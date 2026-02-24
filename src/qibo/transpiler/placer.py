@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import networkx as nx
 import numpy as np
 
 from qibo import gates
+from qibo.backends import Backend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
@@ -12,15 +13,16 @@ from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.router import _find_connected_qubit
 
 
-def _find_gates_qubits_pairs(circuit: Circuit):
+def _find_gates_qubits_pairs(circuit: Circuit) -> List[Tuple[int]]:
     """Helper method for :meth:`qibo.transpiler.placer`.
+
     Translate circuit into a list of pairs of qubits to be used by the router and placer.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be translated.
 
     Returns:
-        (list): Pairs of qubits targeted by two qubits gates.
+        List[Tuple[int]]: Pairs of qubits targeted by two qubits gates.
     """
     gates_qubits_pairs = []
     for gate in circuit.queue:
@@ -52,7 +54,7 @@ class StarConnectivityPlacer(Placer):
         self.connectivity = connectivity
         self.middle_qubit = None
 
-    def __call__(self, circuit: Circuit):
+    def __call__(self, circuit: Circuit) -> None:
         """Apply the transpiler transformation on a given circuit.
 
         Args:
@@ -91,7 +93,7 @@ class StarConnectivityPlacer(Placer):
 
         circuit.wire_names = wire_names
 
-    def _check_star_connectivity(self):
+    def _check_star_connectivity(self) -> None:
         """Check if the connectivity graph is a star graph."""
         if len(self.connectivity.nodes) != 5:
             raise_error(
@@ -122,7 +124,7 @@ class Subgraph(Placer):
     def __init__(self, connectivity: Optional[nx.Graph] = None):
         self.connectivity = connectivity
 
-    def __call__(self, circuit: Circuit):
+    def __call__(self, circuit: Circuit) -> None:
         """Find the initial layout of the given circuit using subgraph isomorphism.
         Circuit must contain at least two two-qubit gates to implement subgraph placement.
 
@@ -188,7 +190,7 @@ class Random(Placer):
         self.samples = samples
         self.seed = seed
 
-    def __call__(self, circuit, backend=None):
+    def __call__(self, circuit, backend: Optional[Backend] = None) -> None:
         """Find an initial layout of the given circuit using random greedy algorithm.
 
         Args:
@@ -225,7 +227,7 @@ class Random(Placer):
         final_layout = dict(zip(keys, list(final_mapping.values())))
         circuit.wire_names = sorted(final_layout, key=final_layout.get)
 
-    def _cost(self, graph: nx.Graph, gates_qubits_pairs: list):
+    def _cost(self, graph: nx.Graph, gates_qubits_pairs: list) -> int:
         """
         Compute the cost associated to an initial layout as the lengh of the reduced circuit.
 
@@ -276,7 +278,7 @@ class ReverseTraversal(Placer):
         self.routing_algorithm = routing_algorithm
         self.depth = depth
 
-    def __call__(self, circuit: Circuit, backend=None):
+    def __call__(self, circuit: Circuit, backend: Optional[Backend] = None) -> None:
         """Find the initial layout of the given circuit using Reverse Traversal placement.
 
         Args:
@@ -287,7 +289,7 @@ class ReverseTraversal(Placer):
         new_circuit = self._assemble_circuit(circuit)
         self._routing_step(new_circuit)
 
-    def _assemble_circuit(self, circuit: Circuit):
+    def _assemble_circuit(self, circuit: Circuit) -> Circuit:
         """Assemble a single circuit to apply Reverse Traversal placement based on depth.
 
         Example: for a circuit with four two-qubit gates :math:`A-B-C-D`
@@ -324,7 +326,7 @@ class ReverseTraversal(Placer):
 
         return new_circuit.invert()
 
-    def _routing_step(self, circuit: Circuit):
+    def _routing_step(self, circuit: Circuit) -> dict:
         """Perform routing of the circuit.
 
         Args:
