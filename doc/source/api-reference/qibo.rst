@@ -2923,7 +2923,7 @@ Backends
 Qibo provides backends for quantum simulation on classical hardware, as well as quantum hardware
 management and control. For a complete list of available backends, refer to the
 :ref:`Packages <packages>` section. To create new backends, inherit from
-:class:`qibo.backends.abstract.Backend` and implement its abstract methods.
+:class:`qibo.backends.abstract.Backend` and implement its new methods.
 This abstract class defines the required methods for circuit execution.
 
 
