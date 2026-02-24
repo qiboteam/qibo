@@ -1,16 +1,17 @@
 """Module for the Circuit class."""
 
-import collections
 import copy
 import sys
+from collections import Counter
 from collections.abc import Iterable
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from tabulate import tabulate
 
 from qibo import __version__, gates
-from qibo.backends import _check_backend, _Global
+from qibo.backends import Backend, _check_backend, _Global
 from qibo.config import raise_error
 from qibo.gates import ParametrizedGate
 from qibo.gates.abstract import Gate
@@ -47,7 +48,7 @@ class _Queue(list):
     the qubits it acts.
     """
 
-    def __init__(self, nqubits):
+    def __init__(self, nqubits: int):
         super().__init__(self)
         self.nqubits = nqubits
 
@@ -93,11 +94,11 @@ class _Queue(list):
         return queue
 
     @property
-    def nmeasurements(self):
+    def nmeasurements(self) -> int:
         return len(list(filter(lambda gate: isinstance(gate, gates.M), self)))
 
     @property
-    def moments(self):
+    def moments(self) -> list:
         moments = [self.nqubits * [None]]
         moment_index = self.nqubits * [0]
         for gate in self:
@@ -175,7 +176,7 @@ class Circuit:
     def __init__(
         self,
         nqubits: Optional[Union[int, list]] = None,
-        accelerators=None,
+        accelerators: Optional[dict] = None,
         density_matrix: bool = False,
         wire_names: Optional[list] = None,
     ):
@@ -215,7 +216,7 @@ class Circuit:
                 )
             self._distributed_init(nqubits, accelerators)
 
-    def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
+    def _distributed_init(self, nqubits: int, accelerators) -> None:  # pragma: no cover
         """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
 
         Uses multiple `accelerator` devices (GPUs) for applying gates to the state vector.
@@ -291,13 +292,13 @@ class Circuit:
         return newcircuit
 
     @property
-    def wire_names(self):
+    def wire_names(self) -> Union[List[int], List[str]]:
         if self._wire_names is None:
             return list(range(self.nqubits))
         return self._wire_names
 
     @wire_names.setter
-    def wire_names(self, wire_names: Optional[list]):
+    def wire_names(self, wire_names: Optional[list]) -> None:
         if not isinstance(wire_names, (list, type(None))):
             raise_error(
                 TypeError,
@@ -317,7 +318,7 @@ class Circuit:
         self.init_kwargs["wire_names"] = self._wire_names
 
     @property
-    def repeated_execution(self):
+    def repeated_execution(self) -> bool:
         return self.has_collapse or (
             self.has_unitary_channel and not self.density_matrix
         )
@@ -604,7 +605,7 @@ class Circuit:
                 noisy_circuit.add(noise_gate)
         return noisy_circuit
 
-    def add(self, gate):
+    def add(self, gate: Gate):
         """Add a gate to a given queue.
 
         Args:
@@ -701,7 +702,7 @@ class Circuit:
                     self.trainable_gates.append(gate)
 
     @property
-    def measurement_tuples(self):
+    def measurement_tuples(self) -> dict:
         """used for testing only"""
         return {m.register_name: m.target_qubits for m in self.measurements}
 
@@ -717,19 +718,19 @@ class Circuit:
         return len(self.queue.moments)
 
     @property
-    def gate_types(self) -> collections.Counter:
+    def gate_types(self) -> Counter:
         """``collections.Counter`` with the number of appearances of each gate
         type."""
-        gatecounter = collections.Counter()
+        gatecounter = Counter()
         for gate in self.queue:
             gatecounter[gate.__class__] += 1
         return gatecounter
 
     @property
-    def gate_names(self) -> collections.Counter:
+    def gate_names(self) -> Counter:
         """``collections.Counter`` with the number of appearances of each gate
         name."""
-        gatecounter = collections.Counter()
+        gatecounter = Counter()
         for gate in self.queue:
             gatecounter[gate.name] += 1
         return gatecounter
@@ -760,7 +761,7 @@ class Circuit:
 
         return [(i, g) for i, g in enumerate(self.queue) if isinstance(g, gate)]
 
-    def _set_parameters_list(self, parameters, n):
+    def _set_parameters_list(self, parameters: ArrayLike, n: int) -> None:
         """Helper method for ``set_parameters`` when a list is given.
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
@@ -784,7 +785,9 @@ class Circuit:
                 + f"the circuit contains {len(self.trainable_gates)} parametrized gates.",
             )
 
-    def set_parameters(self, parameters):
+    def set_parameters(
+        self, parameters: Union[List[float], Dict[str, float], ArrayLike]
+    ) -> None:
         """Updates the parameters of the circuit's parametrized gates.
 
         For more information on how to use this method we refer to the
@@ -888,7 +891,7 @@ class Circuit:
 
         return params
 
-    def associate_gates_with_parameters(self):
+    def associate_gates_with_parameters(self) -> List[Gate]:
         """Associates to each parameter its gate.
 
         Returns:
@@ -903,48 +906,8 @@ class Circuit:
 
         return parameter_to_gate
 
-    def summary(self) -> str:
-        """Generates a summary of the circuit.
-
-        The summary contains the circuit depths, total number of qubits and
-        the all gates sorted in decreasing number of appearance.
-
-        Example:
-            .. testcode::
-
-                from qibo import Circuit, gates
-
-                circuit = Circuit(3)
-                circuit.add(gates.H(0))
-                circuit.add(gates.H(1))
-                circuit.add(gates.CNOT(0, 2))
-                circuit.add(gates.CNOT(1, 2))
-                circuit.add(gates.H(2))
-                circuit.add(gates.TOFFOLI(0, 1, 2))
-
-                print(circuit.summary())
-                # Prints
-                '''
-                Circuit depth = 5
-                Total number of gates = 6
-                Number of qubits = 3
-                Most common gates:
-                h: 3
-                cx: 2
-                ccx: 1
-                '''
-
-            .. testoutput::
-                :hide:
-
-                Circuit depth = 5
-                Total number of gates = 6
-                Number of qubits = 3
-                Most common gates:
-                h: 3
-                cx: 2
-                ccx: 1
-        """
+    def summary_string(self) -> str:
+        """Generate a summary of the circuit."""
         logs = [
             f"Circuit depth = {self.depth}",
             f"Total number of gates = {self.ngates}",
@@ -955,7 +918,40 @@ class Circuit:
         logs.extend(f"{g}: {n}" for g, n in common_gates)
         return "\n".join(logs)
 
-    def fuse(self, max_qubits=2):
+    def summary(self) -> None:
+        """Display a summary of the circuit.
+
+        The summary contains the circuit depths, total number of qubits and
+        the all gates sorted in decreasing number of appearance.
+
+        Example:
+            .. code-block:: python
+                from qibo import Circuit, gates
+
+                circuit = Circuit(3)
+                circuit.add(gates.H(0))
+                circuit.add(gates.H(1))
+                circuit.add(gates.CNOT(0, 2))
+                circuit.add(gates.CNOT(1, 2))
+                circuit.add(gates.H(2))
+                circuit.add(gates.TOFFOLI(0, 1, 2))
+
+                circuit.summary()
+
+                # Prints
+                '''
+                Circuit depth = 5
+                Total number of gates = 6
+                Number of qubits = 3
+                Most common gates:
+                h: 3
+                cx: 2
+                ccx: 1
+                '''
+        """
+        sys.stdout.write(self.summary_string() + "\n")
+
+    def fuse(self, max_qubits: int = 2):
         """Creates an equivalent circuit by fusing gates for increased
         simulation performance.
 
@@ -1006,7 +1002,7 @@ class Circuit:
         circuit.queue = queue.from_fused()
         return circuit
 
-    def unitary(self, backend=None):
+    def unitary(self, backend: Optional[Backend] = None) -> ArrayLike:
         """Creates the unitary matrix corresponding to all circuit gates.
 
         This is a :math:`2^{n} \\times 2^{n}`` matrix obtained by
@@ -1026,7 +1022,7 @@ class Circuit:
         return fgate.matrix(backend)
 
     @property
-    def final_state(self):
+    def final_state(self) -> ArrayLike:
         """Returns the final state after full simulation of the circuit.
 
         If the circuit is executed more than once, only the last final
@@ -1039,7 +1035,7 @@ class Circuit:
             )
         return self._final_state
 
-    def compile(self, backend=None):
+    def compile(self, backend: Optional[Backend] = None) -> None:
         if self.accelerators:  # pragma: no cover
             raise_error(
                 RuntimeError, "Cannot compile circuit that uses custom operators."
@@ -1072,7 +1068,7 @@ class Circuit:
         else:
             self.compiled.result = lambda state, nshots: QuantumState(state, backend)
 
-    def execute(self, initial_state=None, nshots: int = 1000, **kwargs):
+    def execute(self, initial_state: ArrayLike = None, nshots: int = 1000, **kwargs):
         """Executes the circuit. Exact implementation depends on the backend.
 
         Args:
@@ -1109,7 +1105,7 @@ class Circuit:
 
         return backend.execute_circuit(*args)
 
-    def __call__(self, initial_state=None, nshots=1000, **kwargs):
+    def __call__(self, initial_state: ArrayLike = None, nshots: int = 1000, **kwargs):
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots, **kwargs)
 
@@ -1128,7 +1124,7 @@ class Circuit:
         }
 
     @classmethod
-    def from_dict(cls, raw):
+    def from_dict(cls, raw: dict):
         """Load from serialization.
 
         Essentially the counter-part of :meth:`raw`.
@@ -1144,7 +1140,7 @@ class Circuit:
 
         return circuit
 
-    def to_qasm(self, extended_compatibility: bool = False):
+    def to_qasm(self, extended_compatibility: bool = False) -> str:
         """Convert circuit to a QASM string.
 
         Args:
@@ -1211,7 +1207,9 @@ class Circuit:
 
         return "\n".join(code)
 
-    def to_qasm_file(self, qasm_file: str, extended_compatibility: bool = False):
+    def to_qasm_file(
+        self, qasm_file: str, extended_compatibility: bool = False
+    ) -> None:
         """_summary_
 
         Args:
@@ -1222,7 +1220,7 @@ class Circuit:
                 such as ``qiskit``. Defaults to ``False``.
         """
         string = self.to_qasm(extended_compatibility=extended_compatibility)
-        with open(qasm_file, "w") as file:
+        with open(qasm_file, "w") as file:  # pylint: disable=W1514
             file.writelines(string)
 
     @classmethod
@@ -1271,7 +1269,7 @@ class Circuit:
             :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
             specified by the given QASM script.
         """
-        with open(qasm_file) as file:
+        with open(qasm_file) as file:  # pylint: disable=W1514
             string = file.read()
 
         return cls.from_qasm(string, **circuit_kwargs)
@@ -1285,8 +1283,12 @@ class Circuit:
         """
         try:
             import qbraid_qir  # pylint: disable=C0415, W0611
-            from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
-            from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
+            from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
+                qasm2_to_qasm3,
+            )
+            from qbraid.transpiler.conversions.qasm3 import (  # pylint: disable=C0415
+                qasm3_to_pyqir,
+            )
         except ModuleNotFoundError as e:  # pragma: no cover
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, please install it with `poetry install --extras qir`"
@@ -1355,7 +1357,13 @@ class Circuit:
 
         return cls.from_qasm(cudaq_to_qasm2(cudaq_circuit_code))
 
-    def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
+    def _update_draw_matrix(
+        self,
+        matrix: ArrayLike,
+        idx: List[int],
+        gate: Gate,
+        gate_symbol: Optional[str] = None,
+    ) -> Tuple[ArrayLike, List[int]]:
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
             if gate.draw_label:
@@ -1499,7 +1507,7 @@ class Circuit:
     def __str__(self):
         return self.diagram()
 
-    def draw(self, line_wrap: int = 70, legend: bool = False):
+    def draw(self, line_wrap: int = 70, legend: bool = False) -> None:
         """Draw text circuit using unicode symbols.
 
         Args:
@@ -1508,14 +1516,13 @@ class Circuit:
                 Defaults to :math:`70`.
             legend (bool, optional): If ``True`` prints a legend below the circuit for
                 callbacks and channels. Defaults to ``False``.
-
-        Returns:
-            String containing text circuit diagram.
         """
         sys.stdout.write(self.diagram(line_wrap, legend) + "\n")
 
 
-def _resolve_qubits(qubits, wire_names):
+def _resolve_qubits(
+    qubits: Union[int, List[int]], wire_names: Union[list, dict]
+) -> Tuple[int, Union[list, dict]]:
     """Parse the input arguments for defining a circuit.
 
     Allows the user to initialize the circuit as follows:
@@ -1559,7 +1566,7 @@ def _resolve_qubits(qubits, wire_names):
     return len(wire_names), wire_names
 
 
-def _get_parameters_flatlist(parametrized_gates):
+def _get_parameters_flatlist(parametrized_gates: List[Gate]):
     params = []
     for gate in parametrized_gates:
         gparams = gate.parameters
