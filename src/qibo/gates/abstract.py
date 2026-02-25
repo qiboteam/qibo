@@ -155,7 +155,7 @@ class Gate:
         if gate.name not in GATES_CONTROLLED_BY_DEFAULT:
             try:
                 return gate.controlled_by(*raw["_control_qubits"])
-            except RuntimeError as e:
+            except RuntimeError as e:  # pragma: no cover
                 if "controlled" in e.args[0]:
                     return gate
                 raise e
