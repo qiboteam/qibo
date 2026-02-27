@@ -147,8 +147,8 @@ class _Global:
         from qibo.transpiler.router import Sabre
         from qibo.transpiler.unroller import NativeGates, Unroller
 
-        qubits = cls._backend.qubits
-        natives = cls._backend.natives
+        qubits = cls.backend().qubits
+        natives = cls.backend().natives
         connectivity_edges = cls._backend.connectivity
         if qubits is not None and natives is not None:
             connectivity = (
