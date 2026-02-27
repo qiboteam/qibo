@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians, matrices, symbols
-from qibo.hamiltonians import MaxCut, SymbolicHamiltonian
-from qibo.hamiltonians.models import GPP, LABS, XXX, Heisenberg
+from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.hamiltonians.models import GPP, LABS, TFIM, XXX, Heisenberg, MaxCut
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
@@ -164,3 +164,33 @@ def test_gpp(backend, nqubits, penalty_coeff, dense, is_list, node_weights):
         target += penalty_coeff * (penalty**2)
 
     backend.assert_allclose(hamiltonian.matrix, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("h", [0.0, 0.5])
+def test_tfim_boundary(backend, h, closed_boundary, dense):
+    nqubits = 3
+
+    I = lambda x: symbols.I(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    target = Z(0) * Z(1) + Z(1) * Z(2)
+    if closed_boundary:
+        target += Z(2) * Z(0)
+    if h != 0.0:
+        for qubit in range(nqubits):
+            target += h * X(qubit)
+
+    target *= -1
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    print(target)
+    target = backend.real(target.matrix)
+
+    hamiltonian = TFIM(
+        nqubits, h=h, closed_boundary=closed_boundary, dense=dense, backend=backend
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target)
