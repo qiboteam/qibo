@@ -151,12 +151,16 @@ class Gate:
             if raw["measurement_result"]["samples"] is not None:
                 gate.result.register_samples(raw["measurement_result"]["samples"])
             return gate
-        try:
-            return gate.controlled_by(*raw["_control_qubits"])
-        except RuntimeError as e:
-            if "controlled" in e.args[0]:
-                return gate
-            raise e
+
+        if gate.name not in GATES_CONTROLLED_BY_DEFAULT:
+            try:
+                return gate.controlled_by(*raw["_control_qubits"])
+            except RuntimeError as e:  # pragma: no cover
+                if "controlled" in e.args[0]:
+                    return gate
+                raise e
+
+        return gate
 
     def to_json(self):
         """Dump gate to JSON.
