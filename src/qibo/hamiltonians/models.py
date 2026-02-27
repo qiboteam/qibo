@@ -64,7 +64,7 @@ def Z(
         dense (bool, optional): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-       backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
