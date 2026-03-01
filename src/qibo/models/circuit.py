@@ -503,21 +503,32 @@ class Circuit:
 
         return {q: noise_map for q in range(self.nqubits)}
 
-    def decompose(self, *free: int):
+    def decompose(self, *free: int, method: str = "standard", **kwargs):
         """Decomposes circuit's gates to gates supported by OpenQASM.
 
         Args:
-            free: Ids of free (work) qubits to use for gate decomposition.
+            free (int): Ids of free (work) qubits to use for gate decomposition.
+            method (str, optional): Choice of gate set for the decomposition.
+                If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
+                :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
+                :class:`qibo.gates.gates.RZ`, :class:`qibo.gates.gates.U1`,
+                :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
+                and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
+                into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
+                :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
+                and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
 
         Returns:
-            Circuit that contains only gates that are supported by OpenQASM
-            and has the same effect as the original circuit.
+            :class:`qibo.models.circuit.Circuit`: Circuit that contains only
+            gates that are supported by OpenQASM and has the same effect as
+            the original circuit.
         """
         # FIXME: This method is not completed until the ``decompose`` is
         # implemented for all gates not supported by OpenQASM.
         decomp_circuit = self.__class__(self.nqubits)
         for gate in self.queue:
-            decomp_circuit.add(gate.decompose(*free))
+            decomp_circuit.add(gate.decompose(*free, method=method, **kwargs))
         return decomp_circuit
 
     def with_pauli_noise(self, noise_map: NoiseMapType):

@@ -2,6 +2,7 @@ import math
 from typing import List, Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
@@ -24,7 +25,7 @@ class H(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "h"
         self.draw_label = "H"
@@ -33,11 +34,11 @@ class H(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "h"
 
 
@@ -56,7 +57,7 @@ class X(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "x"
         self.draw_label = "X"
@@ -65,15 +66,15 @@ class X(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "x"
 
     @Gate.check_controls
-    def controlled_by(self, *q):
+    def controlled_by(self, *q: int) -> Gate:
         """Fall back to CNOT and Toffoli if there is one or two controls."""
         if len(q) == 1:
             gate = CNOT(q[0], self.target_qubits[0])
@@ -81,20 +82,41 @@ class X(Gate):
             gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
         else:
             gate = super().controlled_by(*q)
+
         return gate
 
-    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+    def _base_decompose(
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
         Args:
-            free: Ids of free qubits to use for the gate decomposition.
+            free (int): Ids of free qubits to use for the gate decomposition.
             use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
                 If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            method (str, optional): Choice of gate set for the decomposition.
+                If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
+                :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
+                :class:`qibo.gates.gates.RZ`, :class:`qibo.gates.gates.U1`,
+                :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
+                and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
+                into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
+                :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
+                and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
+            kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
+                one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
+                of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
+                This precision defaults to :math:`\\epsilon = 10^{-16}`.
+                Another possible keyword argument is ``mpmath_dps``, which defines the
+                number of decimal places used by the ``mpmath`` package.
+                ``mpmmath_dps`` defaults to :math:`256`.
 
         Returns:
-            list: Set of one-qubit, :class:`qibo.gates.CNOT`, and :class:`qibo.gates.TOFFOLI`
-            gates that have the same effect as applying the original multi-control gate.
+            List[:class:`qibo.gates.abstract.Gate`]: Set of one-qubit, :class:`qibo.gates.CNOT`,
+            and :class:`qibo.gates.TOFFOLI` gates that have the same effect as applying
+            the original multi-control gate.
         """
         if set(free) & set(self.qubits):
             raise_error(
@@ -155,10 +177,14 @@ class X(Gate):
         decomp_gates.extend(decomp_gates)
         return decomp_gates
 
-    def decompose(self, *free, use_toffolis: bool = True) -> List["Gate"]:
-        return self._base_decompose(*free, use_toffolis=use_toffolis)
+    def decompose(
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
+        return self._base_decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
-    def basis_rotation(self):
+    def basis_rotation(self) -> Gate:
         return H(self.target_qubits[0])
 
 
@@ -177,7 +203,7 @@ class Y(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "y"
         self.draw_label = "Y"
@@ -186,15 +212,15 @@ class Y(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "y"
 
     @Gate.check_controls
-    def controlled_by(self, *q):
+    def controlled_by(self, *q: int) -> Gate:
         """Fall back to CY if there is only one control."""
         if len(q) == 1:
             gate = CY(q[0], self.target_qubits[0])
@@ -202,7 +228,7 @@ class Y(Gate):
             gate = super().controlled_by(*q)
         return gate
 
-    def basis_rotation(self):
+    def basis_rotation(self) -> Gate:
         from qibo import matrices  # pylint: disable=C0415
 
         matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
@@ -226,7 +252,7 @@ class Z(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "z"
         self.draw_label = "Z"
@@ -235,19 +261,19 @@ class Z(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "z"
 
     @Gate.check_controls
-    def controlled_by(self, *q):
+    def controlled_by(self, *q: int) -> Gate:
         """Fall back to CZ if there is only one control."""
         if len(q) == 1:
             gate = CZ(q[0], self.target_qubits[0])
@@ -257,7 +283,7 @@ class Z(Gate):
             gate = super().controlled_by(*q)
         return gate
 
-    def basis_rotation(self):
+    def basis_rotation(self) -> None:
         return None
 
 
@@ -276,7 +302,7 @@ class SX(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "sx"
         self.draw_label = "SX"
@@ -285,14 +311,16 @@ class SX(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "sx"
 
-    def decompose(self, *free, use_toffolis=True):
+    def decompose(
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
         """Decomposition of :math:`\\sqrt{X}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -300,9 +328,11 @@ class SX(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
         """
-        return super().decompose(*free, use_toffolis=use_toffolis)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         """"""
         return SXDG(self.init_args[0])
 
@@ -322,7 +352,7 @@ class SXDG(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "sxdg"
         self.draw_label = "SXDG"
@@ -331,14 +361,14 @@ class SXDG(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "sxdg"
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         """"""
         return SX(self.init_args[0])
 
@@ -358,7 +388,7 @@ class S(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "s"
         self.draw_label = "S"
@@ -367,18 +397,18 @@ class S(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "s"
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         return SDG(*self.init_args)
 
 
@@ -397,7 +427,7 @@ class SDG(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "sdg"
         self.draw_label = "SDG"
@@ -406,18 +436,18 @@ class SDG(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "sdg"
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         return S(*self.init_args)
 
 
@@ -436,7 +466,7 @@ class T(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "t"
         self.draw_label = "T"
@@ -445,14 +475,14 @@ class T(Gate):
         self.unitary = True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "t"
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         return TDG(*self.init_args)
 
 
@@ -471,7 +501,7 @@ class TDG(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, q: int):
         super().__init__()
         self.name = "tdg"
         self.draw_label = "TDG"
@@ -480,14 +510,14 @@ class TDG(Gate):
         self.unitary = True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "tdg"
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         return T(*self.init_args)
 
 
@@ -498,7 +528,7 @@ class I(Gate):
         *q (int): the qubit id numbers.
     """
 
-    def __init__(self, *q):
+    def __init__(self, *q: int):
         super().__init__()
         self.name = "id"
         self.draw_label = "I"
@@ -507,15 +537,15 @@ class I(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "id"
 
 
@@ -527,11 +557,11 @@ class Align(ParametrizedGate):
 
     Args:
         q (int): The qubit ID.
-        delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
-            Defaults to ``0`` (zero).
+        delay (int, optional): The time (in ns) for which to delay circuit execution
+            on the specified qubits. Defaults to :math:`0`.
     """
 
-    def __init__(self, q, delay=0, trainable=False):
+    def __init__(self, q: int, delay: int = 0, trainable: bool = False):
         if not isinstance(delay, int):
             raise_error(
                 TypeError, f"delay must be type int, but it is type {type(delay)}."
@@ -560,7 +590,7 @@ class _Rn_(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, trainable=True):
+    def __init__(self, q: int, theta: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = None
         self._controlled_gate = None
@@ -576,17 +606,17 @@ class _Rn_(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return _is_clifford_given_angle(self.parameters[0])
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         return self.__class__(
             self.target_qubits[0], -self.parameters[0]
         )  # pylint: disable=E1130
 
     @Gate.check_controls
-    def controlled_by(self, *q):
+    def controlled_by(self, *q: int) -> Gate:
         """Fall back to CRn if there is only one control."""
         if len(q) == 1:
             gate = self._controlled_gate(  # pylint: disable=E1102
@@ -599,7 +629,7 @@ class _Rn_(ParametrizedGate):
     def generator_eigenvalue(self):
         return 0.5
 
-    def gradient(self, backend=None) -> "Gate":
+    def gradient(self, backend=None) -> Gate:
         """Gradient of the Gate."""
         backend = _check_backend(backend=backend)
         return Unitary(
@@ -632,21 +662,21 @@ class RX(_Rn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, trainable=True):
+    def __init__(self, q: int, theta: float, trainable: bool = True):
         super().__init__(q, theta, trainable)
         self.name = "rx"
         self.draw_label = "RX"
         self._controlled_gate = CRX
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "rx"
 
-    def generator(self, backend=None):
+    def generator(self, backend=None) -> ArrayLike:
         backend = _check_backend(backend)
         return backend.matrices.X
 
@@ -672,21 +702,21 @@ class RY(_Rn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, trainable=True):
+    def __init__(self, q: int, theta: float, trainable: bool = True):
         super().__init__(q, theta, trainable)
         self.name = "ry"
         self.draw_label = "RY"
         self._controlled_gate = CRY
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "ry"
 
-    def generator(self, backend=None):
+    def generator(self, backend=None) -> ArrayLike:
         backend = _check_backend(backend)
         return backend.matrices.Y
 
@@ -710,21 +740,21 @@ class RZ(_Rn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, trainable=True):
+    def __init__(self, q: int, theta: float, trainable: bool = True):
         super().__init__(q, theta, trainable)
         self.name = "rz"
         self.draw_label = "RZ"
         self._controlled_gate = CRZ
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "rz"
 
-    def generator(self, backend=None):
+    def generator(self, backend=None) -> ArrayLike:
         backend = _check_backend(backend)
         return backend.matrices.Z
 
@@ -749,7 +779,7 @@ class PRX(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, phi, trainable=True):
+    def __init__(self, q: int, theta: float, phi: float, trainable=True):
         super().__init__(trainable)
         self.name = "prx"
         self.draw_label = "prx"
@@ -770,14 +800,14 @@ class PRX(ParametrizedGate):
         }
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "prx"
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         theta = -self.theta
         phi = self.phi
         return self.__class__(
@@ -804,7 +834,7 @@ class GPI(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, phi, trainable=True):
+    def __init__(self, q: int, phi: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = "gpi"
         self.draw_label = "GPI"
@@ -819,7 +849,7 @@ class GPI(ParametrizedGate):
         self.init_kwargs = {"phi": phi, "trainable": trainable}
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> Tuple[str, str]:
         return "gpi", "gate gpi(phi) q {u3(pi, phi - pi/2, pi/2 - phi) q;}"
 
 
@@ -842,7 +872,7 @@ class GPI2(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, phi, trainable=True):
+    def __init__(self, q: int, phi: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = "gpi2"
         self.draw_label = "GPI2"
@@ -857,14 +887,14 @@ class GPI2(ParametrizedGate):
         self.init_kwargs = {"phi": phi, "trainable": trainable}
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> Tuple[str, str]:
         return "gpi2", "gate gpi2(phi) q {u3(pi/2, phi - pi/2, pi/2 - phi) q;}"
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return _is_clifford_given_angle(self.parameters[0])
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
@@ -879,7 +909,7 @@ class _Un_(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, trainable=True):
+    def __init__(self, q: int, trainable: bool = True):
         super().__init__(trainable)
         self.name = None
         self._controlled_gate = None
@@ -891,7 +921,7 @@ class _Un_(ParametrizedGate):
         self.init_kwargs = {"trainable": trainable}
 
     @Gate.check_controls
-    def controlled_by(self, *q):
+    def controlled_by(self, *q: int) -> Gate:
         """Fall back to CUn if there is only one control."""
         if len(q) == 1:
             gate = self._controlled_gate(  # pylint: disable=E1102
@@ -921,7 +951,7 @@ class U1(_Un_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, trainable=True):
+    def __init__(self, q: int, theta: float, trainable: bool = True):
         super().__init__(q, trainable=trainable)
         self.name = "u1"
         self.draw_label = "U1"
@@ -932,14 +962,14 @@ class U1(_Un_):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "u1"
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         theta = -self.parameters[0]
         return self.__class__(self.target_qubits[0], theta)  # pylint: disable=E1130
 
@@ -965,7 +995,7 @@ class U2(_Un_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, phi, lam, trainable=True):
+    def __init__(self, q: int, phi: float, lam: float, trainable: bool = True):
         super().__init__(q, trainable=trainable)
         self.name = "u2"
         self.draw_label = "U2"
@@ -977,10 +1007,10 @@ class U2(_Un_):
         self.parameters = phi, lam
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "u2"
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         phi, lam = self.parameters
         phi, lam = math.pi - lam, -math.pi - phi
@@ -1010,7 +1040,9 @@ class U3(_Un_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, phi, lam, trainable=True):
+    def __init__(
+        self, q: int, theta: float, phi: float, lam: float, trainable: bool = True
+    ):
         super().__init__(q, trainable=trainable)
         self.name = "u3"
         self.draw_label = "U3"
@@ -1026,20 +1058,9 @@ class U3(_Un_):
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
-    @property
-    def hamming_weight(self):
-        return _is_hamming_weight_given_angle(self.parameters[0])
-
-    @property
-    def qasm_label(self):
-        return "u3"
-
-    def _dagger(self) -> "Gate":
-        """"""
-        theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
-        return self.__class__(self.target_qubits[0], theta, phi, lam)
-
-    def decompose(self, *free, use_toffolis=True):
+    def decompose(
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
         """Decomposition of :math:`U_{3}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -1053,7 +1074,22 @@ class U3(_Un_):
         where :math:`\\text{RZ}` and :math:`\\sqrt{X}` are, respectively,
         :class:`qibo.gates.RZ` and :class`qibo.gates.SX`.
         """
-        return super().decompose(*free, use_toffolis=use_toffolis)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
+
+    @property
+    def hamming_weight(self) -> bool:
+        return _is_hamming_weight_given_angle(self.parameters[0])
+
+    @property
+    def qasm_label(self) -> str:
+        return "u3"
+
+    def _dagger(self) -> Gate:
+        """"""
+        theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
+        return self.__class__(self.target_qubits[0], theta, phi, lam)
 
 
 class U1q(_Un_):
@@ -1070,8 +1106,8 @@ class U1q(_Un_):
         \\end{pmatrix}
 
     Note that
-    :math:`U_{1q}(\\theta, \\phi) = U_{3}(\\theta, \\phi - \\frac{\\pi}{2}, \\frac{\\pi}{2} - \\phi)`,
-    where :math:`U_{3}` is :class:`qibo.gates.U3`.
+    :math:`U_{1q}(\\theta, \\phi) = U_{3}(\\theta, \\phi - \\frac{\\pi}{2},
+    \\frac{\\pi}{2} - \\phi)`, where :math:`U_{3}` is :class:`qibo.gates.U3`.
 
     Args:
         q (int): the qubit id number.
@@ -1082,7 +1118,7 @@ class U1q(_Un_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q, theta, phi, trainable=True):
+    def __init__(self, q: int, theta: float, phi: float, trainable: bool = True):
         super().__init__(q, trainable=trainable)
         self.name = "u1q"
         self.draw_label = "U1q"
@@ -1093,10 +1129,10 @@ class U1q(_Un_):
         self.parameters = theta, phi
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         theta, phi = self.init_kwargs["theta"], self.init_kwargs["phi"]
         return self.__class__(self.init_args[0], -theta, phi)
@@ -1120,7 +1156,7 @@ class CNOT(Gate):
         q1 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "cx"
         self.draw_label = "X"
@@ -1130,11 +1166,11 @@ class CNOT(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "cx"
 
 
@@ -1156,7 +1192,7 @@ class CY(Gate):
         q1 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "cy"
         self.draw_label = "Y"
@@ -1166,11 +1202,11 @@ class CY(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "cy"
 
 
@@ -1192,7 +1228,7 @@ class CZ(Gate):
         q1 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "cz"
         self.draw_label = "Z"
@@ -1202,15 +1238,15 @@ class CZ(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "cz"
 
 
@@ -1232,7 +1268,7 @@ class CSX(Gate):
         q1 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "csx"
         self.draw_label = "CSX"
@@ -1242,10 +1278,10 @@ class CSX(Gate):
         self.unitary = True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "csx"
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         """"""
         return CSXDG(*self.init_args)
 
@@ -1268,7 +1304,7 @@ class CSXDG(Gate):
         q1 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "csxdg"
         self.draw_label = "CSXDG"
@@ -1278,10 +1314,10 @@ class CSXDG(Gate):
         self.unitary = True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "csxdg"
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         """"""
         return CSX(*self.init_args)
 
@@ -1298,7 +1334,7 @@ class _CRn_(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = None
         self.control_qubits = (q0,)
@@ -1310,10 +1346,10 @@ class _CRn_(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return _is_clifford_given_angle(self.parameters[0])
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
@@ -1343,17 +1379,17 @@ class CRX(_CRn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crx"
         self.draw_label = "RX"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "crx"
 
 
@@ -1381,17 +1417,17 @@ class CRY(_CRn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: int, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "cry"
         self.draw_label = "RY"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "cry"
 
 
@@ -1417,17 +1453,17 @@ class CRZ(_CRn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crz"
         self.draw_label = "RZ"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "crz"
 
 
@@ -1442,7 +1478,7 @@ class _CUn_(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, trainable=True):
+    def __init__(self, q0: int, q1: int, trainable: bool = True):
         super().__init__(trainable)
         self.name = None
         self.nparams = 0
@@ -1477,7 +1513,7 @@ class CU1(_CUn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu1"
         self.draw_label = "U1"
@@ -1486,14 +1522,14 @@ class CU1(_CUn_):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "cu1"
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
@@ -1525,7 +1561,9 @@ class CU2(_CUn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, phi, lam, trainable=True):
+    def __init__(
+        self, q0: int, q1: int, phi: float, lam: float, trainable: bool = True
+    ):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu2"
         self.draw_label = "U2"
@@ -1535,7 +1573,7 @@ class CU2(_CUn_):
         self.parameter_names = ["phi", "lam"]
         self.parameters = phi, lam
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
@@ -1570,7 +1608,15 @@ class CU3(_CUn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, phi, lam, trainable=True):
+    def __init__(
+        self,
+        q0: int,
+        q1: int,
+        theta: float,
+        phi: float,
+        lam: float,
+        trainable: bool = True,
+    ):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu3"
         self.draw_label = "U3"
@@ -1586,14 +1632,14 @@ class CU3(_CUn_):
         self.parameters = theta, phi, lam
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "cu3"
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
@@ -1619,7 +1665,7 @@ class SWAP(Gate):
         q1 (int): the second qubit to be swapped id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "swap"
         self.draw_label = "x"
@@ -1628,15 +1674,15 @@ class SWAP(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "swap"
 
 
@@ -1658,7 +1704,7 @@ class iSWAP(Gate):
         q1 (int): the second qubit to be swapped id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "iswap"
         self.draw_label = "i"
@@ -1667,15 +1713,15 @@ class iSWAP(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "iswap"
 
 
@@ -1697,7 +1743,7 @@ class SiSWAP(Gate):
         q1 (int): the second qubit to be swapped id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "siswap"
         self.draw_label = "si"
@@ -1706,10 +1752,10 @@ class SiSWAP(Gate):
         self.unitary = True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         return SiSWAPDG(*self.qubits)
 
 
@@ -1731,7 +1777,7 @@ class SiSWAPDG(Gate):
         q1 (int): the second qubit to be swapped id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "siswapdg"
         self.draw_label = "sidg"
@@ -1740,10 +1786,10 @@ class SiSWAPDG(Gate):
         self.unitary = True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         return SiSWAP(*self.qubits)
 
 
@@ -1765,7 +1811,7 @@ class FSWAP(Gate):
         q1 (int): the second qubit to be f-swapped id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "fswap"
         self.draw_label = "fx"
@@ -1774,15 +1820,15 @@ class FSWAP(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "fswap"
 
 
@@ -1812,7 +1858,9 @@ class fSim(ParametrizedGate):
 
     # TODO: Check how this works with QASM.
 
-    def __init__(self, q0, q1, theta, phi, trainable=True):
+    def __init__(
+        self, q0: int, q1: int, theta: float, phi: float, trainable: bool = True
+    ):
         super().__init__(trainable)
         self.name = "fsim"
         self.draw_label = "f"
@@ -1827,10 +1875,10 @@ class fSim(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         q0, q1 = self.target_qubits
         params = (-x for x in self.parameters)  # pylint: disable=E1130
@@ -1859,7 +1907,7 @@ class SYC(Gate):
         q1 (int): the second qubit to be swapped id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "syc"
         self.draw_label = "SYC"
@@ -1868,10 +1916,10 @@ class SYC(Gate):
         self.unitary = True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
 
@@ -1899,7 +1947,9 @@ class GeneralizedfSim(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, unitary, phi, trainable=True):
+    def __init__(
+        self, q0: int, q1: int, unitary: ArrayLike, phi: float, trainable: bool = True
+    ):
         super().__init__(trainable)
         self.name = "generalizedfsim"
         self.draw_label = "gf"
@@ -1914,10 +1964,10 @@ class GeneralizedfSim(ParametrizedGate):
         self.init_kwargs = {"unitary": unitary, "phi": phi, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         q0, q1 = self.target_qubits
         u, phi = self.parameters
         init_kwargs = dict(self.init_kwargs)
@@ -1926,7 +1976,7 @@ class GeneralizedfSim(ParametrizedGate):
         return self.__class__(q0, q1, **init_kwargs)
 
     @Gate.parameters.setter
-    def parameters(self, x):
+    def parameters(self, x: ArrayLike):
         shape = tuple(x[0].shape)
         if shape != (2, 2):
             raise_error(
@@ -1948,7 +1998,7 @@ class _Rnn_(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = None
         self._controlled_gate = None
@@ -1959,7 +2009,7 @@ class _Rnn_(ParametrizedGate):
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         q0, q1 = self.target_qubits
         return self.__class__(q0, q1, -self.parameters[0])  # pylint: disable=E1130
@@ -1987,17 +2037,17 @@ class RXX(_Rnn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rxx"
         self.draw_label = "RXX"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "rxx"
 
 
@@ -2022,17 +2072,17 @@ class RYY(_Rnn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "ryy"
         self.draw_label = "RYY"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "ryy"
 
 
@@ -2058,17 +2108,17 @@ class RZZ(_Rnn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzz"
         self.draw_label = "RZZ"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "rzz"
 
 
@@ -2100,13 +2150,13 @@ class RZX(_Rnn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzx"
         self.draw_label = "RZX"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
 
 
@@ -2134,23 +2184,27 @@ class RXXYY(_Rnn_):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rxxyy"
         self.draw_label = "RXXYY"
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def decompose(self, *free, use_toffolis=True):
+    def decompose(
+        self, *free, use_toffolis=True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
         """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
 
         This decomposition has a global phase difference with respect to
         the original gate due to a phase difference in
         :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
         """
-        return super().decompose(*free, use_toffolis=use_toffolis)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
 
 class MS(ParametrizedGate):
@@ -2182,7 +2236,15 @@ class MS(ParametrizedGate):
 
     # TODO: Check how this works with QASM.
 
-    def __init__(self, q0, q1, phi0, phi1, theta: float = math.pi / 2, trainable=True):
+    def __init__(
+        self,
+        q0: int,
+        q1: int,
+        phi0: float,
+        phi1: float,
+        theta: float = math.pi / 2,
+        trainable: bool = True,
+    ):
         super().__init__(trainable)
         self.name = "ms"
         self.draw_label = "MS"
@@ -2208,14 +2270,14 @@ class MS(ParametrizedGate):
         }
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[2])
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "ms"
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         q0, q1 = self.target_qubits
         phi0, phi1, theta = self.parameters
@@ -2244,7 +2306,7 @@ class GIVENS(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = "g"
         self.draw_label = "G"
@@ -2259,14 +2321,16 @@ class GIVENS(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
-    def decompose(self, *free, use_toffolis=True):
+    def decompose(
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
         """Decomposition of GIVENS gate according to the decomposition of the
         RBS gate in Ref. [1].
 
@@ -2276,7 +2340,9 @@ class GIVENS(ParametrizedGate):
             (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
 
         """
-        return super().decompose(*free, use_toffolis=use_toffolis)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
 
 class RBS(ParametrizedGate):
@@ -2305,7 +2371,7 @@ class RBS(ParametrizedGate):
             Defaults to ``True``.
     """
 
-    def __init__(self, q0, q1, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, theta: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = "rbs"
         self.draw_label = "RBS"
@@ -2320,15 +2386,40 @@ class RBS(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
-    def _dagger(self) -> "Gate":
+    def _dagger(self) -> Gate:
         """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
-    def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Gate]:
+    def _base_decompose(
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
         """Decomposition of RBS gate as in Ref. [1].
+
+        Args:
+            free (int): Ids of free qubits to use for the gate decomposition.
+            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
+                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
+                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            method (str, optional): Choice of gate set for the decomposition.
+                If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
+                :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
+                :class:`qibo.gates.gates.RZ`, :class:`qibo.gates.gates.U1`,
+                :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
+                and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
+                into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
+                :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
+                and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
+            kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
+                one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
+                of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
+                This precision defaults to :math:`\\epsilon = 10^{-16}`.
+                Another possible keyword argument is ``mpmath_dps``, which defines the
+                number of decimal places used by the ``mpmath`` package.
+                ``mpmmath_dps`` defaults to :math:`256`.
 
         References:
             1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
@@ -2376,7 +2467,7 @@ class ECR(Gate):
         q1 (int): the second qubit id number.
     """
 
-    def __init__(self, q0, q1):
+    def __init__(self, q0: int, q1: int):
         super().__init__()
         self.name = "ecr"
         self.draw_label = "ECR"
@@ -2385,10 +2476,12 @@ class ECR(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
-    def decompose(self, *free, use_toffolis=True):
+    def decompose(
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Gate]:
         """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
 
         A global phase difference exists between the definitions of
@@ -2398,7 +2491,9 @@ class ECR(Gate):
             \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
                 \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0}) \\, .
         """
-        return super().decompose(*free, use_toffolis=use_toffolis)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
 
 class TOFFOLI(Gate):
@@ -2424,7 +2519,7 @@ class TOFFOLI(Gate):
         q2 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1, q2):
+    def __init__(self, q0: int, q1: int, q2: int):
         super().__init__()
         self.name = "ccx"
         self.draw_label = "X"
@@ -2434,7 +2529,7 @@ class TOFFOLI(Gate):
         self.unitary = True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "ccx"
 
     def congruent(self, use_toffolis: bool = True) -> List[Gate]:
@@ -2491,7 +2586,7 @@ class CCZ(Gate):
         q2 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1, q2):
+    def __init__(self, q0: int, q1: int, q2: int):
         super().__init__()
         self.name = "ccz"
         self.draw_label = "Z"
@@ -2501,11 +2596,11 @@ class CCZ(Gate):
         self.unitary = True
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return True
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str:
         return "ccz"
 
 
@@ -2532,7 +2627,7 @@ class DEUTSCH(ParametrizedGate):
         q2 (int): the target qubit id number.
     """
 
-    def __init__(self, q0, q1, q2, theta, trainable=True):
+    def __init__(self, q0: int, q1: int, q2: int, theta: float, trainable: bool = True):
         super().__init__(trainable)
         self.name = "deutsch"
         self.draw_label = "DE"
@@ -2548,7 +2643,7 @@ class DEUTSCH(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0], np.pi)
 
 
@@ -2565,7 +2660,7 @@ class FanOut(Gate):
             The first id is considered to be the control qubit.
     """
 
-    def __init__(self, *q):
+    def __init__(self, *q: int):
         if len(q) < 2:
             raise_error(
                 ValueError, "``FanOut`` gate must be applied to at least two qubits."
@@ -2580,7 +2675,7 @@ class FanOut(Gate):
         self.unitary = True
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return True
 
 
@@ -2644,10 +2739,10 @@ class GeneralizedRBS(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return len(self.init_args[0]) == len(self.init_args[1])
 
-    def on_qubits(self, qubit_map: dict):
+    def on_qubits(self, qubit_map: dict) -> Gate:
         qubits_in = tuple(qubit_map.get(q) for q in self.init_args[0])
         qubits_out = tuple(qubit_map.get(q) for q in self.init_args[1])
         gate = self.__class__(qubits_in, qubits_out, **self.init_kwargs)
@@ -2676,9 +2771,9 @@ class Unitary(ParametrizedGate):
 
     def __init__(
         self,
-        unitary,
-        *q,
-        trainable=True,
+        unitary: ArrayLike,
+        *q: int,
+        trainable: bool = True,
         name: str = None,
         check_unitary: bool = True,
     ):
@@ -2716,7 +2811,7 @@ class Unitary(ParametrizedGate):
             del diagonals, off_diagonals, product
 
     @Gate.parameters.setter
-    def parameters(self, x):
+    def parameters(self, x: ArrayLike) -> None:
         shape = self.parameters[0].shape
         engine = _check_engine(x)
         # Reshape doesn't accept a tuple if engine is pytorch.
@@ -2727,22 +2822,22 @@ class Unitary(ParametrizedGate):
             gate.parameters = x
 
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         return self._clifford
 
     @clifford.setter
-    def clifford(self, value):
+    def clifford(self, value) -> None:
         self._clifford = value
 
     @property
-    def hamming_weight(self):
+    def hamming_weight(self) -> bool:
         return self._hamming_weight
 
     @hamming_weight.setter
-    def hamming_weight(self, value):
+    def hamming_weight(self, value) -> None:
         self._hamming_weight = value
 
-    def on_qubits(self, qubit_map: dict):
+    def on_qubits(self, qubit_map: dict) -> Gate:
         args = [self.init_args[0]]
         args.extend(qubit_map.get(qubit) for qubit in self.target_qubits)
         gate = self.__class__(*args, **self.init_kwargs)
@@ -2752,13 +2847,13 @@ class Unitary(ParametrizedGate):
         gate.parameters = self.parameters
         return gate
 
-    def _dagger(self):
+    def _dagger(self) -> Gate:
         engine = _check_engine(self.parameters[0])
         ud = engine.conj(self.parameters[0].T)
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
 
 
-def _check_engine(array):
+def _check_engine(array: ArrayLike):
     """Check if the array is a numpy or torch tensor and return the corresponding library."""
     if (array.__class__.__name__ == "Tensor") or (
         isinstance(array, tuple) and array[0].__class__.__name__ == "Tensor"
@@ -2770,13 +2865,13 @@ def _check_engine(array):
     return np
 
 
-def _is_clifford_given_angle(angle):
+def _is_clifford_given_angle(angle: Union[float, int]):
     """Helper function to update Clifford boolean condition according to
     the given angle ``angle``."""
     return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
 
 
-def _is_hamming_weight_given_angle(angle, target=2 * np.pi):
+def _is_hamming_weight_given_angle(angle: Union[float, int], target: float = 2 * np.pi):
     """Helper function to update Hamming weight boolean condition according to
     the given angles ``angle`` and ``target``."""
     return isinstance(angle, (float, int)) and (angle % target).is_integer()

@@ -18,11 +18,15 @@ from qibo.gates.abstract import Gate
 
 
 class CliffordBackend(Backend):
-    """Backend for the simulation of Clifford circuits following
+    """Backend for the simulation of Clifford circuits following  Ref. [1].
     `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
 
     Args:
         :class:`qibo.backends.abstract.Backend`: Backend used for the calculation.
+
+    References:
+        1. S. Aaronson and D. Gottesman, *Improved Simulation of Stabilizer Circuits*,
+        `Phys. Rev. A 70, 052328 (2004) <https://doi.org/10.1103/PhysRevA.70.052328>`_.
     """
 
     def __init__(self, platform: Optional[str] = None):
