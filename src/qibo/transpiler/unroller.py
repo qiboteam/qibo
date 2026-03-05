@@ -10,11 +10,11 @@ from qibo.gates import Gate
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.decompositions import (
-    cnot_dec_temp,
     cz_dec,
     gpi2_dec,
     iswap_dec,
     opt_dec,
+    standard_decompositions,
     u3_dec,
 )
 
@@ -77,7 +77,7 @@ class NativeGates(Flag, metaclass=FlagMeta):
         return natives
 
     @classmethod
-    def from_gate(cls, gate: Gate):
+    def from_gate(cls, gate: Gate):  # pylint: disable=R1710
         """Create a :class:`qibo.transpiler.unroller.NativeGates`
         object from a :class:`qibo.gates.gates.Gate`."""
         if isinstance(gate, Gate):
@@ -200,7 +200,7 @@ def _translate_single_qubit_gates(
     return u3_dec(gate, backend)
 
 
-def _translate_two_qubit_gates(
+def _translate_two_qubit_gates(  # pylint: disable=R1710
     gate: Gate, native_gates: NativeGates, backend: Backend
 ) -> List[Gate]:
     """Helper method for :meth:`translate_gate`.
@@ -268,9 +268,10 @@ def _translate_two_qubit_gates(
     # No CZ, iSWAP gates in the native gate set
     # Decompose CNOT, CZ, SWAP gates into CNOT gates
     if native_gates & NativeGates.CNOT:
-        return cnot_dec_temp(gate, backend)
+        return standard_decompositions(gate, backend)
 
     raise_error(
         DecompositionError,
-        "Use only CZ and/or iSWAP as native gates. CNOT is allowed in circuits where the two-qubit gates are limited to CZ, CNOT, and SWAP.",
+        "Use only CZ and/or iSWAP as native gates. CNOT is allowed in circuits"
+        + "where the two-qubit gates are limited to CZ, CNOT, and SWAP.",
     )  # pragma: no cover
