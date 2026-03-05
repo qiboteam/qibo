@@ -87,7 +87,7 @@ class GateDecompositions:
             ]
 
             return gate_list
-        except ModuleNotFoundError:
+        except ModuleNotFoundError:  # pragma: no cover
             raise_error(NotImplementedError)
 
 
@@ -779,7 +779,7 @@ try:
     import pygridsynth  # pylint: disable=C0415,W0611
 
     PYGRIDSYNTH_INSTALLED = True
-except ModuleNotFoundError:
+except ModuleNotFoundError:  # pragma: no cover
     PYGRIDSYNTH_INSTALLED = False
 
 if PYGRIDSYNTH_INSTALLED:
