@@ -777,12 +777,10 @@ standard_decompositions.add(
 
 try:
     import pygridsynth  # pylint: disable=C0415,W0611
-
-    PYGRIDSYNTH_INSTALLED = True
 except ModuleNotFoundError:  # pragma: no cover
-    PYGRIDSYNTH_INSTALLED = False
+    pygridsynth = None
 
-if PYGRIDSYNTH_INSTALLED:
+if pygridsynth:
     METHOD = "clifford_plus_t"
     clifford_plus_t = GateDecompositions()
     clifford_plus_t._set_precision_cliff_plus_t()
