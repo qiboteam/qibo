@@ -540,20 +540,19 @@ def random_clifford(
 
     backend = _check_backend(backend)
     backend.set_seed(seed)
+    dtype = backend.uint8 if nqubits <= 255 else backend.int16
 
     hadamards, permutations = backend.qinfo._sample_from_quantum_mallows_distribution(
         nqubits
     )
-    hadamards = backend.cast(hadamards, dtype=backend.uint8)
-    permutations = backend.cast(permutations, dtype=backend.uint8)
+    hadamards = backend.cast(hadamards, dtype=dtype)
+    permutations = backend.cast(permutations, dtype=dtype)
 
-    gamma = backend.diag(backend.random_integers(2, size=nqubits, dtype=backend.uint8))
+    gamma = backend.diag(backend.random_integers(2, size=nqubits, dtype=dtype))
 
-    gamma_prime = backend.diag(
-        backend.random_integers(2, size=nqubits, dtype=backend.uint8)
-    )
+    gamma_prime = backend.diag(backend.random_integers(2, size=nqubits, dtype=dtype))
 
-    delta = backend.identity(nqubits, dtype=backend.uint8)
+    delta = backend.identity(nqubits, dtype=dtype)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
     backend.qinfo._fill_tril(gamma, symmetric=True)
@@ -568,7 +567,7 @@ def random_clifford(
     block_inverse_threshold = 50
 
     # Compute stabilizer table
-    zero = backend.zeros((nqubits, nqubits), dtype=backend.uint8)
+    zero = backend.zeros((nqubits, nqubits), dtype=dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
     inv1 = backend.qinfo._inverse_tril(delta, block_inverse_threshold).T
