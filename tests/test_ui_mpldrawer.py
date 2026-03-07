@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot
 import numpy as np
 import pytest
 
@@ -59,8 +58,9 @@ def test_circuit_measure(nqubits):
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5, 6])
-def test_bigger_circuit_gates(nqubits):
-    """Test for a bigger circuit"""
+@pytest.mark.parametrize("fold", [3, 4, 10, 12])
+def test_bigger_circuit_gates(nqubits, fold):
+    """Test for a bigger circuit with optional folding"""
     circuit = Circuit(nqubits)
     circuit.add(gates.H(1))
     circuit.add(gates.X(1))
@@ -75,17 +75,20 @@ def test_bigger_circuit_gates(nqubits):
     circuit.add(gates.X(1))
     circuit.add(gates.X(0))
     circuit.add(gates.M(qubit) for qubit in range(2))
-    _, fig = plot_circuit(circuit)
-    assert (
-        match_figure_image(
-            fig, BASEPATH + "/test_bigger_circuit_gates_" + str(nqubits) + ".npy"
-        )
-        == True
-    )
+
+    test_file_no_fold = f"{BASEPATH}/test_bigger_circuit_gates_{nqubits}.npy"
+    test_file_with_fold = f"{BASEPATH}/test_bigger_circuit_gates_{nqubits}_fold_{fold}.npy"
+
+    test_file = test_file_with_fold if fold > 0 else test_file_no_fold
+
+    _, fig = plot_circuit(circuit, fold=fold)
+
+    assert match_figure_image(fig, test_file)
 
 
 @pytest.mark.parametrize("clustered", [False, True])
-def test_complex_circuit(clustered):
+@pytest.mark.parametrize("fold", [-1, 5, 8, 15])
+def test_complex_circuit(clustered, fold):
     """Complex circuits for several cases"""
     circuit = Circuit(3)
     circuit.add(gates.H(0))
@@ -117,28 +120,20 @@ def test_complex_circuit(clustered):
     circuit.add(gates.DEUTSCH(1, 0, 2, np.pi))
     circuit.add(gates.X(0))
     circuit.add(gates.M(qubit) for qubit in range(2))
-    _, fig1 = plot_circuit(circuit.invert(), cluster_gates=clustered, scale=0.70)
-    _, fig2 = plot_circuit(circuit, cluster_gates=clustered, scale=0.70)
-    assert (
-        match_figure_image(
-            fig1,
-            BASEPATH
-            + "/test_complex_circuit_fig1_"
-            + ("true" if clustered else "false")
-            + ".npy",
-        )
-        == True
-    )
-    assert (
-        match_figure_image(
-            fig2,
-            BASEPATH
-            + "/test_complex_circuit_fig2_"
-            + ("true" if clustered else "false")
-            + ".npy",
-        )
-        == True
-    )
+    _, fig1 = plot_circuit(circuit.invert(), cluster_gates=clustered, scale=0.70, fold=fold)
+    _, fig2 = plot_circuit(circuit, cluster_gates=clustered, scale=0.70, fold=fold)
+
+    test_fig1_prefix = f"{BASEPATH}/test_complex_circuit_fig1_"
+    test_fig2_prefix = f"{BASEPATH}/test_complex_circuit_fig2_"
+    clustered_status = "true" if clustered else "false"
+    fold_suffix = f"_fold_{fold}" if fold > 0 else ""
+    extension = ".npy"
+
+    test_file_fig1 = f"{test_fig1_prefix}{clustered_status}{fold_suffix}{extension}"
+    test_file_fig2 = f"{test_fig2_prefix}{clustered_status}{fold_suffix}{extension}"
+
+    assert match_figure_image(fig1, test_file_fig1)
+    assert match_figure_image(fig2, test_file_fig2)
 
 
 def test_align_gate():

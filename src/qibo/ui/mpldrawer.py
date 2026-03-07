@@ -46,19 +46,12 @@ PLOT_PARAMS = {
     "xscale": 1.2,
     "yscale": 3,
     "fold_direction": "down",  # or "up"
-    "fold_gap": 7,
-    "wire_pitch": 80,  # data spacing between adjacent wires
-    "wire_inches": 1,  # physical inches per wire (controls visual spacing)
-    "gate_box_scale": 0.2,  # 1.0 = normal size, <1 shrinks boxes
-    "gate_font_scale": 0.9,  # scale text size inside boxes
-    "control_radius_with_folds": 0.18,  # dot radius (data units)
-    "not_radius_with_folds": 0.32,  # ⊕ outer radius
-    "swap_delta_with_folds": 0.25,  # SWAP arm
-    "gate_box_w": 0.80,  # gate box width
-    "gate_box_h": 0.70,  # gate box height
-    "gate_pad": 0.10,  # padding inside box
-    "margin_left_cols": 1.10,  # space for |q⟩ labels
-    "margin_right_cols": 0.15,  # trim the extra space on the right
+    "fold_gap": 0.5,
+    "gate_font_scale": 0.8,  # scale text size inside boxes
+    "control_radius_with_folds": 0.07,  # dot radius (data units)
+    "not_radius_with_folds": 0.3,  # ⊕ outer radius
+    "gate_box_w": 0.7,  # gate box width
+    "gate_box_h": 0.7,  # gate box height
 }
 
 
@@ -73,9 +66,12 @@ def plot_circuit(
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to plot.
-        scale (float, optional): Scaling factor for  ``matplotlib`` output drawing. Defaults to :math:`0.6`.
-        cluster_gates (bool, optional): if ``True``, groups circuit gates on drawing. Defaults to ``True``.
-        fold (int, optional): Number of gates to display in a row. Defaults to :math:`-1` (no folding unless specified).
+        scale (float, optional): Scaling factor for  ``matplotlib`` output drawing. 
+            Defaults to :math:`0.6`.
+        cluster_gates (bool, optional): if ``True``, groups circuit gates on drawing. 
+            Defaults to ``True``.
+        fold (int, optional): Number of gates to display in a row. 
+            Defaults to :math:`-1` (no folding unless specified).
         style (dict or str or None, optional): Style applied to the circuit. It can a built-in style or custom.
             Built-in options are: ``garnacha``, ``fardelejo``, ``quantumspain``, ``color-blind`` and ``cachirulo``.
             Custom style needs to be a dictionary.
@@ -217,14 +213,17 @@ def _plot_quantum_schedule(
 
         labels (list): List of qubit labels.
 
-        plot_labels (bool, optional): Indicates whether labels are to be plotted. Defaults to ``True``.
+        plot_labels (bool, optional): Indicates whether labels are to be plotted. 
+            Defaults to ``True``.
 
-        fold (int, optional): Number of gates to display in a row. Defaults to :math:`-1` (no folding unless specified).
+        fold (int, optional): Number of gates to display in a row. 
+            Defaults to :math:`-1` (no folding unless specified).
 
         kwargs (dict, optional): Variadic dictionary that can override plot parameters.
 
     Returns:
-        :class:`matplotlib.axes.Axes`: Axes object that encapsulates all the elements of an individual plot.
+        :class:`matplotlib.axes.Axes`: 
+            Axes object that encapsulates all the elements of an individual plot.
     """
 
     return _plot_quantum_circuit(
@@ -257,10 +256,12 @@ def _plot_quantum_circuit(
         inits (list): Initialization list of gates.
         plot_params (dict): Style plot configuration.
         labels (list): List of qubit labels.
-        plot_labels (bool, optional): Indicates whether qubit labels are shown. Defaults to ``True``.
+        plot_labels (bool, optional): Indicates whether qubit labels are shown.
+            Defaults to ``True``.
         schedule (bool, optional): If ``True``, treats ``gates`` as a schedule (list of layers).
             Defaults to ``False``.
-        fold (int, optional): Number of gates to display in a row before folding. Defaults to :math:`-1` (no folding unless specified).
+        fold (int, optional): Number of gates to display in a row before folding. 
+            Defaults to :math:`-1` (no folding unless specified).
         kwargs (dict, optional): Variadic dictionary that can override plot parameters.
 
     Returns:
@@ -274,7 +275,7 @@ def _plot_quantum_circuit(
     #  of gates, in which case move to an ordered dictionary
     if not labels:
         labels = []
-        for i, gate in _enumerate_gates(gates, schedule=schedule):
+        for _, gate in _enumerate_gates(gates, schedule=schedule):
             for label in gate[1:]:
                 if label not in labels:
                     labels.append(label)
@@ -760,39 +761,37 @@ def _swapx_with_folds(ax: Axes, x: float, y: float, plot_params: dict) -> None:
         None: This function updates the provided axes in place.
     """
     # match the CNOT symbol outline
-    R = plot_params["not_radius_with_folds"]  # ⊕'s horizontal diameter = R
-    sx = R * 0.5  # half-width of the box (so total width = R)
-    sy = 0.85 * R * 0.5  # half-height (so total height = 0.85*R)
+    r = plot_params["not_radius_with_folds"] * plot_params["scale"]  # ⊕'s horizontal diameter = R
+    sx = r * 0.6  # half-width of the box (so total width = R*1.2)
+    sy = r * 0.6  # half-height (so total height = R*1.2)
 
     _line(ax, x - sx, x + sx, y - sy, y + sy, plot_params)
     _line(ax, x - sx, x + sx, y + sy, y - sy, plot_params)
 
 
 def _setup_figure_with_folds(
-    num_rows: int, num_cols: int, plot_params: dict
+    gate_grid: np.ndarray, wire_grid: np.ndarray, plot_params: dict
 ) -> tuple[Axes, Figure]:
     """Create figure and axes for folded circuit rendering.
 
     Args:
-        num_rows (int): Number of wire rows to allocate.
-        num_cols (int): Number of gate columns to allocate.
+        gate_grid (np.ndarray): Grid of x positions for gates.
+        wire_grid (np.ndarray): Grid of y positions for wires.
         plot_params (dict): Style plot configuration.
 
     Returns:
         (:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`): Created axes and figure.
     """
-    # New plot_params knobs
-    plot_params.setdefault("inch_per_col", 0.60)  # width per column in inches
-    plot_params.setdefault("inch_per_row", 0.85)  # height per wire in inches
-    plot_params.setdefault("margin_cols", 0.75)  # left/right margins in columns
-    plot_params.setdefault("margin_rows", 0.75)  # top/bottom margins in rows
 
-    left_cols = plot_params.get("margin_left_cols", plot_params["margin_cols"])
-    right_cols = plot_params.get("margin_right_cols", plot_params["margin_cols"])
-    rows_margin = plot_params["margin_rows"]
+    scale = plot_params["scale"]
 
-    fig_w = (num_cols + left_cols + right_cols) * plot_params["inch_per_col"]
-    fig_h = (num_rows + 2 * rows_margin) * plot_params["inch_per_row"]
+    xmin = gate_grid[0] - scale - 1.0
+    xmax = gate_grid[-1] + scale + 0.4
+    ymin = wire_grid[0] - scale
+    ymax = wire_grid[-1] + scale
+
+    fig_w = xmax - xmin
+    fig_h = ymax - ymin
 
     fig = plt.figure(
         figsize=(fig_w, fig_h),
@@ -803,9 +802,10 @@ def _setup_figure_with_folds(
 
     ax = fig.add_subplot(1, 1, 1, frameon=True)
     ax.set_axis_off()
-    ax.set_xlim(-left_cols, num_cols + right_cols)
-    ax.set_ylim(-rows_margin, num_rows + rows_margin)
-    ax.set_aspect("auto")
+
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.set_aspect("equal")
 
     return ax, fig
 
@@ -846,26 +846,27 @@ def _setup_figure(
 
 
 def _draw_wires_with_folds(
-    ax: Axes, nq: int, wire_grid: np.ndarray, plot_params: dict
+    ax: Axes, nq: int, gate_grid: np.ndarray, wire_grid: np.ndarray, plot_params: dict
 ) -> None:
     """Draw all wire lines for folded layouts.
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where wires are drawn.
         nq (int): Number of wire rows to draw.
+        gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
         plot_params (dict): Style plot configuration.
 
     Returns:
         None: This function updates the provided axes in place.
     """
-    xmin, xmax = ax.get_xlim()
+    scale = plot_params["scale"]
 
     for i in range(nq):
         _line(
             ax,
-            xmin,
-            xmax,
+            gate_grid[0] - scale,
+            gate_grid[-1] + scale,
             wire_grid[i],
             wire_grid[i],
             plot_params,
@@ -1530,10 +1531,36 @@ def _plot_quantum_circuit_with_folds(
     cols = fold if fold > 0 else ng
     rows = nq * num_folds
 
-    gate_grid = np.arange(0.0, cols, 1.0, dtype=float)  # 1 unit per column
-    wire_grid = np.arange(0.0, rows, 1.0, dtype=float)  # 1 unit per wire
+    scale = plot_params["scale"]
 
-    ax, _ = _setup_figure_with_folds(rows, cols, plot_params)
+    # We have `num_padding_cols` number of padding columns after every actual column.
+    # Without padding, each gate column was initially separated by scale units.
+    # Now, if first gate is drawn at 0, next gate is drawn at index (num_padding_cols + 1)*scale,
+    # so total padding columns equal num_padding_cols.
+    
+    num_padding_cols = 1
+    gate_grid = np.zeros(cols, dtype=float)
+    current_x = 0.0
+    for i in range(cols):
+        gate_grid[i] = current_x
+        # add num_padding_cols extra columns after every column
+        current_x += scale * (num_padding_cols + 1)
+
+    # Calculate wire grid with fold gaps
+    fold_gap = plot_params.get("fold_gap", 1)
+    wire_grid = np.zeros(rows, dtype=float)
+    current_y = 0.0
+    for f in range(num_folds):
+        for q in range(nq):
+            wire_grid[f * nq + q] = current_y
+            current_y += scale
+        # add fold gap after each fold (except the last one)
+        if f < num_folds - 1:
+            current_y += scale * fold_gap
+
+
+    ax, fig = _setup_figure_with_folds(gate_grid, wire_grid, plot_params)
+    fig.tight_layout(pad=0.1)
 
     # TODO: unused variable. Is it ok to remove?
     # measured = (
@@ -1547,13 +1574,11 @@ def _plot_quantum_circuit_with_folds(
     #         schedule=schedule,
     #         fold_direction=plot_params.get("fold_direction", "down"),
     #     )
-    # )
-
-    _draw_wires_with_folds(ax, nq * num_folds, wire_grid, plot_params)
+    _draw_wires_with_folds(ax, nq * num_folds, gate_grid, wire_grid, plot_params)
 
     if plot_labels:
         _draw_labels_with_folds(
-            ax, labels, inits, wire_grid, plot_params, num_folds=num_folds
+            ax, labels, inits, gate_grid, wire_grid, plot_params, num_folds=num_folds
         )
 
     if ng > 0:
@@ -1570,7 +1595,7 @@ def _plot_quantum_circuit_with_folds(
         )
 
     if fold != -1 and num_folds > 1:
-        _draw_fold_boundaries(ax, wire_grid, nq, num_folds, plot_params)
+        _draw_fold_boundaries(ax, gate_grid, wire_grid, nq, num_folds, plot_params)
 
     return ax
 
@@ -1906,6 +1931,7 @@ def _draw_labels_with_folds(
     ax: Axes,
     labels: list,
     inits: list,
+    gate_grid: np.ndarray,
     wire_grid: np.ndarray,
     plot_params: dict,
     num_folds: int = 0,
@@ -1923,8 +1949,9 @@ def _draw_labels_with_folds(
     Returns:
         None: This function updates the provided axes in place.
     """
-    xmin, _ = ax.get_xlim()
-    left = xmin - plot_params.get("label_pad", 0.60)
+    scale = plot_params["scale"]
+
+    left = gate_grid[0] - scale - 0.1
     nq = len(labels)
 
     if "wire_names" in plot_params and len(plot_params["wire_names"]) > 0:
@@ -1935,18 +1962,25 @@ def _draw_labels_with_folds(
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         for num in range(num_folds):
-            fold_idx = num if direction == "up" else (num_folds - 1 - num)
-            _text_with_folds(
+            # In folded drawing, 'num' goes 0, 1, ..., num_folds-1.
+            # If down, the 0th fold (top visually in the circuit) gets drawn at the top of the canvas,
+            # which corresponds to the highest wire_grid indices because y increases upwards.
+            fold_idx = num if direction == "up" else num_folds - 1 - num
+
+            yoff = fold_idx * nq
+
+            txt = _text_with_folds(
                 ax,
                 left,
-                wire_grid[j + fold_idx * nq],
-                _render_label(labels[i], inits),  # TODO: Is inits needed here?
+                wire_grid[j + yoff],
+                _render_label(labels[i], inits) + " ",  # TODO: Is inits needed here?
                 plot_params,
             )
+            txt.set_ha("right")
 
 
 def _draw_fold_boundaries(
-    ax: Axes, wire_grid: np.ndarray, nq: int, num_folds: int, plot_params: dict
+    ax: Axes, gate_grid: np.ndarray, wire_grid: np.ndarray, nq: int, num_folds: int, plot_params: dict
 ) -> None:
     """Draw Qiskit-like fold boundary brackets.
 
@@ -1963,14 +1997,10 @@ def _draw_fold_boundaries(
     if num_folds <= 1:
         return
 
-    # xscale = plot_params.get("xscale", 1.0)
-    xmin, xmax = ax.get_xlim()
-    pad = 0.005
-
-    # place the brackets just inside the figure margins so they appear
-    # visually after/before all gates in the fold
-    x_left_edge = xmin + pad
-    x_right_edge = xmax - pad
+    # The layout brackets align precisely with the span of the wires
+    # across the folded slice limit.
+    x_left_edge = gate_grid[0] - plot_params["scale"]
+    x_right_edge = gate_grid[-1] + plot_params["scale"]
 
     for f in range(num_folds):
         y_top = wire_grid[f * nq]
@@ -2002,11 +2032,11 @@ def _cdot_with_folds(ax: Axes, x: float, y: float, p: dict) -> None:
     Returns:
         None: This function updates the provided axes in place.
     """
-    r = p["control_radius_with_folds"]
-    e = matplotlib.patches.Ellipse(
-        (x, y), r, 0.85 * r, ec=p["edgecolor"], fc=p["controlcolor"], lw=p["linewidth"]
+    radius = p["control_radius_with_folds"] * p["scale"]
+    circle = matplotlib.patches.Circle(
+        (x, y), radius, ec=p["edgecolor"], fc=p["controlcolor"], lw=p["linewidth"]
     )
-    ax.add_patch(e)
+    ax.add_patch(circle)
 
 
 # Target ⊕
@@ -2022,18 +2052,17 @@ def _oplus_with_folds(ax: Axes, x: float, y: float, p: dict) -> None:
     Returns:
         None: This function updates the provided axes in place.
     """
-    R = p["not_radius_with_folds"]
-    c = matplotlib.patches.Ellipse(
+    radius = p["not_radius_with_folds"] * p["scale"]
+    c = matplotlib.patches.Circle(
         (x, y),
-        R,
-        0.85 * R,
+        radius,
         ec=p["edgecolor"],
         fc=p["gatecolor"],
         lw=p["linewidth"],
         fill=True,
     )
     ax.add_patch(c)
-    _line(ax, x, x, y, y - (0.85 * R) / 2, p)
+    _line(ax, x, x, y - radius, y + radius, p)
 
 
 # Gate box + text
@@ -2053,11 +2082,15 @@ def _text_with_folds(
     Returns:
         :class:`matplotlib.text.Text`: Matplotlib text artist.
     """
-    fs = p["fontsize"] * p.get("gate_font_scale", 1.0)
+    fs = (
+        12.0
+        if _check_list_str(["dagger", "sqrt"], label)
+        else p["fontsize"]
+    ) * p.get("gate_font_scale", 1.0)
 
     if box:
-        w = p["gate_box_w"]
-        h = p["gate_box_h"]
+        w = p["scale"] * p["gate_box_w"]
+        h = p["scale"] * p["gate_box_h"]
         rect = matplotlib.patches.Rectangle(
             (x - w / 2, y - h / 2),
             w,
