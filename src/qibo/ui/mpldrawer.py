@@ -66,11 +66,11 @@ def plot_circuit(
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to plot.
-        scale (float, optional): Scaling factor for  ``matplotlib`` output drawing. 
+        scale (float, optional): Scaling factor for  ``matplotlib`` output drawing.
             Defaults to :math:`0.6`.
-        cluster_gates (bool, optional): if ``True``, groups circuit gates on drawing. 
+        cluster_gates (bool, optional): if ``True``, groups circuit gates on drawing.
             Defaults to ``True``.
-        fold (int, optional): Number of gates to display in a row. 
+        fold (int, optional): Number of gates to display in a row.
             Defaults to :math:`-1` (no folding unless specified).
         style (dict or str or None, optional): Style applied to the circuit. It can a built-in style or custom.
             Built-in options are: ``garnacha``, ``fardelejo``, ``quantumspain``, ``color-blind`` and ``cachirulo``.
@@ -213,16 +213,16 @@ def _plot_quantum_schedule(
 
         labels (list): List of qubit labels.
 
-        plot_labels (bool, optional): Indicates whether labels are to be plotted. 
+        plot_labels (bool, optional): Indicates whether labels are to be plotted.
             Defaults to ``True``.
 
-        fold (int, optional): Number of gates to display in a row. 
+        fold (int, optional): Number of gates to display in a row.
             Defaults to :math:`-1` (no folding unless specified).
 
         kwargs (dict, optional): Variadic dictionary that can override plot parameters.
 
     Returns:
-        :class:`matplotlib.axes.Axes`: 
+        :class:`matplotlib.axes.Axes`:
             Axes object that encapsulates all the elements of an individual plot.
     """
 
@@ -260,7 +260,7 @@ def _plot_quantum_circuit(
             Defaults to ``True``.
         schedule (bool, optional): If ``True``, treats ``gates`` as a schedule (list of layers).
             Defaults to ``False``.
-        fold (int, optional): Number of gates to display in a row before folding. 
+        fold (int, optional): Number of gates to display in a row before folding.
             Defaults to :math:`-1` (no folding unless specified).
         kwargs (dict, optional): Variadic dictionary that can override plot parameters.
 
@@ -761,7 +761,9 @@ def _swapx_with_folds(ax: Axes, x: float, y: float, plot_params: dict) -> None:
         None: This function updates the provided axes in place.
     """
     # match the CNOT symbol outline
-    r = plot_params["not_radius_with_folds"] * plot_params["scale"]  # ⊕'s horizontal diameter = R
+    r = (
+        plot_params["not_radius_with_folds"] * plot_params["scale"]
+    )  # ⊕'s horizontal diameter = R
     sx = r * 0.6  # half-width of the box (so total width = R*1.2)
     sy = r * 0.6  # half-height (so total height = R*1.2)
 
@@ -1537,7 +1539,7 @@ def _plot_quantum_circuit_with_folds(
     # Without padding, each gate column was initially separated by scale units.
     # Now, if first gate is drawn at 0, next gate is drawn at index (num_padding_cols + 1)*scale,
     # so total padding columns equal num_padding_cols.
-    
+
     num_padding_cols = 1
     gate_grid = np.zeros(cols, dtype=float)
     current_x = 0.0
@@ -1557,7 +1559,6 @@ def _plot_quantum_circuit_with_folds(
         # add fold gap after each fold (except the last one)
         if f < num_folds - 1:
             current_y += scale * fold_gap
-
 
     ax, fig = _setup_figure_with_folds(gate_grid, wire_grid, plot_params)
     fig.tight_layout(pad=0.1)
@@ -1980,7 +1981,12 @@ def _draw_labels_with_folds(
 
 
 def _draw_fold_boundaries(
-    ax: Axes, gate_grid: np.ndarray, wire_grid: np.ndarray, nq: int, num_folds: int, plot_params: dict
+    ax: Axes,
+    gate_grid: np.ndarray,
+    wire_grid: np.ndarray,
+    nq: int,
+    num_folds: int,
+    plot_params: dict,
 ) -> None:
     """Draw Qiskit-like fold boundary brackets.
 
@@ -2083,9 +2089,7 @@ def _text_with_folds(
         :class:`matplotlib.text.Text`: Matplotlib text artist.
     """
     fs = (
-        12.0
-        if _check_list_str(["dagger", "sqrt"], label)
-        else p["fontsize"]
+        12.0 if _check_list_str(["dagger", "sqrt"], label) else p["fontsize"]
     ) * p.get("gate_font_scale", 1.0)
 
     if box:

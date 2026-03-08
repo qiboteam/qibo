@@ -77,7 +77,9 @@ def test_bigger_circuit_gates(nqubits, fold):
     circuit.add(gates.M(qubit) for qubit in range(2))
 
     test_file_no_fold = f"{BASEPATH}/test_bigger_circuit_gates_{nqubits}.npy"
-    test_file_with_fold = f"{BASEPATH}/test_bigger_circuit_gates_{nqubits}_fold_{fold}.npy"
+    test_file_with_fold = (
+        f"{BASEPATH}/test_bigger_circuit_gates_{nqubits}_fold_{fold}.npy"
+    )
 
     test_file = test_file_with_fold if fold > 0 else test_file_no_fold
 
@@ -120,7 +122,9 @@ def test_complex_circuit(clustered, fold):
     circuit.add(gates.DEUTSCH(1, 0, 2, np.pi))
     circuit.add(gates.X(0))
     circuit.add(gates.M(qubit) for qubit in range(2))
-    _, fig1 = plot_circuit(circuit.invert(), cluster_gates=clustered, scale=0.70, fold=fold)
+    _, fig1 = plot_circuit(
+        circuit.invert(), cluster_gates=clustered, scale=0.70, fold=fold
+    )
     _, fig2 = plot_circuit(circuit, cluster_gates=clustered, scale=0.70, fold=fold)
 
     test_fig1_prefix = f"{BASEPATH}/test_complex_circuit_fig1_"
