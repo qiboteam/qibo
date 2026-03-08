@@ -1,19 +1,19 @@
 """Module defining Hamiltonian classes."""
 
-import operator
 from functools import cache, cached_property, reduce
 from itertools import chain
-from logging import warn
-from typing import Dict, List, Optional, Tuple
+from operator import add, sub
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import sympy
+from numpy.typing import ArrayLike
 
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
-from qibo.symbols import PauliSymbol, Symbol, Z
+from qibo.symbols import PauliSymbol, Symbol
 
 
 class Hamiltonian(AbstractHamiltonian):
@@ -21,7 +21,7 @@ class Hamiltonian(AbstractHamiltonian):
 
     Args:
         nqubits (int): number of quantum bits.
-        matrix (ndarray): Matrix representation of the Hamiltonian in the
+        matrix (ArrayLike): Matrix representation of the Hamiltonian in the
             computational basis as an array of shape :math:`2^{n} \\times 2^{n}`.
             Sparse matrices based on ``scipy.sparse`` for ``numpy`` / ``qibojit`` backends
             (or on ``tf.sparse`` for the ``tensorflow`` backend) are also supported.
@@ -30,11 +30,9 @@ class Hamiltonian(AbstractHamiltonian):
             Defaults to ``None``.
     """
 
-    def __init__(self, nqubits, matrix, backend=None):
-        from qibo.backends import (  # pylint: disable=import-outside-toplevel
-            _check_backend,
-        )
-
+    def __init__(
+        self, nqubits: int, matrix: ArrayLike, backend: Optional[Backend] = None
+    ):
         self._backend = _check_backend(backend)
 
         if not (
@@ -55,7 +53,7 @@ class Hamiltonian(AbstractHamiltonian):
         self._exp = {"a": None, "result": None}
 
     @property
-    def matrix(self):
+    def matrix(self) -> ArrayLike:
         """Returns the full matrix representation.
 
         For :math:`n` qubits, can be a dense :math:`2^{n} \\times 2^{n}` array or a sparse
@@ -64,7 +62,7 @@ class Hamiltonian(AbstractHamiltonian):
         return self._matrix
 
     @matrix.setter
-    def matrix(self, mat):
+    def matrix(self, mat: ArrayLike) -> None:
         shape = tuple(mat.shape)
         if shape != 2 * (2**self.nqubits,):
             raise_error(
@@ -75,27 +73,27 @@ class Hamiltonian(AbstractHamiltonian):
         self._matrix = mat
 
     @property
-    def backend(self):
+    def backend(self) -> Backend:
         return self._backend
 
     @backend.setter
-    def backend(self, new_backend: Backend):
+    def backend(self, new_backend: Backend) -> None:
         self._backend = new_backend
         self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
 
-    def eigenvalues(self, k=6):
+    def eigenvalues(self, k: int = 6) -> ArrayLike:
         if self._eigenvalues is None:
             self._eigenvalues = self.backend.eigenvalues(self.matrix, k=k)
         return self._eigenvalues
 
-    def eigenvectors(self, k=6):
+    def eigenvectors(self, k: int = 6) -> ArrayLike:
         if self._eigenvectors is None:
             self._eigenvalues, self._eigenvectors = self.backend.eigenvectors(
                 self.matrix, k=k
             )
         return self._eigenvectors
 
-    def exp(self, a):
+    def exp(self, a: ArrayLike) -> ArrayLike:
         if self._exp.get("a") != a:
             self._exp["a"] = a
             self._exp["result"] = self.backend.matrix_exp(
@@ -106,7 +104,9 @@ class Hamiltonian(AbstractHamiltonian):
             )
         return self._exp.get("result")
 
-    def expectation(self, circuit, nshots=None, qubit_map=None):
+    def expectation(
+        self, circuit, nshots: int = None, qubit_map: Optional[dict] = None
+    ) -> float:
         """Computes the expectation value for a given circuit. This works only for diagonal
         observables if ``nshots != None``.
 
@@ -121,7 +121,7 @@ class Hamiltonian(AbstractHamiltonian):
             float: The expectation value.
         """
         if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
-            warn(
+            log.warning(
                 "Calculation of expectation values starting from the state is deprecated, "
                 + "use the ``expectation_from_state`` method if you really need it, "
                 + "or simply pass the circuit you want to calculate the expectation value from."
@@ -143,7 +143,7 @@ class Hamiltonian(AbstractHamiltonian):
         self,
         frequencies: Dict[str | int, int],
         qubit_map: Optional[Tuple[int, ...]] = None,
-    ):
+    ) -> float:
         """Compute the expectation value starting from some samples, works only for diagonal
         observables.
 
@@ -167,7 +167,7 @@ class Hamiltonian(AbstractHamiltonian):
             circuit, self.matrix, self.nqubits, nshots=1, qubit_map=qubit_map
         )
 
-    def energy_fluctuation(self, circuit):
+    def energy_fluctuation(self, circuit) -> float:
         """
         Evaluate energy fluctuation:
 
@@ -368,15 +368,15 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
         self._matrix = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.form)
 
     @property
-    def backend(self):
+    def backend(self) -> Backend:
         return self._backend
 
     @backend.setter
-    def backend(self, new_backend: Backend):
+    def backend(self, new_backend: Backend) -> None:
         self._backend = new_backend
         if self._matrix is not None:
             self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
@@ -402,7 +402,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.nqubits = _calculate_nqubits_from_form(form)
 
     @cached_property
-    def terms(self):
+    def terms(self) -> list:
         """List of terms of which the Hamiltonian is a sum of.
 
         Terms will be objects of type :class:`qibo.core.terms.HamiltonianTerm`.
@@ -500,7 +500,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return terms_coefficients, terms_observables, terms_qubits
 
     @property
-    def matrix(self):
+    def matrix(self) -> ArrayLike:
         """Returns the full matrix representation.
 
         Consisting of :math:`2^{n} \\times 2^{n}`` elements.
@@ -509,16 +509,16 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self._matrix = self._get_symbol_matrix(self.form)
         return self._matrix
 
-    def eigenvalues(self, k=6):
+    def eigenvalues(self, k: int = 6) -> ArrayLike:
         return self.dense.eigenvalues(k)
 
-    def eigenvectors(self, k=6):
+    def eigenvectors(self, k: int = 6) -> ArrayLike:
         return self.dense.eigenvectors(k)
 
-    def ground_state(self):
+    def ground_state(self) -> ArrayLike:
         return self.eigenvectors()[:, 0]
 
-    def exp(self, a):
+    def exp(self, a: ArrayLike) -> ArrayLike:
         return self.dense.exp(a)
 
     @cache
@@ -617,7 +617,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             float: The expectation value.
         """
         if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
-            warn(
+            log.warning(
                 "Calculation of expectation values starting from the state is deprecated, "
                 + "use the ``expectation_from_state`` method if you really need it, "
                 + "or simply pass the circuit you want to calculate the expectation value from."
@@ -650,7 +650,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self,
         frequencies: Dict[str | int, int],
         qubit_map: Optional[Tuple[int, ...]] = None,
-    ):
+    ) -> float:
         """Compute the expectation value starting from some samples, works only for diagonal
         observables.
 
@@ -717,10 +717,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self.__class__(form=form, nqubits=self.nqubits, backend=self.backend)
 
     def __add__(self, other):
-        return self._compose(other, operator.add)
+        return self._compose(other, add)
 
     def __sub__(self, other):
-        return self._compose(other, operator.sub)
+        return self._compose(other, sub)
 
     def __rsub__(self, other):
         return self._compose(other, lambda x, y: y - x)
@@ -728,7 +728,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def __mul__(self, other):
         return self._compose(other, lambda x, y: y * x)
 
-    def apply_gates(self, state, density_matrix=False):
+    def apply_gates(self, state: ArrayLike, density_matrix: bool = False):
         """Applies gates corresponding to the Hamiltonian terms.
 
         Gates are applied to the given state.
@@ -779,7 +779,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         return self.apply_gates(other, density_matrix=True)
 
-    def circuit(self, dt, accelerators=None):
+    def circuit(self, dt: Union[float, int], accelerators: Optional[dict] = None):
         """Circuit that implements a Trotter step of this Hamiltonian.
 
         Args:

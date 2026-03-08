@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from qibo import Circuit, gates
 from qibo.config import raise_error
@@ -179,7 +179,7 @@ class CircuitBlocks:
         return self.block_list[-1]
 
 
-def block_decomposition(circuit: Circuit, fuse: bool = True):
+def block_decomposition(circuit: Circuit, fuse: bool = True) -> List[Block]:
     """Decompose a circuit into blocks of gates acting on two qubits.
     Break measurements on multiple qubits into measurements of single qubit.
 
@@ -187,8 +187,8 @@ def block_decomposition(circuit: Circuit, fuse: bool = True):
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to be decomposed.
         fuse (bool, optional): fuse adjacent blocks acting on the same qubits.
 
-    Return:
-        (list): list of blocks that act on two qubits.
+    Returns:
+        list[:class:`qibo.transpiler.blocks.Block`]: List of blocks that act on two qubits.
     """
     if circuit.nqubits < 2:
         raise_error(

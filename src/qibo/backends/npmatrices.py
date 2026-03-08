@@ -498,9 +498,11 @@ class NumpyMatrices:
         # based on Backend.matrix_fused method
         rank = len(q)
         matrix = self.I(2**rank)
+        matrix = self._cast(matrix, dtype=self.dtype)
 
         gmatrix = self.CNOT
         eye = self.I(2 ** (rank - 2))
+        eye = self._cast(eye, dtype=self.dtype)
         gmatrix = self.engine.kron(gmatrix, eye)
         original_shape = gmatrix.shape
         gmatrix = self.engine.reshape(gmatrix, 2 * rank * (2,))

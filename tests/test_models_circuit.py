@@ -279,7 +279,7 @@ def test_gates_of_type():
         circuit.gates_of_type(5)
 
 
-def test_summary():
+def test_summary(capsys):
     circuit = Circuit(3)
     circuit.add(gates.H(0))
     circuit.add(gates.H(1))
@@ -298,7 +298,9 @@ def test_summary():
             "ccx: 1",
         ]
     )
-    assert circuit.summary() == target_summary
+    circuit.summary()
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == target_summary
 
 
 @pytest.mark.parametrize("measurements", [False, True])
