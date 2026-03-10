@@ -2451,7 +2451,7 @@ class RBS(ParametrizedGate):
 class ECR(Gate):
     """THe Echo Cross-Resonance gate.
 
-    Corresponds ot the following matrix
+    Corresponds to the following matrix
 
     .. math::
         \\frac{1}{\\sqrt{2}} \\left( X \\, I - Y \\, X \\right) =
