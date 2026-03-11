@@ -125,15 +125,27 @@ def random_gaussian_matrix(
     Returns:
         ndarray: Random Gaussian matrix with dimensions ``(dims, rank)``.
     """
+    if not isinstance(dims, int):
+        raise_error(TypeError, f"dims must be an integer, but got {type(dims)}.")
+        
     if rank is None:
         rank = dims
     else:
+        if not isinstance(rank, int):
+            raise_error(TypeError, f"rank must be an integer, but got {type(rank)}.")
         if rank > dims:
             raise_error(
                 ValueError, f"rank ({rank}) cannot be greater than dims ({dims})."
             )
+            
+    if dims <= 0 or rank <= 0:
+        raise_error(ValueError, "Dimensions must be positive integers.")
 
     backend = _check_backend(backend)
+
+    if seed is not None and not isinstance(seed, (int, np.random.Generator)):
+        raise_error(TypeError, f"seed must be an integer or Generator, but got {type(seed)}.")
+        
     backend.set_seed(seed)
     return backend.qinfo._random_gaussian_matrix(dims, rank, mean, stddev)
 
