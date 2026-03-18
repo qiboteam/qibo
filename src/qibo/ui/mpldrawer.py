@@ -380,12 +380,14 @@ def _build_fold_groups(gates_plot: list, schedule: bool = False) -> list:
         if inside_fused:
             group.append(i)
             if "FUSEDENDGATEBARRIER" in name:
-                groups.append(group) # end of a group (Fused_Gate_Barrier--Gates--Fused_Gate_Barrier)
+                groups.append(
+                    group
+                )  # end of a group (Fused_Gate_Barrier--Gates--Fused_Gate_Barrier)
                 group = []
                 inside_fused = False
             continue
 
-        groups.append([i]) # single gate
+        groups.append([i])  # single gate
 
     return groups
 
@@ -411,7 +413,9 @@ def _build_folded_gate_layout(
 
     groups = _build_fold_groups(gates_plot, schedule=schedule)
     num_groups = len(groups)
-    num_folds = max(1, int(np.ceil(num_groups / fold))) # fold > 0 by design, as this function won't be called if fold <= 0
+    num_folds = max(
+        1, int(np.ceil(num_groups / fold))
+    )  # fold > 0 by design, as this function won't be called if fold <= 0
     positions = {}
     cols = 0
 
@@ -2060,7 +2064,7 @@ def _draw_controls_with_folds(
         if strip_symbol == "":
             strip_symbol = "U_G"
         symbol = r"$\rm{{{}}}$".format(strip_symbol)
-        
+
         dx_right = 0.6
         dy = 0.25
         _composed_rectangle(
