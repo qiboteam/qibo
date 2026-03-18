@@ -1,5 +1,6 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
+from dataclasses import dataclass
 from typing import Union
 
 import numpy as np  # cannot be removed
@@ -110,6 +111,21 @@ class CustomQASMGate:
         new_qubits = [qubit_map[q] for q in gate.qubits]
         new_args = [args_map.get(arg, arg) for arg in gate.init_kwargs.values()]
         return new_qubits, new_args
+
+
+@dataclass(frozen=True)
+class ControlledGateInfo:
+    """Stores parsed information about a controlled QASM gate name."""
+
+    num_controls: int
+    """Number of control qubits."""
+    base_gate_name: str
+    """QASM name of the controlled gate."""
+
+    @property
+    def is_controlled(self) -> bool:
+        """``True`` if there is at least one control qubit."""
+        return self.num_controls > 0
 
 
 def _qibo_gate_name(gate):
@@ -226,6 +242,13 @@ class QASMParser:
 
         return qubit.name
 
+    @staticmethod
+    def _parse_controlled_gate(gate_name: str):
+        """Checks if the qasm gate is a controlled gate."""
+        stripped_gate_name = gate_name.lower().lstrip("c")
+        length_difference = len(gate_name) - len(stripped_gate_name)
+        return ControlledGateInfo(length_difference, stripped_gate_name)
+
     def _get_gate(self, gate):
         """Converts a :class:`openqasm3.ast.QuantumGate` statement
         into :class:`qibo.gates.Gate`."""
@@ -262,6 +285,22 @@ class QASMParser:
                 )
         # undefined gate
         else:
+            parsed_gate = self._parse_controlled_gate(gate.name.name)
+            if parsed_gate.is_controlled:
+                if _qibo_gate_name(parsed_gate.base_gate_name) in dir(qibo.gates):
+                    control_qubits = qubits[: parsed_gate.num_controls]
+                    remaining_qubits = qubits[parsed_gate.num_controls :]
+                    try:
+                        gate = getattr(
+                            qibo.gates, _qibo_gate_name(parsed_gate.base_gate_name)
+                        )(*remaining_qubits, *init_args).controlled_by(*control_qubits)
+                    # the gate exists in qibo.gates but invalid construction
+                    except TypeError:
+                        raise_error(
+                            ValueError, f"Invalid gate declaration at span: {gate.span}"
+                        )
+                    return gate
+            # undefined gate
             raise_error(ValueError, f"Undefined gate at span: {gate.span}")
         return gate
 
