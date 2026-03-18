@@ -1686,51 +1686,6 @@ class SWAP(Gate):
         return "swap"
 
 
-class CSWAP(Gate):
-    """The controlled-SWAP gate.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
-            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
-            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\\\
-            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\\\
-            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\\\
-            0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\\\
-            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\\\
-            0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\\\
-        \\end{pmatrix}
-
-    Args:
-        q0 (int): the control qubit id number.
-        q1 (int): the first target qubit id number.
-        q2 (int): the second target qubit id number.
-    """
-
-    def __init__(self, q0: int, q1: int, q2: int):
-        super().__init__()
-        self.name = "cswap"
-        self.draw_label = "x"
-        self.control_qubits = (q0,)
-        self.target_qubits = (q1, q2)
-        self.init_args = [q0, q1, q2]
-        self.unitary = True
-
-    @property
-    def clifford(self) -> bool:
-        return False
-
-    @property
-    def hamming_weight(self) -> bool:
-        return True
-
-    @property
-    def qasm_label(self) -> str:
-        return "cswap"
-
-
 class iSWAP(Gate):
     """The iSWAP gate.
 
