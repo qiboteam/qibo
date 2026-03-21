@@ -507,65 +507,94 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
     gate_matrix = gate.matrix(backend=self)
     qubits = list(gate.target_qubits)
     gate_qubits = len(qubits)
-    if 2 ** (gate_qubits) != gate_matrix.shape[0]:
+    if 2**gate_qubits != gate_matrix.shape[0]:
         qubits = list(gate.qubits)
         gate_qubits = len(qubits)
         controls = []
-        ncontrols = 0
     else:
         controls = list(gate.control_qubits)
+
+    if gate.is_controlled_by and len(controls) > 0:
         ncontrols = len(controls)
+        ntargets = gate_qubits
+        full_dim = 2 ** (ntargets + ncontrols)
+        ctrl_mask = (1 << ncontrols) - 1
+        expanded_matrix = self.identity(full_dim, dtype=gate_matrix.dtype)
+        for trow in range(2**ntargets):
+            row_index = (trow << ncontrols) | ctrl_mask
+            for tcol in range(2**ntargets):
+                col_index = (tcol << ncontrols) | ctrl_mask
+                expanded_matrix[row_index, col_index] = gate_matrix[trow, tcol]
+        gate_matrix = expanded_matrix
 
-    other_qubits = list(set(qubits + controls) ^ set(range(nqubits)))
-    map_ = qubits + controls + other_qubits
-    gate_matrix = gate.matrix(backend=self)
+    active_qubits = qubits + controls
+    k = len(active_qubits)
 
-    if self._dict_indexes is None:
-        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+    self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
-    strings = np.array(list(self._dict_indexes.keys()))
-    indexes = self.cast(
-        [index[1] for index in self._dict_indexes.values()], dtype=self.int64
-    )
-    dim = len(indexes)
+    if not hasattr(self, "_transition_cache"):
+        self._transition_cache = {}
+        self._local_index_cache = {}
 
-    matrix = self.zeros((dim, dim))
-    matrix = self.cast(matrix, dtype=self.dtype)
-    mod_condition = indexes[:, None] % 2 ** (
-        nqubits - gate_qubits - ncontrols
-    ) == indexes[None, :] % 2 ** (nqubits - gate_qubits - ncontrols)
+    key = (tuple(active_qubits), nqubits, weight)
+    if key not in self._transition_cache:
+        strings = list(self._dict_indexes.keys())
 
-    control_substrings = self.cast(
-        [s[gate_qubits : gate_qubits + ncontrols].count("1") for s in strings],
-        dtype=self.int64,
-    )
-    control_condition = control_substrings[:, None] == ncontrols
+        basis = np.array([[int(b) for b in s] for s in strings], dtype=np.int8)
+        basis = self.cast(basis, dtype=basis.dtype)
+        d = basis.shape[0]
 
-    row_indices = indexes[:, None] // 2 ** (nqubits - gate_qubits)
-    col_indices = indexes[None, :] // 2 ** (nqubits - gate_qubits)
+        powers = 1 << self.arange(nqubits)
+        encoded_basis = (basis * powers).sum(axis=1)
 
-    matrix[mod_condition & control_condition] = gate_matrix[row_indices, col_indices][
-        mod_condition & control_condition
-    ]
+        index_map = {int(encoded_basis[i]): i for i in range(d)}
 
-    diagonal_indices = self.identity(dim, dtype=bool)
-    matrix[mod_condition & ~control_condition & diagonal_indices] = 1
+        transitions = -self.ones((d, 2**k), dtype=self.int64)
+        local_indices = self.zeros(d, dtype=self.int64)
 
-    new_matrix = self.zeros((dim, dim), dtype=self.dtype)
+        for i in range(d):
+            bits = basis[i]
+            hw = int(self.sum(bits))
 
-    strings_array = np.array([list(s) for s in strings])
-    reordered_strings_array = strings_array[:, map_]
+            idx = 0
+            for t in range(k):
+                idx = (idx << 1) | int(bits[active_qubits[t]])
+            local_indices[i] = idx
 
-    reordered_strings = ["".join(s) for s in reordered_strings_array]
-    reordered_indexes = [
-        np.where(strings == new_string_i)[0][0] for new_string_i in reordered_strings
-    ]
-    new_matrix = matrix[reordered_indexes][:, reordered_indexes]
+            for j in range(2**k):
+                new_bits = bits.copy()
+                for t in range(k):
+                    new_bits[active_qubits[t]] = (j >> (k - t - 1)) & 1
 
-    new_matrix = self.cast(new_matrix, dtype=new_matrix.dtype)
-    state = new_matrix @ state
+                if int(self.sum(new_bits)) != hw:
+                    continue
 
-    return state
+                encoded = int((new_bits * powers).sum())
+                transitions[i, j] = index_map[encoded]
+
+        self._transition_cache[key] = transitions
+        self._local_index_cache[key] = local_indices
+
+    transitions = self._transition_cache[key]
+    local_indices = self._local_index_cache[key]
+
+    d = state.shape[0]
+    new_state = self.zeros(d, dtype=state.dtype)
+
+    for j in range(gate_matrix.shape[0]):
+        idxs = transitions[:, j]
+        mask = idxs >= 0
+
+        if not self.any(mask):
+            continue
+
+        coeffs = gate_matrix[j, local_indices[mask]]
+        contrib = coeffs * state[mask]
+
+        for v, idx in zip(contrib, idxs[mask]):
+            new_state[int(idx)] += v
+
+    return new_state
 
 
 def calculate_symbolic(
