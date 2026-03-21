@@ -753,7 +753,7 @@ def test_cun(backend, name, params):
 
     gate = getattr(gates, name)(0, 1, **params)
 
-    if name == "CRY":
+    if name in ("CRX", "CRY", "CRZ"):
         decomposition = gate.decompose()
 
     assert gate.unitary
@@ -798,7 +798,7 @@ def test_cun(backend, name, params):
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    if name == "CRY":
+    if name in ("CRX", "CRY", "CRZ"):
         matrix = Circuit(2)
         matrix.add(decomposition)
         matrix = matrix.unitary(backend=backend)
@@ -816,6 +816,14 @@ def test_swap(backend):
     assert gates.SWAP(0, 1).hamming_weight
     assert gates.SWAP(0, 1).unitary
 
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.SWAP(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 def test_iswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.iSWAP(0, 1)], nqubits=2)
@@ -828,6 +836,14 @@ def test_iswap(backend):
     assert gates.iSWAP(0, 1).hamming_weight
     assert gates.iSWAP(0, 1).unitary
 
+    circuit = Circuit(2)
+    circuit.add(gates.iSWAP(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.iSWAP(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 def test_siswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)
@@ -839,6 +855,22 @@ def test_siswap(backend):
     assert not gates.SiSWAP(0, 1).clifford
     assert gates.SiSWAP(0, 1).hamming_weight
     assert gates.SiSWAP(0, 1).unitary
+
+    circuit = Circuit(2)
+    circuit.add(gates.SiSWAP(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.SiSWAP(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target, atol=1e-10)
+
+    circuit = Circuit(2)
+    circuit.add(gates.SiSWAPDG(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.SiSWAPDG(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 def test_fswap(backend):
@@ -1014,6 +1046,14 @@ def test_rxx(backend, theta):
     else:
         assert not gates.RXX(0, 1, theta).hamming_weight
 
+    circuit = Circuit(2)
+    circuit.add(gates.RXX(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RXX(0, 1, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 @pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
 def test_ryy(backend, theta):
@@ -1041,6 +1081,15 @@ def test_ryy(backend, theta):
     else:
         assert not gates.RYY(0, 1, theta).hamming_weight
 
+    circuit = Circuit(2)
+    circuit.add(gates.RYY(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RYY(0, 1, theta).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
+
 
 def test_rzz(backend):
     theta = 0.1234
@@ -1055,6 +1104,14 @@ def test_rzz(backend):
     assert not gates.RZZ(0, 1, theta).clifford
     assert gates.RZZ(0, 1, theta).hamming_weight
     assert gates.RZZ(0, 1, theta).unitary
+
+    circuit = Circuit(2)
+    circuit.add(gates.RZZ(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RZZ(0, 1, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
 
 
 @pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
@@ -1442,6 +1499,14 @@ def test_deutsch(backend, theta):
     else:
         assert not gates.DEUTSCH(0, 1, 2, theta).hamming_weight
 
+    circuit = Circuit(3)
+    circuit.add(gates.DEUTSCH(0, 1, 2, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.DEUTSCH(0, 1, 2, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 @pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
 def test_fanout(backend, qubits):
@@ -1694,6 +1759,15 @@ def test_controlled_u1(backend):
     gate = gates.U1(0, theta).controlled_by(1)
     assert gate.__class__.__name__ == "CU1"
 
+    circuit = Circuit(2)
+    circuit.add(gates.CU1(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU1(0, 1, theta).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary / unitary[0, 0], target)
+
 
 def test_controlled_u2(backend):
     phi = 0.1234
@@ -1708,6 +1782,15 @@ def test_controlled_u2(backend):
     # for coverage
     gate = gates.CU2(0, 1, phi, lam)
     assert gate.parameters == (phi, lam)
+
+    circuit = Circuit(2)
+    circuit.add(gates.CU2(0, 1, phi, lam).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU2(0, 1, phi, lam).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 def test_controlled_u3(backend):
@@ -1724,6 +1807,15 @@ def test_controlled_u3(backend):
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
     assert gate.parameters == (theta, phi, lam)
+
+    circuit = Circuit(2)
+    circuit.add(gates.CU3(0, 1, theta, phi, lam).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU3(0, 1, theta, phi, lam).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 @pytest.mark.parametrize("applyx", [False, True])

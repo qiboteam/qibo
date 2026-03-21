@@ -37,18 +37,21 @@ class Preprocessing(Optimizer):
             )
         if logical_qubits == physical_qubits:
             return circuit
+
         new_wire_names = circuit.wire_names + list(
             self.connectivity.nodes - circuit.wire_names
         )
+
         new_circuit = Circuit(nqubits=physical_qubits, wire_names=new_wire_names)
         for gate in circuit.queue:
             new_circuit.add(gate)
+
         return new_circuit
 
 
 class Rearrange(Optimizer):
-    """Rearranges gates using qibo's fusion algorithm.
-    May reduce number of SWAPs when fixing for connectivity
+    """Rearranges gates using ``qibo``'s fusion algorithm.
+    May reduce number of :class:`qibo.gates.SWAP` when fixing for connectivity
     but this has not been tested.
 
     Args:
@@ -59,7 +62,7 @@ class Rearrange(Optimizer):
     def __init__(self, max_qubits: int = 1):
         self.max_qubits = max_qubits
 
-    def __call__(self, circuit: Circuit, backend: Optional[Backend] = None):
+    def __call__(self, circuit: Circuit, backend: Optional[Backend] = None) -> Circuit:
         backend = _check_backend(backend)
         fused_circuit = circuit.fuse(max_qubits=self.max_qubits)
         new = circuit.__class__(nqubits=circuit.nqubits, wire_names=circuit.wire_names)
@@ -68,4 +71,5 @@ class Rearrange(Optimizer):
                 new.add(gates.Unitary(fgate.matrix(backend), *fgate.qubits))
             else:
                 new.add(fgate)
+
         return new

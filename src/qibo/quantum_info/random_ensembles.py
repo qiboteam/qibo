@@ -125,15 +125,29 @@ def random_gaussian_matrix(
     Returns:
         ndarray: Random Gaussian matrix with dimensions ``(dims, rank)``.
     """
+    if not isinstance(dims, int):
+        raise_error(TypeError, f"dims must be an integer, but got {type(dims)}.")
+
     if rank is None:
         rank = dims
     else:
+        if not isinstance(rank, int):
+            raise_error(TypeError, f"rank must be an integer, but got {type(rank)}.")
         if rank > dims:
             raise_error(
                 ValueError, f"rank ({rank}) cannot be greater than dims ({dims})."
             )
 
+    if dims <= 0 or rank <= 0:
+        raise_error(ValueError, "Dimensions must be positive integers.")
+
     backend = _check_backend(backend)
+
+    if seed is not None and not isinstance(seed, (int, np.random.Generator)):
+        raise_error(
+            TypeError, f"seed must be an integer or Generator, but got {type(seed)}."
+        )
+
     backend.set_seed(seed)
     return backend.qinfo._random_gaussian_matrix(dims, rank, mean, stddev)
 
@@ -540,20 +554,19 @@ def random_clifford(
 
     backend = _check_backend(backend)
     backend.set_seed(seed)
+    dtype = backend.uint8 if nqubits <= 255 else backend.int16
 
     hadamards, permutations = backend.qinfo._sample_from_quantum_mallows_distribution(
         nqubits
     )
-    hadamards = backend.cast(hadamards, dtype=backend.uint8)
-    permutations = backend.cast(permutations, dtype=backend.uint8)
+    hadamards = backend.cast(hadamards, dtype=dtype)
+    permutations = backend.cast(permutations, dtype=dtype)
 
-    gamma = backend.diag(backend.random_integers(2, size=nqubits, dtype=backend.uint8))
+    gamma = backend.diag(backend.random_integers(2, size=nqubits, dtype=dtype))
 
-    gamma_prime = backend.diag(
-        backend.random_integers(2, size=nqubits, dtype=backend.uint8)
-    )
+    gamma_prime = backend.diag(backend.random_integers(2, size=nqubits, dtype=dtype))
 
-    delta = backend.identity(nqubits, dtype=backend.uint8)
+    delta = backend.identity(nqubits, dtype=dtype)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
     backend.qinfo._fill_tril(gamma, symmetric=True)
@@ -568,7 +581,7 @@ def random_clifford(
     block_inverse_threshold = 50
 
     # Compute stabilizer table
-    zero = backend.zeros((nqubits, nqubits), dtype=backend.uint8)
+    zero = backend.zeros((nqubits, nqubits), dtype=dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
     inv1 = backend.qinfo._inverse_tril(delta, block_inverse_threshold).T
