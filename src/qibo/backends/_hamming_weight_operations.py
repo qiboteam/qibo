@@ -520,7 +520,8 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
     map_ = qubits + controls + other_qubits
     gate_matrix = gate.matrix(backend=self)
 
-    self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+    if self._dict_indexes is None:
+        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
     strings = np.array(list(self._dict_indexes.keys()))
     indexes = self.cast(
