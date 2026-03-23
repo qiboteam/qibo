@@ -531,7 +531,7 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
     k = len(active_qubits)
 
     if len(set(active_qubits)) != k:  # pragma: no cover
-        raise ValueError("Duplicate qubit indices in active_qubits")
+        raise_error(ValueError, "Duplicate qubit indices in active_qubits")
 
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
     key = (tuple(sorted(active_qubits)), tuple(controls), nqubits, weight)
