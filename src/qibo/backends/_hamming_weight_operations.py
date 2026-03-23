@@ -83,7 +83,6 @@ def execute_circuit(self, circuit, weight: int, initial_state=None, nshots: int 
             n_choose_k = int(binom(nqubits, weight))
             initial_state = self.zeros(n_choose_k)
             initial_state[0] = 1
-            initial_state = self.cast(initial_state, dtype=self.dtype)
 
         state = initial_state
         for gate in circuit.queue:
@@ -520,6 +519,7 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
         full_dim = 2 ** (ntargets + ncontrols)
         ctrl_mask = (1 << ncontrols) - 1
         expanded_matrix = self.identity(full_dim, dtype=gate_matrix.dtype)
+
         for trow in range(2**ntargets):
             row_index = (trow << ncontrols) | ctrl_mask
             for tcol in range(2**ntargets):
@@ -530,69 +530,66 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
     active_qubits = qubits + controls
     k = len(active_qubits)
 
+    if len(set(active_qubits)) != k:
+        raise ValueError("Duplicate qubit indices in active_qubits")
+
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+    key = (tuple(sorted(active_qubits)), tuple(controls), nqubits, weight)
 
-    if not hasattr(self, "_transition_cache"):
-        self._transition_cache = {}
-        self._local_index_cache = {}
-
-    key = (tuple(active_qubits), nqubits, weight)
     if key not in self._transition_cache:
         strings = list(self._dict_indexes.keys())
+        basis = self.cast([list(map(int, s)) for s in strings], dtype=self.int8)
 
-        basis = np.array([[int(b) for b in s] for s in strings], dtype=np.int8)
-        basis = self.cast(basis, dtype=basis.dtype)
-        d = basis.shape[0]
+        powers_full = 1 << self.arange(nqubits)
+        encoded_basis = (basis * powers_full).sum(axis=1)
 
-        powers = 1 << self.arange(nqubits)
-        encoded_basis = (basis * powers).sum(axis=1)
+        sort_idx = self.argsort(encoded_basis)
+        encoded_basis_sorted = encoded_basis[sort_idx]
 
-        index_map = {int(encoded_basis[i]): i for i in range(d)}
+        active_bits = basis[:, active_qubits]
+        local_indices = active_bits.dot(1 << self.arange(k - 1, -1, -1))
 
-        transitions = -self.ones((d, 2**k), dtype=self.int64)
-        local_indices = self.zeros(d, dtype=self.int64)
+        patterns = (self.arange(2**k)[:, None] >> self.arange(k - 1, -1, -1)) & 1
 
-        for i in range(d):
-            bits = basis[i]
-            hw = int(self.sum(bits))
+        active_hw = active_bits.sum(axis=1)
+        pattern_hw = patterns.sum(axis=1)
+        valid_mask = pattern_hw[None, :] == active_hw[:, None]
 
-            idx = 0
-            for t in range(k):
-                idx = (idx << 1) | int(bits[active_qubits[t]])
-            local_indices[i] = idx
+        powers_active = powers_full[active_qubits]
+        active_contrib = active_bits.dot(powers_active)
+        base_encoded = encoded_basis - active_contrib
+        pattern_encoded = patterns.dot(powers_active)
+        encoded = base_encoded[:, None] + pattern_encoded[None, :]
 
-            for j in range(2**k):
-                new_bits = bits.copy()
-                for t in range(k):
-                    new_bits[active_qubits[t]] = (j >> (k - t - 1)) & 1
+        valid_idx = self.where(valid_mask)
+        valid_encoded = encoded[valid_idx]
 
-                if int(self.sum(new_bits)) != hw:
-                    continue
+        indices_in_sorted = self.searchsorted(encoded_basis_sorted, valid_encoded)
 
-                encoded = int((new_bits * powers).sum())
-                transitions[i, j] = index_map[encoded]
+        transitions = -self.ones(encoded.shape, dtype=self.int64)
+        transitions[valid_idx] = sort_idx[indices_in_sorted]
+
+        valid_mask_flat = transitions >= 0
+        rows, cols = self.where(valid_mask_flat)
+        target_indices = transitions[rows, cols]
 
         self._transition_cache[key] = transitions
         self._local_index_cache[key] = local_indices
+        self._flat_cache[key] = (rows, cols, target_indices)
 
     transitions = self._transition_cache[key]
     local_indices = self._local_index_cache[key]
+    rows, cols, target_indices = self._flat_cache[key]
 
     d = state.shape[0]
     new_state = self.zeros(d, dtype=state.dtype)
 
-    for j in range(gate_matrix.shape[0]):
-        idxs = transitions[:, j]
-        mask = idxs >= 0
+    state = self.ascontiguousarray(state)
 
-        if not self.any(mask):
-            continue
+    coeffs = gate_matrix[cols, local_indices[rows]]
+    values = coeffs * state[rows]
 
-        coeffs = gate_matrix[j, local_indices[mask]]
-        contrib = coeffs * state[mask]
-
-        for v, idx in zip(contrib, idxs[mask]):
-            new_state[int(idx)] += v
+    self._add_at(new_state, target_indices, values)
 
     return new_state
 
@@ -664,8 +661,6 @@ def calculate_probabilities(self, state, qubits, weight, nqubits):
     probs = self.zeros(2 ** len(qubits), dtype=rtype)
     for index, string in zip(indexes, strings):
         probs[index] = measured_strings[string]
-
-    probs = self.cast(probs, dtype=rtype)
     return probs
 
 
@@ -682,8 +677,6 @@ def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
     Returns:
         ndarray: collapsed ``state``.
     """
-    state = self.cast(state, dtype=state.dtype)
-
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
     strings = list(self._dict_indexes.keys())
