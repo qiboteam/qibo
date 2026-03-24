@@ -720,16 +720,22 @@ def permutation_synthesis(
 
 
 def phase_encoder(
-    data: ArrayLike, rotation: str = "RY", backend: Optional[Backend] = None, **kwargs
+    nqubits: int,
+    rotation: str = "RY",
+    data: Optional[ArrayLike] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
 ) -> Circuit:
     """Create circuit that performs the phase encoding of ``data``.
 
     Args:
-        data (ArrayLike or list): :math:`1`-dimensional array of phases to be loaded.
+        nqubits (int): number of qubits in the system.
         rotation (str, optional): If ``"RX"``, uses :class:`qibo.gates.gates.RX` as rotation.
             If ``"RY"``, uses :class:`qibo.gates.gates.RY` as rotation.
             If ``"RZ"``, uses :class:`qibo.gates.gates.RZ` as rotation.
             Defaults to ``"RY"``.
+        data (ArrayLike): :math:`1`-dimensional array of phases to be loaded. If ``None``,
+            all phases of the circuit are set to :math:`0.0`. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -744,26 +750,18 @@ def phase_encoder(
             f"``rotation`` must be type str, but it is type {type(rotation)}.",
         )
 
-    backend = _check_backend(backend)
-
-    if isinstance(data, list):
-        # TODO: Fix this mess with qibo native dtypes
-        try:
-            type_test = data[0].dtype
-        except AttributeError:  # pragma: no cover
-            type_test = type(data[0])
-
-        data = backend.cast(data, dtype=type_test)
-
-    if rotation not in ["RX", "RY", "RZ"]:
+    if rotation not in ("RX", "RY", "RZ"):
         raise_error(ValueError, f"``rotation`` {rotation} not found.")
 
-    nqubits = len(data)
+    backend = _check_backend(backend)
+
     gate = getattr(gates, rotation.upper())
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(gate(qubit, 0.0) for qubit in range(nqubits))
-    circuit.set_parameters(data)
+
+    if data is not None:
+        circuit.set_parameters(data)
 
     return circuit
 

@@ -81,11 +81,11 @@ def test_phase_encoder(backend, rotation, kind):
     with pytest.raises(TypeError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
-        phase_encoder(data, rotation=True)
+        phase_encoder(nqubits, data=data, rotation=True)
     with pytest.raises(ValueError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
-        phase_encoder(data, rotation="rzz")
+        phase_encoder(nqubits, data=data, rotation="rzz")
 
     phases = backend.random_sample(nqubits)
 
@@ -98,7 +98,7 @@ def test_phase_encoder(backend, rotation, kind):
     if kind is not None:
         phases = kind(phases)
 
-    state = phase_encoder(phases, rotation=rotation, backend=backend)
+    state = phase_encoder(nqubits, data=phases, rotation=rotation, backend=backend)
     state.draw()
     state = backend.execute_circuit(state).state()
 
@@ -561,7 +561,9 @@ def test_circuit_kwargs(backend, density_matrix):
     assert test.density_matrix is density_matrix
 
     data = backend.cast(np.random.rand(5), dtype=backend.float64)
-    test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
+    test = phase_encoder(
+        nqubits=5, data=data, density_matrix=density_matrix, backend=backend
+    )
     assert test.density_matrix is density_matrix
 
     test = unary_encoder(
