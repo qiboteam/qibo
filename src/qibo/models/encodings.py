@@ -1027,9 +1027,10 @@ def unary_encoder_random_gaussian(
 
 
 def up_to_k_hamming_weight_encoder(
-    data: ArrayLike,
     nqubits: int,
     up_to_k: int,
+    data: Optional[ArrayLike] = None,
+    complex_data: bool = False,
     codewords: Optional[List[int]] = None,
     keep_antictrls: bool = False,
     backend: Optional[Backend] = None,
@@ -1076,12 +1077,17 @@ def up_to_k_hamming_weight_encoder(
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ArrayLike): :math:`1`-dimensional array of length
-            :math:`d = \\sum_{l=0}^{k} \\binom{n}{l}` to be loaded in the
-            amplitudes of a :math:`n`-qubit quantum state.
         nqubits (int): total number of qubits in the system.
         up_to_k (int): upper limit for the Hamming weight of the union-Hamming-weight-subspace
             in which the data to be loaded will be supported.
+        data (ArrayLike, optional): :math:`1`-dimensional array of length
+            :math:`d = \\sum_{l=0}^{k} \\binom{n}{l}` to be loaded in the amplitudes of a
+            :math:`n`-qubit quantum state. If ``None``, all phases of the returned circuit
+            are set to :math:`0.0`. Defaults to ``None``.
+        complex_data (bool, optional): to be used when ``data is None``. If ``True``, returned
+            circuit parametrizes complex-valued states. If ``False``, it parametrizes
+            real-valued states. If ``data is not None``, then data type is inferred from ``data``.
+            Defaults to ``False``.
         codewords (list, optional): List of codewords used to encode the data in the given order.
             If ``None``, the codewords are set by the erhlich algorithm.
         keep_antictrls (bool, optional): If ``True`` and parametrization is ``hyperspherical``, we
@@ -1103,7 +1109,14 @@ def up_to_k_hamming_weight_encoder(
     """
     backend = _check_backend(backend)
 
-    complex_data = bool("complex" in str(data.dtype))
+    if data is None:
+        dims = int(sum(binom(nqubits, weight) for weight in range(up_to_k + 1)))
+        data = backend.cast(
+            [1] + [0] * (dims - 1),
+            dtype=backend.complex128 if complex_data else backend.float64,
+        )
+    else:
+        complex_data = bool("complex" in str(data.dtype))
 
     return _up_to_k_encoder_hyperspherical(
         data,

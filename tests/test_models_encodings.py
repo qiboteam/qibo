@@ -320,22 +320,24 @@ def test_hamming_weight_encoder(
     backend.assert_allclose(state, target, atol=1e-7)
 
 
-@pytest.mark.parametrize("nqubits", [4, 5, 6])
-@pytest.mark.parametrize("up_to_k", [1, 2, 7])
+@pytest.mark.parametrize("keep_antictrls", [False, True])
 @pytest.mark.parametrize("custom_codewords", [False, True])
 @pytest.mark.parametrize("complex_data", [False, True])
-@pytest.mark.parametrize("keep_antictrls", [False, True])
+@pytest.mark.parametrize("data", [False, True])
+@pytest.mark.parametrize("up_to_k", [1, 2, 7])
+@pytest.mark.parametrize("nqubits", [4, 5, 6])
 def test_up_to_k_hamming_weight_encoder(
     backend,
     nqubits,
     up_to_k,
-    custom_codewords,
+    data,
     complex_data,
+    custom_codewords,
     keep_antictrls,
 ):
 
     seed = 10
-    dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k + 1))
+    dim = int(sum(binom(nqubits, weight) for weight in range(up_to_k + 1)))
     dtype = backend.complex128 if complex_data else backend.float64
 
     codewords = backend.arange(dim) if custom_codewords else None
@@ -343,7 +345,7 @@ def test_up_to_k_hamming_weight_encoder(
     with pytest.raises(ValueError):
         data = random_statevector(dim + 10, dtype=dtype, seed=seed, backend=backend)
         _ = up_to_k_hamming_weight_encoder(
-            data,
+            data=data,
             nqubits=nqubits,
             up_to_k=up_to_k,
             codewords=codewords,
@@ -367,7 +369,7 @@ def test_up_to_k_hamming_weight_encoder(
             target[codewords] = data
 
         circuit = up_to_k_hamming_weight_encoder(
-            data,
+            data=data,
             nqubits=nqubits,
             up_to_k=up_to_k,
             codewords=codewords,
