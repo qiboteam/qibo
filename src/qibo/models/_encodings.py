@@ -333,7 +333,7 @@ def _ehrlich_algorithm(
     Based on the Gray code called Ehrlich algorithm. For more details, please see Ref. [1].
 
     Args:
-        initial_string (ndarray): initial bitstring as an :math:`1`-dimensional array
+        initial_string (ArrayLike): initial bitstring as an :math:`1`-dimensional array
             of size :math:`n`. All ones in the bitstring need to be consecutive.
             For instance, for :math:`n = 6` and :math:`k = 2`, the bistrings
             :math:`000011` and :math:`001100` are examples of acceptable inputs.
@@ -493,7 +493,7 @@ def _generate_rbs_angles(
     """Generate list of angles for RBS gates based on ``architecture``.
 
     Args:
-        data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
+        data (ArrayLike, optional): :math:`1`-dimensional array of data to be loaded.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
@@ -501,7 +501,7 @@ def _generate_rbs_angles(
         nqubits (int): Number of qubits. To be used then ``architecture="tree"``.
 
     Returns:
-        list: List of phases for RBS gates.
+        List[float]: List of phases for RBS gates.
     """
     backend = _check_backend(backend)
 
@@ -521,8 +521,8 @@ def _generate_rbs_angles(
 
         j_max = int(dims / 2)
 
-        r_array = np.zeros(dims - 1, dtype=float)
-        phases = np.zeros(dims - 1, dtype=float)
+        r_array = backend.zeros(dims - 1, dtype=backend.float64)
+        phases = backend.zeros(dims - 1, dtype=backend.float64)
         for j in range(1, j_max + 1):
             r_array[j_max + j - 2] = math.sqrt(
                 data[2 * j - 1] ** 2 + data[2 * j - 2] ** 2
@@ -535,8 +535,6 @@ def _generate_rbs_angles(
         for j in range(j_max - 1, 0, -1):
             r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
             phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
-
-    phases = backend.cast(phases, dtype=phases[0].dtype)
 
     return phases
 
@@ -1387,7 +1385,7 @@ def _sparse_encoder_farias(
 
 
     Args:
-        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+        data (ArrayLike or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
             The addresses :math:`b_{j}` can be either integers or in bitstring
             format of size :math:`n`.
         nqubits (int, optional): total number of qubits in the system.
@@ -1543,7 +1541,7 @@ def _sparse_encoder_li(
 
 
     Args:
-        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+        data (ArrayLike or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
             The addresses :math:`b_{j}` can be either integers or in bitstring
             format of size :math:`n`.
         nqubits (int, optional): total number of qubits in the system.
