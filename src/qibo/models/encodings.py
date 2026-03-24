@@ -61,7 +61,7 @@ def binary_encoder(
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of length :math:`d = 2^{n}`
+        data (ArrayLike): :math:`1`-dimensional array of length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
         parametrization (str): choice of circuit parametrization. either ``hyperspherical``
             or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
@@ -474,7 +474,7 @@ def graph_state(
     being the Hadamard gate.
 
     Args:
-        matrix (ndarray or list): Adjacency matrix of the graph.
+        matrix (ArrayLike or list): Adjacency matrix of the graph.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -532,7 +532,7 @@ def hamming_weight_encoder(
             \\, \\sum_{j = 1}^{d} \\, x_{j} \\, \\ket{b_{j}}
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of data to be loaded.
+        data (ArrayLike): :math:`1`-dimensional array of data to be loaded.
         nqubits (int): number of qubits.
         weight (int): Hamming weight that defines the subspace in which ``data`` will be encoded.
         full_hwp (bool, optional): if ``False``, includes Pauli-:math:`X` gates that prepare the
@@ -543,7 +543,7 @@ def hamming_weight_encoder(
         phase_correction (bool, optional): To be used when ``data`` is complex-valued.
             If ``True``, adds a controlled-$\\mathrm{RZ}$ gate to the end of the circuit,
             adding a final phase correction. If ``False``, gate is not added. Defaults to ``True``.
-        initial_string (ndarray, optional): Array containing the desired initial bitstring of
+        initial_string (ArrayLike, optional): Array containing the desired initial bitstring of
             Hamming ``weight`` $k$. If ``None``, defaults to $\\ket{1^{k}0^{n-k}}$.
             Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -702,7 +702,7 @@ def phase_encoder(
     """Create circuit that performs the phase encoding of ``data``.
 
     Args:
-        data (ndarray or list): :math:`1`-dimensional array of phases to be loaded.
+        data (ArrayLike or list): :math:`1`-dimensional array of phases to be loaded.
         rotation (str, optional): If ``"RX"``, uses :class:`qibo.gates.gates.RX` as rotation.
             If ``"RY"``, uses :class:`qibo.gates.gates.RY` as rotation.
             If ``"RZ"``, uses :class:`qibo.gates.gates.RZ` as rotation.
@@ -780,7 +780,7 @@ def sparse_encoder(
 
 
     Args:
-        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+        data (ArrayLike or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
             The addresses :math:`b_{j}` can be either integers or in bitstring
             format of size :math:`n`.
         method (str, optional): method to be used, either ``li`` or ``farias``. They refer to
@@ -850,7 +850,7 @@ def unary_encoder(
     """Create circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of data to be loaded.
+        data (ArrayLike): :math:`1`-dimensional array of data to be loaded.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
@@ -1055,7 +1055,7 @@ def up_to_k_hamming_weight_encoder(
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of length
+        data (ArrayLike): :math:`1`-dimensional array of length
             :math:`d = \\sum_{l=0}^{k} \\binom{n}{l}` to be loaded in the
             amplitudes of a :math:`n`-qubit quantum state.
         nqubits (int): total number of qubits in the system.
