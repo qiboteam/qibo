@@ -235,7 +235,7 @@ class Backend:  # pylint: disable=R0904
         self, array_1: ArrayLike, indices: ArrayLike, array_2: ArrayLike
     ) -> None:
     """Add ``array_2`` to ``array_1`` at specified ``indices`` in-place.
-    
+
     Args:
         array_1 (ArrayLike): Output array to be modified.
         indices (ArrayLike): Indices at which to add elements.
