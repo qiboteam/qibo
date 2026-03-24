@@ -19,10 +19,11 @@ from qibo.gates.abstract import Gate
 
 class CliffordBackend(Backend):
     """Backend for the simulation of Clifford circuits following  Ref. [1].
-    `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
 
     Args:
-        :class:`qibo.backends.abstract.Backend`: Backend used for the calculation.
+        platform (str, optional): name of the backend that should be used
+            in calculations. Options are: ``"numpy"``,``"numba"``, ``"cupy"``,
+            or ``"stim"``. If ``None``, global backend is used. Defaults to ``None``.
 
     References:
         1. S. Aaronson and D. Gottesman, *Improved Simulation of Stabilizer Circuits*,
@@ -83,10 +84,6 @@ class CliffordBackend(Backend):
                 setattr(
                     self._platform, method, getattr(clifford_operations_gpu, method)
                 )
-        elif self.platform == "pytorch":  # pragma: no cover
-            import torch  # pylint: disable=import-outside-toplevel
-
-            self.engine = torch
         else:  # pragma: no cover
             raise_error(
                 NotImplementedError,
