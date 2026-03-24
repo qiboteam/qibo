@@ -234,13 +234,13 @@ class Backend:  # pylint: disable=R0904
     def _add_at(
         self, array_1: ArrayLike, indices: ArrayLike, array_2: ArrayLike
     ) -> None:
-    """Add ``array_2`` to ``array_1`` at specified ``indices`` in-place.
+        """Add ``array_2`` to ``array_1`` at specified ``indices`` in-place.
 
-    Args:
-        array_1 (ArrayLike): Output array to be modified.
-        indices (ArrayLike): Indices at which to add elements.
-        array_2 (ArrayLike): Input array with elements to add.
-    """
+        Args:
+            array_1 (ArrayLike): Output array to be modified.
+            indices (ArrayLike): Indices at which to add elements.
+            array_2 (ArrayLike): Input array with elements to add.
+        """
         return self.engine.add.at(array_1, indices, array_2)
 
     def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
