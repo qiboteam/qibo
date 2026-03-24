@@ -281,6 +281,8 @@ def _binary_encoder_hopf(
         circuit.add(gate_list)
 
     angles = _generate_rbs_angles(data, "tree", dims, backend=backend)
+    angle = backend.where(backend.isnan(angles), 0.0, angles)
+
     circuit.set_parameters(2 * angles)
 
     return circuit
