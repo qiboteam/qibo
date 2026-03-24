@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot
 import numpy as np
 import pytest
 
@@ -12,6 +11,8 @@ from qibo.models import QFT
 from qibo.quantum_info import random_unitary
 from qibo.ui.drawing_utils import FusedEndGateBarrier, FusedStartGateBarrier
 from qibo.ui.mpldrawer import (
+    _build_folded_gate_layout,
+    _fold_coords,
     _make_cluster_gates,
     _plot_params,
     _plot_quantum_circuit,
@@ -59,8 +60,9 @@ def test_circuit_measure(nqubits):
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5, 6])
-def test_bigger_circuit_gates(nqubits):
-    """Test for a bigger circuit"""
+@pytest.mark.parametrize("fold", [-1, 3, 4, 10, 12])
+def test_bigger_circuit_gates(nqubits, fold):
+    """Test for a bigger circuit with optional folding"""
     circuit = Circuit(nqubits)
     circuit.add(gates.H(1))
     circuit.add(gates.X(1))
@@ -75,17 +77,21 @@ def test_bigger_circuit_gates(nqubits):
     circuit.add(gates.X(1))
     circuit.add(gates.X(0))
     circuit.add(gates.M(qubit) for qubit in range(2))
-    _, fig = plot_circuit(circuit)
-    assert (
-        match_figure_image(
-            fig, BASEPATH + "/test_bigger_circuit_gates_" + str(nqubits) + ".npy"
-        )
-        == True
-    )
+
+    test_file_prefix = f"{BASEPATH}/test_bigger_circuit_gates_{nqubits}"
+    fold_suffix = f"_fold_{fold}" if fold > 0 else ""
+    extension = ".npy"
+
+    test_file = f"{test_file_prefix}{fold_suffix}{extension}"
+
+    _, fig = plot_circuit(circuit, fold=fold)
+
+    assert match_figure_image(fig, test_file)
 
 
 @pytest.mark.parametrize("clustered", [False, True])
-def test_complex_circuit(clustered):
+@pytest.mark.parametrize("fold", [-1, 5, 8, 15])
+def test_complex_circuit(clustered, fold):
     """Complex circuits for several cases"""
     circuit = Circuit(3)
     circuit.add(gates.H(0))
@@ -117,28 +123,22 @@ def test_complex_circuit(clustered):
     circuit.add(gates.DEUTSCH(1, 0, 2, np.pi))
     circuit.add(gates.X(0))
     circuit.add(gates.M(qubit) for qubit in range(2))
-    _, fig1 = plot_circuit(circuit.invert(), cluster_gates=clustered, scale=0.70)
-    _, fig2 = plot_circuit(circuit, cluster_gates=clustered, scale=0.70)
-    assert (
-        match_figure_image(
-            fig1,
-            BASEPATH
-            + "/test_complex_circuit_fig1_"
-            + ("true" if clustered else "false")
-            + ".npy",
-        )
-        == True
+    _, fig1 = plot_circuit(
+        circuit.invert(), cluster_gates=clustered, scale=0.70, fold=fold
     )
-    assert (
-        match_figure_image(
-            fig2,
-            BASEPATH
-            + "/test_complex_circuit_fig2_"
-            + ("true" if clustered else "false")
-            + ".npy",
-        )
-        == True
-    )
+    _, fig2 = plot_circuit(circuit, cluster_gates=clustered, scale=0.70, fold=fold)
+
+    test_fig1_prefix = f"{BASEPATH}/test_complex_circuit_fig1_"
+    test_fig2_prefix = f"{BASEPATH}/test_complex_circuit_fig2_"
+    clustered_status = "true" if clustered else "false"
+    fold_suffix = f"_fold_{fold}" if fold > 0 else ""
+    extension = ".npy"
+
+    test_file_fig1 = f"{test_fig1_prefix}{clustered_status}{fold_suffix}{extension}"
+    test_file_fig2 = f"{test_fig2_prefix}{clustered_status}{fold_suffix}{extension}"
+
+    assert match_figure_image(fig1, test_file_fig1)
+    assert match_figure_image(fig2, test_file_fig2)
 
 
 def test_align_gate():
@@ -147,6 +147,20 @@ def test_align_gate():
     circuit.add(gates.Align(0))
     _, fig = plot_circuit(circuit)
     assert match_figure_image(fig, BASEPATH + "/test_align_gate.npy") == True
+
+
+@pytest.mark.parametrize("fold", [2, 3])
+def test_align_gate_with_folds(fold):
+    circuit = Circuit(3)
+    for _ in range(4):
+        circuit.add(gates.Align(0))
+        circuit.add(gates.Align(1))
+        circuit.add(gates.Align(2))
+    _, fig = plot_circuit(circuit, fold=fold)
+
+    test_file = f"{BASEPATH}/test_align_gate_fold_{fold}.npy"
+
+    assert match_figure_image(fig, test_file)
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -224,7 +238,8 @@ def test_layered_circuit():
     assert match_figure_image(fig, BASEPATH + "/test_layered_circuit.npy") == True
 
 
-def test_fused_gates():
+@pytest.mark.parametrize("fold", [-1, 1])
+def test_fused_gates(fold):
     """Test for gates fusion"""
     circuit = Circuit(3)
     circuit.add(gates.H(0))
@@ -232,8 +247,47 @@ def test_fused_gates():
     circuit.add(gates.H(0))
     circuit.add(gates.X(1))
     circuit.add(gates.H(1))
-    _, fig = plot_circuit(circuit.fuse(), scale=0.8, cluster_gates=False)
-    assert match_figure_image(fig, BASEPATH + "/test_fused_gates.npy") == True
+    _, fig = plot_circuit(circuit.fuse(), scale=0.8, cluster_gates=False, fold=fold)
+
+    test_file_prefix = f"{BASEPATH}/test_fused_gates"
+    fold_suffix = f"_fold_{fold}" if fold > 0 else ""
+    extension = ".npy"
+
+    test_file = f"{test_file_prefix}{fold_suffix}{extension}"
+
+    assert match_figure_image(fig, test_file)
+
+
+def test_fused_gates_fold_layout_is_atomic():
+    """Folded layout should keep fused boxes as a single fold unit."""
+    all_gates = [
+        FusedStartGateBarrier(0, 1, 3, True),
+        gates.H(0),
+        gates.X(0),
+        gates.H(0),
+        FusedEndGateBarrier(0, 1),
+        FusedStartGateBarrier(1, 2, 2, True),
+        gates.X(1),
+        gates.H(1),
+        FusedEndGateBarrier(1, 2),
+    ]
+    gates_plot = _process_gates(all_gates, 3)
+
+    _, num_groups, num_folds, cols = _build_folded_gate_layout(gates_plot, fold=2)
+
+    assert num_groups == 2
+    assert num_folds == 1
+    assert cols == len(gates_plot)
+
+
+def test_fold_coords_without_layout():
+    """Fold coordinates should fall back to index math if no layout is given."""
+    col, yoff = _fold_coords(
+        i=3, fold=2, num_qubits=3, num_folds=2, direction="down", folded_layout=None
+    )
+
+    assert col == 1
+    assert yoff == 0
 
 
 def test_fuse_cluster():
@@ -247,7 +301,8 @@ def test_fuse_cluster():
     assert match_figure_image(fig, BASEPATH + "/test_fuse_cluster.npy") == True
 
 
-def test_plot_unitaries():
+@pytest.mark.parametrize("fold", [-1, 2, 3])
+def test_plot_unitaries(fold):
     """Test for plotting unitaries"""
     backend = construct_backend("numpy")
 
@@ -257,8 +312,15 @@ def test_plot_unitaries():
     circuit.add(gates.Unitary(random_unitary(2, backend=backend, seed=42), 2))
     circuit.add(gates.Unitary(random_unitary(2, backend=backend, seed=42), 4))
     circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 0, 2, 5))
-    _, fig = plot_circuit(circuit)
-    assert match_figure_image(fig, BASEPATH + "/test_plot_unitaries.npy") == True
+    _, fig = plot_circuit(circuit, fold=fold)
+
+    test_file_prefix = f"{BASEPATH}/test_plot_unitaries"
+    fold_suffix = f"_fold_{fold}" if fold > 0 else ""
+    extension = ".npy"
+
+    test_file = f"{test_file_prefix}{fold_suffix}{extension}"
+
+    assert match_figure_image(fig, test_file)
 
 
 def test_plot_unitaries_same_init():
@@ -294,7 +356,8 @@ def test_plot_unitaries_different_init():
     )
 
 
-def test_plot_global_unitaries_as_circuit():
+@pytest.mark.parametrize("fold", [-1, 3, 4, 5])
+def test_plot_global_unitaries_as_circuit(fold):
     """Test for plotting global unitaries built from circuit"""
     backend = construct_backend("numpy")
 
@@ -330,11 +393,15 @@ def test_plot_global_unitaries_as_circuit():
     circuit.add(gates.Y(0))
     circuit.wire_names = ["q_a", "q_b", "q_c", "q_d", "q_e"]
 
-    _, fig = plot_circuit(circuit)
-    assert (
-        match_figure_image(fig, BASEPATH + "/test_plot_global_unitaries_as_circuit.npy")
-        == True
-    )
+    _, fig = plot_circuit(circuit, fold=fold)
+
+    test_file_prefix = f"{BASEPATH}/test_plot_global_unitaries_as_circuit"
+    fold_suffix = f"_fold_{fold}" if fold > 0 else ""
+    extension = ".npy"
+
+    test_file = f"{test_file_prefix}{fold_suffix}{extension}"
+
+    assert match_figure_image(fig, test_file)
 
 
 def test_plot_circuit_internal():
@@ -420,16 +487,16 @@ def test_plot_circuit_error_style():
     assert style3["facecolor"] == "#6497bf"
 
 
-def test_fused_gates():
-    """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
-    min_q = 0
-    max_q = 1
-    l_gates = 1
-    equal_qbits = True
-    start_barrier = FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
-    end_barrier = FusedEndGateBarrier(min_q, max_q)
-    assert start_barrier != None
-    assert end_barrier != None
+# def test_fused_gates():
+#     """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
+#     min_q = 0
+#     max_q = 1
+#     l_gates = 1
+#     equal_qbits = True
+#     start_barrier = FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
+#     end_barrier = FusedEndGateBarrier(min_q, max_q)
+#     assert start_barrier != None
+#     assert end_barrier != None
 
 
 def test_render_label():
@@ -482,3 +549,7 @@ def test_target_control_qubts():
     circuit.queue[0]._target_qubits = ((0, 1), (0, 2))
     circuit.queue[0]._control_qubits = ((0,), (0,))
     assert _process_gates(circuit.queue, 3) != ""
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__, "-s"]))
