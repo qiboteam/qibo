@@ -19,7 +19,8 @@ from ._clifford_utils import _decomposition_AG04, _decomposition_BM20, _string_p
 
 @dataclass
 class Clifford:
-    """Object storing the results of a circuit execution with the :class:`qibo.backends.clifford.CliffordBackend`.
+    """Object storing the results of a circuit execution with the
+    :class:`qibo.backends.clifford.CliffordBackend`.
 
     Args:
         data (ndarray or :class:`qibo.models.circuit.Circuit`): If ``ndarray``, it is the
@@ -45,9 +46,9 @@ class Clifford:
     nshots: int = 1000
     platform: Optional[str] = None
 
-    _backend: Optional[CliffordBackend] = None
-    _measurement_gate: M = None
-    _samples: Optional[int] = None
+    _backend: Optional[CliffordBackend] = field(default=None, repr=False)
+    _measurement_gate: M = field(default=None, repr=False)
+    _samples: Optional[int] = field(default=None, repr=False)
 
     def __post_init__(self):
         if self._backend is None:
