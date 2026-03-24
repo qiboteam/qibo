@@ -181,39 +181,34 @@ def test_binary_encoder(
     backend.assert_allclose(state, target[: len(state)], atol=1e-10, rtol=1e-4)
 
 
-@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("seed", [1])
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
 @pytest.mark.parametrize("nqubits", [8])
-def test_unary_encoder(backend, nqubits, architecture, kind):
-    sampler = np.random.default_rng(1)
-
+def test_unary_encoder(backend, nqubits, architecture, seed):
     with pytest.raises(TypeError):
-        data = sampler.random(nqubits)
-        data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data, architecture=True)
+        data = backend.random_sample(nqubits, seed=seed)
+        test = unary_encoder(nqubits, data=data, architecture=True)
     with pytest.raises(ValueError):
-        data = sampler.random(nqubits)
-        data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data, architecture="semi-diagonal")
+        data = backend.random_sample(nqubits, seed=seed)
+        test = unary_encoder(nqubits, data=data, architecture="semi-diagonal")
     if architecture == "tree":
         with pytest.raises(ValueError):
-            data = sampler.random(nqubits + 1)
-            data = backend.cast(data, dtype=data.dtype)
-            unary_encoder(data, architecture=architecture)
+            data = backend.random_sample(nqubits + 1, seed=seed)
+            test = unary_encoder(nqubits, data=data, architecture=architecture)
 
     # sampling random data in interval [-1, 1]
-    sampler = np.random.default_rng(1)
-    data = 2 * sampler.random(nqubits) - 1
-    data = kind(data) if kind is not None else backend.cast(data, dtype=data.dtype)
+    data = 2 * backend.random_sample(nqubits) - 1
 
-    circuit = unary_encoder(data, architecture=architecture, backend=backend)
+    circuit = unary_encoder(
+        nqubits, data=data, architecture=architecture, backend=backend
+    )
     state = backend.execute_circuit(circuit).state()
-    indexes = np.flatnonzero(backend.to_numpy(state))
+    indexes = backend.flatnonzero(state)
     state = backend.real(state[indexes])
 
     backend.assert_allclose(
         state,
-        backend.cast(data, dtype=np.float64) / backend.vector_norm(data, 2),
+        backend.cast(data, dtype=backend.float64) / backend.vector_norm(data, 2),
         rtol=1e-5,
     )
 
@@ -569,7 +564,7 @@ def test_circuit_kwargs(backend, density_matrix):
     assert test.density_matrix is density_matrix
 
     test = unary_encoder(
-        data, "diagonal", density_matrix=density_matrix, backend=backend
+        5, "diagonal", data, density_matrix=density_matrix, backend=backend
     )
     assert test.density_matrix is density_matrix
 

@@ -863,19 +863,22 @@ def sparse_encoder(
 
 
 def unary_encoder(
-    data: ArrayLike,
+    nqubits: int,
     architecture: str = "tree",
+    data: Optional[ArrayLike] = None,
     backend: Optional[Backend] = None,
     **kwargs,
 ) -> Circuit:
     """Create circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
-        data (ArrayLike): :math:`1`-dimensional array of data to be loaded.
+        nqubits (int): number of qubits in the system.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
             Defaults to ``tree``.
+        data (ArrayLike): :math:`1`-dimensional array of data to be loaded. If ``None``,
+            all phases in the returned circuit are set to :math:`0.0`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -886,35 +889,32 @@ def unary_encoder(
     """
     backend = _check_backend(backend)
 
-    if isinstance(data, list):
-        data = backend.cast(data, dtype=type(data[0]))
-
     if not isinstance(architecture, str):
         raise_error(
             TypeError,
             f"``architecture`` must be type str, but it is type {type(architecture)}.",
         )
 
-    if architecture not in ["diagonal", "tree"]:
+    if architecture not in ("diagonal", "tree"):
         raise_error(ValueError, f"``architecture`` {architecture} not found.")
 
-    if architecture == "tree" and not math.log2(data.shape[0]).is_integer():
-        raise_error(
-            ValueError,
-            "When ``architecture = 'tree'``, len(data) must be a power of 2. "
-            + f"However, it is {len(data)}.",
-        )
-
-    nqubits = len(data)
+    if data is not None:
+        if architecture == "tree" and not math.log2(data.shape[0]).is_integer():
+            raise_error(
+                ValueError,
+                "When ``architecture = 'tree'``, len(data) must be a power of 2. "
+                + f"However, it is {len(data)}.",
+            )
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(gates.X(nqubits - 1))
     circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture, **kwargs)
     circuit += circuit_rbs
 
-    # calculating phases and setting circuit parameters
-    phases = _generate_rbs_angles(data, architecture, nqubits, backend=backend)
-    circuit.set_parameters(phases)
+    if data is not None:
+        # calculating phases and setting circuit parameters
+        phases = _generate_rbs_angles(data, architecture, nqubits, backend=backend)
+        circuit.set_parameters(phases)
 
     return circuit
 
