@@ -35,12 +35,12 @@ from qibo.models.circuit import Circuit
 
 
 def binary_encoder(
-    data: ArrayLike,
-    parametrization: str = "hyperspherical",
     nqubits: Optional[int] = None,
+    parametrization: str = "hyperspherical",
+    data: Optional[ArrayLike] = None,
     codewords: Optional[List[int]] = None,
     keep_antictrls: bool = False,
-    backend: Backend = None,
+    backend: Optional[Backend] = None,
     **kwargs,
 ) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
@@ -61,14 +61,12 @@ def binary_encoder(
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ArrayLike): :math:`1`-dimensional array of length :math:`d = 2^{n}`
-            to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
+        nqubits (int, optional): total number of qubits in the system.
         parametrization (str): choice of circuit parametrization. either ``hyperspherical``
             or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
-        nqubits (int, optional): total number of qubits in the system.
-            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
-            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
-            Defaults to ``None``.
+        data (ArrayLike, optional): :math:`1`-dimensional array of length :math:`d = 2^{n}`
+            to be loaded in the amplitudes of a :math:`n`-qubit quantum state. If ``None``,
+            circuit is returned with all phases set to :math:`0.0`. Defaults to ``None``.
         codewords (int, optional): list of codewords. When parametrization is ``hyperspherical``,
             the list is used to encode the data in the given order. If ``None``,
             the codewords are set by the erhlich algorithm.
@@ -96,16 +94,24 @@ def binary_encoder(
     """
     backend = _check_backend(backend)
 
-    dims = len(data)
-    if (dims & (dims - 1)) != 0 and parametrization == "hopf":
-        raise_error(ValueError, "`data` size must be a power of 2.")
+    if data is not None:
+        dims = len(data)
+        if (dims & (dims - 1)) != 0 and parametrization == "hopf":
+            raise_error(ValueError, "`data` size must be a power of 2.")
+
+        complex_data = bool(
+            "complex" in str(data.dtype)
+        )  # backend-agnostic way of checking the dtype
+    else:
+        dims = 2**nqubits
+        complex_data = bool("complex" in parametrization)
+        data = backend.cast(
+            [1] + [0] * (2**nqubits - 1),
+            dtype=backend.complex128 if complex_data else backend.float64,
+        )
 
     if nqubits is None:
-        nqubits = int(backend.ceil(backend.log2(dims)))
-
-    complex_data = bool(
-        "complex" in str(data.dtype)
-    )  # backend-agnostic way of checking the dtype
+        nqubits = int(math.ceil(math.log2(dims)))
 
     if parametrization == "hopf":
         return _binary_encoder_hopf(
@@ -116,9 +122,9 @@ def binary_encoder(
         data,
         nqubits,
         complex_data=complex_data,
-        backend=backend,
         codewords=codewords,
         keep_antictrls=keep_antictrls,
+        backend=backend,
         **kwargs,
     )
 
@@ -748,7 +754,7 @@ def phase_encoder(
 def sparse_encoder(
     data: ArrayLike,
     method: str = "li",
-    nqubits: Optiona[int] = None,
+    nqubits: Optional[int] = None,
     backend: Optional[Backend] = None,
     **kwargs,
 ) -> Circuit:
