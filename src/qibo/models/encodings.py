@@ -5,6 +5,7 @@ from inspect import signature
 from typing import List, Optional, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.special import binom
 
 from qibo import gates
@@ -34,14 +35,14 @@ from qibo.models.circuit import Circuit
 
 
 def binary_encoder(
-    data,
+    data: ArrayLike,
     parametrization: str = "hyperspherical",
-    nqubits: int = None,
-    codewords=None,
+    nqubits: Optional[int] = None,
+    codewords: Optional[List[int]] = None,
     keep_antictrls: bool = False,
-    backend=None,
+    backend: Backend = None,
     **kwargs,
-):
+) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
     of the computational basis.
 
@@ -124,7 +125,7 @@ def binary_encoder(
 
 def comp_basis_encoder(
     basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None, **kwargs
-):
+) -> Circuit:
     """Create circuit that performs encoding of bitstrings into computational basis states.
 
     Args:
@@ -184,7 +185,9 @@ def comp_basis_encoder(
     return circuit
 
 
-def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
+def dicke_state(
+    nqubits: int, weight: int, all_to_all: bool = False, **kwargs
+) -> Circuit:
     """Create a circuit that prepares the Dicke state :math:`\\ket{D_{k}^{n}}`.
 
     The Dicke state :math:`\\ket{D_{k}^{n}}` is the equal superposition of all :math:`n`-qubit
@@ -305,7 +308,7 @@ def entangling_layer(
     entangling_gate: Union[str, gates.Gate] = "CNOT",
     closed_boundary: bool = False,
     **kwargs,
-):
+) -> Circuit:
     """Create a layer of two-qubit entangling gates.
 
     If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
@@ -426,7 +429,7 @@ def entangling_layer(
     return circuit
 
 
-def ghz_state(nqubits: int, **kwargs):
+def ghz_state(nqubits: int, **kwargs) -> Circuit:
     """Generate an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
 
     .. math::
@@ -455,7 +458,9 @@ def ghz_state(nqubits: int, **kwargs):
     return circuit
 
 
-def graph_state(matrix, backend=None, **kwargs):
+def graph_state(
+    matrix: ArrayLike, backend: Optional[Backend] = None, **kwargs
+) -> Circuit:
     """Create circuit encoding an undirected graph state given its adjacency matrix.
 
     Given a graph :math:`G = (V, E)` with :math:`V` being the set of vertices and :math:`E`
@@ -503,16 +508,16 @@ def graph_state(matrix, backend=None, **kwargs):
 
 
 def hamming_weight_encoder(
-    data,
+    data: ArrayLike,
     nqubits: int,
     weight: int,
     full_hwp: bool = False,
     optimize_controls: bool = True,
     phase_correction: bool = True,
-    initial_string=None,
-    backend=None,
+    initial_string: Optional[ArrayLike] = None,
+    backend: Optional[Backend] = None,
     **kwargs,
-):
+) -> Circuit:
     """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
 
     Let :math:`\\mathbf{x}` be a :math:`1`-dimensional array of size :math:`d = \\binom{n}{k}` and
@@ -619,8 +624,11 @@ def hamming_weight_encoder(
 
 
 def permutation_synthesis(
-    sigma: Union[List[int], tuple[int, ...]], m: int = 2, backend=None, **kwargs
-):
+    sigma: Union[List[int], tuple[int, ...]],
+    m: int = 2,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Return circuit that implements a given permutation.
 
     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
@@ -688,7 +696,9 @@ def permutation_synthesis(
     return circuit
 
 
-def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
+def phase_encoder(
+    data: ArrayLike, rotation: str = "RY", backend: Optional[Backend] = None, **kwargs
+) -> Circuit:
     """Create circuit that performs the phase encoding of ``data``.
 
     Args:
@@ -736,8 +746,12 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
 
 
 def sparse_encoder(
-    data, method: str = "li", nqubits: int = None, backend=None, **kwargs
-):
+    data: ArrayLike,
+    method: str = "li",
+    nqubits: Optiona[int] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
 
@@ -827,7 +841,12 @@ def sparse_encoder(
     return func(data, nqubits, backend, **kwargs)
 
 
-def unary_encoder(data, architecture: str = "tree", backend=None, **kwargs):
+def unary_encoder(
+    data: ArrayLike,
+    architecture: str = "tree",
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Create circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
@@ -880,8 +899,12 @@ def unary_encoder(data, architecture: str = "tree", backend=None, **kwargs):
 
 
 def unary_encoder_random_gaussian(
-    nqubits: int, architecture: str = "tree", seed=None, backend=None, **kwargs
-):
+    nqubits: int,
+    architecture: str = "tree",
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Create a circuit that performs the unary encoding of a random Gaussian state.
 
     At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k}
@@ -983,14 +1006,14 @@ def unary_encoder_random_gaussian(
 
 
 def up_to_k_hamming_weight_encoder(
-    data,
+    data: ArrayLike,
     nqubits: int,
     up_to_k: int,
-    codewords: List[int] = None,
+    codewords: Optional[List[int]] = None,
     keep_antictrls: bool = False,
     backend: Optional[Backend] = None,
     **kwargs,
-):
+) -> Circuit:
     """Create a circuit that encodes ``data`` in the Hamming-weight-:math:`\\leq k`
     subspace of ``nqubits``.
 
