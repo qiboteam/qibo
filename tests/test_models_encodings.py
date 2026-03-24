@@ -105,16 +105,18 @@ def test_phase_encoder(backend, rotation, kind):
     backend.assert_allclose(state, target)
 
 
-@pytest.mark.parametrize("complex_data", [False, True])
-@pytest.mark.parametrize("not_power_of_two", [False, True])
-@pytest.mark.parametrize("custom_codewords", [False, True])
 @pytest.mark.parametrize("keep_antictrls", [False, True])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("not_power_of_two", [False, True])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("data", [False, True])
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_binary_encoder(
     backend,
     nqubits,
     parametrization,
+    data,
     complex_data,
     not_power_of_two,
     custom_codewords,
@@ -127,44 +129,56 @@ def test_binary_encoder(
             )
 
         with pytest.raises(ValueError):
-            dims = 5
-            test = np.random.rand(dims)
-            test = backend.cast(test, dtype=test.dtype)
+            test = backend.random_sample(5)
             test = binary_encoder(
-                test, parametrization=parametrization, nqubits=nqubits, backend=backend
+                data=test,
+                parametrization=parametrization,
+                nqubits=nqubits,
+                backend=backend,
             )
 
-    if parametrization == "hyperspherical" and not_power_of_two:
-        dims = 14
-    else:
-        dims = 2**nqubits
+    dims = (
+        2**nqubits - 2
+        if parametrization == "hyperspherical" and not_power_of_two
+        else 2**nqubits
+    )
 
-    target = random_statevector(dims, seed=10, backend=backend)
-    if not complex_data:
-        target = backend.real(target)
-        target /= backend.vector_norm(target)
+    if data:
+        target = random_statevector(
+            dims,
+            dtype=backend.complex128 if complex_data else backend.float64,
+            seed=10,
+            backend=backend,
+        )
+    else:
+        target = None
+        if complex_data:
+            parametrization += "-complex"
 
     codewords = backend.arange(dims) if custom_codewords else None
 
     circuit = binary_encoder(
-        target,
+        nqubits,
         parametrization=parametrization,
+        data=target,
         backend=backend,
         codewords=codewords,
         keep_antictrls=keep_antictrls,
     )
     state = backend.execute_circuit(circuit).state()
 
+    if not data:
+        target = backend.zero_state(nqubits)
+
     if parametrization == "hyperspherical" and not_power_of_two:
         # need to insert zeros at the end of target to get
         # matching shapes
         trail_zeros = backend.zeros(
-            2 ** int(backend.ceil(backend.log2(dims))) - dims, dtype=target.dtype
+            2 ** int(math.ceil(math.log2(dims))) - dims, dtype=target.dtype
         )
-        trail_zeros = backend.cast(trail_zeros, dtype=trail_zeros.dtype)
         target = backend.concatenate((target, trail_zeros))
 
-    backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
+    backend.assert_allclose(state, target[: len(state)], atol=1e-10, rtol=1e-4)
 
 
 @pytest.mark.parametrize("kind", [None, list])

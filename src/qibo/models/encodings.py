@@ -106,7 +106,7 @@ def binary_encoder(
         dims = 2**nqubits
         complex_data = bool("complex" in parametrization)
         data = backend.cast(
-            [1] + [0] * (2**nqubits - 1),
+            [1] + [0] * (dims - 1),
             dtype=backend.complex128 if complex_data else backend.float64,
         )
 
