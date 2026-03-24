@@ -35,7 +35,7 @@ from qibo.models.circuit import Circuit
 
 
 def binary_encoder(
-    nqubits: Optional[int] = None,
+    nqubits: int,
     parametrization: str = "hyperspherical",
     data: Optional[ArrayLike] = None,
     codewords: Optional[List[int]] = None,
@@ -62,8 +62,12 @@ def binary_encoder(
 
     Args:
         nqubits (int, optional): total number of qubits in the system.
-        parametrization (str): choice of circuit parametrization. either ``hyperspherical``
-            or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
+        parametrization (str): choice of state parametrization in the :math:`(2^{n} - 1)`-unit
+            sphere. Either ``hyperspherical`` or ``hopf``. If ``data is None``, then circuit
+            returned parametrizes real-valued quantum states. To return circuits that parametrize
+            complex-valued states, options are ``hyperspherical-complex`` and ``hopf-complex``.
+            If ``data is not None``, then data type is inferred from ``data`` and the suffix
+            ``-complex`` does not need to be added. Defaults to ``hyperspherical``.
         data (ArrayLike, optional): :math:`1`-dimensional array of length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state. If ``None``,
             circuit is returned with all phases set to :math:`0.0`. Defaults to ``None``.
@@ -514,9 +518,10 @@ def graph_state(
 
 
 def hamming_weight_encoder(
-    data: ArrayLike,
     nqubits: int,
     weight: int,
+    data: Optional[ArrayLike] = None,
+    complex_data: bool = False,
     full_hwp: bool = False,
     optimize_controls: bool = True,
     phase_correction: bool = True,
@@ -538,9 +543,14 @@ def hamming_weight_encoder(
             \\, \\sum_{j = 1}^{d} \\, x_{j} \\, \\ket{b_{j}}
 
     Args:
-        data (ArrayLike): :math:`1`-dimensional array of data to be loaded.
         nqubits (int): number of qubits.
         weight (int): Hamming weight that defines the subspace in which ``data`` will be encoded.
+        data (ArrayLike, optional): :math:`1`-dimensional array of data to be loaded. If ``None``,
+            circuit is returned with all phases set to :math:`0.0`. Defaults to ``None``.
+        complex_data (bool, optional): to be used when ``data is None``. If ``True``, returned
+            circuit parametrizes complex-valued states. If ``False``, it parametrizes
+            real-valued states. If ``data is not None``, then data type is inferred from ``data``.
+            Defaults to ``False``.
         full_hwp (bool, optional): if ``False``, includes Pauli-:math:`X` gates that prepare the
             first bitstring of Hamming weight ``k = weight``. If ``True``, circuit is full
             Hamming weight preserving. Defaults to ```False``.
@@ -568,7 +578,14 @@ def hamming_weight_encoder(
     """
     backend = _check_backend(backend)
 
-    complex_data = bool("complex" in str(data.dtype))
+    if data is None:
+        n_choose_k = int(binom(nqubits, weight))
+        data = backend.cast(
+            [1] + [0] * (n_choose_k - 1),
+            dtype=backend.complex128 if complex_data else backend.float64,
+        )
+    else:
+        complex_data = bool("complex" in str(data.dtype))
 
     if initial_string is None:
         initial_string = np.array([1] * weight + [0] * (nqubits - weight))

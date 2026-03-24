@@ -272,12 +272,14 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
 @pytest.mark.parametrize("optimize_controls", [False, True])
 @pytest.mark.parametrize("complex_data", [False, True])
 @pytest.mark.parametrize("full_hwp", [False, True])
+@pytest.mark.parametrize("data", [False, True])
 @pytest.mark.parametrize("weight", [1, 2, 3])
 @pytest.mark.parametrize("nqubits", [4, 5, 6])
 def test_hamming_weight_encoder(
     backend,
     nqubits,
     weight,
+    data,
     full_hwp,
     complex_data,
     optimize_controls,
@@ -285,29 +287,26 @@ def test_hamming_weight_encoder(
 ):
     n_choose_k = int(binom(nqubits, weight))
     dims = 2**nqubits
-    dtype = complex if complex_data else float
+    dtype = backend.complex128 if complex_data else backend.float64
 
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     indices = _ehrlich_algorithm(initial_string, False)
     indices = [int(string, 2) for string in indices]
     indices_lex = np.sort(np.copy(indices))
 
-    rng = np.random.default_rng(seed)
-    data = rng.random(n_choose_k)
-    if complex_data:
-        data = data.astype(complex) + 1j * rng.random(n_choose_k)
-    data /= np.linalg.norm(data)
-
-    target = np.zeros(dims, dtype=dtype)
-    target[indices_lex] = data
-    target = backend.cast(target, dtype=target.dtype)
-
-    data = backend.cast(data, dtype=data.dtype)
+    if data:
+        _data = random_statevector(n_choose_k, dtype=dtype, seed=seed, backend=backend)
+        target = backend.zeros(dims, dtype=dtype)
+        target[indices_lex] = _data
+    else:
+        _data = None
+        target = comp_basis_encoder([0] * (nqubits - weight) + [1] * weight)
+        target = backend.execute_circuit(target).state()
 
     circuit = hamming_weight_encoder(
-        data,
         nqubits=nqubits,
         weight=weight,
+        data=_data,
         full_hwp=full_hwp,
         optimize_controls=optimize_controls,
         backend=backend,
