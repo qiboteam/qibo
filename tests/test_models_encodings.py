@@ -338,9 +338,9 @@ def test_up_to_k_hamming_weight_encoder(
     codewords = backend.arange(dim) if custom_codewords else None
 
     with pytest.raises(ValueError):
-        data = random_statevector(dim + 10, dtype=dtype, seed=seed, backend=backend)
+        _data = random_statevector(dim + 10, dtype=dtype, seed=seed, backend=backend)
         _ = up_to_k_hamming_weight_encoder(
-            data=data,
+            data=_data,
             nqubits=nqubits,
             up_to_k=up_to_k,
             codewords=codewords,
@@ -348,7 +348,11 @@ def test_up_to_k_hamming_weight_encoder(
             backend=backend,
         )
 
-    data = random_statevector(dim, dtype=dtype, seed=seed, backend=backend)
+    if data:
+        _data = random_statevector(dim, dtype=dtype, seed=seed, backend=backend)
+    else:
+        _data = None
+
     if up_to_k > nqubits:
         with pytest.raises(ValueError):
             _ = list(_ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend))
@@ -357,14 +361,17 @@ def test_up_to_k_hamming_weight_encoder(
         indices = [int(string, 2) for string in indices]
         indices_lex = np.sort(np.copy(indices))
 
-        target = backend.zeros(2**nqubits, dtype=dtype)
-        if codewords is None:
-            target[indices_lex] = data
+        if data:
+            target = backend.zeros(2**nqubits, dtype=dtype)
+            if codewords is None:
+                target[indices_lex] = _data
+            else:
+                target[codewords] = _data
         else:
-            target[codewords] = data
+            target = backend.zero_state(nqubits, dtype=dtype)
 
         circuit = up_to_k_hamming_weight_encoder(
-            data=data,
+            data=_data,
             nqubits=nqubits,
             up_to_k=up_to_k,
             codewords=codewords,

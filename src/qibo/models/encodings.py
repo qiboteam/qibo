@@ -114,9 +114,6 @@ def binary_encoder(
             dtype=backend.complex128 if complex_data else backend.float64,
         )
 
-    if nqubits is None:
-        nqubits = int(math.ceil(math.log2(dims)))
-
     if parametrization == "hopf":
         return _binary_encoder_hopf(
             data, nqubits, complex_data=complex_data, backend=backend, **kwargs
