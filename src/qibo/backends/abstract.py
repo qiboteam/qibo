@@ -231,7 +231,7 @@ class Backend:  # pylint: disable=R0904
     def abs(self, array: ArrayLike, **kwargs) -> Union[int, float, complex, ArrayLike]:
         return self.engine.abs(array, **kwargs)
 
-    def _add_at(
+    def add_at(
         self, array_1: ArrayLike, indices: ArrayLike, array_2: ArrayLike
     ) -> None:
         """Add ``array_2`` to ``array_1`` at specified ``indices`` in-place.
