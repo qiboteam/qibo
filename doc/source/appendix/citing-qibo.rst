@@ -319,6 +319,12 @@ Based on Qibo
 .. _`Eur. J. Phys. 46 035401`: https://iopscience.iop.org/article/10.1088/1361-6404/adcd13
 .. _`arXiv:2501.01434`: https://arxiv.org/abs/2501.01434
 
+* L. Esposito, A. Papaluca, S. Carrazza. QiboAgent: a practitioner's
+  guideline to open source assistants for Quantum Computing code development.
+  (2026), (`arXiv:2603.15538`_).
+
+.. _`arXiv:2603.15538`: https://arxiv.org/abs/2603.15538
+
 Authorship Guideline
 --------------------
 
