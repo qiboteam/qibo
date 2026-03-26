@@ -254,6 +254,9 @@ class Backend:  # pylint: disable=R0904
     def arccos(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arccos(array, **kwargs)
 
+    def arcsin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        return self.engine.arcsin(array, **kwargs)
+
     def arctan2(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
