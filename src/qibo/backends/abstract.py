@@ -442,7 +442,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.min(array, **kwargs)
 
     def mod(
-        dividend: ArrayLike, divisor: Union[float, int, ArrayLike], **kwargs
+        self, dividend: ArrayLike, divisor: Union[float, int, ArrayLike], **kwargs
     ) -> ArrayLike:  # pragma: no cover
         return self.engine.mod(dividend, divisor, **kwargs)
 
