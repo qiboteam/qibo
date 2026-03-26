@@ -1,6 +1,5 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
-from dataclasses import dataclass
 from typing import Union
 
 import numpy as np  # cannot be removed
@@ -111,21 +110,6 @@ class CustomQASMGate:
         new_qubits = [qubit_map[q] for q in gate.qubits]
         new_args = [args_map.get(arg, arg) for arg in gate.init_kwargs.values()]
         return new_qubits, new_args
-
-
-@dataclass(frozen=True)
-class ControlledGateInfo:
-    """Stores parsed information about a controlled QASM gate name."""
-
-    num_controls: int
-    """Number of control qubits."""
-    base_gate_name: str
-    """QASM name of the controlled gate."""
-
-    @property
-    def is_controlled(self) -> bool:
-        """``True`` if there is at least one control qubit."""
-        return self.num_controls > 0
 
 
 def _qibo_gate_name(gate):
@@ -241,13 +225,6 @@ class QASMParser:
             return self.q_registers[qubit.name.name][qubit.indices[0][0].value]
 
         return qubit.name
-
-    @staticmethod
-    def _parse_controlled_gate(gate_name: str):
-        """Checks if the qasm gate is a controlled gate."""
-        stripped_gate_name = gate_name.lower().lstrip("c")
-        length_difference = len(gate_name) - len(stripped_gate_name)
-        return ControlledGateInfo(length_difference, stripped_gate_name)
 
     def _get_gate(self, gate):
         """Converts a :class:`openqasm3.ast.QuantumGate` statement
