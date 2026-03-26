@@ -262,7 +262,7 @@ class QASMParser:
                 )
         # undefined gate
         else:
-            stripped_gate_name = gate.name.name.lower().lstrip("c")
+            stripped_gate_name = gate.name.name.lstrip("c")
             ncontrols = len(gate.name.name) - len(stripped_gate_name)
             if ncontrols > 0:
                 if _qibo_gate_name(stripped_gate_name) in dir(qibo.gates):
