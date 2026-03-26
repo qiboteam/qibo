@@ -285,15 +285,15 @@ class QASMParser:
                 )
         # undefined gate
         else:
-            parsed_gate = self._parse_controlled_gate(gate.name.name)
-            if parsed_gate.is_controlled:
-                if _qibo_gate_name(parsed_gate.base_gate_name) in dir(qibo.gates):
-                    control_qubits = qubits[: parsed_gate.num_controls]
-                    remaining_qubits = qubits[parsed_gate.num_controls :]
+            stripped_gate_name = gate.name.lower().lstrip("c")
+            ncontrols = len(gate.name) - len(stripperd_gate_name)
+            if ncontrols > 0:
+                if _qibo_gate_name(stripped_gate_name) in dir(qibo.gates):
+                    control_qubits = qubits[:ncontrols]
+                    remaining_qubits = qubits[ncontrols:]
                     try:
-                        gate = getattr(
-                            qibo.gates, _qibo_gate_name(parsed_gate.base_gate_name)
-                        )(*remaining_qubits, *init_args).controlled_by(*control_qubits)
+                        gate = getattr(qibo.gates, _qibo_gate_name(stripped_gate_name))
+                        gate = gate(*remaining_qubits, *init_args).controlled_by(*control_qubits)
                     # the gate exists in qibo.gates but invalid construction
                     except TypeError:
                         raise_error(
