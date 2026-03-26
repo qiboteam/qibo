@@ -298,6 +298,9 @@ class Backend:  # pylint: disable=R0904
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
 
+    def cumsum(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return self.engine.cumsum(array, **kwargs)
+
     def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
         return self.engine.random.default_rng(seed)
 
