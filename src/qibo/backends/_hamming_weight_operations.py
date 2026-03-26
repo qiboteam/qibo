@@ -589,7 +589,7 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
     coeffs = gate_matrix[cols, local_indices[rows]]
     values = coeffs * state[rows]
 
-    self._add_at(new_state, target_indices, values)
+    self.add_at(new_state, target_indices, values)
 
     return new_state
 
