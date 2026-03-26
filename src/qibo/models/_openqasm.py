@@ -293,7 +293,9 @@ class QASMParser:
                     remaining_qubits = qubits[ncontrols:]
                     try:
                         gate = getattr(qibo.gates, _qibo_gate_name(stripped_gate_name))
-                        gate = gate(*remaining_qubits, *init_args).controlled_by(*control_qubits)
+                        gate = gate(*remaining_qubits, *init_args).controlled_by(
+                            *control_qubits
+                        )
                     # the gate exists in qibo.gates but invalid construction
                     except TypeError:
                         raise_error(
