@@ -1306,7 +1306,7 @@ class Backend:  # pylint: disable=R0904
         circuit: "Circuit",  # type: ignore
         nshots: int,
         initial_state: Optional[ArrayLike] = None,
-    ) -> ArrayLike:  # pragma: no cover
+    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 
         Useful for noise simulation using state vectors or for simulating gates
