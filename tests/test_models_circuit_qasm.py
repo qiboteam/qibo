@@ -645,7 +645,7 @@ ccz q[0],q[1],q[2];"""
     assert circuit.queue[3].control_qubits == (0, 1)
 
 
-def test_from_qasm_controlled_gates():
+def test_from_qasm_invalid_controlled_gates():
     target = """OPENQASM 2.0;
 qreg q[4];
 x q[0];
