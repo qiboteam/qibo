@@ -1,3 +1,5 @@
+"""Helper functions for the `models.encodingss` module."""
+
 import math
 from inspect import signature
 from typing import List, Optional, Set, Tuple, Union
@@ -70,7 +72,8 @@ def _add_wbd_gate(
     """In-place addition of a Weight Distribution Block (WBD) to ``circuit``.
     Implements the :math:`WBD^{n,m}_k` unitary from Definition 2 of the paper [2].
     Only acts on first_register and second_register, last k qubits
-    Our circuit is mirrored, as paper [2] uses a top-bottom circuit <-> right-left bitstring convention
+    Our circuit is mirrored, as paper [2] uses a top-bottom circuit <-> right-left
+    bitstring convention
     """
 
     if mqubits > nqubits / 2:
@@ -392,8 +395,8 @@ def _ehrlich_codewords_up_to_k(
 
     Args:
         up2k (int): Length of the bitstrings and the maximum Hamming weight.
-        reversed_list (bool, optional): If ``True``, generate from weight ``up2k`` down to :math:`0`.
-            Otherwise, from :math:`0` up to ``up2k``.
+        reversed_list (bool, optional): If ``True``, generate from weight ``up2k``
+            down to :math:`0`. Otherwise, from :math:`0` up to ``up2k``.
         nqubits (int, optional): Number of qubits to be considered. If None, assumes that the
             number of qubits is ``up2k``, which is useful for the binary encoding case.
             Defaults to None.
@@ -418,8 +421,8 @@ def _ehrlich_codewords_up_to_k(
     def ones_right(k: int):
         return "0" * (n - k) + "1" * k
 
-    from qibo.quantum_info.utils import (
-        hamming_distance,  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+        hamming_distance,
     )
 
     # starting boundary (weight 0 or weight up2k)
@@ -468,15 +471,15 @@ def _gate_params(
     bsi: List[int], bsip1: List[int], keep_antictrls: bool = False
 ) -> Tuple[List[int], ...]:
 
-    one_ind_bsi = {i for i in range(len(bsi)) if (bsi[i] == 1)}
-    one_ind_bsip1 = {i for i in range(len(bsip1)) if (bsip1[i] == 1)}
+    one_ind_bsi = {i for i in range(len(bsi)) if bsi[i] == 1}
+    one_ind_bsip1 = {i for i in range(len(bsip1)) if bsip1[i] == 1}
 
     ctrls = one_ind_bsi.intersection(one_ind_bsip1)
 
     actrls = []
     if keep_antictrls:
-        zero_ind_bsi = {i for i in range(len(bsi)) if (bsi[i] == 0)}
-        zero_ind_bsip1 = {i for i in range(len(bsip1)) if (bsip1[i] == 0)}
+        zero_ind_bsi = {i for i in range(len(bsi)) if bsi[i] == 0}
+        zero_ind_bsip1 = {i for i in range(len(bsip1)) if bsip1[i] == 0}
         actrls = zero_ind_bsi.intersection(zero_ind_bsip1)
         ctrls = ctrls.union(actrls)
 
@@ -893,9 +896,9 @@ def _monotonic_hw_encoder_complex(
 
     circuit = Circuit(nqubits, **kwargs)
 
-    bsi = [int(b) for b in format(codewords[0], "0{}b".format(nqubits))]
+    bsi = [int(b) for b in format(codewords[0], f"0{nqubits}b")]
     for i in range(1, dims - 1):
-        bsip1 = [int(b) for b in format(codewords[i], "0{}b".format(nqubits))]
+        bsip1 = [int(b) for b in format(codewords[i], f"0{nqubits}b")]
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
@@ -925,7 +928,7 @@ def _monotonic_hw_encoder_complex(
             circuit.add([gates.X(ac) for ac in actrls])
 
         bsi = bsip1
-    bsip1 = [int(b) for b in format(codewords[dims - 1], "0{}b".format(nqubits))]
+    bsip1 = [int(b) for b in format(codewords[dims - 1], f"0{nqubits}b")]
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
@@ -965,8 +968,8 @@ def _monotonic_hw_encoder_complex(
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
 
-        ctrls = [i for i in range(len(bsip1)) if (bsip1[i] == 1)]
-        in_bits = [i for i in range(len(bsip1)) if (bsip1[i] == 0)]
+        ctrls = [i for i in range(len(bsip1)) if bsip1[i] == 1]
+        in_bits = [i for i in range(len(bsip1)) if bsip1[i] == 0]
 
         circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
         if keep_antictrls:
@@ -1023,9 +1026,9 @@ def _monotonic_hw_encoder_real(
 
     circuit = Circuit(nqubits, **kwargs)
 
-    bsi = [int(b) for b in format(codewords[0], "0{}b".format(nqubits))]
+    bsi = [int(b) for b in format(codewords[0], f"0{nqubits}b")]
     for i in range(1, dims - 1):
-        bsip1 = [int(b) for b in format(codewords[i], "0{}b".format(nqubits))]
+        bsip1 = [int(b) for b in format(codewords[i], f"0{nqubits}b")]
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
@@ -1054,7 +1057,7 @@ def _monotonic_hw_encoder_real(
             circuit.add([gates.X(ac) for ac in actrls])
 
         bsi = bsip1
-    bsip1 = [int(b) for b in format(codewords[dims - 1], "0{}b".format(nqubits))]
+    bsip1 = [int(b) for b in format(codewords[dims - 1], f"0{nqubits}b")]
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
@@ -1179,14 +1182,14 @@ def _perm_column_ops(
     # xj to track the changes in xj where xj,k represents the k-th bit and the
     # bits are arranged from the least significant bit to the most significant bit
     indices = list(sum(indices, ()))
-    A = []
+    perm_matrix = []
     for x in indices:
         bits = []
         for k in range(n):
             bits.append((x >> k) & 1)
-        A.append(bits)
-    A = backend.cast(A, dtype=backend.int8)
-    ncols = A.shape[1]
+        perm_matrix.append(bits)
+    perm_matrix = backend.cast(perm_matrix, dtype=backend.int8)
+    ncols = perm_matrix.shape[1]
     # initialize the list of gates
     qgates = []
 
@@ -1194,33 +1197,35 @@ def _perm_column_ops(
     ell = 0
     flag = backend.zeros(n, dtype=int)
     for idxj in range(ncols):
-        if any(elem != 0 for elem in A[:, idxj]):
+        if any(elem != 0 for elem in perm_matrix[:, idxj]):
             ell += 1
             flag[idxj] = 1
 
-            # look for columns that are equal to A[:,idxj]
+            # look for columns that are equal to perm_matrix[:,idxj]
             for idxk in range(idxj + 1, ncols):
-                if backend.array_equal(A[:, idxj], A[:, idxk]):
+                if backend.array_equal(perm_matrix[:, idxj], perm_matrix[:, idxk]):
                     qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
                     # this should transform the k-th column into an all-zero column
-                    A[:, idxk] = 0
+                    perm_matrix[:, idxk] = 0
 
     # Now, we need to swap the ell non-zero columns to the first ell columns
     for idxk in range(ell, ncols):
-        if not backend.array_equal(A[:, idxk], backend.zeros_like(A[:, idxk])):
-            for k in range(len(flag)):
-                if flag[k] == 0:
+        if not backend.array_equal(
+            perm_matrix[:, idxk], backend.zeros_like(perm_matrix[:, idxk])
+        ):
+            for k, elem in enumerate(flag):
+                if elem == 0:
                     flag[k] = 1
                     flag[idxk] = 0
 
                     qgates.append(gates.SWAP(n - idxk - 1, n - k - 1))
 
-                    bits = A[:, idxk].copy()
-                    A[:, idxk] = A[:, k]
-                    A[:, k] = bits
+                    bits = perm_matrix[:, idxk].copy()
+                    perm_matrix[:, idxk] = perm_matrix[:, k]
+                    perm_matrix[:, k] = bits
                     break
 
-    return ell, qgates, A
+    return ell, qgates, perm_matrix
 
 
 def _perm_pair_flip_ops(
@@ -1228,7 +1233,8 @@ def _perm_pair_flip_ops(
 ) -> List[Gate]:
     """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
     backend = _check_backend(backend)
-    # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
+    # let us flip the first qubit when the last
+    # {int(n-math.log2(2*m))} qubits are all in the state |0⟩
     prefix = int(backend.ceil(backend.log2(2 * m)))
     x_qubits, controls = range(prefix, n), range(n - prefix)
     qgates = [gates.X(n - q - 1) for q in x_qubits]
@@ -1239,7 +1245,7 @@ def _perm_pair_flip_ops(
 
 
 def _perm_row_ops(
-    A: ArrayLike, ell: int, m: int, n: int, backend: Optional[Backend] = None
+    perm_matrix: ArrayLike, ell: int, m: int, n: int, backend: Optional[Backend] = None
 ) -> List[Gate]:
     """Return gates that reduce all rows after row0 to target form."""
     backend = _check_backend(backend)
@@ -1250,59 +1256,62 @@ def _perm_row_ops(
     )
 
     qgates = []
-    nrows = A.shape[0]
-    ncols = A.shape[1]
+    nrows = perm_matrix.shape[0]
+    ncols = perm_matrix.shape[1]
     # Start with the first row (indexed as row 0)
     for k in range(ncols):
         # If we find a0,k = 1 for any 0 <= k <= n−1
-        if A[0, k] == 1:
+        if perm_matrix[0, k] == 1:
             qgates.append(gates.X(n - k - 1))
-            A[:, k] = (A[:, k] + 1) % 2
+            perm_matrix[:, k] = (perm_matrix[:, k] + 1) % 2
 
     for j in range(1, nrows):
         flag = False
         for k in range(log2m, ncols):
-            if A[j, k] != 0:
+            if perm_matrix[j, k] != 0:
                 flag = True
                 break
 
         if not flag:
             # There is no element b_{j},k != 0 for k > {log2m-1}"
-            ctrls = [n - l - 1 for l in range(ncols) if A[j, l] != 0]
+            ctrls = [n - l - 1 for l in range(ncols) if perm_matrix[j, l] != 0]
             qgates.append(gates.X(n - log2m - 1).controlled_by(*ctrls))
-            ctrls = [l for l in range(ncols) if A[j, l] == 1]
+            ctrls = [l for l in range(ncols) if perm_matrix[j, l] == 1]
 
             # check whether the gate is applied on other rows
             for l in range(j, nrows):
-                if all(elem == 1 for elem in A[l, ctrls]):
-                    A[l, log2m] = (A[l, log2m] + 1) % 2
+                if all(elem == 1 for elem in perm_matrix[l, ctrls]):
+                    perm_matrix[l, log2m] = (perm_matrix[l, log2m] + 1) % 2
 
         # There is always an element b_{j},k != 0 for k > {log2m-1}
         for k in range(log2m, ncols):
-            if A[j, k] != 0:
+            if perm_matrix[j, k] != 0:
                 # Element b_{j},{k} != 0, {k} > {log2m-1}"
                 for kprime in range(ell):
                     # There is a typo in the paper
                     # b_{j},{kprime} should be different from Ã_{j},{kprime} not Ã_{j},{k}
-                    if kprime != k and A[j, kprime] != atilde[j, kprime]:
+                    if kprime != k and perm_matrix[j, kprime] != atilde[j, kprime]:
                         qgates.append(gates.CNOT(n - k - 1, n - kprime - 1))
                         # check whether the gate is applied on other rows
                         for l in range(nrows):
-                            if A[l, k] == 1:
-                                A[l, kprime] = (A[l, kprime] + 1) % 2
+                            if perm_matrix[l, k] == 1:
+                                perm_matrix[l, kprime] = (
+                                    perm_matrix[l, kprime] + 1
+                                ) % 2
 
                 # Let us clean the element b_{j},{k}
 
                 # There is another typo in the paper
-                # the control qubits for this gate correspond to the non-zero elements in row j of matrix A, not Ã
-                ctrls = [n - l - 1 for l in range(k) if A[j, l] != 0]
+                # the control qubits for this gate correspond to the non-zero
+                # elements in row j of matrix A, not Ã
+                ctrls = [n - l - 1 for l in range(k) if perm_matrix[j, l] != 0]
                 qgates.append(gates.X(n - k - 1).controlled_by(*ctrls))
-                ctrls = [l for l in range(k) if A[j, l] != 0]
+                ctrls = [l for l in range(k) if perm_matrix[j, l] != 0]
 
                 # check whether the gate is applied on other rows
                 for l in range(nrows):
-                    if all(elem == 1 for elem in A[l, ctrls]):
-                        A[l, k] = (A[l, k] + 1) % 2
+                    if all(elem == 1 for elem in perm_matrix[l, ctrls]):
+                        perm_matrix[l, k] = (perm_matrix[l, k] + 1) % 2
 
     return qgates
 
