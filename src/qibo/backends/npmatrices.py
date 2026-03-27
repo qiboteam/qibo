@@ -1,5 +1,7 @@
 """Module defining the matrix representation of gates used by the backends."""
 
+# pylint: disable=C0103
+
 import cmath
 import math
 from functools import cached_property
