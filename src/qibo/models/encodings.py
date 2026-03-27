@@ -242,9 +242,9 @@ def dicke_state(
         `22nd International Symposium on Fundamentals of Computation Theory, FCT'19, 126-139  (2019)
         <https://doi.org/10.1007/978-3-030-25027-0_9>`_.
 
-        2. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State Preparation*,
-        `IEEE International Conference on Quantum Computing & Engineering (QCE), 87--96 (2022)
-        <https://doi.org/10.1109/QCE53715.2022.00027>`_.
+        2. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State
+        Preparation*, `IEEE International Conference on Quantum Computing & Engineering (QCE),
+        87--96 (2022) <https://doi.org/10.1109/QCE53715.2022.00027>`_.
     """
     if weight < 0 or weight > nqubits:
         raise_error(
@@ -521,7 +521,7 @@ def graph_state(
     if not backend.allclose(matrix, matrix.T):
         raise_error(
             ValueError,
-            f"``matrix`` is not symmetric, not representing an undirected graph",
+            "``matrix`` is not symmetric, not representing an undirected graph",
         )
 
     nqubits = len(matrix)
@@ -702,8 +702,13 @@ def permutation_synthesis(
     The function returns a circuit synthesis of ``sigma``.
 
     Args:
-        sigma (list or tuple): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        sigma (list or tuple): permutation description on :math:`\\{0, \\, 1,
+            \\, \\dots, \\, d-1\\}`.
         m (int): power‑of‑two budget. Defauls to :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that implements the permutation ``sigma``.
@@ -721,17 +726,17 @@ def permutation_synthesis(
     if not isinstance(sigma, (list, tuple)):
         raise_error(
             TypeError,
-            f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
+            "Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
         )
 
     nqubits = int(backend.ceil(backend.log2(len(sigma))))
-    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
+    if sum(abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))) != 0:
         raise_error(
             ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
         )
 
     if m > 0 and (m & (m - 1)) != 0:
-        raise_error(ValueError, f"budget m must be a power‑of‑two")
+        raise_error(ValueError, "budget ``m`` must be a power of 2.")
 
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         decompose_permutation,
@@ -742,12 +747,12 @@ def permutation_synthesis(
     # each layer moves a power‑of‑two number of indices
     layers = decompose_permutation(sigma, m)
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     # in case we have more than one permutation to do, do it in layers
     for layer in layers:
         m = len(layer)
-        ell, col_gates, A = _perm_column_ops(layer, nqubits, backend)
-        row_gates = _perm_row_ops(A, ell, m, nqubits, backend)
+        ell, col_gates, matrix_a = _perm_column_ops(layer, nqubits, backend)
+        row_gates = _perm_row_ops(matrix_a, ell, m, nqubits, backend)
         flip_gates = _perm_pair_flip_ops(nqubits, m, backend)
         col_row = col_gates + row_gates
         circuit.add(col_row)
@@ -1174,7 +1179,7 @@ def up_to_k_hamming_weight_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _up_to_k_hamming_weight_encoder_deprecated(
+        return _up_to_k_hamming_weight_encoder_deprecated(  # pylint: disable=W1114
             nqubits, up_to_k, data, codewords, keep_antictrls, backend, **kwargs
         )
 
