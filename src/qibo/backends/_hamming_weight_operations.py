@@ -1,25 +1,30 @@
 """Module defining the Hamming-weight-preserving backend."""
 
-from typing import List, Union
+# pylint: disable=W0212
 
-import numpy as np
+from typing import Dict, List, Optional, Set, Tuple, Union
+
+from numpy.typing import ArrayLike
 from scipy.special import binom
 
 from qibo import gates
 from qibo.config import raise_error
+from qibo.gates.abstract import Gate
 
 
-def apply_gate(self, gate, state, nqubits: int, weight: int):
+def apply_gate(
+    self, gate: Gate, state: ArrayLike, nqubits: int, weight: int
+) -> ArrayLike:
     """Apply ``gate`` to ``state``.
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): gate to apply to ``state``.
-        state (ndarray): state to apply ``gate`` to.
+        state (ArrayLike): state to apply ``gate`` to.
         nqubits (int): total number of qubits in ``state``.
         weight (int): fixed Hamming weight of ``state``.
 
     Returns:
-        ndarray: ``state`` after the action of ``gate``.
+        ArrayLike: ``state`` after the action of ``gate``.
     """
     if isinstance(gate, gates.M):
         return gate.apply_hamming_weight(self, state, nqubits, weight)
@@ -28,7 +33,7 @@ def apply_gate(self, gate, state, nqubits: int, weight: int):
         # CCZ has a custom apply method because currently it is the only
         # 3-qubit gate that is also Hamming-weight-preserving
         # and this custom method is faster than the n-qubit method
-        return self._apply_gate_CCZ(gate, state, nqubits, weight)
+        return self._apply_gate_ccz(gate, state, nqubits, weight)
 
     if len(gate.target_qubits) == 1:
         return self._apply_gate_single_qubit(gate, state, nqubits, weight)
@@ -39,14 +44,20 @@ def apply_gate(self, gate, state, nqubits: int, weight: int):
     return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
 
-def execute_circuit(self, circuit, weight: int, initial_state=None, nshots: int = 1000):
+def execute_circuit(
+    self,
+    circuit,
+    weight: int,
+    initial_state: Optional[ArrayLike] = None,
+    nshots: int = 1000,
+):
     """Execute ``circuit`` by applying the queue of gates to the ``initial_state``.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Hamming-weight-preserving circuit
             to be executed.
         weight (int): fixed Hamming weight of the ``initial_state``.
-        initial_state (ndarray, optional): initial state that ``circuit`` acts on.
+        initial_state (ArrayLike, optional): initial state that ``circuit`` acts on.
             If ``None``, defaults to :math:`\\ket{0^{n-k} \\, 1^{k}}`,
             with :math:`n` being the total number of qubits in the circuit,
             and :math:`k` being the Hamming ``weight``. Defaults to ``None``.
@@ -108,17 +119,17 @@ def execute_circuit(self, circuit, weight: int, initial_state=None, nshots: int 
         )
 
 
-def _gray_code(self, initial_string):
+def _gray_code(self, initial_string: ArrayLike) -> ArrayLike:
     """Return all bitstrings of a fixed Hamming weight.
 
     Uses the ``ehrlich_algorithm`` with an ``initial_string``.
 
     Args:
-        initial_string (ndarray): Array of bits representing the input
+        initial_string (ArrayLike): Array of bits representing the input
             of the Ehrlich algorithm.
 
     Returns:
-        ndarray: All bitstrings with the same Hamming weight as ``initial_string``.
+        ArrayLike: All bitstrings with the same Hamming weight as ``initial_string``.
     """
     from qibo.models._encodings import _ehrlich_algorithm  # pylint: disable=C0415
 
@@ -131,7 +142,7 @@ def _gray_code(self, initial_string):
 
 def _get_cached_strings(
     self, nqubits: int, weight: int, ncontrols: int = 0, two_qubit_gate: bool = True
-):
+) -> Union[ArrayLike, List[ArrayLike]]:
     """Generate list of strings necessary for the custom ``apply_gate`` method.
 
     Given the total number of qubits ``nqubits``, the Hamming ``weight`` to be
@@ -151,7 +162,7 @@ def _get_cached_strings(
             gate. Defaults to ``True``.
 
     Returns:
-        ndarray or list: ndarray of bitstrings for two-qubit gates or a list of two ndarrays
+        ArrayLike or List[int]: Bitstrings for two-qubit gates or a list of two arrays
         of bitstrings for single-qubit gates.
     """
     if two_qubit_gate:
@@ -181,7 +192,9 @@ def _get_cached_strings(
     return strings
 
 
-def _get_lexicographical_order(self, nqubits, weight):
+def _get_lexicographical_order(
+    self, nqubits: int, weight: int
+) -> Dict[str, Tuple[int, ...]]:
     """Sort bistrings generated from ``self._get_cached_strings`` in lexicographical order.
 
     Bitstrings are sorted in lexicographical (ascending) order.
@@ -212,7 +225,7 @@ def _get_lexicographical_order(self, nqubits, weight):
     return _dict_indexes
 
 
-def _get_single_qubit_matrix(self, gate):
+def _get_single_qubit_matrix(self, gate: Gate) -> Tuple[complex, ...]:
     """Return non-zero elements of the matrix representation of
     Hamming-weight-preserving single-qubit gates.
 
@@ -231,7 +244,9 @@ def _get_single_qubit_matrix(self, gate):
     return self.diag(matrix)
 
 
-def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
+def _apply_gate_single_qubit(
+    self, gate: Gate, state: ArrayLike, nqubits: int, weight: int
+) -> ArrayLike:
     """Custom ``apply_gate`` method for Hamming-weight-preserving single-qubit gates.
 
     Instead of relying on matrix multiplication, this method applies
@@ -241,12 +256,12 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
             single-qubit gate to be applied to ``state``
-        state (ndarray): state to suffer the action of ``gate``.
+        state (ArrayLike): state to suffer the action of ``gate``.
         nqubits (int): total number of qubits in the circuit.
         weight (int): Hamming weight of ``state``.
 
     Returns:
-        ndarray: ``state`` after the action of ``gate``.
+        ArrayLike: ``state`` after the action of ``gate``.
     """
     qubits = list(gate.target_qubits)
     controls = list(gate.control_qubits)
@@ -308,7 +323,7 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
 
 def _update_amplitudes(
     self,
-    state,
+    state: ArrayLike,
     qubits: List[int],
     controls: List[int],
     other_qubits: List[int],
@@ -316,11 +331,11 @@ def _update_amplitudes(
     matrix_element: Union[complex, float],
     bitlist: List[str],
     shift: int,
-):
+) -> ArrayLike:
     """Update in-place the amplitudes changed by a two-qubit Hamming-weight-preserving gate.
 
     Args:
-        state (ndarray): state that the two-qubit gate acts on.
+        state (ArrayLike): state that the two-qubit gate acts on.
         qubits (list): target qubits of the gate.
         controls (list): control qubits of the gate.
         other_qubits (list): remaining qubits in the circuit.
@@ -338,7 +353,7 @@ def _update_amplitudes(
             then ``shift`` is :math:`-1`.
 
     Returns:
-        ndarray: ``state`` after the action of two-qubit Hamming-weight-preserving gate.
+        ArrayLike: ``state`` after the action of two-qubit Hamming-weight-preserving gate.
     """
     ncontrols = len(controls)
     nqubits = len(qubits) + ncontrols + len(other_qubits)
@@ -358,7 +373,9 @@ def _update_amplitudes(
     return state
 
 
-def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
+def _apply_gate_two_qubit(
+    self, gate: Gate, state: ArrayLike, nqubits: int, weight: int
+) -> ArrayLike:
     """Custom ``apply_gate`` method for Hamming-weight-preserving two-qubit gates.
 
     Instead of relying on matrix multiplication, this method applies
@@ -368,12 +385,12 @@ def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
             two-qubit gate to be applied to ``state``
-        state (ndarray): state to suffer the action of ``gate``.
+        state (ArrayLike): state to suffer the action of ``gate``.
         nqubits (int): total number of qubits in the circuit.
         weight (int): Hamming weight of ``state``.
 
     Returns:
-        ndarray: ``state`` after the action of ``gate``.
+        ArrayLike: ``state`` after the action of ``gate``.
     """
     qubits = list(gate.target_qubits)
     controls = list(gate.control_qubits)
@@ -456,18 +473,20 @@ def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
     return state
 
 
-def _apply_gate_CCZ(self, gate, state, nqubits: int, weight: int):
+def _apply_gate_ccz(
+    self, gate: Gate, state: ArrayLike, nqubits: int, weight: int
+) -> ArrayLike:
     """Custom ``apply_gate`` method for the :class:`qibo.gates.CCZ` gate.
 
     Args:
         gate (:class:`qibo.gates.CCZ`): :math:`2`-controlled :math:`Z` gate
             to be applied to ``state``.
-        state (ndarray): state to suffer the action of ``gate``.
+        state (ArrayLike): state to suffer the action of ``gate``.
         nqubits (int): total number of qubits in the circuit.
         weight (int): Hamming-weight of ``state``.
 
     Returns:
-        ndarray: ``state`` after the action of the :class:`qibo.gates.CCZ` gate.
+        ArrayLike: ``state`` after the action of the :class:`qibo.gates.CCZ` gate.
     """
     qubits = list(gate.qubits)
     gate_qubits = len(qubits)
@@ -484,24 +503,27 @@ def _apply_gate_CCZ(self, gate, state, nqubits: int, weight: int):
     return state
 
 
-def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
+def _apply_gate_n_qubit(
+    self, gate: Gate, state: ArrayLike, nqubits: int, weight: int
+) -> ArrayLike:
     """Custom ``apply_gate`` method for Hamming-weight-preserving n-qubit gates.
 
     This method performs matrix multiplication directly in the subspace with Hamming-weight
     ``weight`` without the need to calculate the full matrix representation of the gate.
 
     .. note::
-        The attribute ``gate.hamming_weight`` must be manually set to ``True`` for this method to work.
+        The attribute ``gate.hamming_weight`` must be manually set to ``True``
+        for this method to work.
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
             :math:`n`-qubit gate to be applied to ``state``
-        state (ndarray): state to suffer the action of ``gate``.
+        state (ArrayLike): state to suffer the action of ``gate``.
         nqubits (int): total number of qubits in the circuit.
         weight (int): Hamming weight of ``state``.
 
     Returns:
-        ndarray: ``state`` after the action of ``gate``.
+        ArrayLike: ``state`` after the action of ``gate``.
     """
     gate_matrix = gate.matrix(backend=self)
     qubits = list(gate.target_qubits)
@@ -595,12 +617,18 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
 
 
 def calculate_symbolic(
-    self, state, nqubits, weight, decimals=5, cutoff=1e-10, max_terms=20
-):
+    self,
+    state: ArrayLike,
+    nqubits: int,
+    weight: int,
+    decimals: int = 5,
+    cutoff: float = 1e-10,
+    max_terms: int = 20,
+) -> str:
     """Dirac notation representation of the state in the computational basis.
 
     Args:
-        state (ndarray): state to suffer the action of ``gate``.
+        state (ArrayLike): state to suffer the action of ``gate``.
         nqubits (int): total number of qubits in the circuit.
         weight (int): Hamming-weight of ``state``.
         decimals (int, optional): Number of decimals for the amplitudes.
@@ -630,17 +658,23 @@ def calculate_symbolic(
     return terms
 
 
-def calculate_probabilities(self, state, qubits, weight, nqubits):
+def calculate_probabilities(
+    self,
+    state: ArrayLike,
+    qubits: Union[List[int], Tuple[int, ...], Set[int]],
+    weight: int,
+    nqubits: int,
+) -> ArrayLike:
     """Calculate the probabilities of the measured qubits from the statevector.
 
     Args:
-        state (ndarray): state to suffer the action of ``gate``.
-        qubits (list or set, optional): Set of qubits that are measured.
+        state (ArrayLike): state to suffer the action of ``gate``.
+        qubits (list or tuple or set, optional): qubits that are measured.
         weight (int): Hamming-weight of ``state``.
         nqubits (int): total number of qubits in the circuit.
 
     Returns:
-        ndarray: Probabilities over the input qubits.
+        ArrayLike: Probabilities over the input qubits.
     """
     rtype = self.real(state).dtype
 
@@ -664,18 +698,26 @@ def calculate_probabilities(self, state, qubits, weight, nqubits):
     return probs
 
 
-def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
+def collapse_state(
+    self,
+    state: ArrayLike,
+    qubits: Union[List[int], Tuple[int, ...], Set[int]],
+    shot: List[int],
+    weight: int,
+    nqubits: int,
+    normalize: bool = True,
+) -> ArrayLike:
     """Collapse state vector according to measurement shot.
 
     Args:
-        state (ndarray): state to suffer the action of ``gate``.
-        qubits (list or set, optional): Set of qubits that are measured.
+        state (ArrayLike): state to suffer the action of ``gate``.
+        qubits (list or tuple or set, optional): qubits that are measured.
         shot (list): Decimal value of the bitstring measured.
         weight (int): Hamming-weight of ``state``.
         nqubits (int): total number of qubits in the circuit.
 
     Returns:
-        ndarray: collapsed ``state``.
+        ArrayLike: collapsed ``state``.
     """
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
