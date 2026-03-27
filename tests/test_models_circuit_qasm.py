@@ -643,3 +643,13 @@ ccz q[0],q[1],q[2];"""
     assert isinstance(circuit.queue[3], gates.CCZ)
     assert circuit.queue[3].target_qubits == (2,)
     assert circuit.queue[3].control_qubits == (0, 1)
+
+
+def test_from_qasm_controlled_gates():
+    target = """OPENQASM 2.0;
+qreg q[4];
+x q[0];
+x q[1];
+cswap q[0],q[1],q[2],q[3];"""
+    with pytest.raises(AttributeError):
+        _ = Circuit.from_qasm(target)
