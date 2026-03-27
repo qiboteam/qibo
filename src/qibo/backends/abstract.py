@@ -380,6 +380,9 @@ class Backend:  # pylint: disable=R0904
     def inv(self, array: ArrayLike) -> ArrayLike:
         return self.engine.linalg.inv(array)
 
+    def isnan(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return self.engine.isnan(array, **kwargs)
+
     def kron(self, array_1: ArrayLike, array_2: ArrayLike) -> ArrayLike:
         return self.engine.kron(array_1, array_2)
 

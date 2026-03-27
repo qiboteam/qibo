@@ -337,7 +337,7 @@ For instance, the following two circuit generations are equivalent:
     nqubits = 3
     phases = np.random.rand(nqubits)
 
-    circuit_1 = phase_encoder(phases, rotation="RX")
+    circuit_1 = phase_encoder(nqubits, rotation="RX", data=phases)
 
     circuit_2 = Circuit(3)
     circuit_2.add(gates.RX(qubit, phases[qubit]) for qubit in range(nqubits))
