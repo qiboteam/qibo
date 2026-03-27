@@ -254,6 +254,9 @@ class Backend:  # pylint: disable=R0904
     def arccos(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arccos(array, **kwargs)
 
+    def arcsin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        return self.engine.arcsin(array, **kwargs)
+
     def arctan2(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
@@ -294,6 +297,9 @@ class Backend:  # pylint: disable=R0904
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
+
+    def cumsum(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        return self.engine.cumsum(array, **kwargs)
 
     def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
         return self.engine.random.default_rng(seed)
@@ -434,6 +440,11 @@ class Backend:  # pylint: disable=R0904
         self, array: ArrayLike, **kwargs
     ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
         return self.engine.min(array, **kwargs)
+
+    def mod(
+        self, dividend: ArrayLike, divisor: Union[float, int, ArrayLike], **kwargs
+    ) -> ArrayLike:  # pragma: no cover
+        return self.engine.mod(dividend, divisor, **kwargs)
 
     def nonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.nonzero(array)
@@ -1295,7 +1306,7 @@ class Backend:  # pylint: disable=R0904
         circuit: "Circuit",  # type: ignore
         nshots: int,
         initial_state: Optional[ArrayLike] = None,
-    ) -> ArrayLike:  # pragma: no cover
+    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 
         Useful for noise simulation using state vectors or for simulating gates
