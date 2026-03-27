@@ -174,14 +174,6 @@ Grover's Algorithm
     :member-order: bysource
 
 
-Travelling Salesman Problem
-"""""""""""""""""""""""""""
-
-.. automodule:: qibo.models.tsp
-    :members:
-    :member-order: bysource
-
-
 Iterative Quantum Amplitude Estimation (IQAE)
 """""""""""""""""""""""""""""""""""""""""""""
 
