@@ -575,8 +575,8 @@ def _draw_controls(
                     subindex = plot_params["hash_unitary_gates"][index_r][
                         u_gate_single_hash + "-" + global_hash
                     ]
-                    symbol = rf"$\rm_{{{subindex}}}$" + symbol
-                    symbol += rf"$\rm_{{{plot_params["hash_global_unitary_gates"][global_hash]}}}$"
+                    symbol = f"$\\rm_{{{subindex}}}$" + symbol
+                    symbol += f"$\\rm_{{{plot_params["hash_global_unitary_gates"][global_hash]}}}$"
                     cci += 1
 
                 _text(ax, x, y, symbol, plot_params, box=True)
