@@ -1,3 +1,5 @@
+"""Bloch sphere module."""
+
 from dataclasses import dataclass, field
 from typing import Union
 
@@ -40,19 +42,19 @@ class BlochSphere:
 
     @staticmethod
     def _make_style():
-        _STYLE = {
+        _style = {
             "figure.figsize": (6, 6),
             "lines.linewidth": 0.9,
         }
-        return _STYLE
+        return _style
 
     @staticmethod
     def _make_style_text():
         return {"text.color": "black", "font.size": 19}
 
     # Plot style sheets
-    STYLE_TEXT: dict = field(default_factory=_make_style_text)
-    STYLE: dict = field(default_factory=_make_style)
+    style_text: dict = field(default_factory=_make_style_text)
+    style: dict = field(default_factory=_make_style)
 
     # Data
     _points: list = field(default_factory=list)
@@ -69,7 +71,7 @@ class BlochSphere:
         mpl.rcParams["toolbar"] = "None"
 
         # Figure
-        self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
+        self.fig = plt.figure(figsize=self.style["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
 
         # Title of the window
@@ -77,7 +79,7 @@ class BlochSphere:
 
     def _new_window(self):
         """It creates a new Figure object and it adds to it a new Axis."""
-        self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
+        self.fig = plt.figure(figsize=self.style["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
         self.fig.canvas.manager.set_window_title("Bloch sphere")
 
@@ -126,7 +128,7 @@ class BlochSphere:
         combinations_axis = [(x, y, z), (z, x, y), (y, z, x)]
 
         # Axis lines
-        line, zeros = np.linspace(-1, 1, 100), np.zeros(shape=(100))
+        line, zeros = np.linspace(-1, 1, 100), np.zeros(shape=100)
         combinations_axis_line = [
             (line, zeros, zeros),
             (zeros, line, zeros),
@@ -140,17 +142,19 @@ class BlochSphere:
         parallel = lambda x: self.ax.plot(*self._parallel(x), color="darkgrey")
 
         # Axis, Axis lines, Meridians, Parallels
-        with mpl.rc_context(self.STYLE):
-            [self.ax.plot(*combinations_axis[i], color="darkgrey") for i in range(3)]
-            [
+        with mpl.rc_context(self.style):
+            _ = [
+                self.ax.plot(*combinations_axis[i], color="darkgrey") for i in range(3)
+            ]
+            _ = [
                 self.ax.plot(*combinations_axis_line[i], color="darkgrey")
                 for i in range(3)
             ]
-            [meridian(p) for p in phi]
-            [parallel(l) for l in lat]
+            _ = [meridian(p) for p in phi]
+            _ = [parallel(l) for l in lat]
 
         # Text
-        with mpl.rc_context(self.STYLE_TEXT):
+        with mpl.rc_context(self.style_text):
             self.ax.text(1.2, 0, 0, "x", ha="center")
             self.ax.text(0, 1.2, 0, "y", ha="center")
             self.ax.text(0, 0, 1.2, r"$|0\rangle$", ha="center")
@@ -162,17 +166,18 @@ class BlochSphere:
         on the considered state and yields its cartesian coordinates on the Bloch sphere.
         """
 
-        sigma_X = SymbolicHamiltonian(X(0))
-        sigma_Y = SymbolicHamiltonian(Y(0))
-        sigma_Z = SymbolicHamiltonian(Z(0))
+        sigma_x = SymbolicHamiltonian(X(0))
+        sigma_y = SymbolicHamiltonian(Y(0))
+        sigma_z = SymbolicHamiltonian(Z(0))
 
-        x = sigma_X.expectation_from_state(state)
-        y = sigma_Y.expectation_from_state(state)
-        z = sigma_Z.expectation_from_state(state)
+        x = sigma_x.expectation_from_state(state)
+        y = sigma_y.expectation_from_state(state)
+        z = sigma_z.expectation_from_state(state)
         return x, y, z
 
     def _is_density_matrix(self, rho: np.ndarray) -> bool:
-        """This function is used only to check whether an input of shape (2,2) is two state vectors or one density matrix."""
+        """This function is used only to check whether an input of shape (2,2)
+        is two state vectors or one density matrix."""
         return np.allclose(rho, rho.conj().T) and np.isclose(np.trace(rho), 1)
 
     def _broadcasting_semantics(self, vector, mode, color):
@@ -202,15 +207,15 @@ class BlochSphere:
         """This function adds a vector to the sphere."""
 
         vectors, modes, colors = self._broadcasting_semantics(vector, mode, color)
-        for vector, color, mode in zip(vectors, colors, modes):
-            if mode not in ("vector", "point"):
+        for _vector, _color, _mode in zip(vectors, colors, modes):
+            if _mode not in ("vector", "point"):
                 raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
-            if mode == "vector":
-                self._vectors.append(vector)
-                self._color_vectors.append(color)
+            if _mode == "vector":
+                self._vectors.append(_vector)
+                self._color_vectors.append(_color)
             else:
-                self._points.append(vector)
-                self._color_points.append(color)
+                self._points.append(_vector)
+                self._color_points.append(_color)
 
     def add_state(
         self,
@@ -221,18 +226,18 @@ class BlochSphere:
         """This function adds a state to the sphere."""
 
         vectors, modes, colors = self._broadcasting_semantics(state, mode, color)
-        for vector, color, mode in zip(vectors, colors, modes):
-            if mode not in ("vector", "point"):
+        for _vector, _color, _mode in zip(vectors, colors, modes):
+            if _mode not in ("vector", "point"):
                 raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
-            x, y, z = self._paulis_expectation(vector)
+            x, y, z = self._paulis_expectation(_vector)
 
-            if mode == "vector":
+            if _mode == "vector":
                 self._vectors.append(np.array([x, y, z]))
-                self._color_vectors.append(color)
+                self._color_vectors.append(_color)
             else:
                 self._points.append(np.array([x, y, z]))
-                self._color_points.append(color)
+                self._color_points.append(_color)
 
     # -----Clear and produce the sphere-----
     def clear(self):
@@ -253,7 +258,7 @@ class BlochSphere:
     def render(self):
         """This function creates the empty sphere and plots the
         vectors and points on it."""
-        if self._shown == True:
+        if self._shown is True:
             plt.close()
             self._new_window()
         self._shown = True
