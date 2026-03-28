@@ -634,7 +634,6 @@ cswap q[0],q[1],q[2];
 ccz q[0],q[1],q[2];"""
     circuit = Circuit.from_qasm(target)
     assert circuit.depth == 3
-    print(circuit.queue[0])
     assert isinstance(circuit.queue[0], gates.X)
     assert isinstance(circuit.queue[1], gates.X)
     assert isinstance(circuit.queue[2], gates.SWAP)
@@ -651,5 +650,5 @@ qreg q[4];
 x q[0];
 x q[1];
 cswap q[0],q[1],q[2],q[3];"""
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         _ = Circuit.from_qasm(target)
