@@ -239,7 +239,7 @@ class QASMParser:
                 pass
             init_args.append(arg)
         # check whether the gate exists in qibo.gates already
-        if _qibo_gate_name(gate.name.name) in dir(qibo.gates):
+        if hasattr(qibo.gates, _qibo_gate_name(gate.name.name)):
             try:
                 gate = getattr(qibo.gates, _qibo_gate_name(gate.name.name))(
                     *qubits, *init_args
@@ -265,7 +265,7 @@ class QASMParser:
             stripped_gate_name = gate.name.name.lstrip("c")
             ncontrols = len(gate.name.name) - len(stripped_gate_name)
             if ncontrols > 0:
-                if _qibo_gate_name(stripped_gate_name) in dir(qibo.gates):
+                if hasattr(qibo.gates, _qibo_gate_name(stripped_gate_name)):
                     control_qubits = qubits[:ncontrols]
                     remaining_qubits = qubits[ncontrols:]
                     try:
