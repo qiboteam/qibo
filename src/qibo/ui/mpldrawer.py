@@ -195,7 +195,7 @@ def _plot_quantum_schedule(
     labels: list,
     plot_labels: bool = True,
     fold: int = -1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a queue of quantum circuit.
 
@@ -214,7 +214,7 @@ def _plot_quantum_schedule(
         fold (int, optional): Number of gates to display in a row.
             Defaults to :math:`-1` (no folding unless specified).
 
-        kwargs (dict, optional): Variadic dictionary that can override plot parameters.
+        kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
         :class:`matplotlib.axes.Axes`:
@@ -239,7 +239,7 @@ def _plot_quantum_circuit(
     plot_labels: bool = True,
     schedule: bool = False,
     fold: int = -1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a quantum circuit.
 
@@ -254,7 +254,7 @@ def _plot_quantum_circuit(
             Defaults to ``False``.
         fold (int, optional): Number of gates to display in a row before folding.
             Defaults to :math:`-1` (no folding unless specified).
-        kwargs (dict, optional): Variadic dictionary that can override plot parameters.
+        kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
         :class:`matplotlib.axes.Axes`: An Axes object encapsulating all the plot elements.
@@ -1597,7 +1597,7 @@ def _plot_quantum_circuit_with_folds(
     plot_labels: bool = True,
     schedule: bool = False,
     fold: int = -1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a quantum circuit.
 
@@ -1616,7 +1616,7 @@ def _plot_quantum_circuit_with_folds(
         fold (int, optional): Number of gates in a row.
             Defaults to :math:`-1`, which implies no folding (all gates in a single row).
 
-        kwargs (dict, optional): Variadic dictionary that can override plot parameters.
+        kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
         :class:`matplotlib.axes.Axes`: An Axes object encapsulates all the plot elements of a figure.
