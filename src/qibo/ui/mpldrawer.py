@@ -1789,9 +1789,12 @@ def _fold_coords(
         col = i % fold
         fold_idx = i // fold
 
-    # Folds are numbered bottom-to-top. So the fold that visually appears
-    # at the top has visual index num_folds - 1, the fold below it has 
-    # visual index num_folds - 2 and so on
+    # Fold indices are assigned in logical order as the circuit is split:
+    # 0, 1, 2, ...
+    # The plotted wire grid, however, is laid out from bottom to top.
+    # This means the first logical fold must be drawn on the highest wire
+    # block, the next logical fold below it, and so on.
+    # Convert the logical fold index to the corresponding visual block index.
     visual_idx = num_folds - 1 - fold_idx
 
     yoff = visual_idx * num_qubits
@@ -2116,10 +2119,6 @@ def _draw_labels_with_folds(
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         for num in range(num_folds):
-            # Folds are indexed from bottom to top.
-            # So the fold that appears at the bottom of the plot will have 
-            # index 0, the one above it will have index 1 and so on.
-            
             fold_idx = num_folds - 1 - num
 
             yoff = fold_idx * nq
@@ -2128,7 +2127,7 @@ def _draw_labels_with_folds(
                 ax,
                 left,
                 wire_grid[j + yoff],
-                _render_label(labels[i]) + " ", # a space is added after the rendered label, to avoid overlap with wire
+                _render_label(labels[i]) + " ",
                 plot_params,
             )
             txt.set_ha("right")
@@ -2169,10 +2168,6 @@ def _draw_fold_boundaries(
     for f in range(num_folds):
         y_top = wire_grid[f * nq]
         y_bot = wire_grid[(f + 1) * nq - 1]
-        
-        # Folds are indexed from bottom to top.
-        # So the fold that appears at the bottom of the plot will have 
-        # index 0, the one above it will have index 1 and so on.
 
         # LEFT bracket (start of fold), skip for first fold
         if f != num_folds - 1:
