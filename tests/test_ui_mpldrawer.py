@@ -487,18 +487,6 @@ def test_plot_circuit_error_style():
     assert style3["facecolor"] == "#6497bf"
 
 
-# def test_fused_gates():
-#     """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
-#     min_q = 0
-#     max_q = 1
-#     l_gates = 1
-#     equal_qbits = True
-#     start_barrier = FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
-#     end_barrier = FusedEndGateBarrier(min_q, max_q)
-#     assert start_barrier != None
-#     assert end_barrier != None
-
-
 def test_render_label():
     """Test render labels"""
     inits = [0]

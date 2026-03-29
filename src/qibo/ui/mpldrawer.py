@@ -306,7 +306,6 @@ def _plot_quantum_circuit(
         nq, (nq if ng == 0 else ng), gate_grid, wire_grid, plot_params
     )
 
-    # measured = None if ng == 0 else _measured_wires(gates, labels, schedule=schedule)
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params)
 
     if plot_labels:
@@ -429,17 +428,6 @@ def _build_folded_gate_layout(
         cols = max(cols, col)
 
     return positions, num_groups, num_folds, cols
-
-
-# TODO: This function is unused, hence commented out. Is it ok to remove?
-# def _measured_wires(gates_plot: list, labels: list, schedule: bool = False):
-#     measured = {}
-#     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
-#         name, target = gate[:2]
-#         j = _get_flipped_index(target, labels)
-#         if name.startswith("M"):
-#             measured[j] = i
-#     return measured
 
 
 def _draw_gates(
@@ -1635,41 +1623,6 @@ def _plot_params(style: Optional[Union[dict, str]]) -> dict:
     return style  # type: ignore
 
 
-# TODO: If _measured_wires function is removed, this should also be removed.
-# Unused hence commenting out.
-
-# def _measured_wires_with_folds(
-#     gates_plot: list,
-#     labels: list,
-#     num_qubits: int = 0,
-#     num_folds: int = -1,
-#     schedule: bool = False,
-#     fold_direction: str = "down",
-# ) -> dict:
-#     """Map measured wires to gate indices in folded layouts.
-
-#     Args:
-#         gates_plot (list): List of gates or schedule layers to inspect.
-#         labels (list): List of qubit labels.
-#         num_qubits (int, optional): Number of qubits per fold. Defaults to :math:`0`.
-#         num_folds (int, optional): Number of folds in the drawing. Defaults to :math:`-1`.
-#         schedule (bool, optional): If ``True``, processes a schedule of layers. Defaults to ``False``.
-#         fold_direction (str, optional): Fold direction (``up`` or ``down``). Defaults to ``down``.
-
-#     Returns:
-#         dict: Mapping from folded wire indices to measurement gate indices.
-#     """
-#     measured = {}
-#     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
-#         name, target = gate[:2]
-#         j = _get_flipped_index(target, labels)
-#         if name.startswith("M"):
-#             for num in range(num_folds):
-#                 fold_idx = num if fold_direction == "up" else (num_folds - 1 - num)
-#                 measured[j + fold_idx * num_qubits] = i
-#     return measured
-
-
 def _plot_quantum_circuit_with_folds(
     gates: list,
     inits: list,
@@ -1745,18 +1698,6 @@ def _plot_quantum_circuit_with_folds(
     ax, fig = _setup_figure_with_folds(gate_grid, wire_grid, plot_params)
     fig.tight_layout(pad=0.1)
 
-    # TODO: unused variable. Is it ok to remove?
-    # measured = (
-    #     None
-    #     if ng == 0
-    #     else _measured_wires_with_folds(
-    #         gates,
-    #         labels,
-    #         num_qubits=nq,
-    #         num_folds=num_folds,
-    #         schedule=schedule,
-    #         fold_direction=plot_params.get("fold_direction", "down"),
-    #     )
     _draw_wires_with_folds(ax, nq * num_folds, gate_grid, wire_grid, plot_params)
 
     if plot_labels:
