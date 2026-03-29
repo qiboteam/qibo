@@ -428,8 +428,6 @@ def test_plot_circuit_internal():
         ("MEASURE", "q_1"),
     ]
 
-    inits = [0, 1, 2, 3, 4]
-
     params = {
         "scale": 1.0,
         "fontsize": 14.0,
@@ -451,8 +449,8 @@ def test_plot_circuit_internal():
 
     labels = ["q_0", "q_1", "q_2", "q_3", "q_4"]
 
-    ax1 = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=0.7)
-    ax2 = _plot_quantum_circuit(gates_plot, inits, params, [], scale=0.7)
+    ax1 = _plot_quantum_circuit(gates_plot, params, labels, scale=0.7)
+    ax2 = _plot_quantum_circuit(gates_plot, params, [], scale=0.7)
     assert (
         match_figure_image(ax1.figure, BASEPATH + "/test_plot_circuit_internal_ax1.npy")
         == True
@@ -489,19 +487,13 @@ def test_plot_circuit_error_style():
 
 def test_render_label():
     """Test render labels"""
-    inits = [0]
-    assert _render_label("q_0", inits) != ""
-    assert _render_label("q_8", inits) != ""
+    assert _render_label("q_0") != ""
+    assert _render_label("q_8") != ""
+    assert _render_label(r"\psi") != ""
 
 
 def test_render_label_empty():
-    inits = {"q_0": None}
-    assert _render_label("q_0", inits) == ""
-
-
-def test_render_label_not_empty():
-    inits = {"q_0": r"\psi"}
-    assert _render_label("q_0", inits) != ""
+    assert _render_label("") == ""
 
 
 def test_cluster_gates():

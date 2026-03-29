@@ -123,8 +123,6 @@ def plot_circuit(
     params = PLOT_PARAMS.copy()
     params.update(_plot_params(style))
 
-    inits = list(range(circuit.nqubits))
-
     labels = []
     for i in range(circuit.nqubits):
         labels.append("q_" + str(i))
@@ -181,19 +179,18 @@ def plot_circuit(
     if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
         ax = _plot_quantum_schedule(
-            gates_cluster, inits, params, labels, fold=fold, scale=scale
+            gates_cluster, params, labels, fold=fold, scale=scale
         )
         return ax, ax.figure
 
     ax = _plot_quantum_circuit(
-        gates_plot, inits, params, labels, fold=fold, scale=scale
+        gates_plot, params, labels, fold=fold, scale=scale
     )
     return ax, ax.figure
 
 
 def _plot_quantum_schedule(
     schedule: list,
-    inits: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
@@ -206,8 +203,6 @@ def _plot_quantum_schedule(
         schedule (list):  List of time steps, each containing a sequence of gates during that step.
         Each gate is a tuple containing (name,target,control1,control2...).
         Targets and controls initially defined in terms of labels.
-
-        inits (list): Initialization list of gates (list(range(circuit.nqubits)).
 
         plot_params (dict): Style plot configuration.
 
@@ -228,7 +223,6 @@ def _plot_quantum_schedule(
 
     return _plot_quantum_circuit(
         schedule,
-        inits,
         plot_params,
         labels=labels,
         plot_labels=plot_labels,
@@ -240,7 +234,6 @@ def _plot_quantum_schedule(
 
 def _plot_quantum_circuit(
     gates: list,
-    inits: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
@@ -253,7 +246,6 @@ def _plot_quantum_circuit(
     Args:
         gates (list): List of gate tuples or schedule layers to render. Each gate tuple
             follows ``(name, target, control1, control2, ...)``.
-        inits (list): Initialization list of gates.
         plot_params (dict): Style plot configuration.
         labels (list): List of qubit labels.
         plot_labels (bool, optional): Indicates whether qubit labels are shown.
@@ -290,7 +282,6 @@ def _plot_quantum_circuit(
     if num_fold > 1:
         return _plot_quantum_circuit_with_folds(
             gates,
-            inits,
             plot_params,
             labels=labels,
             fold=fold,
@@ -309,7 +300,7 @@ def _plot_quantum_circuit(
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params)
 
     if plot_labels:
-        _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params)
+        _draw_labels(ax, labels, gate_grid, wire_grid, plot_params)
 
     if ng > 0:
         _draw_gates(
@@ -1048,7 +1039,6 @@ def _draw_wires(
 def _draw_labels(
     ax: Axes,
     labels: list,
-    inits: list,
     gate_grid: np.ndarray,
     wire_grid: np.ndarray,
     plot_params: dict,
@@ -1059,8 +1049,6 @@ def _draw_labels(
         ax (:class:`matplotlib.axes.Axes`): Axes object where labels are drawn.
 
         labels (list): List of qubit labels.
-
-        inits (list): Initialization values associated with labels.
 
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
 
@@ -1086,9 +1074,7 @@ def _draw_labels(
             ax,
             xdata[0] - label_buffer,
             wire_grid[j],
-            _render_label(
-                labels[i], inits
-            ),  # TODO: inits is unused in _render_label. Consider removing it.
+            _render_label(labels[i]),
             plot_params,
         )
 
@@ -1300,36 +1286,17 @@ def _get_flipped_indices(targets: list, labels: list) -> list:
     return [_get_flipped_index(t, labels) for t in targets]
 
 
-def _render_label(label: str, inits: Optional[dict] = None) -> str:
+def _render_label(label: str) -> str:
     """Render a qubit label in ket notation.
 
     Args:
         label (str): Wire label to render.
 
-        inits (dict, optional): Optional map of initial states per label.
-
     Returns:
         str: Rendered label string.
     """
 
-    # TODO: Check whether inits parameter is actually needed.
-    # inits is defined as list(range(circuit.nqubits)),
-    # and label is qubit labels (q_0, q_1 etc.)
-    # As such, the statement "if label in inits" is always False.
-    # The inits parameter can also be removed, as it was defined as dictionary
-    # but a list of int is being passed
-
-    # inits parameter is kept as some tests fail without it
-    inits = {} if inits is None else inits
-
-    if label in inits:
-        s = inits[label]
-        if s is None:
-            return ""
-        else:
-            return r"$|%s\rangle$" % inits[label]
-
-    return r"$|%s\rangle$" % label
+    return r"$|%s\rangle$" % label if label else ""
 
 
 def _check_list_str(substrings: list, string: str) -> bool:
@@ -1625,7 +1592,6 @@ def _plot_params(style: Optional[Union[dict, str]]) -> dict:
 
 def _plot_quantum_circuit_with_folds(
     gates: list,
-    inits: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
@@ -1638,8 +1604,6 @@ def _plot_quantum_circuit_with_folds(
     Args:
         gates (list): List of tuples for each gate in the quantum circuit. (name,target,control1,control2...).
         Targets and controls initially defined in terms of labels.
-
-        inits (list): Initialization list of gates.
 
         plot_params (dict): Style plot configuration.
 
@@ -1702,7 +1666,7 @@ def _plot_quantum_circuit_with_folds(
 
     if plot_labels:
         _draw_labels_with_folds(
-            ax, labels, inits, gate_grid, wire_grid, plot_params, num_folds=num_folds
+            ax, labels, gate_grid, wire_grid, plot_params, num_folds=num_folds
         )
 
     if ng > 0:
@@ -2121,7 +2085,6 @@ def _draw_target_with_folds(
 def _draw_labels_with_folds(
     ax: Axes,
     labels: list,
-    inits: list,
     gate_grid: np.ndarray,
     wire_grid: np.ndarray,
     plot_params: dict,
@@ -2133,8 +2096,6 @@ def _draw_labels_with_folds(
         ax (:class:`matplotlib.axes.Axes`): Axes object where labels are drawn.
 
         labels (list): List of qubit labels.
-
-        inits (list): Initialization values associated with labels.
 
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
 
@@ -2172,7 +2133,7 @@ def _draw_labels_with_folds(
                 ax,
                 left,
                 wire_grid[j + yoff],
-                _render_label(labels[i], inits) + " ",  # TODO: Is inits needed here?
+                _render_label(labels[i]) + " ", # a space is added after the rendered label, to avoid overlap with wire
                 plot_params,
             )
             txt.set_ha("right")
