@@ -45,7 +45,6 @@ PLOT_PARAMS = {
     "controlcolor": "#000000",
     "xscale": 1.2,
     "yscale": 3,
-    "fold_direction": "down",  # or "up"
     "fold_gap": 0.5,
     "gate_font_scale": 0.8,  # scale text size inside boxes
     "control_radius_with_folds": 0.07,  # dot radius (data units)
@@ -1763,7 +1762,6 @@ def _fold_coords(
     fold: int,
     num_qubits: int,
     num_folds: int,
-    direction: str,
     folded_layout: Optional[dict] = None,
 ) -> tuple:
     """Map gate index to folded coordinates.
@@ -1776,8 +1774,6 @@ def _fold_coords(
         num_qubits (int): Number of qubits per fold.
 
         num_folds (int): Total number of folds.
-
-        direction (str): Fold direction (``"up"`` or ``"down"``).
 
         folded_layout (dict or None, optional): Precomputed mapping
             from original gate index to folded ``(column, fold_index)`` coordinates.
@@ -1793,10 +1789,12 @@ def _fold_coords(
         col = i % fold
         fold_idx = i // fold
 
-    if direction == "down":  # top → bottom stacking
-        fold_idx = num_folds - 1 - fold_idx
+    # Folds are numbered bottom-to-top. So the fold that visually appears
+    # at the top has visual index num_folds - 1, the fold below it has 
+    # visual index num_folds - 2 and so on
+    visual_idx = num_folds - 1 - fold_idx
 
-    yoff = fold_idx * num_qubits
+    yoff = visual_idx * num_qubits
 
     return col, yoff
 
@@ -1856,7 +1854,6 @@ def _draw_controls_with_folds(
         fold,
         num_qubits,
         num_folds,
-        direction=plot_params.get("fold_direction", "down"),
         folded_layout=folded_layout,
     )
 
@@ -2051,7 +2048,6 @@ def _draw_target_with_folds(
         fold,
         num_qubits,
         num_folds,
-        direction=plot_params.get("fold_direction", "down"),
         folded_layout=folded_layout,
     )
     x = gate_grid[actual_x_index]
@@ -2117,15 +2113,14 @@ def _draw_labels_with_folds(
     if "wire_names" in plot_params and len(plot_params["wire_names"]) > 0:
         labels = plot_params["wire_names"]
 
-    direction = plot_params.get("fold_direction", "down")
-
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         for num in range(num_folds):
-            # In folded drawing, 'num' goes 0, 1, ..., num_folds-1.
-            # If down, the 0th fold (top visually in the circuit) gets drawn at the top of the canvas,
-            # which corresponds to the highest wire_grid indices because y increases upwards.
-            fold_idx = num if direction == "up" else num_folds - 1 - num
+            # Folds are indexed from bottom to top.
+            # So the fold that appears at the bottom of the plot will have 
+            # index 0, the one above it will have index 1 and so on.
+            
+            fold_idx = num_folds - 1 - num
 
             yoff = fold_idx * nq
 
@@ -2170,21 +2165,21 @@ def _draw_fold_boundaries(
     # across the folded slice limit.
     x_left_edge = gate_grid[0] - plot_params["scale"]
     x_right_edge = gate_grid[-1] + plot_params["scale"]
-
+    
     for f in range(num_folds):
         y_top = wire_grid[f * nq]
         y_bot = wire_grid[(f + 1) * nq - 1]
+        
+        # Folds are indexed from bottom to top.
+        # So the fold that appears at the bottom of the plot will have 
+        # index 0, the one above it will have index 1 and so on.
 
         # LEFT bracket (start of fold), skip for first fold
         if f != num_folds - 1:
-            # Folds are indexed bottom-to-top when fold_direction="down".
-            # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_left_edge, x_left_edge, y_top, y_bot, plot_params)
 
         # RIGHT bracket (end of fold), skip for last fold
         if f != 0:
-            # Folds are indexed bottom-to-top when fold_direction="down".
-            # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_right_edge, x_right_edge, y_top, y_bot, plot_params)
 
 
