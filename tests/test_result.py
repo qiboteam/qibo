@@ -268,3 +268,49 @@ def test_measurementoutcomes_from_frequencies_overflow_state(backend):
 def test_measurementoutcomes_from_samples_nonbinary(backend):
     with pytest.raises(ValueError):
         MeasurementOutcomes.from_samples(np.array([[0, 2], [1, 0]]), backend=backend)
+
+
+def test_measurementoutcomes_from_samples_duplicate_qubits(backend):
+    """Test from_samples raises error on duplicate qubit indices."""
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_samples(
+            np.array([[0, 1], [1, 0]]), qubits=[0, 0], backend=backend
+        )
+
+
+def test_measurementoutcomes_from_frequencies_mixed_key_types(backend):
+    """Test from_frequencies raises error on mixed string/int keys."""
+    with pytest.raises(TypeError):
+        MeasurementOutcomes.from_frequencies({"00": 10, 1: 20}, backend=backend)
+
+
+def test_measurementoutcomes_from_frequencies_nqubits_mismatch(backend):
+    """Test from_frequencies raises error when key length mismatches nqubits."""
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies(
+            {"00": 10, "11": 20}, nqubits=3, backend=backend
+        )
+
+
+def test_measurementoutcomes_from_frequencies_non_integer_count(backend):
+    """Test from_frequencies raises error on non-integer counts."""
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies({"00": 1.5}, backend=backend)
+
+
+def test_measurementoutcomes_from_frequencies_all_zero_counts(backend):
+    """Test from_frequencies raises error when all counts are zero."""
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies({"00": 0, "11": 0}, backend=backend)
+
+
+def test_measurementoutcomes_from_frequencies_zero_count_entry(backend):
+    """Test from_frequencies correctly skips entries with zero count."""
+    freq_input = {"00": 10, "01": 0, "11": 20}
+    result = MeasurementOutcomes.from_frequencies(freq_input, backend=backend)
+
+    assert result.nshots == 30
+    freq_out = result.frequencies(binary=True)
+    assert freq_out["00"] == 10
+    assert freq_out.get("01", 0) == 0
+    assert freq_out["11"] == 20

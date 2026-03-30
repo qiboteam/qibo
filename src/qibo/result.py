@@ -653,6 +653,7 @@ class MeasurementOutcomes:
             int_frequencies = {int(k): v for k, v in frequencies.items()}
 
         # Resolve nqubits
+        resolved_nqubits = 0
         if qubits is not None:
             qubits = tuple(qubits)
             resolved_nqubits = len(qubits)
