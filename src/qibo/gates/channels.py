@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
@@ -107,7 +107,12 @@ class Channel(Gate):
 
         return super_op
 
-    def to_liouville(self, nqubits: int = None, order: str = "row", backend=None):
+    def to_liouville(
+        self,
+        nqubits: Optional[int] = None,
+        order: str = "row",
+        backend: Optional[Backend] = None,
+    ):
         """Returns the Liouville representation of the channel.
 
         Args:
@@ -141,10 +146,10 @@ class Channel(Gate):
 
     def to_pauli_liouville(
         self,
-        nqubits: int = None,
+        nqubits: Optional[int] = None,
         normalize: bool = False,
         pauli_order: str = "IXYZ",
-        backend=None,
+        backend: Optional[Backend] = None,
     ):
         """Returns the Liouville representation of the channel
         in the Pauli basis.

@@ -5,13 +5,11 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
+from numpy.typing import DTypeLike
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates
-from qibo.backends import (
-    _check_backend,
-    _check_backend_and_local_state,
-)
+from qibo.backends import Backend, _check_backend, _check_backend_and_local_state
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.clifford import Clifford
@@ -48,7 +46,9 @@ class _probability_distribution_sin(rv_continuous):  # pragma: no cover
         return 2 * np.arcsin(np.sqrt(theta))
 
 
-def uniform_sampling_U3(ngates: int, seed=None, backend=None):
+def uniform_sampling_U3(
+    ngates: int, seed: Optional[int] = None, backend: Optional[Backend] = None
+):
     """Samples parameters for Haar-random :class:`qibo.gates.U3`.
 
     Args:
@@ -94,8 +94,8 @@ def random_gaussian_matrix(
     rank: Optional[int] = None,
     mean: float = 0.0,
     stddev: float = 1.0,
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Generates a random Gaussian Matrix.
 
@@ -156,8 +156,8 @@ def random_hermitian(
     dims: int,
     semidefinite: bool = False,
     normalize: bool = False,
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Generates a random Hermitian matrix :math:`H`, i.e.
     a random matrix such that :math:`H = H^{\\dagger}.`
@@ -194,7 +194,12 @@ def random_hermitian(
     return matrix
 
 
-def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=None):
+def random_unitary(
+    dims: int,
+    measure: Optional[str] = None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
+):
     """Returns a random Unitary operator :math:`U`, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
@@ -238,8 +243,8 @@ def random_quantum_channel(
     validate_cp: bool = True,
     nqubits: Optional[int] = None,
     initial_state_env=None,
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Creates a random superoperator from an unitary operator in one of the
     supported superoperator representations.
@@ -372,7 +377,12 @@ def random_quantum_channel(
     return super_op
 
 
-def random_statevector(dims: int, dtype=None, seed=None, backend=None):
+def random_statevector(
+    dims: int,
+    dtype: Optional[DTypeLike] = None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
+):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
@@ -426,8 +436,8 @@ def random_density_matrix(
     basis: Optional[str] = None,
     normalize: bool = False,
     order: str = "row",
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Creates a random density matrix :math:`\\rho`. If ``pure=True``,
 
@@ -519,7 +529,11 @@ def random_density_matrix(
 
 
 def random_clifford(
-    nqubits: int, return_circuit: bool = True, seed=None, backend=None, **kwargs
+    nqubits: int,
+    return_circuit: bool = True,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
 ):
     """Generates a random :math:`n`-qubit Clifford operator, where :math:`n` is ``nqubits``.
     For the mathematical details, see Reference [1].
@@ -646,8 +660,8 @@ def random_pauli(
     subset: Optional[list] = None,
     return_circuit: bool = True,
     density_matrix: bool = False,
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Creates random Pauli operator(s).
 
@@ -756,8 +770,8 @@ def random_pauli_hamiltonian(
     max_eigenvalue: Optional[Union[int, float]] = None,
     normalize: bool = False,
     pauli_order: str = "IXYZ",
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Generates a random Hamiltonian in the Pauli basis.
 
@@ -860,8 +874,8 @@ def random_stochastic_matrix(
     diagonally_dominant: bool = False,
     precision_tol: Optional[float] = None,
     max_iterations: Optional[int] = None,
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Creates a random stochastic matrix.
 

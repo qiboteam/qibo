@@ -183,7 +183,7 @@ class Random(Placer):
         self,
         connectivity: Optional[nx.Graph] = None,
         samples: int = 100,
-        seed=None,
+        seed: Optional[int] = None,
     ):
 
         self.connectivity = connectivity

@@ -427,7 +427,7 @@ def CDR(
     full_output: bool = False,
     readout: Optional[dict] = None,
     qubit_map: Optional[List[int]] = None,
-    seed=None,
+    seed: Optional[int] = None,
     backend: Optional[Backend] = None,
 ):
     """Runs the Clifford Data Regression error mitigation method.
@@ -849,7 +849,7 @@ def apply_randomized_readout_mitigation(
     nshots: int = 10000,
     ncircuits: int = 10,
     qubit_map=None,
-    seed=None,
+    seed: Optional[int] = None,
     backend=None,
 ):
     """Readout mitigation method that transforms the bias in an expectation value into a

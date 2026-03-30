@@ -11,11 +11,10 @@ from scipy.special import binom
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
-from qibo.models._encodings import (
+from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
     _add_wbd_gate,
     _angle_mod_two_pi,
-    _binary_encoder_deprecated,
     _binary_encoder_hopf,
     _binary_encoder_hyperspherical,
     _ehrlich_algorithm,
@@ -23,18 +22,14 @@ from qibo.models._encodings import (
     _generate_rbs_pairs,
     _get_gate,
     _get_phase_gate_correction,
-    _hamming_weight_encoder_deprecated,
     _non_trivial_layers,
     _parametrized_two_qubit_gate,
     _perm_column_ops,
     _perm_pair_flip_ops,
     _perm_row_ops,
-    _phase_encoder_deprecated,
     _sparse_encoder_farias,
     _sparse_encoder_li,
-    _unary_encoder_deprecated,
     _up_to_k_encoder_hyperspherical,
-    _up_to_k_hamming_weight_encoder_deprecated,
 )
 from qibo.models.circuit import Circuit
 
@@ -108,10 +103,13 @@ def binary_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _binary_encoder_deprecated(
-            data=nqubits,
-            nqubits=data,
+
+        _nqubits = int(math.ceil(math.log2(len(nqubits))))
+
+        return binary_encoder(
+            nqubits=_nqubits,
             parametrization=parametrization,
+            data=nqubits,
             codewords=codewords,
             keep_antictrls=keep_antictrls,
             backend=backend,
@@ -602,7 +600,7 @@ def hamming_weight_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _hamming_weight_encoder_deprecated(
+        return hamming_weight_encoder(
             data=nqubits,
             nqubits=weight,
             weight=data,
@@ -794,8 +792,9 @@ def phase_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _phase_encoder_deprecated(
-            data=nqubits, rotation=rotation, backend=backend, **kwargs
+        _nqubits = len(nqubits)
+        return phase_encoder(
+            nqubits=_nqubits, data=nqubits, rotation=rotation, backend=backend, **kwargs
         )
 
     if not isinstance(rotation, str):
@@ -948,8 +947,14 @@ def unary_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _unary_encoder_deprecated(
-            data=nqubits, architecture=architecture, backend=backend, **kwargs
+        _nqubits = len(nqubits)
+
+        return unary_encoder(
+            nqubits=_nqubits,
+            architecture=architecture,
+            data=nqubits,
+            backend=backend,
+            **kwargs,
         )
 
     backend = _check_backend(backend)
@@ -1179,8 +1184,14 @@ def up_to_k_hamming_weight_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _up_to_k_hamming_weight_encoder_deprecated(  # pylint: disable=W1114
-            nqubits, up_to_k, data, codewords, keep_antictrls, backend, **kwargs
+        return up_to_k_hamming_weight_encoder(
+            data=nqubits,
+            nqubits=up_to_k,
+            up_to_k=data,
+            codewords=codewords,
+            keep_antictrls=keep_antictrls,
+            backend=backend,
+            **kwargs,
         )
 
     backend = _check_backend(backend)
