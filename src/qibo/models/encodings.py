@@ -11,7 +11,7 @@ from scipy.special import binom
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
-from qibo.models._encodings import (
+from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
     _add_wbd_gate,
     _angle_mod_two_pi,
@@ -34,7 +34,6 @@ from qibo.models._encodings import (
     _sparse_encoder_li,
     _unary_encoder_deprecated,
     _up_to_k_encoder_hyperspherical,
-    _up_to_k_hamming_weight_encoder_deprecated,
 )
 from qibo.models.circuit import Circuit
 
@@ -1172,16 +1171,16 @@ def up_to_k_hamming_weight_encoder(
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
-    # TODO: remove deprecated call on qibo version 0.3.3
-    if not isinstance(nqubits, int):  # pragma: no cover
-        log.warning(
-            "Deprecated initialisation of the ``up_to_k_hamming_weight_encoder`` function."
-            + "See latest documentation for the current way to initialise this function."
-            + "Deprecated initialisation will be removed on version ``0.3.3``."
-        )
-        return _up_to_k_hamming_weight_encoder_deprecated(  # pylint: disable=W1114
-            nqubits, up_to_k, data, codewords, keep_antictrls, backend, **kwargs
-        )
+    # # TODO: remove deprecated call on qibo version 0.3.3
+    # if not isinstance(nqubits, int):  # pragma: no cover
+    #     log.warning(
+    #         "Deprecated initialisation of the ``up_to_k_hamming_weight_encoder`` function."
+    #         + "See latest documentation for the current way to initialise this function."
+    #         + "Deprecated initialisation will be removed on version ``0.3.3``."
+    #     )
+    #     return _up_to_k_hamming_weight_encoder_deprecated(  # pylint: disable=W1114
+    #         nqubits, up_to_k, data, codewords, keep_antictrls, backend, **kwargs
+    #     )
 
     backend = _check_backend(backend)
 
