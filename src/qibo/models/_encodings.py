@@ -1,4 +1,4 @@
-"""Helper functions for the `models.encodingss` module."""
+"""Helper functions for the `models.encodings` module."""
 
 import math
 from inspect import signature
