@@ -34,7 +34,6 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _sparse_encoder_li,
     _unary_encoder_deprecated,
     _up_to_k_encoder_hyperspherical,
-    _up_to_k_hamming_weight_encoder_deprecated,
 )
 from qibo.models.circuit import Circuit
 
@@ -1179,7 +1178,7 @@ def up_to_k_hamming_weight_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _up_to_k_hamming_weight_encoder_deprecated(  # pylint: disable=W1114
+        return _up_to_k_hamming_weight_hyperspherical(  # pylint: disable=W1114
             data=nqubits,
             nqubits=up_to_k,
             weight=data,
