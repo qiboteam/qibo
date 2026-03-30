@@ -231,6 +231,18 @@ class Backend:  # pylint: disable=R0904
     def abs(self, array: ArrayLike, **kwargs) -> Union[int, float, complex, ArrayLike]:
         return self.engine.abs(array, **kwargs)
 
+    def add_at(
+        self, array_1: ArrayLike, indices: ArrayLike, array_2: ArrayLike
+    ) -> None:
+        """Add ``array_2`` to ``array_1`` at specified ``indices`` in-place.
+
+        Args:
+            array_1 (ArrayLike): Output array to be modified.
+            indices (ArrayLike): Indices at which to add elements.
+            array_2 (ArrayLike): Input array with elements to add.
+        """
+        return self.engine.add.at(array_1, indices, array_2)
+
     def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
         return self.engine.all(array, **kwargs)
 
@@ -264,6 +276,9 @@ class Backend:  # pylint: disable=R0904
 
     def array_equal(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> bool:
         return self.engine.array_equal(array_1, array_2, **kwargs)
+
+    def ascontiguousarray(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return self.engine.ascontiguousarray(array, **kwargs)
 
     def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
         return self.engine.block(arrays)
@@ -584,6 +599,11 @@ class Backend:  # pylint: disable=R0904
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         return self.engine.round(array, decimals, **kwargs)
+
+    def searchsorted(
+        self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
+    ) -> ArrayLike:
+        return self.engine.searchsorted(array_1, array_2, **kwargs)
 
     def shuffle(self, array: ArrayLike, **kwargs) -> ArrayLike:
         self.engine.random.shuffle(array, **kwargs)
