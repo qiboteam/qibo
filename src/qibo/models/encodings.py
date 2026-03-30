@@ -974,7 +974,7 @@ def unary_encoder(
         raise_error(ValueError, f"``architecture`` {architecture} not found.")
 
     if data is not None:
-        if architecture == "tree" and not math.log2(data.shape[0]).is_integer():
+        if architecture == "tree" and not math.log2(len(data)).is_integer():
             raise_error(
                 ValueError,
                 "When ``architecture = 'tree'``, len(data) must be a power of 2. "
