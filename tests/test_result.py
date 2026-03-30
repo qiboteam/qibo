@@ -240,16 +240,31 @@ def test_measurementoutcomes_from_frequencies_errors(backend):
         MeasurementOutcomes.from_frequencies({"00": 10, "111": 20}, backend=backend)
 
 
-def test_measurementoutcomes_from_frequencies_dump_load(backend):
+def test_measurementoutcomes_from_frequencies_dump_load(backend, tmp_path):
     """Test that from_frequencies results can be dumped and reloaded."""
     freq_input = {"00": 40, "01": 10, "10": 20, "11": 30}
     result = MeasurementOutcomes.from_frequencies(freq_input, backend=backend)
     freq = result.frequencies()
 
-    result.dump("tmp_from_freq.npy")
-    loaded = MeasurementOutcomes.load("tmp_from_freq.npy")
+    filepath = str(tmp_path / "tmp_from_freq.npy")
+    result.dump(filepath)
+    loaded = MeasurementOutcomes.load(filepath)
     loaded_freq = loaded.frequencies()
 
     for state, f in freq.items():
         assert loaded_freq[state] == f
-    remove("tmp_from_freq.npy")
+
+
+def test_measurementoutcomes_from_frequencies_negative_count(backend):
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies({"00": 10, "01": -1}, backend=backend)
+
+
+def test_measurementoutcomes_from_frequencies_overflow_state(backend):
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies({4: 1}, nqubits=2, backend=backend)
+
+
+def test_measurementoutcomes_from_samples_nonbinary(backend):
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_samples(np.array([[0, 2], [1, 0]]), backend=backend)

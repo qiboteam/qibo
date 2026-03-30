@@ -547,6 +547,11 @@ class MeasurementOutcomes:
                 f"got shape {samples.shape}.",
             )
 
+        if not np.all((samples == 0) | (samples == 1)):
+            raise_error(
+                ValueError, "samples array must contain only binary values (0 or 1)."
+            )
+
         nshots, nqubits = samples.shape
 
         if qubits is None:
@@ -559,6 +564,8 @@ class MeasurementOutcomes:
                     f"Length of qubits ({len(qubits)}) does not match the number "
                     f"of columns in samples ({nqubits}).",
                 )
+            if len(set(qubits)) != len(qubits):
+                raise_error(ValueError, "Qubit indices must be unique.")
 
         measurements = [gates.M(*qubits)]
         return cls(measurements, backend=backend, samples=samples, nshots=nshots)
@@ -570,6 +577,7 @@ class MeasurementOutcomes:
         nqubits=None,
         qubits=None,
         backend=None,
+        seed=None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` from a
         frequencies dictionary.
@@ -593,6 +601,7 @@ class MeasurementOutcomes:
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
                 used for calculations. If ``None``, the current default backend
                 is used. Defaults to ``None``.
+            seed (int, optional): Seed for sampling generation.
 
         Returns:
             :class:`qibo.result.MeasurementOutcomes`: Object storing the
@@ -623,6 +632,11 @@ class MeasurementOutcomes:
         # Detect key type and normalise to integer-keyed dict
         first_key = next(iter(frequencies))
         if isinstance(first_key, str):
+            if not all(isinstance(k, str) for k in frequencies):
+                raise_error(
+                    TypeError,
+                    "All frequency keys must be of the same type (all strings or all integers).",
+                )
             # Binary-string keys: infer nqubits from key length
             key_lengths = {len(k) for k in frequencies}
             if len(key_lengths) != 1:
@@ -654,9 +668,7 @@ class MeasurementOutcomes:
             )
 
         if qubits is None:
-            qubits = tuple(
-                range(resolved_nqubits)
-            )  # pylint: disable=possibly-used-before-assignment
+            qubits = tuple(range(resolved_nqubits))
 
         # Validate nqubits consistency
         if inferred_nqubits is not None and inferred_nqubits != resolved_nqubits:
@@ -667,22 +679,48 @@ class MeasurementOutcomes:
             )
 
         # Expand frequencies into a binary samples array
+        for state_int, count in int_frequencies.items():
+            if not isinstance(count, (int, np.integer)):
+                raise_error(
+                    ValueError,
+                    f"Frequency count for state {state_int} must be an integer, got {type(count)}.",
+                )
+            if count < 0:
+                raise_error(
+                    ValueError,
+                    f"Frequency count for state {state_int} must be non-negative, got {count}.",
+                )
         nshots = sum(int_frequencies.values())
-        if nshots == 0:
+        if nshots <= 0:
             raise_error(ValueError, "Total number of shots must be positive.")
+
+        max_state = 2**resolved_nqubits - 1
+        for state_int in int_frequencies:
+            if state_int < 0 or state_int > max_state:
+                raise_error(
+                    ValueError,
+                    f"State integer {state_int} is out of range for "
+                    f"{resolved_nqubits} qubits (valid range: 0 to {max_state}).",
+                )
 
         sample_rows = []
         for state_int, count in int_frequencies.items():
-            if count <= 0:
+            if count == 0:
                 continue
             # Convert integer state to binary row
             binary_str = format(state_int, f"0{resolved_nqubits}b")
-            row = np.array([int(b) for b in binary_str], dtype=int)
+            row = np.array(
+                [
+                    (state_int >> (resolved_nqubits - 1 - i)) & 1
+                    for i in range(resolved_nqubits)
+                ],
+                dtype=int,
+            )
             sample_rows.append(np.tile(row, (count, 1)))
 
         samples = np.concatenate(sample_rows, axis=0)
         # Shuffle to avoid ordering artifacts
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(seed)
         rng.shuffle(samples)
 
         measurements = [gates.M(*qubits)]
