@@ -656,9 +656,8 @@ def _draw_target(
                 _hash + "-" + global_hash
             ]
             symbol = rf"$\rm_{{{subindex}}}$" + symbol
-            symbol += (
-                rf"$\rm_{{{plot_params["hash_global_unitary_gates"][global_hash]}}}$"
-            )
+            global_idx = plot_params["hash_global_unitary_gates"][global_hash]
+            symbol += rf"$\rm_{{{global_idx}}}$"
         _text(ax, x, y, symbol, plot_params, box=True)
 
 
@@ -1839,7 +1838,8 @@ def _draw_controls_with_folds(
                         u_gate_single_hash + "-" + global_hash
                     ]
                     symbol = rf"$\rm_{{{subindex}}}$" + symbol
-                    symbol += rf"$\rm_{{{plot_params["hash_global_unitary_gates"][global_hash]}}}$"
+                    global_idx = plot_params["hash_global_unitary_gates"][global_hash]
+                    symbol += rf"$\rm_{{{global_idx}}}$"
                     cci += 1
 
                 _text_with_folds(ax, x, y, symbol, plot_params, box=True)
@@ -1947,9 +1947,8 @@ def _draw_target_with_folds(
                 _hash + "-" + global_hash
             ]
             symbol = rf"$\rm_{{{subindex}}}$" + symbol
-            symbol += (
-                rf"$\rm_{{{plot_params["hash_global_unitary_gates"][global_hash]}}}$"
-            )
+            global_idx = plot_params["hash_global_unitary_gates"][global_hash]
+            symbol += rf"$\rm_{{{global_idx}}}$"
         _text_with_folds(ax, x, y, symbol, plot_params, box=True)
 
 
