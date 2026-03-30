@@ -1,7 +1,9 @@
 # Some functions in MPLDrawer are from code provided by Rick Muller
 # Simplified Plotting Routines for Quantum Circuits
 # https://github.com/rpmuller/PlotQCircuit
-#
+
+# pylint: disable=R0801
+
 import json
 from pathlib import Path
 from typing import Any, Iterator, Optional, Union
