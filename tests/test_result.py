@@ -314,3 +314,159 @@ def test_measurementoutcomes_from_frequencies_zero_count_entry(backend):
     assert freq_out["00"] == 10
     assert freq_out.get("01", 0) == 0
     assert freq_out["11"] == 20
+
+
+def test_quantumstate_symbolic_and_str(backend):
+    """Cover QuantumState.symbolic()."""
+    from qibo.result import QuantumState
+
+    # |0> state for 1 qubit
+    state = backend.cast(np.array([1.0, 0.0], dtype=complex))
+    qs = QuantumState(state, backend=backend)
+
+    symbolic_repr = qs.symbolic()
+    assert isinstance(symbolic_repr, str)
+    assert len(symbolic_repr) > 0
+
+    # __str__ delegates to symbolic()
+    assert str(qs) == symbolic_repr
+
+
+def test_frequencies_from_probabilities_only(backend):
+    """Cover probabilities-based frequency generation"""
+    m0 = gates.M(0, register_name="a")
+    m1 = gates.M(1, register_name="b")
+    # probabilities for 2-qubit system: |00>=0.5, |01>=0.0, |10>=0.0, |11>=0.5
+    probs = np.array([0.5, 0.0, 0.0, 0.5], dtype=np.float64)
+    result = MeasurementOutcomes(
+        [m0, m1], backend=backend, probabilities=probs, nshots=1000
+    )
+
+    freq = result.frequencies(binary=True)
+    assert isinstance(freq, dict)
+    total = sum(freq.values())
+    assert total == 1000
+    # With these probabilities, only "00" and "11" should appear
+    for key in freq:
+        assert key in ("00", "11")
+
+
+def test_frequencies_registers_true(backend):
+    """Cover frequencies(registers=True)"""
+    m0 = gates.M(0, register_name="a")
+    m1 = gates.M(1, register_name="b")
+    probs = np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float64)
+    result = MeasurementOutcomes(
+        [m0, m1], backend=backend, probabilities=probs, nshots=100
+    )
+
+    reg_freq = result.frequencies(registers=True)
+    assert isinstance(reg_freq, dict)
+    # Should have register names as keys
+    assert set(reg_freq.keys()) == {"a", "b"}
+    for name, counter in reg_freq.items():
+        total = sum(counter.values())
+        assert total == 100
+
+
+def test_samples_from_existing_frequencies(backend):
+    """Cover samples()."""
+    m = gates.M(0, 1)
+    result = MeasurementOutcomes([m], backend=backend, nshots=100)
+    # Manually inject frequencies (integer-keyed: state -> count)
+    result._frequencies = collections.Counter({0: 60, 3: 40})
+
+    samples = result.samples(binary=True)
+    assert samples.shape == (100, 2)
+    # All values should be binary
+    assert np.all((np.array(samples) == 0) | (np.array(samples) == 1))
+
+    # Verify frequencies match what we injected
+    freq = result.frequencies(binary=False)
+    assert freq[0] == 60
+    assert freq[3] == 40
+
+
+def test_samples_with_bitflip_noise(backend):
+    """Cover bitflip noise in samples()"""
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(0, 1, p0=0.5, p1=0.5))
+    result = backend.execute_circuit(c, nshots=1000)
+
+    # The result has probabilities but not samples yet;
+    # calling samples() should trigger the bitflip path
+    s = result.samples(binary=True)
+    assert s.shape == (1000, 2)
+
+
+def test_samples_registers_true(backend):
+    """Cover samples(registers=True)"""
+    samples = np.array([[0, 1], [1, 0], [1, 1], [0, 0]], dtype=int)
+    m0 = gates.M(0, register_name="a")
+    m1 = gates.M(1, register_name="b")
+    result = MeasurementOutcomes([m0, m1], backend=backend, samples=samples, nshots=4)
+
+    reg_samples = result.samples(registers=True)
+    assert isinstance(reg_samples, dict)
+    assert set(reg_samples.keys()) == {"a", "b"}
+    for name, s in reg_samples.items():
+        assert s.shape[0] == 4
+
+
+def test_measurement_gate_add_merge(backend):
+    """Cover measurement_gate.add(gate).
+
+    Create MeasurementOutcomes with multiple M gates so that the
+    measurement_gate property merges them via .add().
+    """
+    m0 = gates.M(0, register_name="a")
+    m1 = gates.M(1, register_name="b")
+    samples = np.array([[0, 1], [1, 0]], dtype=int)
+    result = MeasurementOutcomes([m0, m1], backend=backend, samples=samples, nshots=2)
+
+    mg = result.measurement_gate
+    # The merged gate should contain both qubits
+    assert set(mg.qubits) == {0, 1}
+
+
+def test_apply_bitflips_method(backend):
+    """Cover apply_bitflips() method."""
+    samples = np.array([[0, 0], [1, 1], [0, 1], [1, 0]], dtype=int)
+    result = MeasurementOutcomes.from_samples(samples, backend=backend)
+
+    flipped = result.apply_bitflips(0.0)
+    # With p0=0.0, no bits should flip
+    backend.assert_allclose(flipped, samples)
+
+
+def test_expectation_from_samples_method(backend):
+    """Cover expectation_from_samples()."""
+    from qibo.hamiltonians import Hamiltonian
+
+    # Z operator on 1 qubit: diag(1, -1)
+    matrix = np.array([[1.0, 0.0], [0.0, -1.0]])
+    obs = Hamiltonian(1, matrix, backend=backend)
+
+    # All samples are |0>, so <Z> should be 1.0
+    samples = np.array([[0]] * 100, dtype=int)
+    result = MeasurementOutcomes.from_samples(samples, backend=backend)
+
+    exp_val = result.expectation_from_samples(obs)
+    backend.assert_allclose(exp_val, 1.0, atol=1e-10)
+
+
+def test_circuitresult_probabilities_bitflip(backend):
+    """Cover CircuitResult.probabilities bitflip path."""
+    c = Circuit(1)
+    c.add(gates.X(0))
+    c.add(gates.M(0, p0=0.2, p1=0.2))
+    result = backend.execute_circuit(c, nshots=10000)
+
+    probs = result.probabilities()
+    # Probabilities should sum to 1
+    backend.assert_allclose(backend.sum(probs), 1.0)
+    # With X gate, qubit is |1>, but bitflip noise should cause some |0>
+    # So prob[0] should be > 0 and prob[1] should be > 0
+    assert float(probs[0]) > 0
+    assert float(probs[1]) > 0
