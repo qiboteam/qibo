@@ -107,7 +107,7 @@ def binary_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _binary_encoder_deprecated(
+        return binary_encoder(
             data=nqubits,
             nqubits=data,
             parametrization=parametrization,
@@ -601,7 +601,7 @@ def hamming_weight_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _hamming_weight_encoder_deprecated(
+        return hamming_weight_encoder(
             data=nqubits,
             nqubits=weight,
             weight=data,
@@ -793,9 +793,7 @@ def phase_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _phase_encoder_deprecated(
-            data=nqubits, rotation=rotation, backend=backend, **kwargs
-        )
+        return phase_encoder(data=nqubits, rotation=rotation, backend=backend, **kwargs)
 
     if not isinstance(rotation, str):
         raise_error(
@@ -947,7 +945,7 @@ def unary_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _unary_encoder_deprecated(
+        return unary_encoder(
             data=nqubits, architecture=architecture, backend=backend, **kwargs
         )
 
@@ -1178,7 +1176,7 @@ def up_to_k_hamming_weight_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return _up_to_k_hamming_weight_hyperspherical(  # pylint: disable=W1114
+        return up_to_k_hamming_weight_encoder(
             data=nqubits,
             nqubits=up_to_k,
             weight=data,
