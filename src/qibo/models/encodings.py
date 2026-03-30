@@ -107,10 +107,13 @@ def binary_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
+
+        _nqubits = int(math.ceil(math.log2(len(nqubits))))
+
         return binary_encoder(
-            data=nqubits,
-            nqubits=data,
+            nqubits=_nqubits,
             parametrization=parametrization,
+            data=nqubits,
             codewords=codewords,
             keep_antictrls=keep_antictrls,
             backend=backend,
@@ -793,7 +796,10 @@ def phase_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
-        return phase_encoder(data=nqubits, rotation=rotation, backend=backend, **kwargs)
+        _nqubits = len(nqubits)
+        return phase_encoder(
+            nqubits=_nqubits, data=nqubits, rotation=rotation, backend=backend, **kwargs
+        )
 
     if not isinstance(rotation, str):
         raise_error(
@@ -945,8 +951,14 @@ def unary_encoder(
             + "See latest documentation for the current way to initialise this function."
             + "Deprecated initialisation will be removed on version ``0.3.3``."
         )
+        _nqubits = len(nqubits)
+
         return unary_encoder(
-            data=nqubits, architecture=architecture, backend=backend, **kwargs
+            nqubits=_nqubits,
+            architecture=architecture,
+            data=nqubits,
+            backend=backend,
+            **kwargs,
         )
 
     backend = _check_backend(backend)
@@ -1179,7 +1191,7 @@ def up_to_k_hamming_weight_encoder(
         return up_to_k_hamming_weight_encoder(
             data=nqubits,
             nqubits=up_to_k,
-            weight=data,
+            up_to_k=data,
             codewords=codewords,
             keep_antictrls=keep_antictrls,
             backend=backend,
