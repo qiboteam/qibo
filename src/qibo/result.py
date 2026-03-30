@@ -496,6 +496,196 @@ class MeasurementOutcomes:
         payload = np.load(filename, allow_pickle=True).item()
         return cls.from_dict(payload)
 
+    @classmethod
+    def from_samples(
+        cls,
+        samples,
+        qubits=None,
+        backend=None,
+    ):
+        """Constructs a :class:`qibo.result.MeasurementOutcomes` directly from
+        a binary samples array.
+
+        This is useful when building measurement outcomes from experimental data
+        without needing to manually construct measurement gates.
+
+        Args:
+            samples (np.ndarray): Binary array of shape ``(nshots, nqubits)``
+                where each row is a measurement outcome with 0/1 values.
+            qubits (tuple or list, optional): Qubit indices for the measured
+                qubits. If ``None``, defaults to ``(0, 1, ..., nqubits - 1)``.
+                Defaults to ``None``.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
+                used for calculations. If ``None``, the current default backend
+                is used. Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.result.MeasurementOutcomes`: Object storing the
+            measurement outcomes.
+
+        Example:
+            .. code-block:: python
+
+                import numpy as np
+                from qibo.result import MeasurementOutcomes
+
+                samples = np.array([[0, 1], [1, 0], [1, 1]])
+                result = MeasurementOutcomes.from_samples(samples)
+                print(result.frequencies())  # Counter({'01': 1, '10': 1, '11': 1})
+        """
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
+
+        backend = _check_backend(backend)
+        samples = np.array(samples)
+
+        if samples.ndim != 2:
+            raise_error(
+                ValueError,
+                f"samples must be a 2D array of shape (nshots, nqubits), "
+                f"got shape {samples.shape}.",
+            )
+
+        nshots, nqubits = samples.shape
+
+        if qubits is None:
+            qubits = tuple(range(nqubits))
+        else:
+            qubits = tuple(qubits)
+            if len(qubits) != nqubits:
+                raise_error(
+                    ValueError,
+                    f"Length of qubits ({len(qubits)}) does not match the number "
+                    f"of columns in samples ({nqubits}).",
+                )
+
+        measurements = [gates.M(*qubits)]
+        return cls(measurements, backend=backend, samples=samples, nshots=nshots)
+
+    @classmethod
+    def from_frequencies(
+        cls,
+        frequencies,
+        nqubits=None,
+        qubits=None,
+        backend=None,
+    ):
+        """Constructs a :class:`qibo.result.MeasurementOutcomes` from a
+        frequencies dictionary.
+
+        The frequencies are expanded into a binary samples array, shuffled to
+        avoid ordering artifacts, and passed through the standard construction
+        path so that all methods (``samples()``, ``frequencies()``,
+        ``probabilities()``) work correctly.
+
+        Args:
+            frequencies (dict or Counter): Mapping from measurement outcomes to
+                their counts. Keys can be binary strings (e.g. ``"010"``) or
+                integers (e.g. ``2``). Values are non-negative integer counts.
+            nqubits (int, optional): Number of measured qubits. Required when
+                keys are integers and ``qubits`` is not provided, since the
+                number of qubits cannot be inferred from integer keys alone.
+                Defaults to ``None``.
+            qubits (tuple or list, optional): Qubit indices for the measured
+                qubits. If ``None``, defaults to ``(0, 1, ..., nqubits - 1)``.
+                Defaults to ``None``.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
+                used for calculations. If ``None``, the current default backend
+                is used. Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.result.MeasurementOutcomes`: Object storing the
+            measurement outcomes.
+
+        Raises:
+            ValueError: If ``nqubits`` cannot be determined from the inputs.
+
+        Example:
+            .. code-block:: python
+
+                from qibo.result import MeasurementOutcomes
+
+                freq = {"00": 50, "11": 50}
+                result = MeasurementOutcomes.from_frequencies(freq)
+                print(result.frequencies())  # Counter({'00': 50, '11': 50})
+        """
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
+
+        backend = _check_backend(backend)
+        frequencies = dict(frequencies)
+
+        if len(frequencies) == 0:
+            raise_error(ValueError, "frequencies dictionary must not be empty.")
+
+        # Detect key type and normalise to integer-keyed dict
+        first_key = next(iter(frequencies))
+        if isinstance(first_key, str):
+            # Binary-string keys: infer nqubits from key length
+            key_lengths = {len(k) for k in frequencies}
+            if len(key_lengths) != 1:
+                raise_error(
+                    ValueError,
+                    "All binary-string keys must have the same length, "
+                    f"got lengths {key_lengths}.",
+                )
+            inferred_nqubits = key_lengths.pop()
+            int_frequencies = {int(k, 2): v for k, v in frequencies.items()}
+        else:
+            # Integer keys
+            inferred_nqubits = None
+            int_frequencies = {int(k): v for k, v in frequencies.items()}
+
+        # Resolve nqubits
+        if qubits is not None:
+            qubits = tuple(qubits)
+            resolved_nqubits = len(qubits)
+        elif nqubits is not None:
+            resolved_nqubits = nqubits
+        elif inferred_nqubits is not None:
+            resolved_nqubits = inferred_nqubits
+        else:
+            raise_error(
+                ValueError,
+                "Cannot determine the number of qubits. Provide `nqubits` or "
+                "`qubits` when using integer keys in frequencies.",
+            )
+
+        if qubits is None:
+            qubits = tuple(range(resolved_nqubits))
+
+        # Validate nqubits consistency
+        if inferred_nqubits is not None and inferred_nqubits != resolved_nqubits:
+            raise_error(
+                ValueError,
+                f"Binary-string key length ({inferred_nqubits}) does not match "
+                f"the resolved number of qubits ({resolved_nqubits}).",
+            )
+
+        # Expand frequencies into a binary samples array
+        nshots = sum(int_frequencies.values())
+        if nshots == 0:
+            raise_error(ValueError, "Total number of shots must be positive.")
+
+        sample_rows = []
+        for state_int, count in int_frequencies.items():
+            if count <= 0:
+                continue
+            # Convert integer state to binary row
+            binary_str = format(state_int, f"0{resolved_nqubits}b")
+            row = np.array([int(b) for b in binary_str], dtype=int)
+            sample_rows.append(np.tile(row, (count, 1)))
+
+        samples = np.concatenate(sample_rows, axis=0)
+        # Shuffle to avoid ordering artifacts
+        rng = np.random.default_rng()
+        rng.shuffle(samples)
+
+        measurements = [gates.M(*qubits)]
+        return cls(measurements, backend=backend, samples=samples, nshots=nshots)
+
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
     """Object to store both the outcomes of measurements and the final state

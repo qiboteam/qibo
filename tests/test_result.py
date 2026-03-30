@@ -1,3 +1,4 @@
+import collections
 from os import remove
 
 import numpy as np
@@ -108,3 +109,147 @@ def test_circuitresult_dump_load(backend, agnostic_load):
         assert loaded_freq[state] == f
     assert backend.sum(result.state() - backend.cast(loaded_res.state())) == 0
     remove("tmp.npy")
+
+
+def test_measurementoutcomes_from_samples(backend):
+    """Test constructing MeasurementOutcomes from a raw samples array."""
+    samples = np.array(
+        [[0, 1], [1, 0], [1, 1], [0, 1], [1, 0]],
+        dtype=int,
+    )
+    result = MeasurementOutcomes.from_samples(samples, backend=backend)
+
+    # Check samples round-trip
+    backend.assert_allclose(result.samples(), samples)
+
+    # Check frequencies
+    freq = result.frequencies(binary=True)
+    assert freq["01"] == 2
+    assert freq["10"] == 2
+    assert freq["11"] == 1
+
+    # Check nshots
+    assert result.nshots == 5
+
+    # Check decimal samples
+    dec = result.samples(binary=False)
+    assert dec.shape == (5,)
+
+    # Check probabilities sum to 1
+    probs = result.probabilities()
+    backend.assert_allclose(backend.sum(probs), 1.0)
+
+
+def test_measurementoutcomes_from_samples_custom_qubits(backend):
+    """Test from_samples with explicit qubit indices."""
+    samples = np.array([[0, 1], [1, 0]], dtype=int)
+    result = MeasurementOutcomes.from_samples(samples, qubits=[2, 5], backend=backend)
+    assert result.measurement_gate.qubits == (2, 5)
+    assert result.nshots == 2
+
+
+def test_measurementoutcomes_from_samples_errors(backend):
+    """Test from_samples raises errors on invalid input."""
+    # 1D array
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_samples(np.array([0, 1, 1]), backend=backend)
+
+    # qubits length mismatch
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_samples(
+            np.array([[0, 1], [1, 0]]), qubits=[0, 1, 2], backend=backend
+        )
+
+
+def test_measurementoutcomes_from_frequencies_binary_keys(backend):
+    """Test constructing MeasurementOutcomes from binary-string frequencies."""
+    freq_input = {"00": 30, "01": 20, "10": 10, "11": 40}
+    result = MeasurementOutcomes.from_frequencies(freq_input, backend=backend)
+
+    # Check nshots
+    assert result.nshots == 100
+
+    # Check frequencies round-trip
+    freq_out = result.frequencies(binary=True)
+    for key, count in freq_input.items():
+        assert freq_out[key] == count
+
+    # Check nqubits inferred correctly
+    assert len(result.measurement_gate.qubits) == 2
+
+    # Check probabilities sum to 1
+    probs = result.probabilities()
+    backend.assert_allclose(backend.sum(probs), 1.0)
+
+
+def test_measurementoutcomes_from_frequencies_integer_keys(backend):
+    """Test constructing MeasurementOutcomes from integer-keyed frequencies."""
+    freq_input = {0: 50, 3: 50}
+    result = MeasurementOutcomes.from_frequencies(
+        freq_input, nqubits=2, backend=backend
+    )
+
+    assert result.nshots == 100
+
+    freq_out = result.frequencies(binary=True)
+    assert freq_out["00"] == 50
+    assert freq_out["11"] == 50
+
+
+def test_measurementoutcomes_from_frequencies_integer_keys_with_qubits(backend):
+    """Test from_frequencies with integer keys and explicit qubits."""
+    freq_input = {0: 25, 1: 75}
+    result = MeasurementOutcomes.from_frequencies(
+        freq_input, qubits=[3, 7], backend=backend
+    )
+
+    assert result.nshots == 100
+    assert result.measurement_gate.qubits == (3, 7)
+
+    freq_out = result.frequencies(binary=True)
+    assert freq_out["00"] == 25
+    assert freq_out["01"] == 75
+
+
+def test_measurementoutcomes_from_frequencies_counter(backend):
+    """Test from_frequencies accepts a collections.Counter."""
+    freq_input = collections.Counter({"010": 10, "111": 20, "000": 30})
+    result = MeasurementOutcomes.from_frequencies(freq_input, backend=backend)
+
+    assert result.nshots == 60
+    assert len(result.measurement_gate.qubits) == 3
+
+    freq_out = result.frequencies(binary=True)
+    assert freq_out["010"] == 10
+    assert freq_out["111"] == 20
+    assert freq_out["000"] == 30
+
+
+def test_measurementoutcomes_from_frequencies_errors(backend):
+    """Test from_frequencies raises errors on invalid input."""
+    # Integer keys without nqubits or qubits
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies({0: 10, 1: 20}, backend=backend)
+
+    # Empty dict
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies({}, backend=backend)
+
+    # Inconsistent binary key lengths
+    with pytest.raises(ValueError):
+        MeasurementOutcomes.from_frequencies({"00": 10, "111": 20}, backend=backend)
+
+
+def test_measurementoutcomes_from_frequencies_dump_load(backend):
+    """Test that from_frequencies results can be dumped and reloaded."""
+    freq_input = {"00": 40, "01": 10, "10": 20, "11": 30}
+    result = MeasurementOutcomes.from_frequencies(freq_input, backend=backend)
+    freq = result.frequencies()
+
+    result.dump("tmp_from_freq.npy")
+    loaded = MeasurementOutcomes.load("tmp_from_freq.npy")
+    loaded_freq = loaded.frequencies()
+
+    for state, f in freq.items():
+        assert loaded_freq[state] == f
+    remove("tmp_from_freq.npy")
