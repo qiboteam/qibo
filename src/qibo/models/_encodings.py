@@ -1940,26 +1940,26 @@ def _unary_encoder_deprecated(
     return circuit
 
 
-# def _up_to_k_hamming_weight_encoder_deprecated(
-#     data: ArrayLike,
-#     nqubits: int,
-#     up_to_k: int,
-#     codewords: List[int] = None,
-#     keep_antictrls: bool = False,
-#     backend: Optional[Backend] = None,
-#     **kwargs,
-# ):  # pragma: no cover
-#     backend = _check_backend(backend)
+def _up_to_k_hamming_weight_encoder_deprecated(
+    data: ArrayLike,
+    nqubits: int,
+    up_to_k: int,
+    codewords: List[int] = None,
+    keep_antictrls: bool = False,
+    backend: Optional[Backend] = None,
+    **kwargs,
+):  # pragma: no cover
+    backend = _check_backend(backend)
 
-#     complex_data = bool("complex" in str(data.dtype))
+    complex_data = bool("complex" in str(data.dtype))
 
-#     return _up_to_k_encoder_hyperspherical(
-#         data,
-#         nqubits,
-#         up_to_k,
-#         complex_data=complex_data,
-#         backend=backend,
-#         codewords=codewords,
-#         keep_antictrls=keep_antictrls,
-#         **kwargs,
-#     )
+    return _up_to_k_encoder_hyperspherical(
+        data,
+        nqubits,
+        up_to_k,
+        complex_data=complex_data,
+        backend=backend,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+        **kwargs,
+    )
