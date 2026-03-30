@@ -407,7 +407,7 @@ def schmidt_decomposition(
 
 def lanczos(
     matrix,
-    steps: int = None,
+    steps: Optional[int] = None,
     initial_vector=None,
     precision_tol: float = 1e-8,
     seed=None,

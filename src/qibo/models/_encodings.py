@@ -1757,7 +1757,7 @@ def _x_layer(
 def _binary_encoder_deprecated(
     data: ArrayLike,
     parametrization: str = "hyperspherical",
-    nqubits: int = None,
+    nqubits: Optional[int] = None,
     codewords: Optional[List[int]] = None,
     keep_antictrls: bool = False,
     backend: Optional[Backend] = None,
