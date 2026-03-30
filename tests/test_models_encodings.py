@@ -122,20 +122,26 @@ def test_binary_encoder(
     custom_codewords,
     keep_antictrls,
 ):
-    if parametrization == "hopf":
+    if complex_data:
+        parametrization += "-complex"
+
+    if parametrization in ("hopf", "hopf-complex"):
         if complex_data:
+            with pytest.raises(NotImplementedError):
+                test = binary_encoder(nqubits, "hopf-complex")
+
             pytest.skip(
                 "``binary_encoder`` in Hopf coordinates not implemented for complex data."
             )
-
-        with pytest.raises(ValueError):
-            test = backend.random_sample(5)
-            test = binary_encoder(
-                data=test,
-                parametrization=parametrization,
-                nqubits=nqubits,
-                backend=backend,
-            )
+        else:
+            with pytest.raises(ValueError):
+                test = backend.random_sample(5)
+                test = binary_encoder(
+                    data=test,
+                    parametrization=parametrization,
+                    nqubits=nqubits,
+                    backend=backend,
+                )
 
     dims = (
         2**nqubits - 2
@@ -152,8 +158,6 @@ def test_binary_encoder(
         )
     else:
         target = None
-        if complex_data:
-            parametrization += "-complex"
 
     codewords = backend.arange(dims) if custom_codewords else None
 

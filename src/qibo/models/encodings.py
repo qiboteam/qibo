@@ -134,7 +134,12 @@ def binary_encoder(
             dtype=backend.complex128 if complex_data else backend.float64,
         )
 
-    if parametrization == "hopf":
+    if parametrization in ("hopf", "hopf-complex"):
+        if parametrization == "hopf-complex":
+            raise_error(
+                NotImplementedError, '``"hopf-complex"`` not implemented currently.'
+            )
+
         return _binary_encoder_hopf(
             data, nqubits, complex_data=complex_data, backend=backend, **kwargs
         )
