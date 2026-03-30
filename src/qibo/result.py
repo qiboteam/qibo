@@ -654,7 +654,9 @@ class MeasurementOutcomes:
             )
 
         if qubits is None:
-            qubits = tuple(range(resolved_nqubits))
+            qubits = tuple(
+                range(resolved_nqubits)
+            )  # pylint: disable=possibly-used-before-assignment
 
         # Validate nqubits consistency
         if inferred_nqubits is not None and inferred_nqubits != resolved_nqubits:
