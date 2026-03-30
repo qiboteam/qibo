@@ -3,7 +3,7 @@
 import math
 from typing import List, Optional, Tuple, Union
 
-from qibo.backends import _check_backend, _check_backend_and_local_state
+from qibo.backends import Backend, _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
 
 
@@ -410,8 +410,8 @@ def lanczos(
     steps: Optional[int] = None,
     initial_vector=None,
     precision_tol: float = 1e-8,
-    seed=None,
-    backend=None,
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
 ):
     """Lanczos iterative method to tridiagonalize a Hermitian matrix.
 

@@ -466,7 +466,7 @@ class Backend:  # pylint: disable=R0904
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         replace: bool = True,
         p: Optional[ArrayLike] = None,
-        seed=None,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
@@ -489,7 +489,7 @@ class Backend:  # pylint: disable=R0904
         low: int,
         high: Optional[int] = None,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
-        seed=None,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.int64)
@@ -513,7 +513,7 @@ class Backend:  # pylint: disable=R0904
         mean: Union[float, int],
         stddev: Union[float, int],
         size: Optional[Union[int, List[int], Tuple[int, ...]]] = None,
-        seed=None,
+        seed: Optional[int] = None,
         dtype: Optional[DTypeLike] = None,
     ) -> ArrayLike:
         if dtype is None:
@@ -531,7 +531,9 @@ class Backend:  # pylint: disable=R0904
 
         return self.cast(self.engine.random.normal(mean, stddev, size), dtype=dtype)
 
-    def random_sample(self, size: int, seed=None, **kwargs) -> ArrayLike:
+    def random_sample(
+        self, size: int, seed: Optional[int] = None, **kwargs
+    ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
 
         if seed is not None:  # pragma: no cover
@@ -546,7 +548,7 @@ class Backend:  # pylint: disable=R0904
         low: Union[float, int] = 0.0,
         high: Union[float, int] = 1.0,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
-        seed=None,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
