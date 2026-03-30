@@ -1,13 +1,14 @@
 """Plotscripts to visualize circuit execution's result."""
 
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from qibo.backends import _check_backend
+from qibo import Circuit
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 from qibo.ui.drawing_utils import (
@@ -17,144 +18,17 @@ from qibo.ui.drawing_utils import (
 )
 
 
-def visualize_state(
-    execution_outcome: Union[QuantumState, MeasurementOutcomes, CircuitResult],
-    mode: str = "probabilities",
-    n_most_relevant_components=None,
-):
-    """
-    Plot circuit execution's result data according to the chosen ``mode``.
-
-    Args:
-        execution_outcome: qibo circuit's result. Depending on the simulation
-            preferences, some of the visualizations can be accessed and some of them
-            not. In particular:
-                - if ``execution_outcome`` is a `QuantumState`, only probabilities and
-                  amplitudes can be visualized;
-                - if ``execution_outcome`` is a ``MeasurementOutcomes``, then all
-                  the ``mode`` options are available.
-        mode: visualization mode can be "amplitudes", "probabilities" or "frequencies".
-            Default is "probabilities".
-        n_most_relevant_components (int): in case the system is big (more than a few
-            qubits), it can be helpful to reduce the number of ticks in the x-axis.
-            To do so, this argument can be set, reducing the number of plotted ticks
-            to `n_most_relevant_components`. Default is None.
-    """
-    # Collect amplitude
-    probabilities = execution_outcome.backend.to_numpy(
-        execution_outcome.probabilities()
-    )
-    nqubits = int(np.log2(len(probabilities)))
-
-    bitstrings = generate_bitstring_combinations(nqubits)
-
-    num_bitstrings = len(bitstrings)
-
-    fig_width = max(6, nqubits * 1.5)
-    fig_height = 5
-
-    _, ax = plt.subplots(figsize=(fig_width, fig_height))
-
-    x = np.arange(num_bitstrings)
-
-    ax.set_xlabel("States")
-    ax.set_ylabel(mode.capitalize())
-
-    if mode == "frequencies":
-        if not isinstance(execution_outcome, MeasurementOutcomes):
-            raise_error(
-                ValueError,
-                "To visualize frequencies, ensure the circuit is executed with shots.",
-            )
-        frequencies = execution_outcome.frequencies()
-        y_values = [frequencies.get(b, 0) for b in bitstrings]
-        ax.bar(x, y_values, color=QIBO_DEFAULT_COLOR, edgecolor="black")
-
-    elif mode == "amplitudes":
-        amplitudes = execution_outcome.backend.to_numpy(execution_outcome.state())
-        real_parts = np.real(amplitudes)
-        imag_parts = np.imag(amplitudes)
-        width = 0.3
-        ax.bar(
-            x - width / 2,
-            real_parts,
-            width,
-            color=QIBO_DEFAULT_COLOR,
-            edgecolor="black",
-            label="Real part",
-        )
-        ax.bar(
-            x + width / 2,
-            imag_parts,
-            width,
-            color=QIBO_COMPLEMENTARY_COLOR,
-            edgecolor="black",
-            label="Imag part",
-        )
-        ax.hlines(0, -1, num_bitstrings, color="black", lw=1)
-        ax.legend()
-        y_values = np.abs(amplitudes)
-
-    elif mode == "probabilities":
-        ax.bar(x, probabilities, color=QIBO_DEFAULT_COLOR, edgecolor="black")
-        y_values = probabilities
-
-    else:
-        raise_error(
-            ValueError,
-            f"Unsupported mode '{mode}'. Choose 'amplitudes', 'probabilities' or 'frequencies'.",
-        )
-
-    # Adjust x-axis labels based on number of qubits
-    if n_most_relevant_components is not None:
-        top_indices = np.argsort(y_values)[-n_most_relevant_components:]
-        tick_labels = [
-            bitstrings[i] if i in top_indices else "" for i in range(num_bitstrings)
-        ]
-        ax.set_xticks(x)
-        ax.set_xticklabels(tick_labels, rotation=90)
-    else:
-        ax.set_xticks(x)
-        ax.set_xticklabels(bitstrings, rotation=90)
-
-    plt.tight_layout()
-
-    return ax, ax.figure
-
-
-def _validate_colors(colors):
-    if colors is None:
-        return QIBO_DEFAULT_COLOR, QIBO_COMPLEMENTARY_COLOR
-
-    if len(colors) != 2:
-        raise_error(
-            ValueError, f"Colors must be a list of length 2, got {len(colors)} instead"
-        )
-
-    pos_color = QIBO_DEFAULT_COLOR if colors[0] is None else colors[0]
-    neg_color = QIBO_COMPLEMENTARY_COLOR if colors[1] is None else colors[1]
-
-    return pos_color, neg_color
-
-
-def _get_labels(nqubits):
-    indices = np.arange(2**nqubits)
-    bits = np.array(np.unravel_index(indices, [2] * nqubits)).T
-    labels = ["".join(str(b) for b in row) for row in bits]
-    return labels
-
-
 # Based on Qiskit density state plot
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
 def plot_density_hist(
-    circuit,
+    circuit: Circuit,
     title: str = "",
     alpha: float = 0.5,
     colors: Optional[List[str]] = None,
     fig_width: int = 16,
     fig_height: int = 8,
-    backend=None,
-    n_most_relevant_components=None,
+    n_most_relevant_components: Optional[int] = None,
+    backend: Optional[Backend] = None,
     **kwargs,
 ):
     """Plot the real and imaginary parts of the density matrix.
@@ -194,14 +68,13 @@ def plot_density_hist(
 
     backend = _check_backend(backend)
     # Execute the circuit to get the state
-    exec_circ = backend.execute_circuit(circuit)
-
-    state = exec_circ.state()
+    state = backend.execute_circuit(circuit).state()
 
     # Create a density matrix from state vector
     if not circuit.density_matrix:
-        state = backend.cast(state)
         state = backend.outer(state, backend.conj(state))
+
+    state = backend.to_numpy(state)
 
     nqubits = circuit.nqubits
     row_names = _get_labels(nqubits)
@@ -221,8 +94,8 @@ def plot_density_hist(
 
     dx = 0.5 * np.ones_like(zpos)
     dy = dx.copy()
-    dzr = backend.reshape(matrix_real, (-1))
-    dzi = backend.reshape(matrix_imag, (-1))
+    dzr = np.reshape(matrix_real, (-1))
+    dzi = np.reshape(matrix_imag, (-1))
 
     max_dzr = np.max(dzr)
     max_dzi = np.max(dzi)
@@ -342,3 +215,130 @@ def plot_density_hist(
     fig.subplots_adjust(top=0.9, bottom=0, left=0, right=1, hspace=0, wspace=0)
 
     return fig, ax1, ax2
+
+
+def visualize_state(
+    execution_outcome: Union[QuantumState, MeasurementOutcomes, CircuitResult],
+    mode: str = "probabilities",
+    n_most_relevant_components: Optional[int] = None,
+):
+    """
+    Plot circuit execution's result data according to the chosen ``mode``.
+
+    Args:
+        execution_outcome: qibo circuit's result. Depending on the simulation
+            preferences, some of the visualizations can be accessed and some of them
+            not. In particular:
+                - if ``execution_outcome`` is a `QuantumState`, only probabilities and
+                  amplitudes can be visualized;
+                - if ``execution_outcome`` is a ``MeasurementOutcomes``, then all
+                  the ``mode`` options are available.
+        mode: visualization mode can be "amplitudes", "probabilities" or "frequencies".
+            Default is "probabilities".
+        n_most_relevant_components (int): in case the system is big (more than a few
+            qubits), it can be helpful to reduce the number of ticks in the x-axis.
+            To do so, this argument can be set, reducing the number of plotted ticks
+            to `n_most_relevant_components`. Default is None.
+    """
+    # Collect amplitude
+    probabilities = execution_outcome.backend.to_numpy(
+        execution_outcome.probabilities()
+    )
+    nqubits = int(np.log2(len(probabilities)))
+
+    bitstrings = generate_bitstring_combinations(nqubits)
+
+    num_bitstrings = len(bitstrings)
+
+    fig_width = max(6, nqubits * 1.5)
+    fig_height = 5
+
+    _, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+    x = np.arange(num_bitstrings)
+
+    ax.set_xlabel("States")
+    ax.set_ylabel(mode.capitalize())
+
+    if mode == "frequencies":
+        if not isinstance(execution_outcome, MeasurementOutcomes):
+            raise_error(
+                ValueError,
+                "To visualize frequencies, ensure the circuit is executed with shots.",
+            )
+        frequencies = execution_outcome.frequencies()
+        y_values = [frequencies.get(b, 0) for b in bitstrings]
+        ax.bar(x, y_values, color=QIBO_DEFAULT_COLOR, edgecolor="black")
+
+    elif mode == "amplitudes":
+        amplitudes = execution_outcome.backend.to_numpy(execution_outcome.state())
+        real_parts = np.real(amplitudes)
+        imag_parts = np.imag(amplitudes)
+        width = 0.3
+        ax.bar(
+            x - width / 2,
+            real_parts,
+            width,
+            color=QIBO_DEFAULT_COLOR,
+            edgecolor="black",
+            label="Real part",
+        )
+        ax.bar(
+            x + width / 2,
+            imag_parts,
+            width,
+            color=QIBO_COMPLEMENTARY_COLOR,
+            edgecolor="black",
+            label="Imag part",
+        )
+        ax.hlines(0, -1, num_bitstrings, color="black", lw=1)
+        ax.legend()
+        y_values = np.abs(amplitudes)
+
+    elif mode == "probabilities":
+        ax.bar(x, probabilities, color=QIBO_DEFAULT_COLOR, edgecolor="black")
+        y_values = probabilities
+
+    else:
+        raise_error(
+            ValueError,
+            f"Unsupported mode '{mode}'. Choose 'amplitudes', 'probabilities' or 'frequencies'.",
+        )
+
+    # Adjust x-axis labels based on number of qubits
+    if n_most_relevant_components is not None:
+        top_indices = np.argsort(y_values)[-n_most_relevant_components:]
+        tick_labels = [
+            bitstrings[i] if i in top_indices else "" for i in range(num_bitstrings)
+        ]
+        ax.set_xticks(x)
+        ax.set_xticklabels(tick_labels, rotation=90)
+    else:
+        ax.set_xticks(x)
+        ax.set_xticklabels(bitstrings, rotation=90)
+
+    plt.tight_layout()
+
+    return ax, ax.figure
+
+
+def _validate_colors(colors: List[str] | None) -> Tuple[str, str]:
+    if colors is None:
+        return QIBO_DEFAULT_COLOR, QIBO_COMPLEMENTARY_COLOR
+
+    if len(colors) != 2:
+        raise_error(
+            ValueError, f"Colors must be a list of length 2, got {len(colors)} instead"
+        )
+
+    pos_color = QIBO_DEFAULT_COLOR if colors[0] is None else colors[0]
+    neg_color = QIBO_COMPLEMENTARY_COLOR if colors[1] is None else colors[1]
+
+    return pos_color, neg_color
+
+
+def _get_labels(nqubits: int) -> List[str]:
+    indices = np.arange(2**nqubits)
+    bits = np.array(np.unravel_index(indices, [2] * nqubits)).T
+    labels = ["".join(str(b) for b in row) for row in bits]
+    return labels

@@ -313,7 +313,7 @@ def _plot_quantum_circuit(
     if ng > 0:
         _draw_gates(
             ax,
-            gates,
+            gatelist,
             labels,
             gate_grid,
             wire_grid,

@@ -165,10 +165,13 @@ class BlochSphere:
         """This function computes the expectation value of Pauli matrices
         on the considered state and yields its cartesian coordinates on the Bloch sphere.
         """
+        from qibo.backends.numpy import NumpyBackend  # pylint: disable=C0415
 
-        sigma_x = SymbolicHamiltonian(X(0))
-        sigma_y = SymbolicHamiltonian(Y(0))
-        sigma_z = SymbolicHamiltonian(Z(0))
+        _backend = NumpyBackend()
+
+        sigma_x = SymbolicHamiltonian(X(0, backend=_backend), backend=_backend)
+        sigma_y = SymbolicHamiltonian(Y(0, backend=_backend), backend=_backend)
+        sigma_z = SymbolicHamiltonian(Z(0, backend=_backend), backend=_backend)
 
         x = sigma_x.expectation_from_state(state)
         y = sigma_y.expectation_from_state(state)
