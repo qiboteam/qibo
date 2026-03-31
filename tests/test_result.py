@@ -284,6 +284,21 @@ def test_measurementoutcomes_from_frequencies_mixed_key_types(backend):
         MeasurementOutcomes.from_frequencies({"00": 10, 1: 20}, backend=backend)
 
 
+def test_measurementoutcomes_from_frequencies_key_length_qubits_mismatch(backend):
+    """Test from_frequencies raises error when binary-string key length does not
+    match the number of qubits provided."""
+    # Keys have length 2, but 3 qubits are provided
+    with pytest.raises(ValueError, match="Binary-string key length"):
+        MeasurementOutcomes.from_frequencies(
+            {"00": 10, "11": 20}, qubits=[0, 1, 2], backend=backend
+        )
+    # Keys have length 3, but only 2 qubits are provided
+    with pytest.raises(ValueError, match="Binary-string key length"):
+        MeasurementOutcomes.from_frequencies(
+            {"000": 5, "111": 15}, qubits=[0, 1], backend=backend
+        )
+
+
 def test_measurementoutcomes_from_frequencies_nqubits_larger(backend):
     """Test from_frequencies with nqubits larger than key length (unmeasured qubits)."""
     result = MeasurementOutcomes.from_frequencies(
