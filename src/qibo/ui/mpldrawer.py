@@ -182,9 +182,7 @@ def plot_circuit(
         )
         return ax, ax.figure
 
-    ax = _plot_quantum_circuit(
-        gates_plot, params, labels, fold=fold, scale=scale
-    )
+    ax = _plot_quantum_circuit(gates_plot, params, labels, fold=fold, scale=scale)
     return ax, ax.figure
 
 
@@ -2164,7 +2162,7 @@ def _draw_fold_boundaries(
     # across the folded slice limit.
     x_left_edge = gate_grid[0] - plot_params["scale"]
     x_right_edge = gate_grid[-1] + plot_params["scale"]
-    
+
     for f in range(num_folds):
         y_top = wire_grid[f * nq]
         y_bot = wire_grid[(f + 1) * nq - 1]

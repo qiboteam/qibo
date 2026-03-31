@@ -282,9 +282,7 @@ def test_fused_gates_fold_layout_is_atomic():
 
 def test_fold_coords_without_layout():
     """Fold coordinates should fall back to index math if no layout is given."""
-    col, yoff = _fold_coords(
-        i=3, fold=2, num_qubits=3, num_folds=2, folded_layout=None
-    )
+    col, yoff = _fold_coords(i=3, fold=2, num_qubits=3, num_folds=2, folded_layout=None)
 
     assert col == 1
     assert yoff == 0
