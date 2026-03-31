@@ -206,8 +206,8 @@ def test_ccz(backend, weight):
     backend.assert_allclose(hamming_full_state, state, atol=1e-8)
 
     hamming_bkd._dict_indexes = None
-    state = hamming_bkd._apply_gate_CCZ(gate1, initial_state, 3, weight)
-    state = hamming_bkd._apply_gate_CCZ(gate2, state, 3, weight)
+    state = hamming_bkd._apply_gate_ccz(gate1, initial_state, 3, weight)
+    state = hamming_bkd._apply_gate_ccz(gate2, state, 3, weight)
     backend.assert_allclose(hamming_state, state, atol=1e-8)
 
 

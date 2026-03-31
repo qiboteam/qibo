@@ -1,4 +1,4 @@
-from qibo.models import hep, tsp
+from qibo.models import hep
 from qibo.models.circuit import Circuit
 from qibo.models.encodings import (
     binary_encoder,
