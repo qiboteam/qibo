@@ -128,7 +128,7 @@ class BlochSphere:
         combinations_axis = [(x, y, z), (z, x, y), (y, z, x)]
 
         # Axis lines
-        line, zeros = np.linspace(-1, 1, 100), np.zeros(shape=100)
+        line, zeros = np.linspace(-1, 1, 100), np.zeros(100)
         combinations_axis_line = [
             (line, zeros, zeros),
             (zeros, line, zeros),
