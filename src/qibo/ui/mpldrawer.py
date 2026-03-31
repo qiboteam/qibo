@@ -1,7 +1,11 @@
+"""Matplotlib drawer module."""
+
 # Some functions in MPLDrawer are from code provided by Rick Muller
 # Simplified Plotting Routines for Quantum Circuits
 # https://github.com/rpmuller/PlotQCircuit
-#
+
+# pylint: disable=protected-access,R0912,R0913,R0914,R0915,R0917
+
 import json
 from pathlib import Path
 from typing import Any, Iterator, Optional, Union
@@ -71,8 +75,9 @@ def plot_circuit(
             Defaults to ``True``.
         fold (int, optional): Number of gates to display in a row.
             Defaults to :math:`-1` (no folding unless specified).
-        style (dict or str or None, optional): Style applied to the circuit. It can a built-in style or custom.
-            Built-in options are: ``garnacha``, ``fardelejo``, ``quantumspain``, ``color-blind`` and ``cachirulo``.
+        style (dict or str or None, optional): Style applied to the circuit.
+            It can a built-in style or custom. Built-in options are: ``garnacha``,
+            ``fardelejo``, ``quantumspain``, ``color-blind`` and ``cachirulo``.
             Custom style needs to be a dictionary.
     Returns:
         (:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`):
@@ -198,24 +203,20 @@ def _plot_quantum_schedule(
 
     Args:
         schedule (list):  List of time steps, each containing a sequence of gates during that step.
-        Each gate is a tuple containing (name,target,control1,control2...).
-        Targets and controls initially defined in terms of labels.
-
+            Each gate is a tuple containing ``(name,target,control1,control2...)``.
+            Targets and controls initially defined in terms of labels.
         plot_params (dict): Style plot configuration.
-
         labels (list): List of qubit labels.
-
         plot_labels (bool, optional): Indicates whether labels are to be plotted.
             Defaults to ``True``.
-
         fold (int, optional): Number of gates to display in a row.
             Defaults to :math:`-1` (no folding unless specified).
 
         kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
-        :class:`matplotlib.axes.Axes`:
-            Axes object that encapsulates all the elements of an individual plot.
+        :class:`matplotlib.axes.Axes`: Axes object that encapsulates all the elements
+        of an individual plot.
     """
 
     return _plot_quantum_circuit(
@@ -230,7 +231,7 @@ def _plot_quantum_schedule(
 
 
 def _plot_quantum_circuit(
-    gates: list,
+    gatelist: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
@@ -241,7 +242,7 @@ def _plot_quantum_circuit(
     """Use Matplotlib to plot a quantum circuit.
 
     Args:
-        gates (list): List of gate tuples or schedule layers to render. Each gate tuple
+        gatelist (list): List of gate tuples or schedule layers to render. Each gate tuple
             follows ``(name, target, control1, control2, ...)``.
         plot_params (dict): Style plot configuration.
         labels (list): List of qubit labels.
@@ -264,21 +265,21 @@ def _plot_quantum_circuit(
     #  of gates, in which case move to an ordered dictionary
     if not labels:
         labels = []
-        for _, gate in _enumerate_gates(gates, schedule=schedule):
+        for _, gate in _enumerate_gates(gatelist, schedule=schedule):
             for label in gate[1:]:
                 if label not in labels:
                     labels.append(label)
 
     nq = len(labels)
-    ng = len(gates)
+    ng = len(gatelist)
     num_fold = 1
 
     if fold > 0:
-        _, _, num_fold, _ = _build_folded_gate_layout(gates, fold, schedule=schedule)
+        _, _, num_fold, _ = _build_folded_gate_layout(gatelist, fold, schedule=schedule)
 
     if num_fold > 1:
         return _plot_quantum_circuit_with_folds(
-            gates,
+            gatelist,
             plot_params,
             labels=labels,
             fold=fold,
@@ -302,7 +303,7 @@ def _plot_quantum_circuit(
     if ng > 0:
         _draw_gates(
             ax,
-            gates,
+            gatelist,
             labels,
             gate_grid,
             wire_grid,
@@ -318,16 +319,16 @@ def _enumerate_gates(gates_plot: list, schedule: bool = False) -> Iterator[tuple
 
     Args:
         gates_plot (list): List of gates to plot.
-
-        schedule (bool, optional): Check whether process single gate or array of gates at a time. Defaults to ``False``.
+        schedule (bool, optional): Check whether process single gate or array of gates at a time.
+            Defaults to ``False``.
 
     Returns:
         tuple: Pair containing the gate index and the processed gate.
     """
 
     if schedule:
-        for i, gates in enumerate(gates_plot):
-            for gate in gates:
+        for i, gatelist in enumerate(gates_plot):
+            for gate in gatelist:
                 yield i, gate
     else:
         for i, gate in enumerate(gates_plot):
@@ -431,21 +432,13 @@ def _draw_gates(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the circuit is drawn.
-
         gates_plot (list): List of gates or schedule layers to draw.
-
         labels (list): List of qubit labels.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
-        schedule (bool, optional): If ``True``, processes a schedule of layers. Defaults to ``False``.
-
-    Returns:
-        None: This function updates the provided axes in place.
+        schedule (bool, optional): If ``True``, processes a schedule of layers.
+            Defaults to ``False``.
     """
 
     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
@@ -467,21 +460,12 @@ def _draw_controls(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the circuit is drawn.
-
         i (int): Gate index in the current row.
-
         gate (tuple): Gate data tuple ``(name, target, control1, ...)``.
-
         labels (list): List of qubit labels.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
     name, target = gate[:2]
 
@@ -571,10 +555,9 @@ def _draw_controls(
                     subindex = plot_params["hash_unitary_gates"][index_r][
                         u_gate_single_hash + "-" + global_hash
                     ]
-                    symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
-                    symbol += r"$\rm_{{{}}}$".format(
-                        plot_params["hash_global_unitary_gates"][global_hash]
-                    )
+                    symbol = f"$\\rm_{{{subindex}}}$" + symbol
+                    global_idx = plot_params["hash_global_unitary_gates"][global_hash]
+                    symbol += rf"$\rm_{{{global_idx}}}$"
                     cci += 1
 
                 _text(ax, x, y, symbol, plot_params, box=True)
@@ -589,7 +572,7 @@ def _draw_controls(
         if strip_symbol == "":
             strip_symbol = "U_G"
 
-        symbol = r"$\rm{{{}}}$".format(strip_symbol)
+        symbol = rf"$\rm{{{strip_symbol}}}$"
 
         dx_right = 0.45
         dy = 0.25
@@ -617,21 +600,12 @@ def _draw_target(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the circuit is drawn.
-
         i (int): Gate index in the current row.
-
         gate (tuple): Gate data tuple ``(name, target, control1, ...)``.
-
         labels (list): List of qubit labels.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
     name, target = gate[:2]
 
@@ -661,21 +635,19 @@ def _draw_target(
         _swapx(ax, x, y, plot_params)
     else:
         if name == "ALIGN":
-            symbol = "A({})".format(target[2:])
+            symbol = f"A({target[2:]})"
 
         if name == "UNITARY" and target.count("_") > 1:
             hash_split = target.split("_")
-            hash = hash_split[2]
+            _hash = hash_split[2]
             global_hash = hash_split[3]
             index_r = int(hash_split[4])
             subindex = plot_params["hash_unitary_gates"][index_r][
-                hash + "-" + global_hash
+                _hash + "-" + global_hash
             ]
-            symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
-            symbol += r"$\rm_{{{}}}$".format(
-                plot_params["hash_global_unitary_gates"][global_hash]
-            )
-
+            symbol = rf"$\rm_{{{subindex}}}$" + symbol
+            global_idx = plot_params["hash_global_unitary_gates"][global_hash]
+            symbol += rf"$\rm_{{{global_idx}}}$"
         _text(ax, x, y, symbol, plot_params, box=True)
 
 
@@ -692,21 +664,12 @@ def _line(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the line is drawn.
-
         x1 (float): Initial x coordinate.
-
         x2 (float): Final x coordinate.
-
         y1 (float): Initial y coordinate.
-
         y2 (float): Final y coordinate.
-
         plot_params (dict): Style plot configuration.
-
         linestyle (str, optional): Matplotlib line style. Defaults to ``solid``.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     Line2D = matplotlib.lines.Line2D
@@ -727,15 +690,10 @@ def _text(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the text is drawn.
-
         x (float): Text x coordinate.
-
         y (float): Text y coordinate.
-
         textstr (str): Text string to render.
-
         plot_params (dict): Style plot configuration.
-
         box (bool, optional): If ``True``, draws a gate-like box behind text. Defaults to ``False``.
 
     Returns:
@@ -750,14 +708,14 @@ def _text(
     )
 
     if box:
-        bbox = dict(
-            ec=plot_params["edgecolor"],
-            fc=plot_params["gatecolor"],
-            fill=True,
-            lw=linewidth,
-        )
+        bbox = {
+            "ec": plot_params["edgecolor"],
+            "fc": plot_params["gatecolor"],
+            "fill": True,
+            "lw": linewidth,
+        }
     else:
-        bbox = dict(fill=False, lw=0)
+        bbox = {"fill": False, "lw": 0}
     return ax.text(
         x,
         y,
@@ -775,15 +733,9 @@ def _oplus(ax: Axes, x: float, y: float, plot_params: dict) -> None:
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the symbol is drawn.
-
         x (float): Symbol x coordinate.
-
         y (float): Symbol y coordinate.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     Circle = matplotlib.patches.Circle
@@ -806,15 +758,9 @@ def _cdot(ax: Axes, x: float, y: float, plot_params: dict) -> None:
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the symbol is drawn.
-
         x (float): Symbol x coordinate.
-
         y (float): Symbol y coordinate.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     Circle = matplotlib.patches.Circle
@@ -837,15 +783,9 @@ def _swapx(ax: Axes, x: float, y: float, plot_params: dict) -> None:
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the symbol is drawn.
-
         x (float): Symbol x coordinate.
-
         y (float): Symbol y coordinate.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     d = plot_params["swap_delta"]
@@ -858,15 +798,9 @@ def _swapx_with_folds(ax: Axes, x: float, y: float, plot_params: dict) -> None:
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the symbol is drawn.
-
         x (float): Symbol x coordinate.
-
         y (float): Symbol y coordinate.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     # match the CNOT symbol outline
@@ -887,13 +821,12 @@ def _setup_figure_with_folds(
 
     Args:
         gate_grid (np.ndarray): Grid of x positions for gates.
-
         wire_grid (np.ndarray): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
 
     Returns:
-        (:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`): Created axes and figure.
+        Tuple[:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`]:
+        Created axes and figure.
     """
 
     scale = plot_params["scale"]
@@ -934,17 +867,14 @@ def _setup_figure(
 
     Args:
         nq (int): Number of circuit wires.
-
         ng (int): Number of gate columns.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
 
     Returns:
-        (:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`): Created axes and figure.
+        Tuple[:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`]:
+        Created axes and figure.
     """
 
     scale = plot_params["scale"]
@@ -970,17 +900,10 @@ def _draw_wires_with_folds(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where wires are drawn.
-
         nq (int): Number of wire rows to draw.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     scale = plot_params["scale"]
@@ -1007,17 +930,10 @@ def _draw_wires(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where wires are drawn.
-
         nq (int): Number of wires to draw.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     scale = plot_params["scale"]
@@ -1044,17 +960,11 @@ def _draw_labels(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where labels are drawn.
-
         labels (list): List of qubit labels.
 
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     scale = plot_params["scale"]
@@ -1076,11 +986,11 @@ def _draw_labels(
         )
 
 
-def _get_min_max_qbits(gates: gates.FusedGate) -> tuple[int, int]:
+def _get_min_max_qbits(gate: gates.FusedGate) -> tuple[int, int]:
     """Get min and max qubit indices touched by a fused gate.
 
     Args:
-        gates (:class:`qibo.gates.gates.FusedGate`): Fused gate object.
+        gate (:class:`qibo.gates.gates.FusedGate`): Fused gate object.
 
     Returns:
         tuple: Minimum and maximum qubit indices used by the fused gate.
@@ -1093,8 +1003,8 @@ def _get_min_max_qbits(gates: gates.FusedGate) -> tuple[int, int]:
         return tuple(t)
 
     all_qbits = []
-    c_qbits = [t._control_qubits for t in gates.gates]
-    t_qbits = [t._target_qubits for t in gates.gates]
+    c_qbits = [t._control_qubits for t in gate.gates]
+    t_qbits = [t._target_qubits for t in gate.gates]
     c_qbits = _get_all_tuple_items(c_qbits)
     t_qbits = _get_all_tuple_items(t_qbits)
     all_qbits.append(c_qbits + t_qbits)
@@ -1108,7 +1018,6 @@ def _get_flipped_index(target: str, labels: list) -> int:
 
     Args:
         target (str): Target wire label.
-
         labels (list): List of qubit labels.
 
     Returns:
@@ -1136,19 +1045,11 @@ def _rectangle(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the rectangle is drawn.
-
         x1 (float): x-coordinate of the first corner.
-
         x2 (float): x-coordinate of the second corner.
-
         y1 (float): y-coordinate of the first corner.
-
         y2 (float): y-coordinate of the second corner.
-
         plot_style (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     Rectangle = matplotlib.patches.Rectangle
@@ -1178,21 +1079,12 @@ def _composed_rectangle(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object to draw on.
-
         x1 (float): x-coordinate of the first corner.
-
         x2 (float): x-coordinate of the second corner.
-
         y1 (float): y-coordinate of the first corner.
-
         y2 (float): y-coordinate of the second corner.
-
         label (str): Label to display inside the rectangle.
-
         plot_style (dict): Dictionary containing style parameters for the rectangle.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     Rectangle = matplotlib.patches.Rectangle
@@ -1232,14 +1124,12 @@ def _auto_fit_fontsize(
 
     Args:
         text (:class:`matplotlib.text.Text`): Text object to resize.
-
         width (float): Allowed width in data coordinates.
-
         height (float or None): Allowed height in data coordinates.
-
-        fig (:class:`matplotlib.figure.Figure`, optional): Figure object to use for rendering. Defaults to ``None``.
-
-        ax (:class:`matplotlib.axes.Axes`, optional): Axes object to use for rendering. Defaults to ``None``.
+        fig (:class:`matplotlib.figure.Figure`, optional): Figure object to use for rendering.
+            Defaults to ``None``.
+        ax (:class:`matplotlib.axes.Axes`, optional): Axes object to use for rendering.
+            Defaults to ``None``.
 
     Returns:
         float: Final fitted font size.
@@ -1251,7 +1141,8 @@ def _auto_fit_fontsize(
     # Compute the text bounding box using a renderer-free draw call.
     # This avoids relying on fig.canvas.get_renderer().
 
-    fig.draw_without_rendering()  # Force a draw so Matplotlib can compute `text.get_window_extent()`.
+    # Force a draw so Matplotlib can compute `text.get_window_extent()`.
+    fig.draw_without_rendering()
     bbox_text = text.get_window_extent()  # removed renderer parameter
 
     # transform bounding box to data coordinates
@@ -1273,7 +1164,6 @@ def _get_flipped_indices(targets: list, labels: list) -> list:
 
     Args:
         targets (list): Target wire labels.
-
         labels (list): List of qubit labels.
 
     Returns:
@@ -1301,7 +1191,6 @@ def _check_list_str(substrings: list, string: str) -> bool:
 
     Args:
         substrings (list): List of substrings to look for.
-
         string (str): String where substrings are searched.
 
     Returns:
@@ -1355,11 +1244,11 @@ def _build_hash_init_unitary_gates_register(
     gates_circ: list, dict_init_param: dict
 ) -> dict:
     """
-    Given a list of gates, this function builds a dictionary to register a unique hash for each unitary gate.
+    Given a list of gates, this function builds a dictionary to register
+    a unique hash for each unitary gate.
 
     Args:
-        gates_circ (list): List of gates provided by the Qibo circuit.
-
+        gates_circ (list): List of gates provided by the circuit.
         dict_init_param (dict): Dictionary to store the hash from unitary gates.
 
     Returns:
@@ -1384,11 +1273,7 @@ def _build_unitary_gates_register(gate: Any, array_register: list) -> None:
 
     Args:
         gate (:class:`qibo.gates.gates.Unitary`): Unitary gate to register.
-
         array_register (list): Register that stores hash dictionaries for unitary gates.
-
-    Returns:
-        None: This function updates ``array_register`` in place.
     """
 
     if (
@@ -1408,7 +1293,8 @@ def _build_unitary_gates_register(gate: Any, array_register: list) -> None:
 
 def _global_gate_hash(gate: gates.Unitary) -> str:
     """
-    Given a unitary gate, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
+    Given a unitary gate, this function returns a hash to identify the gate uniquely.
+    Only for Unitary gates.
 
     Args:
         gate (:class:`qibo.gates.gates.Unitary`): Unitary gate.
@@ -1430,11 +1316,11 @@ def _global_gate_hash(gate: gates.Unitary) -> str:
 
 def _u_hash(gate: gates.Unitary, param_index: int) -> str:
     """
-    Given a unitary gate and a qubit, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
+    Given a unitary gate and a qubit, this function returns a hash to identify the gate uniquely.
+    Only for Unitary gates.
 
     Args:
         gate (:class:`qibo.gates.gates.Unitary`): Unitary gate.
-
         param_index (int): Parameter index applied.
 
     Returns:
@@ -1515,7 +1401,7 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
                 item += (init_label,)
 
             for qbit in gate._target_qubits:
-                if type(qbit) is tuple:
+                if isinstance(qbit, tuple):
                     qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
                     item += ("q_" + str(qbit_item),)
                 else:
@@ -1552,7 +1438,7 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
                 ucount += 1
 
             for qbit in gate._control_qubits:
-                if type(qbit) is tuple:
+                if isinstance(qbit, tuple):
                     qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
                     item += ("q_" + str(qbit_item),)
                 else:
@@ -1588,7 +1474,7 @@ def _plot_params(style: Optional[Union[dict, str]]) -> dict:
 
 
 def _plot_quantum_circuit_with_folds(
-    gates: list,
+    gatelist: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
@@ -1599,32 +1485,30 @@ def _plot_quantum_circuit_with_folds(
     """Use Matplotlib to plot a quantum circuit.
 
     Args:
-        gates (list): List of tuples for each gate in the quantum circuit. (name,target,control1,control2...).
-        Targets and controls initially defined in terms of labels.
-
+        gatelist (list): List of tuples for each gate in the quantum circuit.
+            ``(name,target,control1,control2...)``. Targets and controls initially
+            defined in terms of labels.
         plot_params (dict): Style plot configuration.
-
         labels (list): List of qubit labels.
-
-        plot_labels (bool, optional): Indicates whether qubit labels are to be shown. Defaults to ``True``.
-
-        schedule (bool, optional): Check whether process single gate or array of gates at a time. Defaults to ``False``.
-
-        fold (int, optional): Number of gates in a row.
-            Defaults to :math:`-1`, which implies no folding (all gates in a single row).
-
+        plot_labels (bool, optional): Indicates whether qubit labels are to be shown.
+            Defaults to ``True``.
+        schedule (bool, optional): Check whether process single gate or array of gates at a time.
+            Defaults to ``False``.
+        fold (int, optional): Number of gates in a row. Defaults to :math:`-1`,
+            which implies no folding (all gates in a single row).
         kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
-        :class:`matplotlib.axes.Axes`: An Axes object encapsulates all the plot elements of a figure.
+        :class:`matplotlib.axes.Axes`: An Axes object encapsulates all
+        the plot elements of a figure.
     """
 
     plot_params.update(kwargs)
 
     nq = len(labels)
-    ng = len(gates)
+    ng = len(gatelist)
     folded_layout, _, num_folds, cols = _build_folded_gate_layout(
-        gates, fold, schedule=schedule
+        gatelist, fold, schedule=schedule
     )
 
     rows = nq * num_folds
@@ -1669,7 +1553,7 @@ def _plot_quantum_circuit_with_folds(
     if ng > 0:
         _draw_gates_with_folds(
             ax,
-            gates,
+            gatelist,
             labels,
             gate_grid,
             wire_grid,
@@ -1702,29 +1586,18 @@ def _draw_gates_with_folds(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the circuit is drawn.
-
         gates_plot (list): List of gates or schedule layers to draw.
-
         labels (list): List of qubit labels.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
-        schedule (bool, optional): If ``True``, processes a schedule of layers. Defaults to ``False``.
-
+        schedule (bool, optional): If ``True``, processes a schedule of layers.
+            Defaults to ``False``.
         fold (int, optional): Number of gates per fold row. Defaults to :math:`-1`.
-
         num_folds (int, optional): Number of folds. Defaults to :math:`0`.
-
         folded_layout (dict or None, optional): Precomputed mapping
             from original gate index to folded ``(column, fold_index)`` coordinates.
             Defaults to ``None``.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
@@ -1766,11 +1639,8 @@ def _fold_coords(
 
     Args:
         i (int): Gate index in the original circuit.
-
         fold (int): Number of gates per fold row.
-
         num_qubits (int): Number of qubits per fold.
-
         num_folds (int): Total number of folds.
 
         folded_layout (dict or None, optional): Precomputed mapping
@@ -1816,29 +1686,17 @@ def _draw_controls_with_folds(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where controls are drawn.
-
         i (int): Gate index in the original circuit.
-
         gate (tuple): Gate data tuple ``(name, target, control1, ...)``.
-
         labels (list): List of qubit labels.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
         fold (int, optional): Number of gates per fold row. Defaults to :math:`-1`.
-
         num_folds (int, optional): Number of folds. Defaults to :math:`0`.
-
         folded_layout (dict or None, optional): Precomputed mapping
             from original gate index to folded ``(column, fold_index)`` coordinates.
             Defaults to ``None``.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     name, target = gate[:2]
@@ -1950,10 +1808,9 @@ def _draw_controls_with_folds(
                     subindex = plot_params["hash_unitary_gates"][index_r][
                         u_gate_single_hash + "-" + global_hash
                     ]
-                    symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
-                    symbol += r"$\rm_{{{}}}$".format(
-                        plot_params["hash_global_unitary_gates"][global_hash]
-                    )
+                    symbol = rf"$\rm_{{{subindex}}}$" + symbol
+                    global_idx = plot_params["hash_global_unitary_gates"][global_hash]
+                    symbol += rf"$\rm_{{{global_idx}}}$"
                     cci += 1
 
                 _text_with_folds(ax, x, y, symbol, plot_params, box=True)
@@ -1966,7 +1823,7 @@ def _draw_controls_with_folds(
         strip_symbol = name.replace("UNITARY@", "")
         if strip_symbol == "":
             strip_symbol = "U_G"
-        symbol = r"$\rm{{{}}}$".format(strip_symbol)
+        symbol = rf"$\rm{{{strip_symbol}}}$"
 
         dx_right = 0.6
         dy = 0.25
@@ -1997,29 +1854,17 @@ def _draw_target_with_folds(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the symbol is drawn.
-
         i (int): Gate index in the original circuit.
-
         gate (tuple): Gate data tuple ``(name, target, control1, ...)``.
-
         labels (list): List of qubit labels.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
         fold (int, optional): Number of gates per fold row. Defaults to :math:`-1`.
-
         num_folds (int, optional): Number of folds. Defaults to :math:`0`.
-
         folded_layout (dict or None, optional): Precomputed mapping
             from original gate index to folded ``(column, fold_index)`` coordinates.
             Defaults to ``None``.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     name, target = gate[:2]
@@ -2061,21 +1906,19 @@ def _draw_target_with_folds(
         _swapx_with_folds(ax, x, y, plot_params)
     else:
         if name == "ALIGN":
-            symbol = "A({})".format(target[2:])
+            symbol = f"A({target[2:]})"
 
         if name == "UNITARY" and target.count("_") > 1:
             hash_split = target.split("_")
-            hash = hash_split[2]
+            _hash = hash_split[2]
             global_hash = hash_split[3]
             index_r = int(hash_split[4])
             subindex = plot_params["hash_unitary_gates"][index_r][
-                hash + "-" + global_hash
+                _hash + "-" + global_hash
             ]
-            symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
-            symbol += r"$\rm_{{{}}}$".format(
-                plot_params["hash_global_unitary_gates"][global_hash]
-            )
-
+            symbol = rf"$\rm_{{{subindex}}}$" + symbol
+            global_idx = plot_params["hash_global_unitary_gates"][global_hash]
+            symbol += rf"$\rm_{{{global_idx}}}$"
         _text_with_folds(ax, x, y, symbol, plot_params, box=True)
 
 
@@ -2091,19 +1934,12 @@ def _draw_labels_with_folds(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where labels are drawn.
-
         labels (list): List of qubit labels.
 
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         plot_params (dict): Style plot configuration.
-
         num_folds (int, optional): Number of folds. Defaults to :math:`0`.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     scale = plot_params["scale"]
@@ -2143,19 +1979,11 @@ def _draw_fold_boundaries(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where fold boundaries are drawn.
-
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
-
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
-
         nq (int): Number of qubits.
-
         num_folds (int): Number of folds.
-
         plot_params (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     # The layout brackets align precisely with the span of the wires
@@ -2176,21 +2004,15 @@ def _draw_fold_boundaries(
             _line(ax, x_right_edge, x_right_edge, y_top, y_bot, plot_params)
 
 
-# Controls (solid dot)
+# Controls
 def _cdot_with_folds(ax: Axes, x: float, y: float, p: dict) -> None:
     """Draw a filled control dot for folded layouts.
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the symbol is drawn.
-
         x (float): Symbol x coordinate.
-
         y (float): Symbol y coordinate.
-
         p (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     radius = p["control_radius_with_folds"] * p["scale"]
@@ -2200,21 +2022,15 @@ def _cdot_with_folds(ax: Axes, x: float, y: float, p: dict) -> None:
     ax.add_patch(circle)
 
 
-# Target ⊕
+# Target
 def _oplus_with_folds(ax: Axes, x: float, y: float, p: dict) -> None:
     """Draw a target symbol for folded layouts.
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where the symbol is drawn.
-
         x (float): Symbol x coordinate.
-
         y (float): Symbol y coordinate.
-
         p (dict): Style plot configuration.
-
-    Returns:
-        None: This function updates the provided axes in place.
     """
 
     radius = p["not_radius_with_folds"] * p["scale"]
@@ -2238,15 +2054,10 @@ def _text_with_folds(
 
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where text is drawn.
-
         x (float): Text x coordinate.
-
         y (float): Text y coordinate.
-
         label (str): Text string to render.
-
         p (dict): Style plot configuration.
-
         box (bool, optional): If ``True``, draws a gate-like box behind text. Defaults to ``False``.
 
     Returns:

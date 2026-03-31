@@ -1,3 +1,7 @@
+"""Module defining built-in quantum gate classes."""
+
+# pylint: disable=C0103,W0212,W0223
+
 import math
 from typing import List, Tuple, Union
 
@@ -318,7 +322,7 @@ class SX(Gate):
     def qasm_label(self) -> str:
         return "sx"
 
-    def decompose(
+    def decompose(  # pylint: disable=W0246
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`\\sqrt{X}` up to global phase.
@@ -1058,7 +1062,7 @@ class U3(_Un_):
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
-    def decompose(
+    def decompose(  # pylint: disable=W0246
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`U_{3}` up to global phase.
@@ -2193,7 +2197,7 @@ class RXXYY(_Rnn_):
     def hamming_weight(self) -> bool:
         return True
 
-    def decompose(
+    def decompose(  # pylint: disable=W0246
         self, *free, use_toffolis=True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
@@ -2328,7 +2332,7 @@ class GIVENS(ParametrizedGate):
         """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
-    def decompose(
+    def decompose(  # pylint: disable=W0246
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of GIVENS gate according to the decomposition of the
@@ -2479,7 +2483,7 @@ class ECR(Gate):
     def clifford(self) -> bool:
         return True
 
-    def decompose(
+    def decompose(  # pylint: disable=W0246
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
@@ -2807,7 +2811,7 @@ class Unitary(ParametrizedGate):
                 )
             )
 
-            self.unitary = True if diagonals and off_diagonals else False
+            self.unitary = bool(diagonals and off_diagonals)
             del diagonals, off_diagonals, product
 
     @Gate.parameters.setter
