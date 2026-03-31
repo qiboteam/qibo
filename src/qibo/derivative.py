@@ -13,9 +13,10 @@ def parameter_shift(
     nshots=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
-    Given a circuit :math:`U` and an observable :math:`H`, the PSR allows to calculate the derivative
-    of the expected value of :math:`H` on the final state with respect to a variational
-    parameter of the circuit.
+
+    Given a circuit :math:`U` and an observable :math:`H`, the PSR allows to
+    calculate the derivative of the expected value of :math:`H` on the final state
+    with respect to a variational parameter of the circuit.
     There is also the possibility of setting a scale factor. It is useful when a
     circuit's parameter is obtained by combination of a variational
     parameter and an external object, such as a training variable in a Quantum
@@ -100,7 +101,8 @@ def parameter_shift(
     if not isinstance(hamiltonian, AbstractHamiltonian):
         raise_error(
             TypeError,
-            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
+            "``hamiltonian`` must be a ``qibo.hamiltonians.Hamiltonian`` or "
+            + "``qibo.hamiltonians.SymbolicHamiltonian`` object.",
         )
 
     # inheriting hamiltonian's backend
@@ -193,7 +195,8 @@ def finite_differences(
     if not isinstance(hamiltonian, AbstractHamiltonian):
         raise_error(
             TypeError,
-            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
+            "``hamiltonian`` must be a ``qibo.hamiltonians.Hamiltonian`` "
+            + "or ``qibo.hamiltonians.SymbolicHamiltonian`` object.",
         )
 
     backend = hamiltonian.backend
