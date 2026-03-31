@@ -284,11 +284,24 @@ def test_measurementoutcomes_from_frequencies_mixed_key_types(backend):
         MeasurementOutcomes.from_frequencies({"00": 10, 1: 20}, backend=backend)
 
 
-def test_measurementoutcomes_from_frequencies_nqubits_mismatch(backend):
-    """Test from_frequencies raises error when key length mismatches nqubits."""
+def test_measurementoutcomes_from_frequencies_nqubits_larger(backend):
+    """Test from_frequencies with nqubits larger than key length (unmeasured qubits)."""
+    result = MeasurementOutcomes.from_frequencies(
+        {"00": 10, "11": 20}, nqubits=3, backend=backend
+    )
+    # 2 measured qubits, 3 total circuit qubits
+    assert len(result.measurement_gate.qubits) == 2
+    probs = result.probabilities()
+    # probabilities should span 2^3 = 8 states
+    assert len(probs) == 8
+    backend.assert_allclose(backend.sum(probs), 1.0)
+
+
+def test_measurementoutcomes_from_frequencies_nqubits_too_small(backend):
+    """Test from_frequencies raises error when nqubits < number of measured qubits."""
     with pytest.raises(ValueError):
         MeasurementOutcomes.from_frequencies(
-            {"00": 10, "11": 20}, nqubits=3, backend=backend
+            {"000": 10, "111": 20}, nqubits=2, backend=backend
         )
 
 
@@ -314,3 +327,50 @@ def test_measurementoutcomes_from_frequencies_zero_count_entry(backend):
     assert freq_out["00"] == 10
     assert freq_out.get("01", 0) == 0
     assert freq_out["11"] == 20
+
+
+def test_measurementoutcomes_from_frequencies_matches_circuit_probabilities(backend):
+    """Test that from_frequencies with nqubits produces probabilities matching
+    CircuitResult.probabilities() when the circuit has unmeasured qubits."""
+    from qibo import Circuit
+    from qibo.gates import M, X
+
+    circ = Circuit(3)
+    circ.add(X(0))
+    circ.add(M(0, 1))
+
+    res = backend.execute_circuit(circ)
+
+    m = MeasurementOutcomes.from_frequencies(
+        res.frequencies(), nqubits=3, backend=backend
+    )
+
+    # Both should return arrays of length 2^3 = 8 and match exactly
+    res_probs = res.probabilities()
+    m_probs = m.probabilities()
+    assert len(res_probs) == len(m_probs)
+    backend.assert_allclose(m_probs, res_probs, atol=1e-1)
+
+    # Marginalising over the unmeasured qubit (qubit 2) should also match
+    res_measured = res.probabilities(qubits=[0, 1])
+    m_measured = m.probabilities(qubits=[0, 1])
+    backend.assert_allclose(m_measured, res_measured, atol=1e-1)
+
+
+def test_measurementoutcomes_from_frequencies_marginal_over_unmeasured(backend):
+    """Test that marginalising over unmeasured qubits recovers the measured
+    qubit probabilities."""
+    freq_input = {"10": 1000}
+    result = MeasurementOutcomes.from_frequencies(
+        freq_input, nqubits=3, backend=backend
+    )
+
+    # Full probabilities should have length 8
+    full_probs = result.probabilities()
+    assert len(full_probs) == 8
+    backend.assert_allclose(backend.sum(full_probs), 1.0)
+
+    # Probabilities for just the measured qubits should recover original
+    measured_probs = result.probabilities(qubits=[0, 1])
+    assert len(measured_probs) == 4
+    backend.assert_allclose(measured_probs[2], 1.0, atol=1e-10)  # state "10" = index 2

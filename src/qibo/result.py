@@ -173,6 +173,10 @@ class MeasurementOutcomes:
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
         nshots (int): Number of shots used for samples, probabilities and frequencies generation.
+        nqubits (int, optional): Total number of qubits in the circuit. When set,
+            :meth:`probabilities` with ``qubits=None`` returns probabilities over
+            all circuit qubits (not just the measured ones). If ``None``, defaults
+            to the number of measured qubits. Defaults to ``None``.
     """
 
     def __init__(
@@ -182,10 +186,12 @@ class MeasurementOutcomes:
         probabilities=None,
         samples: Optional[int] = None,
         nshots: int = 1000,
+        nqubits: Optional[int] = None,
     ):
         self.backend = backend
         self.measurements = measurements
         self.nshots = nshots
+        self._nqubits = nqubits
 
         self._measurement_gate = None
         self._probs = probabilities
@@ -278,33 +284,75 @@ class MeasurementOutcomes:
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
         """Calculate the probabilities as frequencies / nshots
 
+        Args:
+            qubits (list or set, optional): Set of qubits for which to compute
+                probabilities. If ``None`` and ``nqubits`` was provided at
+                construction, probabilities are returned over all circuit
+                qubits; otherwise only over the measured qubits.
+                Defaults to ``None``.
+
         Returns:
-            The array containing the probabilities of the measured qubits.
+            The array containing the probabilities of the requested qubits.
         """
-        nqubits = len(self.measurement_gate.qubits)
+        measured_qubits = self.measurement_gate.qubits
+        n_measured = len(measured_qubits)
+        nqubits = self._nqubits if self._nqubits is not None else n_measured
+
         if qubits is None:
             qubits = range(nqubits)
-        elif set(qubits).issubset(self.measurement_gate.qubits):
-            qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
+        elif set(qubits).issubset(set(range(nqubits))):
+            pass  # keep qubits as-is; they index into the full qubit space
         else:
             raise_error(
                 RuntimeError,
                 f"Asking probabilities for qubits {qubits}, "
-                + f"but only qubits {self.measurement_gate.qubits} were measured.",
+                + f"but the system only has {nqubits} qubits "
+                + f"(measured qubits: {measured_qubits}).",
             )
 
+        # Build probability array in the measured-qubit space
         if self._probs is not None and not self.measurement_gate.has_bitflip_noise():
+            measured_probs = self._probs
+        else:
+            measured_probs = [0] * 2**n_measured
+            for state, freq in self.frequencies(binary=False).items():
+                measured_probs[state] = freq / self.nshots
+            measured_probs = self.backend.cast(measured_probs)
+            self._probs = measured_probs
+
+        if nqubits == n_measured:
+            # No unmeasured qubits: use the standard path
             return self.backend.calculate_probabilities(
-                np.sqrt(self._probs), qubits, nqubits
+                self.backend.cast(np.sqrt(np.array(measured_probs))),
+                list(qubits),
+                n_measured,
             )
 
-        probs = [0] * 2**nqubits
-        for state, freq in self.frequencies(binary=False).items():
-            probs[state] = freq / self.nshots
-        probs = self.backend.cast(probs)
-        self._probs = probs
+        # Expand measured probabilities into the full circuit qubit space.
+        # Unmeasured qubits are placed in the |0⟩ state, consistent with the
+        # standard qubit initialisation convention.
+        full_probs = np.zeros(2**nqubits)
+
+        for measured_state in range(2**n_measured):
+            p = float(np.real(measured_probs[measured_state]))
+            if p == 0:
+                continue
+            # Map the measured-state bits into the full-state index,
+            # leaving unmeasured qubit bits as 0.
+            full_state = 0
+            m_bit_idx = 0
+            for bit_pos in range(nqubits):
+                if bit_pos in measured_qubits:
+                    bit_val = (measured_state >> (n_measured - 1 - m_bit_idx)) & 1
+                    m_bit_idx += 1
+                    full_state |= bit_val << (nqubits - 1 - bit_pos)
+            full_probs[full_state] = p
+
+        full_probs = self.backend.cast(full_probs)
         return self.backend.calculate_probabilities(
-            self.backend.sqrt(probs), qubits, nqubits
+            self.backend.cast(np.sqrt(np.array(full_probs))),
+            list(qubits),
+            nqubits,
         )
 
     def has_samples(self):
@@ -438,6 +486,7 @@ class MeasurementOutcomes:
             "probabilities": self._probs,
             "samples": self._samples,
             "nshots": self.nshots,
+            "nqubits": self._nqubits,
             "dtype": self.__class__.__name__,
             "qibo": __version__,
         }
@@ -479,6 +528,7 @@ class MeasurementOutcomes:
             probabilities=payload.get("probabilities"),
             samples=payload.get("samples"),
             nshots=payload.get("nshots"),
+            nqubits=payload.get("nqubits"),
         )
 
     @classmethod
@@ -591,12 +641,18 @@ class MeasurementOutcomes:
             frequencies (dict or Counter): Mapping from measurement outcomes to
                 their counts. Keys can be binary strings (e.g. ``"010"``) or
                 integers (e.g. ``2``). Values are non-negative integer counts.
-            nqubits (int, optional): Number of measured qubits. Required when
-                keys are integers and ``qubits`` is not provided, since the
-                number of qubits cannot be inferred from integer keys alone.
+            nqubits (int, optional): Total number of qubits in the circuit.
+                When binary-string keys are used, the number of *measured*
+                qubits is inferred from the key length; ``nqubits`` may be
+                larger than or equal to that length, and the extra qubits are
+                treated as unmeasured.
+                When integer keys are used *without* ``qubits``, ``nqubits``
+                is required and is interpreted as the number of *measured*
+                qubits (backward-compatible behaviour).
                 Defaults to ``None``.
             qubits (tuple or list, optional): Qubit indices for the measured
-                qubits. If ``None``, defaults to ``(0, 1, ..., nqubits - 1)``.
+                qubits. If ``None``, defaults to ``(0, 1, ..., n_measured - 1)``
+                where ``n_measured`` is the number of measured qubits.
                 Defaults to ``None``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
                 used for calculations. If ``None``, the current default backend
@@ -608,7 +664,8 @@ class MeasurementOutcomes:
             measurement outcomes.
 
         Raises:
-            ValueError: If ``nqubits`` cannot be determined from the inputs.
+            ValueError: If the number of measured qubits cannot be determined
+                from the inputs.
 
         Example:
             .. code-block:: python
@@ -637,7 +694,7 @@ class MeasurementOutcomes:
                     TypeError,
                     "All frequency keys must be of the same type (all strings or all integers).",
                 )
-            # Binary-string keys: infer nqubits from key length
+            # Binary-string keys: infer n_measured from key length
             key_lengths = {len(k) for k in frequencies}
             if len(key_lengths) != 1:
                 raise_error(
@@ -645,39 +702,52 @@ class MeasurementOutcomes:
                     "All binary-string keys must have the same length, "
                     f"got lengths {key_lengths}.",
                 )
-            inferred_nqubits = key_lengths.pop()
+            inferred_n_measured = key_lengths.pop()
             int_frequencies = {int(k, 2): v for k, v in frequencies.items()}
         else:
             # Integer keys
-            inferred_nqubits = None
+            inferred_n_measured = None
             int_frequencies = {int(k): v for k, v in frequencies.items()}
 
-        # Resolve nqubits
-        resolved_nqubits = 0
+        # Resolve the number of measured qubits
         if qubits is not None:
             qubits = tuple(qubits)
-            resolved_nqubits = len(qubits)
+            n_measured = len(qubits)
+        elif inferred_n_measured is not None:
+            n_measured = inferred_n_measured
         elif nqubits is not None:
-            resolved_nqubits = nqubits
-        elif inferred_nqubits is not None:
-            resolved_nqubits = inferred_nqubits
+            # Integer keys without qubits: nqubits gives the measured count
+            n_measured = nqubits
         else:
             raise_error(
                 ValueError,
-                "Cannot determine the number of qubits. Provide `nqubits` or "
-                "`qubits` when using integer keys in frequencies.",
+                "Cannot determine the number of measured qubits. Provide "
+                "`nqubits` or `qubits` when using integer keys in frequencies.",
             )
+
+        # Validate consistency between inferred measured count and qubits
+        if inferred_n_measured is not None and qubits is not None:
+            if inferred_n_measured != len(qubits):
+                raise_error(
+                    ValueError,
+                    f"Binary-string key length ({inferred_n_measured}) does not "
+                    f"match the number of qubits provided ({len(qubits)}).",
+                )
 
         if qubits is None:
-            qubits = tuple(range(resolved_nqubits))
+            qubits = tuple(range(n_measured))
 
-        # Validate nqubits consistency
-        if inferred_nqubits is not None and inferred_nqubits != resolved_nqubits:
-            raise_error(
-                ValueError,
-                f"Binary-string key length ({inferred_nqubits}) does not match "
-                f"the resolved number of qubits ({resolved_nqubits}).",
-            )
+        # Resolve total nqubits for the circuit
+        if nqubits is not None:
+            if nqubits < n_measured:
+                raise_error(
+                    ValueError,
+                    f"nqubits ({nqubits}) must be >= the number of measured "
+                    f"qubits ({n_measured}).",
+                )
+            total_nqubits = nqubits
+        else:
+            total_nqubits = None  # will default to n_measured inside __init__
 
         # Expand frequencies into a binary samples array
         for state_int, count in int_frequencies.items():
@@ -695,13 +765,13 @@ class MeasurementOutcomes:
         if nshots <= 0:
             raise_error(ValueError, "Total number of shots must be positive.")
 
-        max_state = 2**resolved_nqubits - 1
+        max_state = 2**n_measured - 1
         for state_int in int_frequencies:
             if state_int < 0 or state_int > max_state:
                 raise_error(
                     ValueError,
                     f"State integer {state_int} is out of range for "
-                    f"{resolved_nqubits} qubits (valid range: 0 to {max_state}).",
+                    f"{n_measured} measured qubits (valid range: 0 to {max_state}).",
                 )
 
         sample_rows = []
@@ -709,12 +779,8 @@ class MeasurementOutcomes:
             if count == 0:
                 continue
             # Convert integer state to binary row
-            binary_str = format(state_int, f"0{resolved_nqubits}b")
             row = np.array(
-                [
-                    (state_int >> (resolved_nqubits - 1 - i)) & 1
-                    for i in range(resolved_nqubits)
-                ],
+                [(state_int >> (n_measured - 1 - i)) & 1 for i in range(n_measured)],
                 dtype=int,
             )
             sample_rows.append(np.tile(row, (count, 1)))
@@ -725,7 +791,13 @@ class MeasurementOutcomes:
         rng.shuffle(samples)
 
         measurements = [gates.M(*qubits)]
-        return cls(measurements, backend=backend, samples=samples, nshots=nshots)
+        return cls(
+            measurements,
+            backend=backend,
+            samples=samples,
+            nshots=nshots,
+            nqubits=total_nqubits,
+        )
 
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
@@ -759,6 +831,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             probabilities=probs,
             samples=samples,
             nshots=nshots,
+            nqubits=self.nqubits,
         )
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
