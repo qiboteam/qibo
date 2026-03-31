@@ -1,10 +1,10 @@
 """Submodules with entanglement measures."""
 
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.linalg_operations import (
     matrix_power,
@@ -305,7 +305,9 @@ def meyer_wallach_entanglement(state, backend=None):
     return 2 * (1 - entanglement / nqubits)
 
 
-def entangling_capability(circuit, samples: int, seed=None, backend=None):
+def entangling_capability(
+    circuit, samples: int, seed: Optional[int] = None, backend: Optional[Backend] = None
+):
     """Calculate the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
 
     It is defined as the average Meyer-Wallach entanglement :math:`\\operatorname{Q}`

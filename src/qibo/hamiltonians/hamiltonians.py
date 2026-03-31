@@ -105,7 +105,7 @@ class Hamiltonian(AbstractHamiltonian):
         return self._exp.get("result")
 
     def expectation(
-        self, circuit, nshots: int = None, qubit_map: Optional[dict] = None
+        self, circuit, nshots: Optional[int] = None, qubit_map: Optional[dict] = None
     ) -> float:
         """Computes the expectation value for a given circuit. This works only for diagonal
         observables if ``nshots != None``.

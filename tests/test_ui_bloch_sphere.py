@@ -6,7 +6,13 @@ import pytest
 mpl.use("agg")
 
 from qibo import Circuit, gates
+from qibo.backends.numpy import NumpyBackend
 from qibo.ui.bloch import BlochSphere
+
+_BACKEND = NumpyBackend()
+ZERO_STATE = _BACKEND.zero_state(1, density_matrix=False, dtype=_BACKEND.complex128)
+ZERO_STATE_DM = _BACKEND.zero_state(1, density_matrix=True, dtype=_BACKEND.complex128)
+ONE_STATE = np.array([0, 1], dtype="complex")
 
 
 def _circuit(weight, boolean=False):
@@ -93,17 +99,19 @@ def test_state_clear():
 
 def test_classification():
     bs = BlochSphere()
-    bs.add_state(np.array([1, 0]), color="black")
-    bs.add_state(np.array([0, 1]), color="black")
+    bs.add_state(ZERO_STATE.real, color="black")
+    bs.add_state(ONE_STATE.real, color="black")
 
     weight = 0.1
 
     for _ in range(20):
-        state = _circuit(weight)(np.array([1, 0], dtype="complex")).state()
+        circ = _circuit(weight)
+        state = _BACKEND.execute_circuit(circ).state()
         bs.add_state(state, mode="point", color="red")
 
     for _ in range(20):
-        state = _circuit(weight)(np.array([0, 1], dtype="complex")).state()
+        circ = _circuit(weight)
+        state = _BACKEND.execute_circuit(circ, initial_state=ONE_STATE).state()
         bs.add_state(state, mode="point", color="blue")
 
     bs.render()
@@ -112,24 +120,26 @@ def test_classification():
 
 def test_multi_classification():
     bs = BlochSphere()
-    bs.add_state(np.array([1, 0]), color="black")
-    bs.add_state(np.array([0, 1]), color="black")
+    bs.add_state(ZERO_STATE.real, color="black")
+    bs.add_state(ONE_STATE.real, color="black")
     bs.add_vector(np.array([0, 1, 0]), color="black")
 
     weight = 0.1
 
     for _ in range(20):
-        state = _circuit(weight)(np.array([1, 0], dtype="complex")).state()
+        circ = _circuit(weight)
+        state = _BACKEND.execute_circuit(circ, initial_state=ZERO_STATE).state()
         bs.add_state(state, mode="point", color="red")
 
     for _ in range(20):
         circ = _circuit(weight)
         circ.add(gates.RX(q=0, theta=-np.pi / 2))
-        bs.add_state(circ().state(), mode="point", color="orange")
+        state = _BACKEND.execute_circuit(circ).state()
+        bs.add_state(state, mode="point", color="orange")
 
     for _ in range(20):
         circ = _circuit(weight)
-        state = circ(np.array([0, 1], dtype="complex")).state()
+        state = _BACKEND.execute_circuit(circ, initial_state=ONE_STATE).state()
         bs.add_state(state, mode="point", color="magenta")
 
     bs.render()
@@ -148,7 +158,7 @@ def test_qibo_output():
         circ.add(gates.RZ(q=0, theta=np.random.randn()))
 
     # state
-    state = circ().state()
+    state = _BACKEND.execute_circuit(circ).state()
     bs.add_state(state, color="orange")
     bs.render()
     plt.show()
@@ -165,7 +175,7 @@ def test_point_vector_state():
         circ.add(gates.RZ(q=0, theta=np.random.randn()))
 
     # state
-    state = circ().state()
+    state = _BACKEND.execute_circuit(circ).state()
     bs.add_state(state, color="orange")
 
     # point
@@ -190,7 +200,7 @@ def test_save():
     for _ in range(layers):
         circ.add(gates.RY(q=0, theta=np.random.randn()))
         circ.add(gates.RZ(q=0, theta=np.random.randn()))
-    state = circ().state()
+    state = _BACKEND.execute_circuit(circ).state()
 
     bs.add_state(state, color=["orange"])
     bs.render()
@@ -206,7 +216,7 @@ def test_many_spheres():
 
     for _ in range(20):
         circ = _circuit(weight)
-        state = circ(np.array([0, 1], dtype="complex")).state()
+        state = _BACKEND.execute_circuit(circ, initial_state=ONE_STATE).state()
         bs.add_state(state, mode="point", color="blue")
 
     bs.render()
@@ -215,7 +225,7 @@ def test_many_spheres():
 
     for _ in range(20):
         circ = _circuit(weight)
-        state = circ(np.array([0, 1], dtype="complex")).state()
+        state = _BACKEND.execute_circuit(circ, initial_state=ONE_STATE).state()
         bs.add_state(state, mode="point", color="red")
 
     bs.render()
@@ -231,9 +241,8 @@ def test_density_matrix():
     weight = 1.0
     boolean = True
 
-    states = _circuit(weight, boolean)(
-        np.array([[1, 0], [0, 0]], dtype="complex")
-    ).state()
+    states = _circuit(weight, boolean)
+    states = _BACKEND.execute_circuit(states, initial_state=ZERO_STATE_DM).state()
 
     bs.add_state(states, mode="vector", color="red")
 
@@ -259,7 +268,8 @@ def test_density_matrix_vs_state():
 
     # Scenario 1
     boolean = False
-    state = _circuit(weight, boolean)(np.array([1, 0], dtype="complex")).state()
+    circ = _circuit(weight, boolean)
+    state = _BACKEND.execute_circuit(circ, initial_state=ZERO_STATE).state()
     bs.add_state(state, mode="vector", color="red")
     bs.render()
     plt.show()
@@ -268,7 +278,9 @@ def test_density_matrix_vs_state():
     # Scenario 2
     boolean = False
     states = [
-        _circuit(weight, boolean)(np.array([1, 0], dtype="complex")).state()
+        _BACKEND.execute_circuit(
+            _circuit(weight, boolean), initial_state=ZERO_STATE
+        ).state()
         for _ in range(2)
     ]
     bs.add_state(states, mode="vector", color="red")
@@ -279,7 +291,9 @@ def test_density_matrix_vs_state():
     # Scenario 3
     boolean = False
     states = [
-        _circuit(weight, boolean)(np.array([1, 0], dtype="complex")).state()
+        _BACKEND.execute_circuit(
+            _circuit(weight, boolean), initial_state=ZERO_STATE
+        ).state()
         for _ in range(10)
     ]
     bs.add_state(states, mode="vector", color="red")
@@ -289,7 +303,8 @@ def test_density_matrix_vs_state():
 
     # Scenario 4
     boolean = True
-    rho = _circuit(weight, boolean)(np.array([[1, 0], [0, 0]], dtype="complex")).state()
+    circ = _circuit(weight, boolean)
+    rho = _BACKEND.execute_circuit(circ, initial_state=ZERO_STATE_DM).state()
     bs.add_state(rho, mode="vector", color="blue")
     bs.render()
     plt.show()
@@ -298,7 +313,7 @@ def test_density_matrix_vs_state():
     # Scenario 5
     boolean = True
     rhos = [
-        _circuit(weight, boolean)(np.array([[1, 0], [0, 0]], dtype="complex")).state()
+        _BACKEND.execute_circuit(circ, initial_state=ZERO_STATE_DM).state()
         for _ in range(2)
     ]
     bs.add_state(rhos, mode="vector", color="blue")
@@ -309,7 +324,7 @@ def test_density_matrix_vs_state():
     # Scenario 6
     boolean = True
     rhos = [
-        _circuit(weight, boolean)(np.array([[1, 0], [0, 0]], dtype="complex")).state()
+        _BACKEND.execute_circuit(circ, initial_state=ZERO_STATE_DM).state()
         for _ in range(10)
     ]
     bs.add_state(rhos, mode="vector", color="blue")

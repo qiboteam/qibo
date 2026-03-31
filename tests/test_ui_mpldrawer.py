@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, callbacks, construct_backend, gates
+from qibo.backends.numpy import NumpyBackend
 from qibo.models import QFT
 from qibo.quantum_info import random_unitary
 from qibo.ui.drawing_utils import FusedEndGateBarrier, FusedStartGateBarrier
@@ -166,6 +167,13 @@ def test_align_gate_with_folds(fold):
 @pytest.mark.parametrize("clustered", [False, True])
 def test_circuit_fused_gates(clustered):
     """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
+    _backend = NumpyBackend()
+    with pytest.raises(NotImplementedError):
+        _ = FusedStartGateBarrier(0, 1, 2).generator(_backend)
+
+    with pytest.raises(NotImplementedError):
+        _ = FusedEndGateBarrier(0, 1).generator(_backend)
+
     circuit = QFT(5)
     circuit.add(gates.M(qubit) for qubit in range(2))
     _, fig = plot_circuit(

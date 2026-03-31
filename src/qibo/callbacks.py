@@ -1,3 +1,5 @@
+"""Module defining circuit callbacks."""
+
 from typing import List, Optional, Union
 
 from qibo.config import EIGVAL_CUTOFF, log, raise_error
@@ -103,7 +105,7 @@ class EntanglementEntropy(Callback):
         self.partition = partition
         self.compute_spectrum = compute_spectrum
         self.base = base
-        self.spectrum = list()
+        self.spectrum = []
 
     @Callback.nqubits.setter
     def nqubits(self, n: int):
