@@ -1,7 +1,7 @@
 """Bloch sphere module."""
 
 from dataclasses import dataclass, field
-from typing import Union
+from typing import List, Optional, Tuple, Union
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -10,6 +10,7 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from numpy.typing import ArrayLike
 
+from qibo.backends.abstract import Backend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.symbols import X, Y, Z
@@ -22,7 +23,7 @@ class Arrow3D(FancyArrowPatch):
         super().__init__((0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
 
-    def do_3d_projection(self):
+    def do_3d_projection(self) -> float:
         """This function performs the 3D projection of the arrow rendering.
 
         This method is automatically called by Matplotlib's 3D axis
@@ -41,7 +42,7 @@ class BlochSphere:
     """This class creates a Bloch sphere."""
 
     @staticmethod
-    def _make_style():
+    def _make_style() -> dict:
         _style = {
             "figure.figsize": (6, 6),
             "lines.linewidth": 0.9,
@@ -49,7 +50,7 @@ class BlochSphere:
         return _style
 
     @staticmethod
-    def _make_style_text():
+    def _make_style_text() -> dict:
         return {"text.color": "black", "font.size": 19}
 
     # Plot style sheets
@@ -68,7 +69,7 @@ class BlochSphere:
 
     _numpy_backend: Optional[Backend] = field(default=None, repr=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # No toolbar
         mpl.rcParams["toolbar"] = "None"
 
@@ -79,14 +80,14 @@ class BlochSphere:
         # Title of the window
         self.fig.canvas.manager.set_window_title("Bloch sphere")
 
-    def _new_window(self):
+    def _new_window(self) -> None:
         """It creates a new Figure object and it adds to it a new Axis."""
         self.fig = plt.figure(figsize=self.style["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
         self.fig.canvas.manager.set_window_title("Bloch sphere")
 
     # -----Sphere-----
-    def _sphere_surface(self):
+    def _sphere_surface(self) -> Tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's surface"""
         phi, theta = np.mgrid[0.0 : np.pi : 100j, 0.0 : 2.0 * np.pi : 100j]
         x = np.sin(phi) * np.cos(theta)
@@ -94,7 +95,7 @@ class BlochSphere:
         z = np.cos(phi)
         return x, y, z
 
-    def _axis(self):
+    def _axis(self) -> Tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's axis."""
         theta = np.linspace(0, 2 * np.pi, 100)
         z = np.zeros(100)
@@ -102,7 +103,7 @@ class BlochSphere:
         y = np.cos(theta)
         return x, y, z
 
-    def _parallel(self, z):
+    def _parallel(self, z: float) -> Tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's parallels."""
         theta = np.linspace(0, 2 * np.pi, 100)
         z = np.full(100, z)
@@ -111,7 +112,7 @@ class BlochSphere:
         y = r * np.sin(theta)
         return x, y, z
 
-    def _meridian(self, phi):
+    def _meridian(self, phi: float) -> Tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's meridians."""
         theta = np.linspace(0, 2 * np.pi, 100)
         x = np.sin(theta) * np.cos(phi)
@@ -119,7 +120,7 @@ class BlochSphere:
         z = np.cos(theta)
         return x, y, z
 
-    def _create_sphere(self):
+    def _create_sphere(self) -> None:
         "This function builds an empty Bloch sphere."
 
         # Empty sphere
@@ -163,7 +164,7 @@ class BlochSphere:
             self.ax.text(0, 0, -1.3, r"$|1\rangle$", ha="center")
 
     # -----States and Vectors-----
-    def _paulis_expectation(self, state):
+    def _paulis_expectation(self, state: ArrayLike) -> Tuple[float, ...]:
         """This function computes the expectation value of Pauli matrices
         on the considered state and yields its cartesian coordinates on the Bloch sphere.
         """
@@ -187,12 +188,14 @@ class BlochSphere:
         z = sigma_z.expectation_from_state(state)
         return x, y, z
 
-    def _is_density_matrix(self, rho: np.ndarray) -> bool:
+    def _is_density_matrix(self, rho: ArrayLike) -> bool:
         """This function is used only to check whether an input of shape (2,2)
         is two state vectors or one density matrix."""
         return np.allclose(rho, rho.conj().T) and np.isclose(np.trace(rho), 1)
 
-    def _broadcasting_semantics(self, vector, mode, color):
+    def _broadcasting_semantics(
+        self, vector: ArrayLike, mode: Union[list, str], color: Union[list, str]
+    ) -> Tuple[ArrayLike, ...]:
         """This function makes sure that `vector`, `mode`, `color` have the same sizes."""
         if isinstance(vector, list):
             vector = np.array(vector)
@@ -213,9 +216,9 @@ class BlochSphere:
     def add_vector(
         self,
         vector: ArrayLike,
-        mode: Union[str, list[str]] = "vector",
-        color: Union[str, list[str]] = "black",
-    ):
+        mode: Union[str, List[str]] = "vector",
+        color: Union[str, List[str]] = "black",
+    ) -> None:
         """This function adds a vector to the sphere."""
 
         vectors, modes, colors = self._broadcasting_semantics(vector, mode, color)
@@ -234,7 +237,7 @@ class BlochSphere:
         state: ArrayLike,
         mode: Union[str, list[str]] = "vector",
         color: Union[str, list[str]] = "black",
-    ):
+    ) -> None:
         """This function adds a state to the sphere."""
 
         vectors, modes, colors = self._broadcasting_semantics(state, mode, color)
@@ -252,7 +255,7 @@ class BlochSphere:
                 self._color_points.append(_color)
 
     # -----Clear and produce the sphere-----
-    def clear(self):
+    def clear(self) -> None:
         """This function clears the sphere."""
         plt.close()
         self._new_window()
@@ -267,7 +270,7 @@ class BlochSphere:
 
         self.render()
 
-    def render(self):
+    def render(self) -> None:
         """This function creates the empty sphere and plots the
         vectors and points on it."""
         if self._shown is True:
