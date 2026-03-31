@@ -710,6 +710,7 @@ class MeasurementOutcomes:
             int_frequencies = {int(k): v for k, v in frequencies.items()}
 
         # Resolve the number of measured qubits
+        n_measured: int
         if qubits is not None:
             qubits = tuple(qubits)
             n_measured = len(qubits)
