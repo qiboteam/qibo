@@ -1183,7 +1183,7 @@ def _render_label(label: str) -> str:
         str: Rendered label string.
     """
 
-    return r"$|%s\rangle$" % label if label else ""
+    return rf"$|{label}\rangle$" if label else ""
 
 
 def _check_list_str(substrings: list, string: str) -> bool:
