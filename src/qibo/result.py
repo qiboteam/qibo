@@ -562,7 +562,7 @@ class MeasurementOutcomes:
         without needing to manually construct measurement gates.
 
         Args:
-            samples (np.ndarray): Binary array of shape ``(nshots, nqubits)``
+            samples (ArrayLike): Binary array of shape ``(nshots, nqubits)``.
                 where each row is a measurement outcome with 0/1 values.
             qubits (tuple or list, optional): Qubit indices for the measured
                 qubits. If ``None``, defaults to ``(0, 1, ..., nqubits - 1)``.
