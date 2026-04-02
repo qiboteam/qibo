@@ -656,10 +656,10 @@ class MeasurementOutcomes:
                 qubits. If ``None``, defaults to ``(0, 1, ..., n_measured - 1)``
                 where ``n_measured`` is the number of measured qubits.
                 Defaults to ``None``.
+            seed (int, optional): Seed for sampling generation.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
                 used for calculations. If ``None``, the current default backend
                 is used. Defaults to ``None``.
-            seed (int, optional): Seed for sampling generation.
 
         Returns:
             :class:`qibo.result.MeasurementOutcomes`: Object storing the
