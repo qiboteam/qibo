@@ -337,7 +337,7 @@ class MeasurementOutcomes:
         full_probs = np.zeros(2**nqubits)
 
         for measured_state in range(2**n_measured):
-            p = float(np.real(measured_probs[measured_state]))
+            p = float(measured_probs[measured_state])
             if p == 0:
                 continue
             # Map the measured-state bits into the full-state index,
