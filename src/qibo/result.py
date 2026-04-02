@@ -626,10 +626,10 @@ class MeasurementOutcomes:
     def from_frequencies(
         cls,
         frequencies,
-        nqubits=None,
-        qubits=None,
-        backend=None,
-        seed=None,
+        nqubits: Optional[int] = None,
+        qubits: Optional[Union[List[int], Tuple[int, ...]]] = None,
+        seed: Optional[int] = None,
+        backend: Optional[Backend] = None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` from a
         frequencies dictionary.
