@@ -352,7 +352,7 @@ class MeasurementOutcomes:
             full_probs[full_state] = p
 
         return self.backend.calculate_probabilities(
-            self.backend.cast(np.sqrt(np.array(full_probs))),
+            self.backend.sqrt(full_probs),
             list(qubits),
             nqubits,
         )
