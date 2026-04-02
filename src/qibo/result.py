@@ -552,7 +552,7 @@ class MeasurementOutcomes:
     def from_samples(
         cls,
         samples,
-        qubits=None,
+        qubits: Optional[Union[List[int], Tuple[int, ...]]] = None,
         backend: Optional[Backend] = None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` directly from
