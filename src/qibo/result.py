@@ -599,7 +599,7 @@ class MeasurementOutcomes:
                 f"got shape {samples.shape}.",
             )
 
-        if not np.all((samples == 0) | (samples == 1)):
+        if not backend.all((samples == 0) | (samples == 1)):
             raise_error(
                 ValueError, "samples array must contain only binary values (0 or 1)."
             )
