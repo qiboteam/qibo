@@ -281,7 +281,7 @@ class MeasurementOutcomes:
 
         return self._frequencies
 
-    def probabilities(self, qubits: Optional[Union[list, set]] = None):
+    def probabilities(self, qubits: Optional[Union[list, set]] = None) -> ArrayLike:
         """Calculate the probabilities as frequencies / nshots
 
         Args:
