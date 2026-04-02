@@ -334,7 +334,7 @@ class MeasurementOutcomes:
         # Expand measured probabilities into the full circuit qubit space.
         # Unmeasured qubits are placed in the |0⟩ state, consistent with the
         # standard qubit initialisation convention.
-        full_probs = np.zeros(2**nqubits)
+        full_probs = backend.zeros(2**nqubits, dtype=backend.float64)
 
         for measured_state in range(2**n_measured):
             p = float(measured_probs[measured_state])
