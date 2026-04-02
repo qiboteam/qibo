@@ -351,7 +351,6 @@ class MeasurementOutcomes:
                     full_state |= bit_val << (nqubits - 1 - bit_pos)
             full_probs[full_state] = p
 
-        full_probs = self.backend.cast(full_probs)
         return self.backend.calculate_probabilities(
             self.backend.cast(np.sqrt(np.array(full_probs))),
             list(qubits),
