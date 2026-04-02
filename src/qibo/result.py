@@ -292,7 +292,7 @@ class MeasurementOutcomes:
                 Defaults to ``None``.
 
         Returns:
-            The array containing the probabilities of the requested qubits.
+            ArrayLike: The array containing the probabilities of the requested qubits.
         """
         measured_qubits = self.measurement_gate.qubits
         n_measured = len(measured_qubits)
