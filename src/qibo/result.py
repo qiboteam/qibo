@@ -5,6 +5,7 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from sympy.core import basic
 
 from qibo import __version__, gates
