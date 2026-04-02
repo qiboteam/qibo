@@ -590,7 +590,7 @@ class MeasurementOutcomes:
         )
 
         backend = _check_backend(backend)
-        samples = np.array(samples)
+        samples = backend.cast(samples, dtype=backend.int8)
 
         if samples.ndim != 2:
             raise_error(
