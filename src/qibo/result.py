@@ -553,7 +553,7 @@ class MeasurementOutcomes:
         cls,
         samples,
         qubits=None,
-        backend=None,
+        backend: Optional[Backend] = None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` directly from
         a binary samples array.
