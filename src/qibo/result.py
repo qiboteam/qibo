@@ -326,7 +326,7 @@ class MeasurementOutcomes:
         if nqubits == n_measured:
             # No unmeasured qubits: use the standard path
             return self.backend.calculate_probabilities(
-                self.backend.cast(np.sqrt(np.array(measured_probs))),
+                self.backend.sqrt(measured_probs),
                 list(qubits),
                 n_measured,
             )
