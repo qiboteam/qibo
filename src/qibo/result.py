@@ -6,7 +6,6 @@ from typing import Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
-from sympy.core import basic
 
 from qibo import __version__, gates
 from qibo.config import raise_error
@@ -334,7 +333,7 @@ class MeasurementOutcomes:
         # Expand measured probabilities into the full circuit qubit space.
         # Unmeasured qubits are placed in the |0⟩ state, consistent with the
         # standard qubit initialisation convention.
-        full_probs = backend.zeros(2**nqubits, dtype=backend.float64)
+        full_probs = self.backend.zeros(2**nqubits, dtype=self.backend.float64)
 
         for measured_state in range(2**n_measured):
             p = float(measured_probs[measured_state])
@@ -552,8 +551,8 @@ class MeasurementOutcomes:
     def from_samples(
         cls,
         samples,
-        qubits: Optional[Union[List[int], Tuple[int, ...]]] = None,
-        backend: Optional[Backend] = None,
+        qubits: Optional[Union[list[int], tuple[int, ...]]] = None,
+        backend: Optional["Backend"] = None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` directly from
         a binary samples array.
@@ -627,9 +626,9 @@ class MeasurementOutcomes:
         cls,
         frequencies,
         nqubits: Optional[int] = None,
-        qubits: Optional[Union[List[int], Tuple[int, ...]]] = None,
+        qubits: Optional[Union[list[int], tuple[int, ...]]] = None,
         seed: Optional[int] = None,
-        backend: Optional[Backend] = None,
+        backend: Optional["Backend"] = None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` from a
         frequencies dictionary.
