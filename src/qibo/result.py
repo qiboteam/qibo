@@ -318,7 +318,9 @@ class MeasurementOutcomes:
             measured_probs = [0] * 2**n_measured
             for state, freq in self.frequencies(binary=False).items():
                 measured_probs[state] = freq / self.nshots
-            measured_probs = self.backend.cast(measured_probs, dtype=self.backend.float64)
+            measured_probs = self.backend.cast(
+                measured_probs, dtype=self.backend.float64
+            )
             self._probs = measured_probs
 
         if nqubits == n_measured:
