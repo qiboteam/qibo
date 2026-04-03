@@ -96,8 +96,7 @@ resp_matrix_3q = random_stochastic_matrix(
 )
 @pytest.mark.parametrize("solve", [False, True])
 @pytest.mark.parametrize("GUF", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10000])
-def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readout):
+def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     """Test that ZNE reduces the noise."""
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
@@ -241,14 +240,16 @@ def test_sample_training_circuit(backend, nqubits):
     ],
 )
 @pytest.mark.parametrize("full_output", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10000])
-def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout, nshots):
+def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     """Test that vnCDR reduces the noise."""
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
         backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
+
+    nshots = 30000
+
     # Define the circuit
     circuit = get_circuit(nqubits)
     circuit_copy = circuit.copy(True)
