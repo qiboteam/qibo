@@ -290,9 +290,7 @@ def test_fused_gates_fold_layout_is_atomic():
 
 def test_fold_coords_without_layout():
     """Fold coordinates should fall back to index math if no layout is given."""
-    col, yoff = _fold_coords(
-        i=3, fold=2, num_qubits=3, num_folds=2, direction="down", folded_layout=None
-    )
+    col, yoff = _fold_coords(i=3, fold=2, num_qubits=3, num_folds=2, folded_layout=None)
 
     assert col == 1
     assert yoff == 0
@@ -436,8 +434,6 @@ def test_plot_circuit_internal():
         ("MEASURE", "q_1"),
     ]
 
-    inits = [0, 1, 2, 3, 4]
-
     params = {
         "scale": 1.0,
         "fontsize": 14.0,
@@ -459,8 +455,8 @@ def test_plot_circuit_internal():
 
     labels = ["q_0", "q_1", "q_2", "q_3", "q_4"]
 
-    ax1 = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=0.7)
-    ax2 = _plot_quantum_circuit(gates_plot, inits, params, [], scale=0.7)
+    ax1 = _plot_quantum_circuit(gates_plot, params, labels, scale=0.7)
+    ax2 = _plot_quantum_circuit(gates_plot, params, [], scale=0.7)
     assert (
         match_figure_image(ax1.figure, BASEPATH + "/test_plot_circuit_internal_ax1.npy")
         == True
@@ -495,33 +491,15 @@ def test_plot_circuit_error_style():
     assert style3["facecolor"] == "#6497bf"
 
 
-# def test_fused_gates():
-#     """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
-#     min_q = 0
-#     max_q = 1
-#     l_gates = 1
-#     equal_qbits = True
-#     start_barrier = FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
-#     end_barrier = FusedEndGateBarrier(min_q, max_q)
-#     assert start_barrier != None
-#     assert end_barrier != None
-
-
 def test_render_label():
     """Test render labels"""
-    inits = [0]
-    assert _render_label("q_0", inits) != ""
-    assert _render_label("q_8", inits) != ""
+    assert _render_label("q_0") != ""
+    assert _render_label("q_8") != ""
+    assert _render_label(r"\psi") != ""
 
 
 def test_render_label_empty():
-    inits = {"q_0": None}
-    assert _render_label("q_0", inits) == ""
-
-
-def test_render_label_not_empty():
-    inits = {"q_0": r"\psi"}
-    assert _render_label("q_0", inits) != ""
+    assert _render_label("") == ""
 
 
 def test_cluster_gates():
