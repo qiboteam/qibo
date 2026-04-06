@@ -49,7 +49,6 @@ PLOT_PARAMS = {
     "controlcolor": "#000000",
     "xscale": 1.2,
     "yscale": 3,
-    "fold_direction": "down",  # or "up"
     "fold_gap": 0.5,
     "gate_font_scale": 0.8,  # scale text size inside boxes
     "control_radius_with_folds": 0.07,  # dot radius (data units)
@@ -128,8 +127,6 @@ def plot_circuit(
     params = PLOT_PARAMS.copy()
     params.update(_plot_params(style))
 
-    inits = list(range(circuit.nqubits))
-
     labels = []
     for i in range(circuit.nqubits):
         labels.append("q_" + str(i))
@@ -186,24 +183,21 @@ def plot_circuit(
     if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
         ax = _plot_quantum_schedule(
-            gates_cluster, inits, params, labels, fold=fold, scale=scale
+            gates_cluster, params, labels, fold=fold, scale=scale
         )
         return ax, ax.figure
 
-    ax = _plot_quantum_circuit(
-        gates_plot, inits, params, labels, fold=fold, scale=scale
-    )
+    ax = _plot_quantum_circuit(gates_plot, params, labels, fold=fold, scale=scale)
     return ax, ax.figure
 
 
 def _plot_quantum_schedule(
     schedule: list,
-    inits: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
     fold: int = -1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a queue of quantum circuit.
 
@@ -211,14 +205,14 @@ def _plot_quantum_schedule(
         schedule (list):  List of time steps, each containing a sequence of gates during that step.
             Each gate is a tuple containing ``(name,target,control1,control2...)``.
             Targets and controls initially defined in terms of labels.
-        inits (list): Initialization list of gates (list(range(circuit.nqubits)).
         plot_params (dict): Style plot configuration.
         labels (list): List of qubit labels.
         plot_labels (bool, optional): Indicates whether labels are to be plotted.
             Defaults to ``True``.
         fold (int, optional): Number of gates to display in a row.
             Defaults to :math:`-1` (no folding unless specified).
-        kwargs (dict, optional): Variadic dictionary that can override plot parameters.
+
+        kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
         :class:`matplotlib.axes.Axes`: Axes object that encapsulates all the elements
@@ -227,7 +221,6 @@ def _plot_quantum_schedule(
 
     return _plot_quantum_circuit(
         schedule,
-        inits,
         plot_params,
         labels=labels,
         plot_labels=plot_labels,
@@ -239,20 +232,18 @@ def _plot_quantum_schedule(
 
 def _plot_quantum_circuit(
     gatelist: list,
-    inits: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
     schedule: bool = False,
     fold: int = -1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a quantum circuit.
 
     Args:
         gatelist (list): List of gate tuples or schedule layers to render. Each gate tuple
             follows ``(name, target, control1, control2, ...)``.
-        inits (list): Initialization list of gates.
         plot_params (dict): Style plot configuration.
         labels (list): List of qubit labels.
         plot_labels (bool, optional): Indicates whether qubit labels are shown.
@@ -261,7 +252,7 @@ def _plot_quantum_circuit(
             Defaults to ``False``.
         fold (int, optional): Number of gates to display in a row before folding.
             Defaults to :math:`-1` (no folding unless specified).
-        kwargs (dict, optional): Variadic dictionary that can override plot parameters.
+        kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
         :class:`matplotlib.axes.Axes`: An Axes object encapsulating all the plot elements.
@@ -289,7 +280,6 @@ def _plot_quantum_circuit(
     if num_fold > 1:
         return _plot_quantum_circuit_with_folds(
             gatelist,
-            inits,
             plot_params,
             labels=labels,
             fold=fold,
@@ -308,7 +298,7 @@ def _plot_quantum_circuit(
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params)
 
     if plot_labels:
-        _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params)
+        _draw_labels(ax, labels, gate_grid, wire_grid, plot_params)
 
     if ng > 0:
         _draw_gates(
@@ -962,7 +952,6 @@ def _draw_wires(
 def _draw_labels(
     ax: Axes,
     labels: list,
-    inits: list,
     gate_grid: np.ndarray,
     wire_grid: np.ndarray,
     plot_params: dict,
@@ -972,7 +961,7 @@ def _draw_labels(
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where labels are drawn.
         labels (list): List of qubit labels.
-        inits (list): Initialization values associated with labels.
+
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
         plot_params (dict): Style plot configuration.
@@ -992,9 +981,7 @@ def _draw_labels(
             ax,
             xdata[0] - label_buffer,
             wire_grid[j],
-            _render_label(
-                labels[i], inits
-            ),  # TODO: inits is unused in _render_label. Consider removing it.
+            _render_label(labels[i]),
             plot_params,
         )
 
@@ -1186,34 +1173,17 @@ def _get_flipped_indices(targets: list, labels: list) -> list:
     return [_get_flipped_index(t, labels) for t in targets]
 
 
-def _render_label(label: str, inits: Optional[dict] = None) -> str:
+def _render_label(label: str) -> str:
     """Render a qubit label in ket notation.
 
     Args:
         label (str): Wire label to render.
-        inits (dict, optional): Optional map of initial states per label.
 
     Returns:
         str: Rendered label string.
     """
 
-    # TODO: Check whether inits parameter is actually needed.
-    # inits is defined as list(range(circuit.nqubits)),
-    # and label is qubit labels (q_0, q_1 etc.)
-    # As such, the statement "if label in inits" is always False.
-    # The inits parameter can also be removed, as it was defined as dictionary
-    # but a list of int is being passed
-
-    # inits parameter is kept as some tests fail without it
-    inits = {} if inits is None else inits
-
-    if label in inits:
-        s = inits[label]
-        if s is None:
-            return ""
-        return rf"$|{inits[label]}\rangle$"
-
-    return rf"$|{label}\rangle$"
+    return rf"$|{label}\rangle$" if label else ""
 
 
 def _check_list_str(substrings: list, string: str) -> bool:
@@ -1505,13 +1475,12 @@ def _plot_params(style: Optional[Union[dict, str]]) -> dict:
 
 def _plot_quantum_circuit_with_folds(
     gatelist: list,
-    inits: list,
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
     schedule: bool = False,
     fold: int = -1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a quantum circuit.
 
@@ -1519,7 +1488,6 @@ def _plot_quantum_circuit_with_folds(
         gatelist (list): List of tuples for each gate in the quantum circuit.
             ``(name,target,control1,control2...)``. Targets and controls initially
             defined in terms of labels.
-        inits (list): Initialization list of gates.
         plot_params (dict): Style plot configuration.
         labels (list): List of qubit labels.
         plot_labels (bool, optional): Indicates whether qubit labels are to be shown.
@@ -1528,7 +1496,7 @@ def _plot_quantum_circuit_with_folds(
             Defaults to ``False``.
         fold (int, optional): Number of gates in a row. Defaults to :math:`-1`,
             which implies no folding (all gates in a single row).
-        kwargs (dict, optional): Variadic dictionary that can override plot parameters.
+        kwargs: Optional keyword arguments that can override plot parameters.
 
     Returns:
         :class:`matplotlib.axes.Axes`: An Axes object encapsulates all
@@ -1579,7 +1547,7 @@ def _plot_quantum_circuit_with_folds(
 
     if plot_labels:
         _draw_labels_with_folds(
-            ax, labels, inits, gate_grid, wire_grid, plot_params, num_folds=num_folds
+            ax, labels, gate_grid, wire_grid, plot_params, num_folds=num_folds
         )
 
     if ng > 0:
@@ -1665,7 +1633,6 @@ def _fold_coords(
     fold: int,
     num_qubits: int,
     num_folds: int,
-    direction: str,
     folded_layout: Optional[dict] = None,
 ) -> tuple:
     """Map gate index to folded coordinates.
@@ -1675,7 +1642,7 @@ def _fold_coords(
         fold (int): Number of gates per fold row.
         num_qubits (int): Number of qubits per fold.
         num_folds (int): Total number of folds.
-        direction (str): Fold direction (``"up"`` or ``"down"``).
+
         folded_layout (dict or None, optional): Precomputed mapping
             from original gate index to folded ``(column, fold_index)`` coordinates.
             Defaults to ``None``.
@@ -1690,10 +1657,15 @@ def _fold_coords(
         col = i % fold
         fold_idx = i // fold
 
-    if direction == "down":  # top → bottom stacking
-        fold_idx = num_folds - 1 - fold_idx
+    # Fold indices are assigned in logical order as the circuit is split:
+    # 0, 1, 2, ...
+    # The plotted wire grid, however, is laid out from bottom to top.
+    # This means the first logical fold must be drawn on the highest wire
+    # block, the next logical fold below it, and so on.
+    # Convert the logical fold index to the corresponding visual block index.
+    visual_idx = num_folds - 1 - fold_idx
 
-    yoff = fold_idx * num_qubits
+    yoff = visual_idx * num_qubits
 
     return col, yoff
 
@@ -1741,7 +1713,6 @@ def _draw_controls_with_folds(
         fold,
         num_qubits,
         num_folds,
-        direction=plot_params.get("fold_direction", "down"),
         folded_layout=folded_layout,
     )
 
@@ -1923,7 +1894,6 @@ def _draw_target_with_folds(
         fold,
         num_qubits,
         num_folds,
-        direction=plot_params.get("fold_direction", "down"),
         folded_layout=folded_layout,
     )
     x = gate_grid[actual_x_index]
@@ -1955,7 +1925,6 @@ def _draw_target_with_folds(
 def _draw_labels_with_folds(
     ax: Axes,
     labels: list,
-    inits: list,
     gate_grid: np.ndarray,
     wire_grid: np.ndarray,
     plot_params: dict,
@@ -1966,7 +1935,7 @@ def _draw_labels_with_folds(
     Args:
         ax (:class:`matplotlib.axes.Axes`): Axes object where labels are drawn.
         labels (list): List of qubit labels.
-        inits (list): Initialization values associated with labels.
+
         gate_grid (:class:`numpy.ndarray`): Grid of x positions for gates.
         wire_grid (:class:`numpy.ndarray`): Grid of y positions for wires.
         plot_params (dict): Style plot configuration.
@@ -1981,16 +1950,10 @@ def _draw_labels_with_folds(
     if "wire_names" in plot_params and len(plot_params["wire_names"]) > 0:
         labels = plot_params["wire_names"]
 
-    direction = plot_params.get("fold_direction", "down")
-
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         for num in range(num_folds):
-            # In folded drawing, 'num' goes 0, 1, ..., num_folds-1.
-            # If down, the 0th fold (top visually in the circuit)
-            # gets drawn at the top of the canvas,
-            # which corresponds to the highest wire_grid indices because y increases upwards.
-            fold_idx = num if direction == "up" else num_folds - 1 - num
+            fold_idx = num_folds - 1 - num
 
             yoff = fold_idx * nq
 
@@ -1998,7 +1961,7 @@ def _draw_labels_with_folds(
                 ax,
                 left,
                 wire_grid[j + yoff],
-                _render_label(labels[i], inits) + " ",  # TODO: Is inits needed here?
+                _render_label(labels[i]) + " ",
                 plot_params,
             )
             txt.set_ha("right")
@@ -2034,14 +1997,10 @@ def _draw_fold_boundaries(
 
         # LEFT bracket (start of fold), skip for first fold
         if f != num_folds - 1:
-            # Folds are indexed bottom-to-top when fold_direction="down".
-            # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_left_edge, x_left_edge, y_top, y_bot, plot_params)
 
         # RIGHT bracket (end of fold), skip for last fold
         if f != 0:
-            # Folds are indexed bottom-to-top when fold_direction="down".
-            # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_right_edge, x_right_edge, y_top, y_bot, plot_params)
 
 
