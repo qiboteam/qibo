@@ -28,7 +28,7 @@ def X(
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, symbols.X, dense, backend=backend)
+    return _one_body_pauli(nqubits, symbols.X, dense, backend=backend)
 
 
 def Y(
@@ -48,7 +48,7 @@ def Y(
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, symbols.Y, dense, backend=backend)
+    return _one_body_pauli(nqubits, symbols.Y, dense, backend=backend)
 
 
 def Z(
@@ -68,7 +68,7 @@ def Z(
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, symbols.Z, dense, backend=backend)
+    return _one_body_pauli(nqubits, symbols.Z, dense, backend=backend)
 
 
 def TFIM(
@@ -77,7 +77,7 @@ def TFIM(
     dense: bool = True,
     closed_boundary: bool = True,
     backend: Optional[Backend] = None,
-):
+) -> Hamiltonian | ArrayLike:
     """:math:`n`-qubit Transverse field Ising model.
 
     .. math::
@@ -332,7 +332,7 @@ def Heisenberg(
             matrix = (
                 matrix
                 + external_field_strengths[ind]
-                * _OneBodyPauli(nqubits, pauli, dense, backend).matrix
+                * _one_body_pauli(nqubits, pauli, dense, backend).matrix
             )
 
         return Hamiltonian(nqubits, matrix, backend=backend)
@@ -366,7 +366,7 @@ def XXX(
     external_field_strengths: Union[float, int, list, tuple] = [0.5, 0, 0],
     dense: bool = True,
     backend: Optional[Backend] = None,
-):
+) -> Hamiltonian | ArrayLike:
     """Heisenberg :math:`\\mathrm{XXX}` model with periodic boundary conditions.
 
     The :math:`n`-qubit :math:`\\mathrm{XXX}` Hamiltonian is given by
@@ -464,7 +464,7 @@ def GPP(
     node_weights: Optional[ArrayLike] = None,
     dense: bool = True,
     backend: Optional[Backend] = None,
-):
+) -> Hamiltonian | ArrayLike:
     """The Graph Partitioning Problem (GPP) as a quadratic function.
 
     For a (possibly weighted) graph :math:`G = (V, E)` defined by its set :math:`V` of vertices
@@ -546,6 +546,23 @@ def GPP(
         return _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend)
 
     return _gpp_dense(adjacency_matrix, penalty_coeff, node_weights, backend)
+
+
+def _build_spin_model(
+    nqubits: int, matrix: ArrayLike, condition: Callable, backend: Backend
+) -> ArrayLike:
+    """Helper method for building nearest-neighbor spin model Hamiltonians."""
+    h = sum(
+        reduce(
+            backend.kron,
+            (
+                matrix if condition(qubit_i, qubit_j) else backend.matrices.I()
+                for qubit_j in range(nqubits)
+            ),
+        )
+        for qubit_i in range(nqubits)
+    )
+    return h
 
 
 def _gpp_symbolic(
@@ -634,24 +651,7 @@ def _multikron(matrix_list: List[ArrayLike], backend: Backend) -> ArrayLike:
     return reduce(backend.kron, matrix_list)
 
 
-def _build_spin_model(
-    nqubits: int, matrix: ArrayLike, condition: Callable, backend: Backend
-) -> ArrayLike:
-    """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(
-        reduce(
-            backend.kron,
-            (
-                matrix if condition(qubit_i, qubit_j) else backend.matrices.I()
-                for qubit_j in range(nqubits)
-            ),
-        )
-        for qubit_i in range(nqubits)
-    )
-    return h
-
-
-def _OneBodyPauli(
+def _one_body_pauli(
     nqubits: int,
     operator: Callable,
     dense: bool = True,
