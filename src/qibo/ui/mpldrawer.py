@@ -971,17 +971,18 @@ def _draw_labels(
     label_buffer = plot_params["label_buffer"]
     nq = len(labels)
     xdata = (gate_grid[0] - scale, gate_grid[-1] + scale)
-    if "wire_names" in plot_params:
-        labels = (
-            plot_params["wire_names"] if len(plot_params["wire_names"]) > 0 else labels
-        )
+    wires = plot_params.get("wire_names", None)
+    if wires and wires != list(range(len(wires))):
+        _labels = wires
+    else:
+        _labels = labels
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         _text(
             ax,
             xdata[0] - label_buffer,
             wire_grid[j],
-            _render_label(labels[i]),
+            _render_label(_labels[i]),
             plot_params,
         )
 
