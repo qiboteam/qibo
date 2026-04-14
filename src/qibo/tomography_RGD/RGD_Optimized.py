@@ -113,7 +113,12 @@ class PauliMap:
             ValueError: If symProj_list is empty or operators have inconsistent qubit counts
         """
         if isinstance(backend, str) or backend is None:
-            self.backend = construct_backend(backend if backend else "numpy")
+            name = backend if backend else "numpy"
+            if "-" in name:
+                bname, platform = name.split("-", 1)
+            else:
+                bname, platform = name, None
+            self.backend = construct_backend(bname, platform=platform)
         else:
             self.backend = backend
 
@@ -154,8 +159,26 @@ class PauliMap:
             Measurement vector y of shape (m,) where m is number of operators
         """
         results = []
-        actual_state = state
 
+        # Density matrix path: compute Tr(P_i ρ) directly from cached matrices.
+        # This avoids the deprecated SymbolicHamiltonian.expectation(2D-array) call.
+        if isinstance(state, np.ndarray) and state.ndim == 2:
+            matrices = self.get_matrices()
+            for i, proj in enumerate(self.symProj_list):
+                if len(proj.terms) == 0:
+                    # Identity operator: Tr(I^⊗n ρ) = Tr(ρ).
+                    # Must NOT hardcode 1.0 here — when state is the optimization
+                    # iterate X_k, Tr(X_k) ≠ 1 in general. Hardcoding 1.0 would
+                    # zero out the identity residual and kill the scale-correction signal.
+                    val = float(self.backend.real(self.backend.trace(state)))
+                    results.append(val)
+                else:
+                    val = self.backend.real(self.backend.trace(matrices[i] @ state))
+                    results.append(float(val))
+            return self.backend.cast(results)
+
+        # State-vector or circuit path
+        actual_state = state
         if hasattr(state, "execute") and nshots is None:
             actual_state = state.execute().state()
 
@@ -170,9 +193,9 @@ class PauliMap:
                 except (TypeError, AttributeError):
                     val = proj.expectation(state.execute().state())
             else:
-                val = proj.expectation(actual_state)
+                val = proj.expectation_from_state(actual_state)
 
-            results.append(float(self.backend.np.real(val)))
+            results.append(float(self.backend.real(val)))
 
         return self.backend.cast(results)
 
@@ -314,7 +337,9 @@ class RGDOptimizer:
 
         if method == "algorithm":
             # Paper's initialization: X_0 = H_r(A†(y))
-            adj_matrix = self.pauli_map.get_adjoint_matrix(y_scaled)
+            # A†(y) = coef * sum_i y_i * S_i  (paper Eq.; the coef factor appears twice:
+            # once in y_scaled = coef * measurements, and once as A†'s own coef)
+            adj_matrix = self.pauli_map.get_adjoint_matrix(y_scaled) * self.coef
             adj_matrix = (adj_matrix + adj_matrix.conj().T) / 2  # Ensure Hermitian
 
             should_use_rsvd = use_rsvd and (dim > svd_threshold)
@@ -336,6 +361,8 @@ class RGDOptimizer:
             # Construct and ensure Hermiticity (do in numpy first)
             temp_Xk = U @ S @ V.conj().T
             temp_Xk = (temp_Xk + temp_Xk.conj().T) / 2
+            # No normalization: paper Algorithm 1 says "No further normalization is needed"
+
             self.Xk = self.backend.cast(temp_Xk)
 
         elif method == "random":
@@ -397,7 +424,7 @@ class RGDOptimizer:
             raise ValueError(f"Unknown initialization method: {method}")
 
         # Ensure Hermiticity
-        self.Xk = (self.Xk + self.backend.np.conj(self.Xk.T)) / 2
+        self.Xk = (self.Xk + self.backend.conj(self.Xk.T)) / 2
 
         return self.coef
 
@@ -568,16 +595,25 @@ class RGDOptimizer:
         Returns:
             Tuple of (frobenius_error, fidelity) where:
                 - frobenius_error: ||X_k - ρ_target||_F
-                - fidelity: Tr(X_k ρ_target)
+                - fidelity: Tr((X_k / Tr(X_k)) ρ_target)  — normalized so always in [0,1]
             Returns (0.0, 0.0) if target_dm is None
         """
         if self.target_dm is None:
             return 0.0, 0.0
 
         diff = self.Xk - self.target_dm
-        fro_error = float(self.backend.np.linalg.norm(diff, "fro"))
+        fro_error = float(self.backend.matrix_norm(diff, "fro"))
+
+        # Normalize X_k before computing fidelity so the metric is always in [0,1].
+        # For full measurements X_k already has Tr=1 (no-op); for partial measurements
+        # the trace may deviate, so we normalize to get the correct state fidelity.
+        trace_Xk = float(self.backend.real(self.backend.trace(self.Xk)))
+        if abs(trace_Xk) > 1e-12:
+            Xk_normalized = self.Xk / trace_Xk
+        else:
+            Xk_normalized = self.Xk
         fidelity = float(
-            self.backend.np.real(self.backend.np.trace(self.Xk @ self.target_dm))
+            self.backend.real(self.backend.trace(Xk_normalized @ self.target_dm))
         )
 
         return fro_error, fidelity
@@ -622,7 +658,7 @@ class RGDOptimizer:
                 )
                 print(f"{'-'*70}")
 
-        # Check initial state
+        # Log initial quality metrics (for benchmarking only, not convergence)
         init_fro_error, init_fidelity = self._compute_metrics()
         if verbose and self.target_dm is not None:
             print(
@@ -632,6 +668,9 @@ class RGDOptimizer:
 
         # Main loop
         for k in range(self.max_iterations):
+            # Save current iterate before step (for convergence criterion)
+            Xk_prev = np.array(self.Xk)
+
             stats = self.step(coef, y_scaled)
             fro_error, fidelity = self._compute_metrics()
 
@@ -645,6 +684,25 @@ class RGDOptimizer:
                     f"{stats['gradient_norm']:12.6e}"
                 )
 
+            # Convergence criterion: relative change between consecutive iterates
+            # ||X_{k+1} - X_k||_F / ||X_k||_F < tol
+            # (target_dm is unknown in real tomography — cannot use fro_error for convergence)
+            Xk_np = np.array(self.Xk)
+            norm_diff = np.linalg.norm(Xk_np - Xk_prev, "fro")
+            norm_prev = np.linalg.norm(Xk_prev, "fro")
+            rel_change = norm_diff / norm_prev if norm_prev > 1e-12 else norm_diff
+            if rel_change < self.tol:
+                self.converged = True
+                if verbose:
+                    print(f"\n{'='*70}")
+                    print(f"Converged at iteration {self.iteration}!")
+                    print(f"Relative change: {rel_change:.6e}")
+                    if self.target_dm is not None:
+                        print(f"Final Frobenius error: {fro_error:.6e}")
+                        print(f"Final fidelity: {fidelity:.6f}")
+                    print(f"{'='*70}\n")
+                break
+
             # Check for stagnation
             if stats["gradient_norm"] < 1e-12:
                 if verbose:
@@ -652,17 +710,6 @@ class RGDOptimizer:
                         f"\nWarning: Gradient norm too small ({stats['gradient_norm']:.2e})"
                     )
                     print(f"Algorithm stagnated at iteration {self.iteration}")
-                break
-
-            # Check convergence
-            if fro_error < self.tol and self.target_dm is not None:
-                self.converged = True
-                if verbose:
-                    print(f"\n{'='*70}")
-                    print(f"Converged at iteration {self.iteration}!")
-                    print(f"Final Frobenius error: {fro_error:.6e}")
-                    print(f"Final fidelity: {fidelity:.6f}")
-                    print(f"{'='*70}\n")
                 break
 
         if not self.converged and verbose:

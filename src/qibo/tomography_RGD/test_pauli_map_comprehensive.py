@@ -16,7 +16,18 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from qibo.backends import construct_backend, list_available_backends
+from qibo.backends import construct_backend
+
+
+def _try_build_backend(backend_name):
+    """Build backend, splitting 'name-platform' format (e.g. 'qibojit-numba')."""
+    if "-" in backend_name:
+        name, platform = backend_name.split("-", 1)
+    else:
+        name, platform = backend_name, None
+    return construct_backend(name, platform=platform)
+
+
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.encodings import ghz_state
 from qibo.symbols import I, X, Y, Z
@@ -126,7 +137,7 @@ class TestPauliMapBasics:
     def test_initialization_with_backend_object(self, backend_name):
         """Test initialization with backend object."""
         try:
-            backend = construct_backend(backend_name)
+            backend = _try_build_backend(backend_name)
         except Exception as e:
             pytest.skip(f"Backend {backend_name} not available: {e}")
         # backend = construct_backend(backend_name)
@@ -177,9 +188,10 @@ class TestPauliMapMeasurements:
         self, ghz_2qubit, backend_name, symbol_map
     ):
         """Test exact measurement on density matrix."""
-        available = list_available_backends()
-        if backend_name not in available:
-            pytest.skip(f"Backend {backend_name} not available")
+        try:
+            _try_build_backend(backend_name)
+        except Exception as e:
+            pytest.skip(f"Backend {backend_name} not available: {e}")
 
         circuit, state, dm = ghz_2qubit
 
@@ -250,7 +262,11 @@ class TestPauliMapMeasurements:
         np.testing.assert_allclose(result, result.conj().T, atol=1e-10)
 
     def test_adjoint_round_trip(self, ghz_2qubit, symbol_map):
-        """Test A†(A(X)) ≈ X for sufficient measurements."""
+        """Test that A†(A(X)) recovers X for full Pauli measurements.
+
+        Pauli completeness: Σ_i Tr(S_i X) S_i = d * X
+        So: get_adjoint_matrix(apply(dm)) = d * dm → divide by d to recover dm.
+        """
         circuit, state, dm = ghz_2qubit
 
         # Use ALL Pauli operators for exact recovery
@@ -258,20 +274,50 @@ class TestPauliMapMeasurements:
         ops = create_pauli_operators(labels, symbol_map)
         pm = PauliMap(ops, backend="numpy")
 
-        # Forward: A(dm)
+        # Forward: A(dm) = [Tr(S_i dm)]
         y = pm.apply(dm)
 
-        # Backward: A†(y)
+        # Backward: A†(y) = Σ_i y_i S_i = d * dm  (Pauli completeness)
         reconstructed = pm.get_adjoint_matrix(y)
 
-        # Scale properly (see paper)
-        d = 4
-        m = len(labels)
-        reconstructed = reconstructed * np.sqrt(d / m)
+        # Verify Pauli completeness: reconstructed / d == dm exactly
+        d = pm.dim  # = 4 for 2 qubits
+        np.testing.assert_allclose(
+            reconstructed / d,
+            dm,
+            atol=1e-10,
+            err_msg="Pauli completeness A†(A(X)) = d*X failed",
+        )
 
-        # Should recover dm (approximately)
-        # Note: This is not exact recovery, just checking the map works
-        assert reconstructed.shape == dm.shape
+    def test_identity_operator_returns_trace(self, symbol_map):
+        """Identity measurement returns Tr(ρ), not hardcoded 1.0.
+
+        For unnormalized X_k (Tr ≠ 1), the identity expectation value
+        must be Tr(ρ), not 1.0 — otherwise the scale-correction gradient vanishes.
+        """
+        labels = ["II"]
+        ops = create_pauli_operators(labels, symbol_map)
+        pm = PauliMap(ops, backend="numpy")
+
+        # Unnormalized state: Tr = 2.0
+        dm_unnorm = np.eye(4, dtype=complex) * 0.5
+        measurements = pm.apply(dm_unnorm)
+        np.testing.assert_allclose(
+            measurements[0],
+            2.0,
+            atol=1e-10,
+            err_msg="Identity on Tr=2 state must return 2.0, not 1.0",
+        )
+
+        # Normalized state: Tr = 1.0
+        dm_norm = np.eye(4, dtype=complex) / 4
+        measurements_norm = pm.apply(dm_norm)
+        np.testing.assert_allclose(
+            measurements_norm[0],
+            1.0,
+            atol=1e-10,
+            err_msg="Identity on normalized state must return 1.0",
+        )
 
 
 class TestPauliMapRSVD:
@@ -387,9 +433,12 @@ class TestPauliMapWithRIPSampling:
         assert all(abs(m) <= 1.0 for m in measurements)  # Expectation values in [-1, 1]
 
     def test_insufficient_sampling_warning(self, symbol_map):
-        """Test behavior with insufficient sampling."""
+        """Test that PauliMap works even with very few measurements.
+
+        Insufficient sampling should not crash; measurements must still be
+        finite and real (expectation values of Hermitian operators).
+        """
         n_qubits = 5
-        rank = 1
 
         # Use very few samples (much less than RIP requirement)
         all_labels = generate_all_pauli_labels(n_qubits)
@@ -398,21 +447,24 @@ class TestPauliMapWithRIPSampling:
         ops = create_pauli_operators(labels, symbol_map)
         pm = PauliMap(ops, backend="numpy")
 
-        # Should still work (no crash)
         circuit = ghz_state(n_qubits)
         dm = np.outer(circuit.execute().state(), circuit.execute().state().conj())
 
         measurements = pm.apply(dm)
 
-        # But warn user
-        m_required = compute_rip_required_samples(n_qubits, rank)
-        m_actual = len(labels)
-
-        if m_actual < m_required:
-            print(
-                f"\nWarning: Using {m_actual} samples, "
-                f"RIP requires {m_required} for guaranteed recovery"
-            )
+        # Must return one value per operator
+        assert len(measurements) == len(labels)
+        # Expectation values of Hermitian operators are real
+        assert all(np.isreal(m) for m in measurements), "All measurements must be real"
+        # Must be finite (no NaN/Inf)
+        assert all(
+            np.isfinite(m) for m in measurements
+        ), "All measurements must be finite"
+        # Non-identity Pauli expectation values are in [-1, 1]
+        non_identity = [m for l, m in zip(labels, measurements) if l != "I" * n_qubits]
+        assert all(
+            abs(m) <= 1.0 + 1e-10 for m in non_identity
+        ), "Non-identity Pauli expectation values must be in [-1, 1]"
 
 
 class TestPauliMapMultipleBackends:
@@ -420,9 +472,10 @@ class TestPauliMapMultipleBackends:
 
     def test_backend_consistency(self, backend_name, ghz_2qubit, symbol_map):
         """Test that different backends give same results."""
-        available = list_available_backends()
-        if backend_name not in available:
-            pytest.skip(f"Backend {backend_name} not available")
+        try:
+            _try_build_backend(backend_name)
+        except Exception as e:
+            pytest.skip(f"Backend {backend_name} not available: {e}")
 
         circuit, state, dm = ghz_2qubit
 
