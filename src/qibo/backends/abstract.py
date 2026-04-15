@@ -451,7 +451,9 @@ class Backend:  # pylint: disable=R0904
     ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
         return self.engine.max(array, **kwargs)
 
-    def maximum(array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
+    def maximum(
+        array_1: ArrayLike, array_2: ArrayLike, **kwargs
+    ) -> ArrayLike:  # pragma: no cover
         return self.engine.maximum(array_1, array_2, **kwargs)
 
     def mean(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
@@ -462,7 +464,9 @@ class Backend:  # pylint: disable=R0904
     ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
         return self.engine.min(array, **kwargs)
 
-    def minimum(array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
+    def minimum(
+        array_1: ArrayLike, array_2: ArrayLike, **kwargs
+    ) -> ArrayLike:  # pragma: no cover
         return self.engine.minimum(array_1, array_2, **kwargs)
 
     def mod(
