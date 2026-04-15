@@ -452,7 +452,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.max(array, **kwargs)
 
     def maximum(
-        array_1: ArrayLike, array_2: ArrayLike, **kwargs
+        self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
     ) -> ArrayLike:  # pragma: no cover
         return self.engine.maximum(array_1, array_2, **kwargs)
 
@@ -465,7 +465,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.min(array, **kwargs)
 
     def minimum(
-        array_1: ArrayLike, array_2: ArrayLike, **kwargs
+        self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
     ) -> ArrayLike:  # pragma: no cover
         return self.engine.minimum(array_1, array_2, **kwargs)
 
