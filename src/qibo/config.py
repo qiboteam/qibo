@@ -69,7 +69,7 @@ def set_max_qubits(max_qubits: int) -> None:
     """
     if not isinstance(max_qubits, int):
         raise_error(TypeError, "Maximum number of qubits must be an integer.")
-    
+
     if max_qubits < 1 and max_qubits != -1:
         raise_error(
             ValueError,
@@ -96,7 +96,7 @@ def set_max_qubits_dm(max_qubits_dm: int) -> None:
     """
     if not isinstance(max_qubits_dm, int):
         raise_error(TypeError, "Maximum number of qubits must be an integer.")
-    
+
     if max_qubits_dm < 1 and max_qubits_dm != -1:
         raise_error(
             ValueError,
