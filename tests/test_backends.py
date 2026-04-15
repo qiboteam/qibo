@@ -8,6 +8,73 @@ from qibo.backends import MetaBackend
 
 from .conftest import AVAILABLE_BACKENDS
 
+
+def test_validate_nqubits_exceeds_max(backend):
+    """Test that state allocation raises ValueError when nqubits exceeds limits."""
+    import qibo
+
+    original_sv = qibo.get_max_qubits()
+    original_dm = qibo.get_max_qubits_dm()
+    try:
+        qibo.set_max_qubits(5)
+        qibo.set_max_qubits_dm(4)
+        # state vector checks use MAX_QUBITS
+        with pytest.raises(ValueError, match="state vector"):
+            backend.zero_state(10)
+        with pytest.raises(ValueError, match="set_max_qubits\\("):
+            backend.plus_state(10)
+        with pytest.raises(ValueError, match="state vector"):
+            backend.minus_state(10)
+        # density matrix checks use MAX_QUBITS_DM
+        with pytest.raises(ValueError, match="density matrix"):
+            backend.zero_state(10, density_matrix=True)
+        with pytest.raises(ValueError, match="set_max_qubits_dm\\("):
+            backend.plus_state(10, density_matrix=True)
+        with pytest.raises(ValueError, match="density matrix"):
+            backend.minus_state(10, density_matrix=True)
+        with pytest.raises(ValueError, match="density matrix"):
+            backend.maximally_mixed_state(10)
+        # state vector within SV limit but exceeding DM limit should work
+        state = backend.zero_state(5)
+        assert state.shape == (2**5,)
+        # density matrix within DM limit should work
+        state_dm = backend.zero_state(4, density_matrix=True)
+        assert state_dm.shape == (2**4, 2**4)
+        # density matrix exceeding DM limit should fail even if within SV limit
+        with pytest.raises(ValueError, match="density matrix"):
+            backend.zero_state(5, density_matrix=True)
+    finally:
+        qibo.set_max_qubits(original_sv)
+        qibo.set_max_qubits_dm(original_dm)
+
+
+def test_validate_nqubits_unlimited(backend):
+    """Test that setting -1 disables the qubit limit."""
+    import qibo
+
+    original_sv = qibo.get_max_qubits()
+    original_dm = qibo.get_max_qubits_dm()
+    try:
+        qibo.set_max_qubits(-1)
+        qibo.set_max_qubits_dm(-1)
+        # large qubit counts should not raise (only allocate small states to avoid OOM)
+        state = backend.zero_state(10)
+        assert state.shape == (2**10,)
+        state_dm = backend.zero_state(10, density_matrix=True)
+        assert state_dm.shape == (2**10, 2**10)
+    finally:
+        qibo.set_max_qubits(original_sv)
+        qibo.set_max_qubits_dm(original_dm)
+
+
+def test_validate_nqubits_invalid_type(backend):
+    """Test that _validate_nqubits rejects non-integer or non-positive nqubits."""
+    with pytest.raises(ValueError, match="positive integer"):
+        backend.zero_state(-1)
+    with pytest.raises(ValueError, match="positive integer"):
+        backend.zero_state(0)
+
+
 ####################### Test `matrix` #######################
 GATES = [
     ("H", (0,), np.array([[1, 1], [1, -1]]) / np.sqrt(2)),

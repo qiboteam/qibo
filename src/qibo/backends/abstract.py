@@ -88,6 +88,66 @@ class Backend:  # pylint: disable=R0904
         # needs to be None and not NotImplementedError because of the transpiler
         return None
 
+    def _validate_nqubits(self, nqubits: int, density_matrix: bool = False) -> None:
+        """Validate that ``nqubits`` does not exceed the configured maximum.
+
+        This prevents uncontrolled memory consumption (CWE-400) when
+        allocating state vectors or density matrices. Memory scales as
+        ``2^n * dtype_size`` for state vectors and ``4^n * dtype_size``
+        for density matrices.
+
+        Separate limits are used for state vectors and density matrices:
+
+        - State vectors: controlled by :func:`qibo.set_max_qubits` or the
+          ``QIBO_MAX_QUBITS`` environment variable (default: -1, unlimited).
+        - Density matrices: controlled by :func:`qibo.set_max_qubits_dm` or the
+          ``QIBO_MAX_QUBITS_DM`` environment variable (default: -1, unlimited).
+
+        Either limit can be set to ``-1`` to disable the check entirely.
+
+        Args:
+            nqubits (int): Number of qubits requested.
+            density_matrix (bool): Whether the allocation is for a density
+                matrix (which uses quadratically more memory).
+
+        Raises:
+            ValueError: If ``nqubits`` exceeds the configured limit.
+        """
+        from qibo.config import (  # pylint: disable=import-outside-toplevel
+            MAX_QUBITS,
+            MAX_QUBITS_DM,
+        )
+
+        if not isinstance(nqubits, int) or nqubits < 1:
+            raise_error(
+                ValueError,
+                f"nqubits must be a positive integer, but got {nqubits}.",
+            )
+
+        if density_matrix:
+            max_allowed = MAX_QUBITS_DM
+            state_type = "density matrix"
+            mem_bytes = 4**nqubits * 16  # complex128
+            setter = "set_max_qubits_dm"
+            env_var = "QIBO_MAX_QUBITS_DM"
+        else:
+            max_allowed = MAX_QUBITS
+            state_type = "state vector"
+            mem_bytes = 2**nqubits * 16
+            setter = "set_max_qubits"
+            env_var = "QIBO_MAX_QUBITS"
+
+        if max_allowed != -1 and nqubits > max_allowed:
+            mem_gib = mem_bytes / (1024**3)
+            raise_error(
+                ValueError,
+                f"Requested {nqubits} qubits for {state_type} allocation, "
+                f"which would require ~{mem_gib:.1f} GiB of memory. "
+                f"The maximum allowed is {max_allowed} qubits. "
+                f"Use ``qibo.{setter}({nqubits})`` or set the "
+                f"{env_var} environment variable to increase the limit.",
+            )
+
     def cast(
         self,
         array: ArrayLike,
@@ -957,6 +1017,7 @@ class Backend:  # pylint: disable=R0904
         if dtype is None:
             dtype = self.dtype
 
+        self._validate_nqubits(nqubits, density_matrix=True)
         dims = 2**nqubits
         state = self.identity(dims, dtype=dtype)
         state /= dims
@@ -972,6 +1033,7 @@ class Backend:  # pylint: disable=R0904
         if dtype is None:
             dtype = self.dtype
 
+        self._validate_nqubits(nqubits, density_matrix=density_matrix)
         state = self.cast([1, -1], dtype=dtype)  # pylint: disable=E1111
         state = reduce(self.kron, [state] * nqubits)
 
@@ -1004,6 +1066,7 @@ class Backend:  # pylint: disable=R0904
         if dtype is None:
             dtype = self.dtype
 
+        self._validate_nqubits(nqubits, density_matrix=density_matrix)
         dims = 2**nqubits
         normalization = dims if density_matrix else math.sqrt(dims)
         shape = 2 * (dims,) if density_matrix else dims
@@ -1064,6 +1127,7 @@ class Backend:  # pylint: disable=R0904
         if dtype is None:
             dtype = self.dtype
 
+        self._validate_nqubits(nqubits, density_matrix=density_matrix)
         dims = 2**nqubits
         shape = 2 * (dims,) if density_matrix else dims
 
