@@ -107,7 +107,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             nqubits (int): Number of qubits requested.
-            density_matrix (bool): Whether the allocation is for a density
+            density_matrix (bool, optional): Whether the allocation is for a density
                 matrix (which uses quadratically more memory).
 
         Raises:

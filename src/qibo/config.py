@@ -52,12 +52,12 @@ SHOT_METROPOLIS_THRESHOLD = 100000
 MAX_ITERATIONS = 50
 
 
-def get_max_qubits():
+def get_max_qubits() -> int:
     """Returns maximum number of qubits allowed for state vector allocation."""
     return MAX_QUBITS
 
 
-def set_max_qubits(max_qubits):
+def set_max_qubits(max_qubits: int) -> None:
     """Sets maximum number of qubits allowed for state vector allocation.
 
     This limit prevents uncontrolled memory consumption when allocating
@@ -69,7 +69,8 @@ def set_max_qubits(max_qubits):
     """
     if not isinstance(max_qubits, int):
         raise_error(TypeError, "Maximum number of qubits must be an integer.")
-    elif max_qubits < 1 and max_qubits != -1:
+    
+    if max_qubits < 1 and max_qubits != -1:
         raise_error(
             ValueError,
             "Maximum number of qubits must be a positive integer or -1 (unlimited).",
@@ -78,12 +79,12 @@ def set_max_qubits(max_qubits):
     MAX_QUBITS = max_qubits
 
 
-def get_max_qubits_dm():
+def get_max_qubits_dm() -> int:
     """Returns maximum number of qubits allowed for density matrix allocation."""
     return MAX_QUBITS_DM
 
 
-def set_max_qubits_dm(max_qubits_dm):
+def set_max_qubits_dm(max_qubits_dm: int) -> None:
     """Sets maximum number of qubits allowed for density matrix allocation.
 
     This limit prevents uncontrolled memory consumption when allocating
@@ -95,7 +96,8 @@ def set_max_qubits_dm(max_qubits_dm):
     """
     if not isinstance(max_qubits_dm, int):
         raise_error(TypeError, "Maximum number of qubits must be an integer.")
-    elif max_qubits_dm < 1 and max_qubits_dm != -1:
+    
+    if max_qubits_dm < 1 and max_qubits_dm != -1:
         raise_error(
             ValueError,
             "Maximum number of qubits must be a positive integer or -1 (unlimited).",
