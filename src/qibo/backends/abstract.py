@@ -1312,6 +1312,8 @@ class Backend:  # pylint: disable=R0904
         nqubits = circuit.nqubits
         density_matrix = circuit.density_matrix
 
+        self._validate_nqubits(nqubits, density_matrix=density_matrix)
+
         if isinstance(initial_state, type(circuit)):
             if not bool(initial_state.density_matrix == density_matrix):
                 raise_error(
