@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple, Union
 
 from numpy.typing import ArrayLike, DTypeLike
 
-from qibo import __version__
+from qibo import __version__, config
 from qibo.backends import einsum_utils
 from qibo.config import SHOT_BATCH_SIZE, log, raise_error
 from qibo.gates.abstract import Gate
@@ -2207,11 +2207,6 @@ class Backend:  # pylint: disable=R0904
         Raises:
             ValueError: If ``nqubits`` exceeds the configured limit.
         """
-        from qibo.config import (  # pylint: disable=import-outside-toplevel
-            MAX_QUBITS,
-            MAX_QUBITS_DM,
-        )
-
         if not isinstance(nqubits, int) or nqubits < 1:
             raise_error(
                 ValueError,
@@ -2219,13 +2214,13 @@ class Backend:  # pylint: disable=R0904
             )
 
         if density_matrix:
-            max_allowed = MAX_QUBITS_DM
+            max_allowed = config.MAX_QUBITS_DM
             state_type = "density matrix"
             mem_bytes = 4**nqubits * 16  # complex128
             setter = "set_max_qubits_dm"
             env_var = "QIBO_MAX_QUBITS_DM"
         else:
-            max_allowed = MAX_QUBITS
+            max_allowed = config.MAX_QUBITS
             state_type = "state vector"
             mem_bytes = 2**nqubits * 16
             setter = "set_max_qubits"
