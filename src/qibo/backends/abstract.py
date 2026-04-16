@@ -11,7 +11,7 @@ from numpy.typing import ArrayLike, DTypeLike
 
 from qibo import __version__
 from qibo.backends import einsum_utils
-from qibo.config import SHOT_BATCH_SIZE, log, raise_error
+from qibo.config import MAX_QUBITS, MAX_QUBITS_DM, SHOT_BATCH_SIZE, log, raise_error
 from qibo.gates.abstract import Gate
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
@@ -2207,11 +2207,6 @@ class Backend:  # pylint: disable=R0904
         Raises:
             ValueError: If ``nqubits`` exceeds the configured limit.
         """
-        from qibo.config import (  # pylint: disable=import-outside-toplevel
-            MAX_QUBITS,
-            MAX_QUBITS_DM,
-        )
-
         if not isinstance(nqubits, int) or nqubits < 1:
             raise_error(
                 ValueError,
