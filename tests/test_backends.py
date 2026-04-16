@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import pytest
 
+import qibo
 from qibo import Circuit, construct_backend, gates, list_available_backends, set_backend
 from qibo.backends import MetaBackend
 
@@ -17,8 +18,6 @@ def test_validate_nqubits_state_allocation(backend):
     Methods that are not overridden (``plus_state``, ``minus_state``,
     ``maximally_mixed_state``) are validated on all backends.
     """
-    import qibo
-
     original_sv = qibo.get_max_qubits()
     original_dm = qibo.get_max_qubits_dm()
     try:
@@ -57,8 +56,6 @@ def test_validate_nqubits_state_allocation(backend):
 
 def test_validate_nqubits_circuit_execution(backend):
     """Test that circuit execution raises ValueError when nqubits exceeds limits on any backend."""
-    import qibo
-
     original_sv = qibo.get_max_qubits()
     original_dm = qibo.get_max_qubits_dm()
     try:
@@ -84,8 +81,6 @@ def test_validate_nqubits_circuit_execution(backend):
 
 def test_validate_nqubits_unlimited(backend):
     """Test that setting -1 disables the qubit limit."""
-    import qibo
-
     original_sv = qibo.get_max_qubits()
     original_dm = qibo.get_max_qubits_dm()
     try:
