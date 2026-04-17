@@ -96,25 +96,6 @@ def binary_encoder(
         Integrability and Geometry: Methods and Applications 10.3842/sigma.2013.042 (2013)
         <https://arxiv.org/abs/1209.6047>`_.
     """
-    # TODO: remove deprecated call on qibo version 0.3.3
-    if not isinstance(nqubits, int):  # pragma: no cover
-        log.warning(
-            "Deprecated initialisation of the ``binary_encoder`` function."
-            + "See latest documentation for the current way to initialise this function."
-            + "Deprecated initialisation will be removed on version ``0.3.3``."
-        )
-
-        _nqubits = int(math.ceil(math.log2(len(nqubits))))
-
-        return binary_encoder(
-            nqubits=_nqubits,
-            parametrization=parametrization,
-            data=nqubits,
-            codewords=codewords,
-            keep_antictrls=keep_antictrls,
-            backend=backend,
-            **kwargs,
-        )
 
     backend = _check_backend(backend)
 
@@ -598,24 +579,6 @@ def hamming_weight_encoder(
         *Quantum encoder for fixed-Hamming-weight subspaces*
         `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
     """
-    # TODO: remove deprecated call on qibo version 0.3.3
-    if not isinstance(nqubits, int):  # pragma: no cover
-        log.warning(
-            "Deprecated initialisation of the ``hamming_weight_encoder`` function."
-            + "See latest documentation for the current way to initialise this function."
-            + "Deprecated initialisation will be removed on version ``0.3.3``."
-        )
-        return hamming_weight_encoder(
-            data=nqubits,
-            nqubits=weight,
-            weight=data,
-            full_hwp=full_hwp,
-            optimize_controls=optimize_controls,
-            phase_correction=phase_correction,
-            initial_string=initial_string,
-            backend=backend,
-            **kwargs,
-        )
 
     backend = _check_backend(backend)
 
@@ -790,17 +753,6 @@ def phase_encoder(
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in phase encoding.
     """
-    # TODO: remove deprecated call on qibo version 0.3.3
-    if not isinstance(nqubits, int):  # pragma: no cover
-        log.warning(
-            "Deprecated initialisation of the ``phase_encoder`` function."
-            + "See latest documentation for the current way to initialise this function."
-            + "Deprecated initialisation will be removed on version ``0.3.3``."
-        )
-        _nqubits = len(nqubits)
-        return phase_encoder(
-            nqubits=_nqubits, data=nqubits, rotation=rotation, backend=backend, **kwargs
-        )
 
     if not isinstance(rotation, str):
         raise_error(
@@ -945,23 +897,6 @@ def unary_encoder(
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in unary representation.
     """
-    # TODO: remove deprecated call on qibo version 0.3.3
-    if not isinstance(nqubits, int):  # pragma: no cover
-        log.warning(
-            "Deprecated initialisation of the ``unary_encoder`` function."
-            + "See latest documentation for the current way to initialise this function."
-            + "Deprecated initialisation will be removed on version ``0.3.3``."
-        )
-        _nqubits = len(nqubits)
-
-        return unary_encoder(
-            nqubits=_nqubits,
-            architecture=architecture,
-            data=nqubits,
-            backend=backend,
-            **kwargs,
-        )
-
     backend = _check_backend(backend)
 
     if not isinstance(architecture, str):
@@ -1182,22 +1117,6 @@ def up_to_k_hamming_weight_encoder(
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
-    # TODO: remove deprecated call on qibo version 0.3.3
-    if not isinstance(nqubits, int):  # pragma: no cover
-        log.warning(
-            "Deprecated initialisation of the ``up_to_k_hamming_weight_encoder`` function."
-            + "See latest documentation for the current way to initialise this function."
-            + "Deprecated initialisation will be removed on version ``0.3.3``."
-        )
-        return up_to_k_hamming_weight_encoder(
-            data=nqubits,
-            nqubits=up_to_k,
-            up_to_k=data,
-            codewords=codewords,
-            keep_antictrls=keep_antictrls,
-            backend=backend,
-            **kwargs,
-        )
 
     backend = _check_backend(backend)
 
