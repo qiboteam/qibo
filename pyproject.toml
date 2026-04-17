@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.3.2"
+version = "0.3.3"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -65,7 +65,7 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 optional = true
 
 [tool.poetry.group.tests.dependencies]
-pytest = "^7.2.1"
+pytest = ">=7.2.1,<10.0.0"
 pytest-cov = "^4.0.0"
 pylint = "^3.3.5"
 matplotlib = "^3.7.0"

@@ -57,4 +57,8 @@ def HammingWeightBackend(platform=None):
 
     hw_backend._dict_indexes = None
 
+    hw_backend._transition_cache = {}
+    hw_backend._local_index_cache = {}
+    hw_backend._flat_cache = {}
+
     return hw_backend

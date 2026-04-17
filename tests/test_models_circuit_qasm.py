@@ -623,3 +623,32 @@ def test_qasm_file(backend):
     backend.assert_circuitclose(circuit, target)
 
     os.remove("tests/circ.qasm")
+
+
+def test_from_qasm_controlled_gates():
+    target = """OPENQASM 2.0;
+qreg q[3];
+x q[0];
+x q[1];
+cswap q[0],q[1],q[2];
+ccz q[0],q[1],q[2];"""
+    circuit = Circuit.from_qasm(target)
+    assert circuit.depth == 3
+    assert isinstance(circuit.queue[0], gates.X)
+    assert isinstance(circuit.queue[1], gates.X)
+    assert isinstance(circuit.queue[2], gates.SWAP)
+    assert circuit.queue[2].target_qubits == (1, 2)
+    assert circuit.queue[2].control_qubits == (0,)
+    assert isinstance(circuit.queue[3], gates.CCZ)
+    assert circuit.queue[3].target_qubits == (2,)
+    assert circuit.queue[3].control_qubits == (0, 1)
+
+
+def test_from_qasm_invalid_controlled_gates():
+    target = """OPENQASM 2.0;
+qreg q[4];
+x q[0];
+x q[1];
+cswap q[0],q[1],q[2],q[3];"""
+    with pytest.raises(ValueError):
+        _ = Circuit.from_qasm(target)

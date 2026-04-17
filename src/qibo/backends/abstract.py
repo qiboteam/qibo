@@ -231,6 +231,18 @@ class Backend:  # pylint: disable=R0904
     def abs(self, array: ArrayLike, **kwargs) -> Union[int, float, complex, ArrayLike]:
         return self.engine.abs(array, **kwargs)
 
+    def add_at(
+        self, array_1: ArrayLike, indices: ArrayLike, array_2: ArrayLike
+    ) -> None:
+        """Add ``array_2`` to ``array_1`` at specified ``indices`` in-place.
+
+        Args:
+            array_1 (ArrayLike): Output array to be modified.
+            indices (ArrayLike): Indices at which to add elements.
+            array_2 (ArrayLike): Input array with elements to add.
+        """
+        return self.engine.add.at(array_1, indices, array_2)
+
     def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
         return self.engine.all(array, **kwargs)
 
@@ -254,6 +266,9 @@ class Backend:  # pylint: disable=R0904
     def arccos(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arccos(array, **kwargs)
 
+    def arcsin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        return self.engine.arcsin(array, **kwargs)
+
     def arctan2(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
@@ -264,6 +279,9 @@ class Backend:  # pylint: disable=R0904
 
     def array_equal(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> bool:
         return self.engine.array_equal(array_1, array_2, **kwargs)
+
+    def ascontiguousarray(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return self.engine.ascontiguousarray(array, **kwargs)
 
     def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
         return self.engine.block(arrays)
@@ -294,6 +312,9 @@ class Backend:  # pylint: disable=R0904
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
+
+    def cumsum(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        return self.engine.cumsum(array, **kwargs)
 
     def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
         return self.engine.random.default_rng(seed)
@@ -380,6 +401,9 @@ class Backend:  # pylint: disable=R0904
     def inv(self, array: ArrayLike) -> ArrayLike:
         return self.engine.linalg.inv(array)
 
+    def isnan(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return self.engine.isnan(array, **kwargs)
+
     def kron(self, array_1: ArrayLike, array_2: ArrayLike) -> ArrayLike:
         return self.engine.kron(array_1, array_2)
 
@@ -427,6 +451,11 @@ class Backend:  # pylint: disable=R0904
     ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
         return self.engine.max(array, **kwargs)
 
+    def maximum(
+        self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
+    ) -> ArrayLike:  # pragma: no cover
+        return self.engine.maximum(array_1, array_2, **kwargs)
+
     def mean(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
         return self.engine.mean(array, **kwargs)
 
@@ -434,6 +463,16 @@ class Backend:  # pylint: disable=R0904
         self, array: ArrayLike, **kwargs
     ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
         return self.engine.min(array, **kwargs)
+
+    def minimum(
+        self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
+    ) -> ArrayLike:  # pragma: no cover
+        return self.engine.minimum(array_1, array_2, **kwargs)
+
+    def mod(
+        self, dividend: ArrayLike, divisor: Union[float, int, ArrayLike], **kwargs
+    ) -> ArrayLike:  # pragma: no cover
+        return self.engine.mod(dividend, divisor, **kwargs)
 
     def nonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.nonzero(array)
@@ -463,7 +502,7 @@ class Backend:  # pylint: disable=R0904
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         replace: bool = True,
         p: Optional[ArrayLike] = None,
-        seed=None,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
@@ -486,7 +525,7 @@ class Backend:  # pylint: disable=R0904
         low: int,
         high: Optional[int] = None,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
-        seed=None,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.int64)
@@ -510,7 +549,7 @@ class Backend:  # pylint: disable=R0904
         mean: Union[float, int],
         stddev: Union[float, int],
         size: Optional[Union[int, List[int], Tuple[int, ...]]] = None,
-        seed=None,
+        seed: Optional[int] = None,
         dtype: Optional[DTypeLike] = None,
     ) -> ArrayLike:
         if dtype is None:
@@ -528,7 +567,9 @@ class Backend:  # pylint: disable=R0904
 
         return self.cast(self.engine.random.normal(mean, stddev, size), dtype=dtype)
 
-    def random_sample(self, size: int, seed=None, **kwargs) -> ArrayLike:
+    def random_sample(
+        self, size: int, seed: Optional[int] = None, **kwargs
+    ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
 
         if seed is not None:  # pragma: no cover
@@ -543,7 +584,7 @@ class Backend:  # pylint: disable=R0904
         low: Union[float, int] = 0.0,
         high: Union[float, int] = 1.0,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
-        seed=None,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
@@ -579,6 +620,11 @@ class Backend:  # pylint: disable=R0904
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         return self.engine.round(array, decimals, **kwargs)
+
+    def searchsorted(
+        self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
+    ) -> ArrayLike:
+        return self.engine.searchsorted(array_1, array_2, **kwargs)
 
     def shuffle(self, array: ArrayLike, **kwargs) -> ArrayLike:
         self.engine.random.shuffle(array, **kwargs)
@@ -1295,7 +1341,7 @@ class Backend:  # pylint: disable=R0904
         circuit: "Circuit",  # type: ignore
         nshots: int,
         initial_state: Optional[ArrayLike] = None,
-    ) -> ArrayLike:  # pragma: no cover
+    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 
         Useful for noise simulation using state vectors or for simulating gates

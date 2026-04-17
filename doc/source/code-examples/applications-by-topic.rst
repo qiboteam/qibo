@@ -77,12 +77,3 @@ Quantum Machine Learning
     tutorials/qcnn_classifier/qcnn_demo.ipynb
     tutorials/qclustering/README.md
     tutorials/adiabatic_qml/adiabatic-qml.ipynb
-
-Combinatorics
-^^^^^^^^^^^^^
-
-.. toctree::
-    :maxdepth: 1
-
-    tutorials/qap/README.md
-    tutorials/mvc/README.md

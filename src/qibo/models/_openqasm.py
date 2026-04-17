@@ -239,7 +239,7 @@ class QASMParser:
                 pass
             init_args.append(arg)
         # check whether the gate exists in qibo.gates already
-        if _qibo_gate_name(gate.name.name) in dir(qibo.gates):
+        if hasattr(qibo.gates, _qibo_gate_name(gate.name.name)):
             try:
                 gate = getattr(qibo.gates, _qibo_gate_name(gate.name.name))(
                     *qubits, *init_args
@@ -262,6 +262,26 @@ class QASMParser:
                 )
         # undefined gate
         else:
+            stripped_gate_name = gate.name.name.lstrip("c")
+            ncontrols = len(gate.name.name) - len(stripped_gate_name)
+            if ncontrols > 0:
+                if hasattr(qibo.gates, _qibo_gate_name(stripped_gate_name)):
+                    control_qubits = qubits[:ncontrols]
+                    remaining_qubits = qubits[ncontrols:]
+                    try:
+                        base_gate_cls = getattr(
+                            qibo.gates, _qibo_gate_name(stripped_gate_name)
+                        )
+                        gate_instance = base_gate_cls(
+                            *remaining_qubits, *init_args
+                        ).controlled_by(*control_qubits)
+                    # the gate exists in qibo.gates but invalid construction
+                    except TypeError:
+                        raise_error(
+                            ValueError, f"Invalid gate declaration at span: {gate.span}"
+                        )
+                    return gate_instance
+            # undefined gate
             raise_error(ValueError, f"Undefined gate at span: {gate.span}")
         return gate
 

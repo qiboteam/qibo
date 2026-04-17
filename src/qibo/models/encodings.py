@@ -5,12 +5,13 @@ from inspect import signature
 from typing import List, Optional, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.special import binom
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import raise_error
-from qibo.models._encodings import (
+from qibo.config import log, raise_error
+from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
     _add_wbd_gate,
     _angle_mod_two_pi,
@@ -34,14 +35,14 @@ from qibo.models.circuit import Circuit
 
 
 def binary_encoder(
-    data,
+    nqubits: int,
     parametrization: str = "hyperspherical",
-    nqubits: int = None,
-    codewords=None,
+    data: Optional[ArrayLike] = None,
+    codewords: Optional[List[int]] = None,
     keep_antictrls: bool = False,
-    backend=None,
+    backend: Optional[Backend] = None,
     **kwargs,
-):
+) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
     of the computational basis.
 
@@ -60,14 +61,16 @@ def binary_encoder(
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of length :math:`d = 2^{n}`
-            to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
-        parametrization (str): choice of circuit parametrization. either ``hyperspherical``
-            or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
         nqubits (int, optional): total number of qubits in the system.
-            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
-            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
-            Defaults to ``None``.
+        parametrization (str): choice of state parametrization in the :math:`(2^{n} - 1)`-unit
+            sphere. Either ``hyperspherical`` or ``hopf``. If ``data is None``, then circuit
+            returned parametrizes real-valued quantum states. To return circuits that parametrize
+            complex-valued states, options are ``hyperspherical-complex`` and ``hopf-complex``.
+            If ``data is not None``, then data type is inferred from ``data`` and the suffix
+            ``-complex`` does not need to be added. Defaults to ``hyperspherical``.
+        data (ArrayLike, optional): :math:`1`-dimensional array of length :math:`d = 2^{n}`
+            to be loaded in the amplitudes of a :math:`n`-qubit quantum state. If ``None``,
+            circuit is returned with all phases set to :math:`0.0`. Defaults to ``None``.
         codewords (int, optional): list of codewords. When parametrization is ``hyperspherical``,
             the list is used to encode the data in the given order. If ``None``,
             the codewords are set by the erhlich algorithm.
@@ -93,20 +96,31 @@ def binary_encoder(
         Integrability and Geometry: Methods and Applications 10.3842/sigma.2013.042 (2013)
         <https://arxiv.org/abs/1209.6047>`_.
     """
+
     backend = _check_backend(backend)
 
-    dims = len(data)
-    if (dims & (dims - 1)) != 0 and parametrization == "hopf":
-        raise_error(ValueError, "`data` size must be a power of 2.")
+    if data is not None:
+        dims = len(data)
+        if (dims & (dims - 1)) != 0 and parametrization == "hopf":
+            raise_error(ValueError, "`data` size must be a power of 2.")
 
-    if nqubits is None:
-        nqubits = int(backend.ceil(backend.log2(dims)))
+        complex_data = bool(
+            "complex" in str(data.dtype)
+        )  # backend-agnostic way of checking the dtype
+    else:
+        dims = 2**nqubits
+        complex_data = bool("complex" in parametrization)
+        data = backend.cast(
+            [1] + [0] * (dims - 1),
+            dtype=backend.complex128 if complex_data else backend.float64,
+        )
 
-    complex_data = bool(
-        "complex" in str(data.dtype)
-    )  # backend-agnostic way of checking the dtype
+    if parametrization in ("hopf", "hopf-complex"):
+        if parametrization == "hopf-complex":
+            raise_error(
+                NotImplementedError, '``"hopf-complex"`` not implemented currently.'
+            )
 
-    if parametrization == "hopf":
         return _binary_encoder_hopf(
             data, nqubits, complex_data=complex_data, backend=backend, **kwargs
         )
@@ -115,16 +129,16 @@ def binary_encoder(
         data,
         nqubits,
         complex_data=complex_data,
-        backend=backend,
         codewords=codewords,
         keep_antictrls=keep_antictrls,
+        backend=backend,
         **kwargs,
     )
 
 
 def comp_basis_encoder(
     basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None, **kwargs
-):
+) -> Circuit:
     """Create circuit that performs encoding of bitstrings into computational basis states.
 
     Args:
@@ -184,7 +198,9 @@ def comp_basis_encoder(
     return circuit
 
 
-def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
+def dicke_state(
+    nqubits: int, weight: int, all_to_all: bool = False, **kwargs
+) -> Circuit:
     """Create a circuit that prepares the Dicke state :math:`\\ket{D_{k}^{n}}`.
 
     The Dicke state :math:`\\ket{D_{k}^{n}}` is the equal superposition of all :math:`n`-qubit
@@ -210,9 +226,9 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
         `22nd International Symposium on Fundamentals of Computation Theory, FCT'19, 126-139  (2019)
         <https://doi.org/10.1007/978-3-030-25027-0_9>`_.
 
-        2. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State Preparation*,
-        `IEEE International Conference on Quantum Computing & Engineering (QCE), 87--96 (2022)
-        <https://doi.org/10.1109/QCE53715.2022.00027>`_.
+        2. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State
+        Preparation*, `IEEE International Conference on Quantum Computing & Engineering (QCE),
+        87--96 (2022) <https://doi.org/10.1109/QCE53715.2022.00027>`_.
     """
     if weight < 0 or weight > nqubits:
         raise_error(
@@ -305,7 +321,7 @@ def entangling_layer(
     entangling_gate: Union[str, gates.Gate] = "CNOT",
     closed_boundary: bool = False,
     **kwargs,
-):
+) -> Circuit:
     """Create a layer of two-qubit entangling gates.
 
     If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
@@ -426,7 +442,7 @@ def entangling_layer(
     return circuit
 
 
-def ghz_state(nqubits: int, **kwargs):
+def ghz_state(nqubits: int, **kwargs) -> Circuit:
     """Generate an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
 
     .. math::
@@ -455,7 +471,9 @@ def ghz_state(nqubits: int, **kwargs):
     return circuit
 
 
-def graph_state(matrix, backend=None, **kwargs):
+def graph_state(
+    matrix: ArrayLike, backend: Optional[Backend] = None, **kwargs
+) -> Circuit:
     """Create circuit encoding an undirected graph state given its adjacency matrix.
 
     Given a graph :math:`G = (V, E)` with :math:`V` being the set of vertices and :math:`E`
@@ -469,7 +487,7 @@ def graph_state(matrix, backend=None, **kwargs):
     being the Hadamard gate.
 
     Args:
-        matrix (ndarray or list): Adjacency matrix of the graph.
+        matrix (ArrayLike or list): Adjacency matrix of the graph.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -487,7 +505,7 @@ def graph_state(matrix, backend=None, **kwargs):
     if not backend.allclose(matrix, matrix.T):
         raise_error(
             ValueError,
-            f"``matrix`` is not symmetric, not representing an undirected graph",
+            "``matrix`` is not symmetric, not representing an undirected graph",
         )
 
     nqubits = len(matrix)
@@ -503,16 +521,17 @@ def graph_state(matrix, backend=None, **kwargs):
 
 
 def hamming_weight_encoder(
-    data,
     nqubits: int,
     weight: int,
+    data: Optional[ArrayLike] = None,
+    complex_data: bool = False,
     full_hwp: bool = False,
     optimize_controls: bool = True,
     phase_correction: bool = True,
-    initial_string=None,
-    backend=None,
+    initial_string: Optional[ArrayLike] = None,
+    backend: Optional[Backend] = None,
     **kwargs,
-):
+) -> Circuit:
     """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
 
     Let :math:`\\mathbf{x}` be a :math:`1`-dimensional array of size :math:`d = \\binom{n}{k}` and
@@ -527,9 +546,14 @@ def hamming_weight_encoder(
             \\, \\sum_{j = 1}^{d} \\, x_{j} \\, \\ket{b_{j}}
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of data to be loaded.
         nqubits (int): number of qubits.
         weight (int): Hamming weight that defines the subspace in which ``data`` will be encoded.
+        data (ArrayLike, optional): :math:`1`-dimensional array of data to be loaded. If ``None``,
+            circuit is returned with all phases set to :math:`0.0`. Defaults to ``None``.
+        complex_data (bool, optional): to be used when ``data is None``. If ``True``, returned
+            circuit parametrizes complex-valued states. If ``False``, it parametrizes
+            real-valued states. If ``data is not None``, then data type is inferred from ``data``.
+            Defaults to ``False``.
         full_hwp (bool, optional): if ``False``, includes Pauli-:math:`X` gates that prepare the
             first bitstring of Hamming weight ``k = weight``. If ``True``, circuit is full
             Hamming weight preserving. Defaults to ```False``.
@@ -538,7 +562,7 @@ def hamming_weight_encoder(
         phase_correction (bool, optional): To be used when ``data`` is complex-valued.
             If ``True``, adds a controlled-$\\mathrm{RZ}$ gate to the end of the circuit,
             adding a final phase correction. If ``False``, gate is not added. Defaults to ``True``.
-        initial_string (ndarray, optional): Array containing the desired initial bitstring of
+        initial_string (ArrayLike, optional): Array containing the desired initial bitstring of
             Hamming ``weight`` $k$. If ``None``, defaults to $\\ket{1^{k}0^{n-k}}$.
             Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -555,9 +579,17 @@ def hamming_weight_encoder(
         *Quantum encoder for fixed-Hamming-weight subspaces*
         `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
     """
+
     backend = _check_backend(backend)
 
-    complex_data = bool("complex" in str(data.dtype))
+    if data is None:
+        n_choose_k = int(binom(nqubits, weight))
+        data = backend.cast(
+            [1] + [0] * (n_choose_k - 1),
+            dtype=backend.complex128 if complex_data else backend.float64,
+        )
+    else:
+        complex_data = bool("complex" in str(data.dtype))
 
     if initial_string is None:
         initial_string = np.array([1] * weight + [0] * (nqubits - weight))
@@ -619,8 +651,11 @@ def hamming_weight_encoder(
 
 
 def permutation_synthesis(
-    sigma: Union[List[int], tuple[int, ...]], m: int = 2, backend=None, **kwargs
-):
+    sigma: Union[List[int], tuple[int, ...]],
+    m: int = 2,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Return circuit that implements a given permutation.
 
     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
@@ -633,8 +668,13 @@ def permutation_synthesis(
     The function returns a circuit synthesis of ``sigma``.
 
     Args:
-        sigma (list or tuple): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        sigma (list or tuple): permutation description on :math:`\\{0, \\, 1,
+            \\, \\dots, \\, d-1\\}`.
         m (int): power‑of‑two budget. Defauls to :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that implements the permutation ``sigma``.
@@ -652,17 +692,17 @@ def permutation_synthesis(
     if not isinstance(sigma, (list, tuple)):
         raise_error(
             TypeError,
-            f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
+            "Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
         )
 
     nqubits = int(backend.ceil(backend.log2(len(sigma))))
-    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
+    if sum(abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))) != 0:
         raise_error(
             ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
         )
 
     if m > 0 and (m & (m - 1)) != 0:
-        raise_error(ValueError, f"budget m must be a power‑of‑two")
+        raise_error(ValueError, "budget ``m`` must be a power of 2.")
 
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         decompose_permutation,
@@ -673,12 +713,12 @@ def permutation_synthesis(
     # each layer moves a power‑of‑two number of indices
     layers = decompose_permutation(sigma, m)
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     # in case we have more than one permutation to do, do it in layers
     for layer in layers:
         m = len(layer)
-        ell, col_gates, A = _perm_column_ops(layer, nqubits, backend)
-        row_gates = _perm_row_ops(A, ell, m, nqubits, backend)
+        ell, col_gates, matrix_a = _perm_column_ops(layer, nqubits, backend)
+        row_gates = _perm_row_ops(matrix_a, ell, m, nqubits, backend)
         flip_gates = _perm_pair_flip_ops(nqubits, m, backend)
         col_row = col_gates + row_gates
         circuit.add(col_row)
@@ -688,15 +728,23 @@ def permutation_synthesis(
     return circuit
 
 
-def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
+def phase_encoder(
+    nqubits: int,
+    rotation: str = "RY",
+    data: Optional[ArrayLike] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Create circuit that performs the phase encoding of ``data``.
 
     Args:
-        data (ndarray or list): :math:`1`-dimensional array of phases to be loaded.
+        nqubits (int): number of qubits in the system.
         rotation (str, optional): If ``"RX"``, uses :class:`qibo.gates.gates.RX` as rotation.
             If ``"RY"``, uses :class:`qibo.gates.gates.RY` as rotation.
             If ``"RZ"``, uses :class:`qibo.gates.gates.RZ` as rotation.
             Defaults to ``"RY"``.
+        data (ArrayLike): :math:`1`-dimensional array of phases to be loaded. If ``None``,
+            all phases of the circuit are set to :math:`0.0`. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -705,39 +753,36 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in phase encoding.
     """
+
     if not isinstance(rotation, str):
         raise_error(
             TypeError,
             f"``rotation`` must be type str, but it is type {type(rotation)}.",
         )
 
-    backend = _check_backend(backend)
-
-    if isinstance(data, list):
-        # TODO: Fix this mess with qibo native dtypes
-        try:
-            type_test = data[0].dtype
-        except AttributeError:  # pragma: no cover
-            type_test = type(data[0])
-
-        data = backend.cast(data, dtype=type_test)
-
-    if rotation not in ["RX", "RY", "RZ"]:
+    if rotation not in ("RX", "RY", "RZ"):
         raise_error(ValueError, f"``rotation`` {rotation} not found.")
 
-    nqubits = len(data)
+    backend = _check_backend(backend)
+
     gate = getattr(gates, rotation.upper())
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(gate(qubit, 0.0) for qubit in range(nqubits))
-    circuit.set_parameters(data)
+
+    if data is not None:
+        circuit.set_parameters(data)
 
     return circuit
 
 
 def sparse_encoder(
-    data, method: str = "li", nqubits: int = None, backend=None, **kwargs
-):
+    data: ArrayLike,
+    method: str = "li",
+    nqubits: Optional[int] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
 
@@ -766,7 +811,7 @@ def sparse_encoder(
 
 
     Args:
-        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+        data (ArrayLike or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
             The addresses :math:`b_{j}` can be either integers or in bitstring
             format of size :math:`n`.
         method (str, optional): method to be used, either ``li`` or ``farias``. They refer to
@@ -827,15 +872,23 @@ def sparse_encoder(
     return func(data, nqubits, backend, **kwargs)
 
 
-def unary_encoder(data, architecture: str = "tree", backend=None, **kwargs):
+def unary_encoder(
+    nqubits: int,
+    architecture: str = "tree",
+    data: Optional[ArrayLike] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Create circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of data to be loaded.
+        nqubits (int): number of qubits in the system.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
             Defaults to ``tree``.
+        data (ArrayLike): :math:`1`-dimensional array of data to be loaded. If ``None``,
+            all phases in the returned circuit are set to :math:`0.0`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -846,42 +899,43 @@ def unary_encoder(data, architecture: str = "tree", backend=None, **kwargs):
     """
     backend = _check_backend(backend)
 
-    if isinstance(data, list):
-        data = backend.cast(data, dtype=type(data[0]))
-
     if not isinstance(architecture, str):
         raise_error(
             TypeError,
             f"``architecture`` must be type str, but it is type {type(architecture)}.",
         )
 
-    if architecture not in ["diagonal", "tree"]:
+    if architecture not in ("diagonal", "tree"):
         raise_error(ValueError, f"``architecture`` {architecture} not found.")
 
-    if architecture == "tree" and not math.log2(data.shape[0]).is_integer():
-        raise_error(
-            ValueError,
-            "When ``architecture = 'tree'``, len(data) must be a power of 2. "
-            + f"However, it is {len(data)}.",
-        )
-
-    nqubits = len(data)
+    if data is not None:
+        if architecture == "tree" and not math.log2(len(data)).is_integer():
+            raise_error(
+                ValueError,
+                "When ``architecture = 'tree'``, len(data) must be a power of 2. "
+                + f"However, it is {len(data)}.",
+            )
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(gates.X(nqubits - 1))
     circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture, **kwargs)
     circuit += circuit_rbs
 
-    # calculating phases and setting circuit parameters
-    phases = _generate_rbs_angles(data, architecture, nqubits, backend=backend)
-    circuit.set_parameters(phases)
+    if data is not None:
+        # calculating phases and setting circuit parameters
+        phases = _generate_rbs_angles(data, architecture, nqubits, backend=backend)
+        circuit.set_parameters(phases)
 
     return circuit
 
 
 def unary_encoder_random_gaussian(
-    nqubits: int, architecture: str = "tree", seed=None, backend=None, **kwargs
-):
+    nqubits: int,
+    architecture: str = "tree",
+    seed: Optional[int] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
     """Create a circuit that performs the unary encoding of a random Gaussian state.
 
     At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k}
@@ -983,14 +1037,15 @@ def unary_encoder_random_gaussian(
 
 
 def up_to_k_hamming_weight_encoder(
-    data,
     nqubits: int,
     up_to_k: int,
-    codewords: List[int] = None,
+    data: Optional[ArrayLike] = None,
+    complex_data: bool = False,
+    codewords: Optional[List[int]] = None,
     keep_antictrls: bool = False,
     backend: Optional[Backend] = None,
     **kwargs,
-):
+) -> Circuit:
     """Create a circuit that encodes ``data`` in the Hamming-weight-:math:`\\leq k`
     subspace of ``nqubits``.
 
@@ -1032,12 +1087,17 @@ def up_to_k_hamming_weight_encoder(
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array of length
-            :math:`d = \\sum_{l=0}^{k} \\binom{n}{l}` to be loaded in the
-            amplitudes of a :math:`n`-qubit quantum state.
         nqubits (int): total number of qubits in the system.
         up_to_k (int): upper limit for the Hamming weight of the union-Hamming-weight-subspace
             in which the data to be loaded will be supported.
+        data (ArrayLike, optional): :math:`1`-dimensional array of length
+            :math:`d = \\sum_{l=0}^{k} \\binom{n}{l}` to be loaded in the amplitudes of a
+            :math:`n`-qubit quantum state. If ``None``, all phases of the returned circuit
+            are set to :math:`0.0`. Defaults to ``None``.
+        complex_data (bool, optional): to be used when ``data is None``. If ``True``, returned
+            circuit parametrizes complex-valued states. If ``False``, it parametrizes
+            real-valued states. If ``data is not None``, then data type is inferred from ``data``.
+            Defaults to ``False``.
         codewords (list, optional): List of codewords used to encode the data in the given order.
             If ``None``, the codewords are set by the erhlich algorithm.
         keep_antictrls (bool, optional): If ``True`` and parametrization is ``hyperspherical``, we
@@ -1057,9 +1117,17 @@ def up_to_k_hamming_weight_encoder(
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
+
     backend = _check_backend(backend)
 
-    complex_data = bool("complex" in str(data.dtype))
+    if data is None:
+        dims = int(sum(binom(nqubits, weight) for weight in range(up_to_k + 1)))
+        data = backend.cast(
+            [1] + [0] * (dims - 1),
+            dtype=backend.complex128 if complex_data else backend.float64,
+        )
+    else:
+        complex_data = bool("complex" in str(data.dtype))
 
     return _up_to_k_encoder_hyperspherical(
         data,
