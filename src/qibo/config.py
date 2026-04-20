@@ -16,6 +16,22 @@ TF_LOG_LEVEL = 3
 if "TF_LOG_LEVEL" in os.environ:  # pragma: no cover
     TF_LOG_LEVEL = int(os.environ.get("TF_LOG_LEVEL"))
 
+# Maximum number of qubits allowed for state allocation.
+# These limits prevent uncontrolled memory consumption (CWE-400).
+# Memory scales as 2^n * 16 bytes (complex128) for state vectors
+# and 4^n * 16 bytes for density matrices.
+#
+# Default is -1 (unlimited). To enable protection, set to a positive
+# integer via environment variables or the corresponding setter
+# functions (``qibo.set_max_qubits``, ``qibo.set_max_qubits_dm``).
+MAX_QUBITS = -1
+if "QIBO_MAX_QUBITS" in os.environ:  # pragma: no cover
+    MAX_QUBITS = int(os.environ.get("QIBO_MAX_QUBITS"))
+
+MAX_QUBITS_DM = -1
+if "QIBO_MAX_QUBITS_DM" in os.environ:  # pragma: no cover
+    MAX_QUBITS_DM = int(os.environ.get("QIBO_MAX_QUBITS_DM"))
+
 # characters used in einsum strings
 EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -34,6 +50,60 @@ SHOT_METROPOLIS_THRESHOLD = 100000
 
 # Max iterations for normalizing bistochastic matrices
 MAX_ITERATIONS = 50
+
+
+def get_max_qubits() -> int:
+    """Returns maximum number of qubits allowed for state vector allocation."""
+    return MAX_QUBITS
+
+
+def set_max_qubits(max_qubits: int) -> None:
+    """Sets maximum number of qubits allowed for state vector allocation.
+
+    This limit prevents uncontrolled memory consumption when allocating
+    state vectors. Memory scales as ``2^n * 16`` bytes (complex128).
+
+    Args:
+        max_qubits (int): Maximum number of qubits. Must be a positive
+            integer, or ``-1`` to disable the limit.
+    """
+    if not isinstance(max_qubits, int):
+        raise_error(TypeError, "Maximum number of qubits must be an integer.")
+
+    if max_qubits < 1 and max_qubits != -1:
+        raise_error(
+            ValueError,
+            "Maximum number of qubits must be a positive integer or -1 (unlimited).",
+        )
+    global MAX_QUBITS
+    MAX_QUBITS = max_qubits
+
+
+def get_max_qubits_dm() -> int:
+    """Returns maximum number of qubits allowed for density matrix allocation."""
+    return MAX_QUBITS_DM
+
+
+def set_max_qubits_dm(max_qubits_dm: int) -> None:
+    """Sets maximum number of qubits allowed for density matrix allocation.
+
+    This limit prevents uncontrolled memory consumption when allocating
+    density matrices. Memory scales as ``4^n * 16`` bytes (complex128).
+
+    Args:
+        max_qubits_dm (int): Maximum number of qubits. Must be a positive
+            integer, or ``-1`` to disable the limit.
+    """
+    if not isinstance(max_qubits_dm, int):
+        raise_error(TypeError, "Maximum number of qubits must be an integer.")
+
+    if max_qubits_dm < 1 and max_qubits_dm != -1:
+        raise_error(
+            ValueError,
+            "Maximum number of qubits must be a positive integer or -1 (unlimited).",
+        )
+    global MAX_QUBITS_DM
+    MAX_QUBITS_DM = max_qubits_dm
 
 
 def raise_error(exception, message=None):

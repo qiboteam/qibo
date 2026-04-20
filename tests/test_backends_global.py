@@ -130,6 +130,44 @@ def test_set_metropolis_threshold():
     qibo.set_metropolis_threshold(original_threshold)
 
 
+def test_set_max_qubits():
+    original_max_qubits = qibo.get_max_qubits()
+    qibo.set_max_qubits(30)
+    assert qibo.get_max_qubits() == 30
+    from qibo.config import MAX_QUBITS
+
+    assert MAX_QUBITS == 30
+    # -1 disables the limit
+    qibo.set_max_qubits(-1)
+    assert qibo.get_max_qubits() == -1
+    with pytest.raises(TypeError):
+        qibo.set_max_qubits("test")
+    with pytest.raises(ValueError):
+        qibo.set_max_qubits(-10)
+    with pytest.raises(ValueError):
+        qibo.set_max_qubits(0)
+    qibo.set_max_qubits(original_max_qubits)
+
+
+def test_set_max_qubits_dm():
+    original_max_qubits_dm = qibo.get_max_qubits_dm()
+    qibo.set_max_qubits_dm(20)
+    assert qibo.get_max_qubits_dm() == 20
+    from qibo.config import MAX_QUBITS_DM
+
+    assert MAX_QUBITS_DM == 20
+    # -1 disables the limit
+    qibo.set_max_qubits_dm(-1)
+    assert qibo.get_max_qubits_dm() == -1
+    with pytest.raises(TypeError):
+        qibo.set_max_qubits_dm("test")
+    with pytest.raises(ValueError):
+        qibo.set_max_qubits_dm(-10)
+    with pytest.raises(ValueError):
+        qibo.set_max_qubits_dm(0)
+    qibo.set_max_qubits_dm(original_max_qubits_dm)
+
+
 def test_circuit_execution():
     qibo.set_backend("numpy")
     circuit = Circuit(2)
