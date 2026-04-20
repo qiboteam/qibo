@@ -746,14 +746,14 @@ def test_relative_tsallis_entropy(backend, alpha, base, state_flag, target_flag)
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-@pytest.mark.parametrize("bipartition", [[0], [1]])
-def test_entanglement_entropy(backend, bipartition, base):
+@pytest.mark.parametrize("partition", [[0], [1]])
+def test_entanglement_entropy(backend, partition, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         test = entanglement_entropy(
             state,
-            bipartition=bipartition,
+            partition=partition,
             base=base,
             backend=backend,
         )
@@ -762,7 +762,7 @@ def test_entanglement_entropy(backend, bipartition, base):
         state = backend.cast(state, dtype=state.dtype)
         test = entanglement_entropy(
             state,
-            bipartition=bipartition,
+            partition=partition,
             base=0,
             backend=backend,
         )
@@ -773,7 +773,7 @@ def test_entanglement_entropy(backend, bipartition, base):
 
     entang_entrop = entanglement_entropy(
         state,
-        bipartition=bipartition,
+        partition=partition,
         base=base,
         backend=backend,
     )
@@ -796,7 +796,7 @@ def test_entanglement_entropy(backend, bipartition, base):
 
     entang_entrop = entanglement_entropy(
         state,
-        bipartition=bipartition,
+        partition=partition,
         base=base,
         backend=backend,
     )
