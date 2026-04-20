@@ -88,6 +88,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 from qibo.backends import construct_backend
+from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 
 
@@ -106,11 +107,14 @@ class PauliMap:
         """Initialize Pauli measurement map.
 
         Args:
-            symProj_list: List of Pauli operators as SymbolicHamiltonians
-            backend: Qibo backend (str or object). Defaults to 'numpy'
+            symProj_list (list[SymbolicHamiltonian]): List of Pauli operators
+                as SymbolicHamiltonians.
+            backend (str or Backend, optional): Qibo backend name or instance.
+                Defaults to ``'numpy'``.
 
         Raises:
-            ValueError: If symProj_list is empty or operators have inconsistent qubit counts
+            ValueError: If ``symProj_list`` is empty or operators have inconsistent
+                qubit counts.
         """
         if isinstance(backend, str) or backend is None:
             name = backend if backend else "numpy"
@@ -123,7 +127,7 @@ class PauliMap:
             self.backend = backend
 
         if not symProj_list:
-            raise ValueError("symProj_list cannot be empty")
+            raise_error(ValueError, "symProj_list cannot be empty")
 
         self.symProj_list = symProj_list
         self.nqubits = symProj_list[0].nqubits
@@ -132,15 +136,16 @@ class PauliMap:
 
         for i, op in enumerate(symProj_list):
             if op.nqubits != self.nqubits:
-                raise ValueError(
-                    f"Operator {i} has {op.nqubits} qubits, expected {self.nqubits}"
+                raise_error(
+                    ValueError,
+                    f"Operator {i} has {op.nqubits} qubits, expected {self.nqubits}",
                 )
 
     def get_matrices(self) -> List[np.ndarray]:
         """Get cached Pauli operator matrices.
 
         Returns:
-            List of dense matrix representations of Pauli operators
+            list[ndarray]: Dense matrix representations of Pauli operators.
         """
         if self._cached_matrices is None:
             self._cached_matrices = [proj.matrix for proj in self.symProj_list]
@@ -152,11 +157,13 @@ class PauliMap:
         """Apply measurement operator A(X) = [Tr(P_1 X), ..., Tr(P_m X)].
 
         Args:
-            state: Density matrix (ndarray) or quantum circuit
-            nshots: Number of measurement shots. If None, exact expectation values
+            state (ndarray or Circuit): Density matrix (2-D array) or quantum circuit.
+            nshots (int, optional): Number of measurement shots. If ``None``,
+                exact expectation values are used.
 
         Returns:
-            Measurement vector y of shape (m,) where m is number of operators
+            ndarray: Measurement vector y of shape (m,) where m is the number
+                of operators.
         """
         results = []
 
@@ -203,10 +210,10 @@ class PauliMap:
         """Compute adjoint operator A†(y) = Σ_i y_i P_i.
 
         Args:
-            y: Measurement vector of shape (m,)
+            y (ndarray): Measurement vector of shape (m,).
 
         Returns:
-            Hermitian matrix A†(y) of shape (d, d) where d = 2^n_qubits
+            ndarray: Hermitian matrix A†(y) of shape (d, d) where d = 2^n_qubits.
         """
         matrices = self.get_matrices()
         return sum(y_i * mat for y_i, mat in zip(y, matrices))
@@ -219,13 +226,14 @@ class PauliMap:
         This is more efficient than full SVD for large matrices.
 
         Args:
-            A: Hermitian matrix to decompose
-            rank: Target rank
-            oversampling: Oversampling parameter (default: 5)
-            power_iterations: Number of power iterations (default: 2)
+            A (ndarray): Hermitian matrix to decompose.
+            rank (int): Target rank.
+            oversampling (int): Oversampling parameter. Defaults to 5.
+            power_iterations (int): Number of power iterations. Defaults to 2.
 
         Returns:
-            (U, S, V) where U = V for Hermitian case
+            tuple[ndarray, ndarray, ndarray]: ``(U, S, V)`` where ``U = V``
+                for the Hermitian case.
         """
         d = A.shape[0]
         r_oversample = min(rank + oversampling, d)
@@ -274,13 +282,16 @@ class RGDOptimizer:
         """Initialize RGD optimizer.
 
         Args:
-            pauli_map: PauliMap instance containing measurement operators
-            rank: Rank of the low-rank approximation (r in paper)
-            target_dm: Target density matrix for computing fidelity (optional)
-            tol: Convergence tolerance on Frobenius error
-            max_iterations: Maximum number of RGD iterations
-            regularization: Regularization parameter for step size computation
-            use_fast_svd: Use fast tangent-space SVD (Algorithm in SI Section 8.7)
+            pauli_map (PauliMap): PauliMap instance containing measurement operators.
+            rank (int): Rank of the low-rank approximation (r in paper). Defaults to 1.
+            target_dm (ndarray, optional): Target density matrix for computing fidelity.
+            tol (float): Convergence tolerance on relative Frobenius change.
+                Defaults to 1e-5.
+            max_iterations (int): Maximum number of RGD iterations. Defaults to 150.
+            regularization (float): Regularization parameter for step size computation.
+                Defaults to 1e-10.
+            use_fast_svd (bool): Use fast tangent-space SVD (SI Section 8.7).
+                Defaults to ``True``.
         """
         self.pauli_map = pauli_map
         self.backend = pauli_map.backend
@@ -317,16 +328,16 @@ class RGDOptimizer:
         """Initialize X_0.
 
         Args:
-            measurements: Measurement vector y
-            method: Initialization method
-                - 'algorithm': X_0 = H_r(A†(y)) (paper's method)
-                - 'random': Random Hermitian matrix of full rank
-                - 'random_rank': Random Hermitian matrix of rank r
-            use_rsvd: Use randomized SVD for large matrices
-            svd_threshold: Use rSVD if dim > threshold
+            measurements (ndarray): Measurement vector y.
+            method (str): Initialization method. ``'algorithm'`` uses the paper's
+                X_0 = H_r(A†(y)); ``'random'`` uses a random full-rank Hermitian
+                matrix; ``'random_rank'`` uses a random rank-r Hermitian matrix.
+                Defaults to ``'algorithm'``.
+            use_rsvd (bool): Use randomized SVD for large matrices. Defaults to ``True``.
+            svd_threshold (int): Use rSVD only when dim > threshold. Defaults to 32.
 
         Returns:
-            Scaling coefficient sqrt(d/m)
+            float: Scaling coefficient sqrt(d/m).
         """
         m = len(measurements)
         dim = self.pauli_map.dim
@@ -421,7 +432,7 @@ class RGDOptimizer:
 
             self.Xk = self.backend.cast(temp_Xk)
         else:
-            raise ValueError(f"Unknown initialization method: {method}")
+            raise_error(ValueError, f"Unknown initialization method: {method}")
 
         # Ensure Hermiticity
         self.Xk = (self.Xk + self.backend.conj(self.Xk.T)) / 2
@@ -447,18 +458,16 @@ class RGDOptimizer:
         where M_k is only 2r × 2r, so SVD is much faster!
 
         Args:
-            Jk: Matrix to decompose (not used directly, kept for interface)
-            Uk: Left singular vectors of X_k (d × r)
-            Vk: Right singular vectors of X_k (d × r)
-            Sigma_k: Diagonal matrix of singular values (r × r)
-            alpha_k: Step size scalar
-            Gk: Gradient matrix (d × d Hermitian)
+            Jk (ndarray): Not used directly; kept for interface compatibility.
+            Uk (ndarray): Left singular vectors of X_k, shape (d, r).
+            Vk (ndarray): Right singular vectors of X_k, shape (d, r).
+            Sigma_k (ndarray): Diagonal singular value matrix, shape (r, r).
+            alpha_k (float): Step size scalar.
+            Gk (ndarray): Gradient matrix, shape (d, d), Hermitian.
 
         Returns:
-            Tuple of (U_new, Sigma_new, V_new) where:
-                - U_new: Updated left singular vectors (d × r)
-                - Sigma_new: Updated singular values (r × r diagonal matrix)
-                - V_new: Updated right singular vectors (d × r)
+            tuple[ndarray, ndarray, ndarray]: Updated ``(U_new, Sigma_new, V_new)``
+                with shapes (d, r), (r, r), (d, r) respectively.
 
         Complexity:
             O(d²r + r³) vs O(d³) for full SVD
@@ -510,16 +519,12 @@ class RGDOptimizer:
         4. Update via hard thresholding: X_{k+1} = H_r(X_k + α_k P_T(G_k))
 
         Args:
-            coef: Scaling coefficient sqrt(d/m)
-            y_scaled: Scaled measurements (y * coef)
+            coef (float): Scaling coefficient sqrt(d/m).
+            y_scaled (ndarray): Scaled measurements (y * coef).
 
         Returns:
-            Dictionary with iteration statistics:
-                - iteration: Current iteration number
-                - step_size: Computed step size α_k
-                - gradient_norm: Frobenius norm of gradient
-                - numerator: Numerator of step size formula
-                - denominator: Denominator of step size formula
+            dict: Iteration statistics with keys ``iteration``, ``step_size``,
+                ``gradient_norm``, ``numerator``, ``denominator``.
         """
         # Step 1: Compute gradient G_k = A†(y - A(X_k))
         A_Xk = self.pauli_map.apply(self.Xk) * coef
@@ -593,10 +598,10 @@ class RGDOptimizer:
         """Compute error metrics against target density matrix.
 
         Returns:
-            Tuple of (frobenius_error, fidelity) where:
-                - frobenius_error: ||X_k - ρ_target||_F
-                - fidelity: Tr((X_k / Tr(X_k)) ρ_target)  — normalized so always in [0,1]
-            Returns (0.0, 0.0) if target_dm is None
+            tuple[float, float]: ``(frobenius_error, fidelity)`` where
+                ``frobenius_error`` is ``||X_k - ρ_target||_F`` and ``fidelity``
+                is ``Tr((X_k / Tr(X_k)) ρ_target)``. Returns ``(0.0, 0.0)``
+                if ``target_dm`` is ``None``.
         """
         if self.target_dm is None:
             return 0.0, 0.0
@@ -627,12 +632,13 @@ class RGDOptimizer:
         """Run complete RGD algorithm.
 
         Args:
-            measurements: Measurement vector y
-            init_method: 'algorithm', 'random', or 'random_rank'
-            verbose: Print progress
+            measurements (ndarray): Measurement vector y.
+            init_method (str): Initialization method — ``'algorithm'``, ``'random'``,
+                or ``'random_rank'``. Defaults to ``'algorithm'``.
+            verbose (bool): Print progress to stdout. Defaults to ``True``.
 
         Returns:
-            Reconstructed density matrix
+            ndarray: Reconstructed density matrix X_k.
         """
         # Initialize
         coef = self.initialize(measurements, method=init_method)
@@ -724,16 +730,11 @@ class RGDOptimizer:
         """Get comprehensive optimization results and statistics.
 
         Returns:
-            Dictionary containing:
-                - density_matrix: Final reconstructed density matrix X_k
-                - converged: Boolean indicating convergence
-                - iterations: Total number of iterations performed
-                - frobenius_errors: Array of Frobenius errors per iteration
-                - fidelities: Array of fidelity values per iteration
-                - gradient_norms: Array of gradient norms per iteration
-                - step_sizes: Array of step sizes α_k per iteration
-                - final_error: Final Frobenius error (or None)
-                - final_fidelity: Final fidelity value (or None)
+            dict: Keys are ``density_matrix`` (final X_k), ``converged`` (bool),
+                ``iterations`` (int), ``frobenius_errors`` (ndarray),
+                ``fidelities`` (ndarray), ``gradient_norms`` (ndarray),
+                ``step_sizes`` (ndarray), ``final_error`` (float or ``None``),
+                ``final_fidelity`` (float or ``None``).
         """
         return {
             "density_matrix": self.Xk,

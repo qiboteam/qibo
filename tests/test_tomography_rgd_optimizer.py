@@ -10,10 +10,8 @@ Tests cover:
 - Numerical stability
 """
 
-import sys
 from functools import reduce
 from itertools import product
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -22,10 +20,7 @@ from qibo.backends import construct_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.encodings import ghz_state
 from qibo.symbols import I, X, Y, Z
-
-sys.path.insert(0, str(Path(__file__).parent))
-
-from RGD_Optimized import PauliMap, RGDOptimizer
+from qibo.tomography.state_tomography import PauliMap, RGDOptimizer
 
 
 def _try_build_backend(backend_name):

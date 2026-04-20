@@ -8,15 +8,17 @@ Tests cover:
 - RIP-based sampling requirements
 """
 
-import sys
 from functools import reduce
 from itertools import product
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 from qibo.backends import construct_backend
+from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.models.encodings import ghz_state
+from qibo.symbols import I, X, Y, Z
+from qibo.tomography.state_tomography import PauliMap
 
 
 def _try_build_backend(backend_name):
@@ -27,14 +29,6 @@ def _try_build_backend(backend_name):
         name, platform = backend_name, None
     return construct_backend(name, platform=platform)
 
-
-from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.models.encodings import ghz_state
-from qibo.symbols import I, X, Y, Z
-
-sys.path.insert(0, str(Path(__file__).parent))
-
-from RGD_Optimized import PauliMap
 
 # ==================== Fixtures ====================
 
