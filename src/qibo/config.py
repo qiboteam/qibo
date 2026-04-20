@@ -11,11 +11,6 @@ QIBO_LOG_LEVEL = 1
 if "QIBO_LOG_LEVEL" in os.environ:  # pragma: no cover
     QIBO_LOG_LEVEL = 10 * int(os.environ.get("QIBO_LOG_LEVEL"))
 
-# Logging level from 0 (all) to 3 (errors) for TensorFlow
-TF_LOG_LEVEL = 3
-if "TF_LOG_LEVEL" in os.environ:  # pragma: no cover
-    TF_LOG_LEVEL = int(os.environ.get("TF_LOG_LEVEL"))
-
 # Maximum number of qubits allowed for state allocation.
 # These limits prevent uncontrolled memory consumption (CWE-400).
 # Memory scales as 2^n * 16 bytes (complex128) for state vectors
