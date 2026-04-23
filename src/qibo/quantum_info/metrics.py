@@ -1140,14 +1140,14 @@ def quantum_fisher_information_matrix(
 
     if parameters is None:
         parameters = circuit.get_parameters()
-        parameters = backend.cast(parameters, dtype=float).flatten()
+        parameters = backend.cast(parameters, dtype=backend.float64).flatten()
 
     jacobian = backend.jacobian(circuit, parameters, initial_state, return_complex)
 
     if return_complex:
         jacobian = jacobian[0] + 1j * jacobian[1]
 
-    jacobian = backend.cast(jacobian, dtype=np.complex128)
+    jacobian = backend.cast(jacobian, dtype=backend.complex128)
 
     copied = circuit.copy(deep=True)
     copied.set_parameters(parameters)
