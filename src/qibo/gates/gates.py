@@ -937,7 +937,7 @@ class _Un_(ParametrizedGate):
 
 
 class U1(_Un_):
-    """First general unitary gate.
+    """First general unitary gate. Also known as `Phase` gate or `P` gate.
 
     Corresponds to the following unitary matrix
 
@@ -1494,7 +1494,7 @@ class _CUn_(ParametrizedGate):
 
 
 class CU1(_CUn_):
-    """Controlled first general unitary gate.
+    """Controlled first general unitary gate. Also known as `CPhase`.
 
     Corresponds to the following unitary matrix
 
