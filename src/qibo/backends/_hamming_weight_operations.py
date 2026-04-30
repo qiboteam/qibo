@@ -192,6 +192,14 @@ def _get_cached_strings(
     return strings
 
 
+def _cast_value_to_str(self, value):
+    return (
+        str(value.item())
+        if self.name == "hamming_weight" and self.platform == "pytorch"
+        else str(value)
+    )
+
+
 def _get_lexicographical_order(
     self, nqubits: int, weight: int
 ) -> Dict[str, Tuple[int, ...]]:
@@ -214,14 +222,7 @@ def _get_lexicographical_order(
 
     lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
     lexicographical_order = [
-        "".join(
-            (
-                str(elem.item())
-                if self.name == "hamming_weight" and self.platform == "pytorch"
-                else str(elem)
-            )
-            for elem in item
-        )
+        "".join(self._cast_value_to_str(elem) for elem in item)
         for item in lexicographical_order
     ]
     lexicographical_order.sort()
@@ -436,15 +437,7 @@ def _apply_gate_two_qubit(
             [
                 (
                     self._dict_indexes[
-                        "".join(
-                            (
-                                str(e.item())
-                                if self.name == "hamming_weight"
-                                and self.platform == "pytorch"
-                                else str(e)
-                            )
-                            for e in elem
-                        )
+                        "".join(self._cast_value_to_str(e) for e in elem)
                     ][0]
                 )
                 for elem in indexes_in
@@ -455,15 +448,7 @@ def _apply_gate_two_qubit(
             [
                 (
                     self._dict_indexes[
-                        "".join(
-                            (
-                                str(e.item())
-                                if self.name == "hamming_weight"
-                                and self.platform == "pytorch"
-                                else str(e)
-                            )
-                            for e in elem
-                        )
+                        "".join((self._cast_value_to_str(e)) for e in elem)
                     ][0]
                 )
                 for elem in indexes_out
