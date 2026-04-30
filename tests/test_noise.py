@@ -836,3 +836,41 @@ def test_gth_noise(backend):
     state_target = backend.execute_circuit(noisy_target, nshots=10)
 
     backend.assert_allclose(state, state_target)
+
+
+@pytest.mark.parametrize("phase_damping", [0.1, {"0": 0.1}])
+@pytest.mark.parametrize("amplitude_damping", [0.2, {"0": 0.2}])
+@pytest.mark.parametrize(
+    "readout_one_qubit", [0.05, {"0": 0.05, "1": [0.02], "2": (0.01, 0.03)}]
+)
+@pytest.mark.parametrize("depolarizing_one_qubit", [0.1, {"0": 0.1}])
+@pytest.mark.parametrize("depolarizing_two_qubit", [0.2, {"0-1": 0.2}])
+def test_gth_from_dict_branches(
+    phase_damping,
+    amplitude_damping,
+    readout_one_qubit,
+    depolarizing_one_qubit,
+    depolarizing_two_qubit,
+):
+
+    params = {
+        "phase_damping": phase_damping,
+        "amplitude_damping": amplitude_damping,
+        "readout_one_qubit": readout_one_qubit,
+        "depolarizing_one_qubit": depolarizing_one_qubit,
+        "depolarizing_two_qubit": depolarizing_two_qubit,
+    }
+
+    model = GTHNoiseModel()
+    model.from_dict(params)
+
+
+def test_readout_formats():
+    params = {
+        "phase_damping": 0.1,
+        "amplitude_damping": 0.1,
+        "depolarizing_one_qubit": 0.1,
+        "depolarizing_two_qubit": 0.1,
+        "readout_one_qubit": {"0": 0.1, "1": [0.2], "2": (0.3, 0.4)},
+    }
+    GTHNoiseModel().from_dict(params)
