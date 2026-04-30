@@ -567,3 +567,236 @@ class IBMQNoiseModel(NoiseModel):
                     gate=gates.M,
                     qubits=int(qubit),
                 )
+
+
+class GTHNoiseModel(NoiseModel):
+    """Class for implementing the GST-trained heuristic (GTH) noise model to mimic hardware noise.
+
+    This noise model applies a combination of :class:`qibo.gates.DepolarizingChannel`,
+    :class:`qibo.gates.AmplitudeDampingChannel`, :class:`qibo.gates.PhaseDampingChannel`,
+    and :class:`qibo.gates.ReadoutErrorChannel` after each single-qubit gate.
+
+    It also applies a two-qubit :class:`qibo.gates.DepolarizingChannel` after each
+    two-qubit gate.
+
+    The single-qubit :class:`qibo.gates.ReadoutErrorChannel` is applied before every
+    measurement gate.
+
+    The noise parameters are expected to be obtained using the GST-trained
+    heuristic (GTH) workflow, where gate set tomography (GST) data is used
+    to infer effective noise parameters for each qubit and qubit pair.
+    This procedure is described in detail in https://arxiv.org/abs/2502.19872.
+
+    Alternatively, arbitrary (fictitious) parameters may be supplied to
+    emulate generic or hypothetical hardware noise for simulation and testing
+    purposes.
+
+    Example:
+
+    .. testcode::
+
+        from qibo import Circuit, gates
+        from qibo.noise import GTHNoiseModel
+        from qibo.backends import NumpyBackend
+        import numpy as np
+
+        # Define a dictionary containing 4-tuples representing:
+        # [depolarizing_error, amplitude_damping_error, dephasing_error, readout_error]:
+        single_qb_errors = {
+            1: [0.3, 0.4, 0.2, 0.1],
+            2: [0.3, 0.4, 0.2, 0.3],
+            4: [0.5, 0.3, 0.4, 0.6],
+            5: [0.5, 0.2, 0.4, 0.1]
+        }
+
+        # Define a dictionary containing two-qubit depolarizing error.
+        two_qb_errors = {
+            (1, 4): 0.25,
+            (4, 5): 0.1,
+            (2, 5): 0.21,
+            (1, 2): 0.14
+        }
+
+        # Construct composite noise model
+        noise_model = GTHNoiseModel.from_parameters(single_qb_errors, two_qb_errors)
+
+        # Apply to circuit
+        c = Circuit(6, density_matrix=True)
+        c.add(gates.PRX(1, np.pi/3, np.pi/4))
+        c.add(gates.PRX(2, np.pi/4, np.pi/5))
+        c.add(gates.PRX(4, np.pi/3, np.pi/2))
+        c.add(gates.PRX(5, np.pi/2, np.pi/6))
+        c.add(gates.CZ(1, 4))
+        c.add(gates.CZ(1, 2))
+        c.add(gates.CZ(4, 5))
+        c.add(gates.CZ(2, 5))
+        c.add(gates.M(1))
+        c.add(gates.M(2))
+        c.add(gates.M(4))
+        c.add(gates.M(5))
+
+        c_noisy = noise_model.apply(c)
+    """
+
+    @classmethod
+    def from_parameters(cls, single_params: dict, pair_params: dict):
+        """Class method to construct the GTH noise model from structured parameters.
+
+        Args:
+            single_params (dict): Dictionary mapping qubit indices to 4-tuples or lists
+                ``[p_dep, p_amp, p_phase, p_readout]`` representing, respectively,
+                the single-qubit depolarizing, amplitude damping, phase damping,
+                and readout error probabilities.
+            pair_params (dict): Dictionary mapping qubit index pairs ``(q1, q2)``
+                to two-qubit depolarizing error probabilities.
+
+        Returns:
+            GTHNoiseModel: Noise model instance initialised with the provided parameters.
+        """
+        trial_parameters = {
+            "depolarizing_one_qubit": {},
+            "amplitude_damping": {},
+            "phase_damping": {},
+            "readout_one_qubit": {},
+            "depolarizing_two_qubit": {},
+        }
+
+        for q, p in single_params.items():
+            trial_parameters["depolarizing_one_qubit"][str(q)] = p[0]
+            trial_parameters["amplitude_damping"][str(q)] = p[1]
+            trial_parameters["phase_damping"][str(q)] = p[2]
+            trial_parameters["readout_one_qubit"][str(q)] = (p[3], p[3])
+
+        for (i, j), pij in pair_params.items():
+            trial_parameters["depolarizing_two_qubit"][f"{i}-{j}"] = pij
+
+        obj = cls()
+        obj.from_dict(trial_parameters)
+        return obj
+
+    def from_dict(self, parameters: dict):
+        """Method used to initialise the GTH noise model from a dictionary.
+
+        Args:
+            parameters (dict): Contains parameters required to initialise
+                :class:`qibo.noise.DepolarizingError`,
+                :class:`qibo.noise.AmplitudeDampingError`,
+                :class:`qibo.noise.PhaseDampingError`, and
+                :class:`qibo.noise.ReadoutError`.
+
+                The keys and values of the dictionary are defined below:
+
+                - ``"depolarizing_one_qubit"`` (*int* or *float* or *dict*):
+                    If ``int`` or ``float``, all qubits share the same depolarizing parameter.
+                    If ``dict``, expects qubit indices as keys and depolarizing parameters as values.
+
+                - ``"amplitude_damping"`` (*int* or *float* or *dict*):
+                    If ``int`` or ``float``, all qubits share the same amplitude damping parameter.
+                    If ``dict``, expects qubit indices as keys and damping parameters as values.
+
+                - ``"phase_damping"`` (*int* or *float* or *dict*):
+                    If ``int`` or ``float``, all qubits share the same phase damping parameter.
+                    If ``dict``, expects qubit indices as keys and damping parameters as values.
+
+                - ``"readout_one_qubit"`` (*int* or *float* or *dict*):
+                    If ``int`` or ``float``, assumes symmetric readout error
+                    :math:`p(0|1) = p(1|0)` for all qubits.
+                    If ``dict``, expects qubit indices as keys and values as
+                    ``float`` or ``tuple/list`` of the form ``(p(0|1), p(1|0))``.
+
+                - ``"depolarizing_two_qubit"`` (*int* or *float* or *dict*):
+                    If ``int`` or ``float``, all two-qubit gates share the same depolarizing parameter.
+                    If ``dict``, expects qubit pairs as string keys in the format ``"q1-q2"``
+                    and corresponding depolarizing parameters as values.
+
+        Notes:
+            Noise channels are applied conditionally using :class:`_Conditions`
+            depending on whether gates are single- or two-qubit operations.
+        """
+        phase_damping = parameters["phase_damping"]
+        amplitude_damping = parameters["amplitude_damping"]
+        readout_one_qubit = parameters["readout_one_qubit"]
+        depolarizing_one_qubit = parameters["depolarizing_one_qubit"]
+        depolarizing_two_qubit = parameters["depolarizing_two_qubit"]
+
+        if isinstance(phase_damping, (float, int)):
+            self.add(
+                PhaseDampingError(phase_damping),
+                conditions=_Conditions().condition_gate_single,
+            )
+
+        if isinstance(phase_damping, dict):
+            for qubit_key, lamb in phase_damping.items():
+                self.add(
+                    PhaseDampingError(lamb),
+                    qubits=int(qubit_key),
+                    conditions=_Conditions().condition_gate_single,
+                )
+
+        if isinstance(amplitude_damping, (float, int)):
+            self.add(
+                AmplitudeDampingError(amplitude_damping),
+                conditions=_Conditions().condition_gate_single,
+            )
+
+        if isinstance(amplitude_damping, dict):
+            for qubit_key, lamb in amplitude_damping.items():
+                self.add(
+                    AmplitudeDampingError(lamb),
+                    qubits=int(qubit_key),
+                    conditions=_Conditions().condition_gate_single,
+                )
+
+        if isinstance(readout_one_qubit, (int, float)):
+            probabilities = [
+                [1 - readout_one_qubit, readout_one_qubit],
+                [readout_one_qubit, 1 - readout_one_qubit],
+            ]
+            self.add(ReadoutError(probabilities), gate=gates.M)
+
+        if isinstance(readout_one_qubit, dict):
+            for qubit, probs in readout_one_qubit.items():
+                if isinstance(probs, (int, float)):
+                    probs = (probs, probs)
+                elif isinstance(probs, (tuple, list)) and len(probs) == 1:
+                    probs *= 2
+
+                probabilities = [[1 - probs[0], probs[0]], [probs[1], 1 - probs[1]]]
+                self.add(
+                    ReadoutError(probabilities),
+                    gate=gates.M,
+                    qubits=int(qubit),
+                )
+
+        if isinstance(depolarizing_one_qubit, (float, int)):
+            self.add(
+                DepolarizingError(depolarizing_one_qubit),
+                conditions=_Conditions().condition_gate_single,
+            )
+
+        if isinstance(depolarizing_one_qubit, dict):
+            for qubit_key, lamb in depolarizing_one_qubit.items():
+                self.add(
+                    DepolarizingError(lamb),
+                    qubits=int(qubit_key),
+                    conditions=_Conditions().condition_gate_single,
+                )
+
+        if isinstance(depolarizing_two_qubit, (float, int)):
+            self.add(
+                DepolarizingError(depolarizing_two_qubit),
+                conditions=_Conditions().condition_gate_two,
+            )
+
+        if isinstance(depolarizing_two_qubit, dict):
+            for key, lamb in depolarizing_two_qubit.items():
+                qubits = key.replace(" ", "").split("-")
+                qubits = tuple(map(int, qubits))
+                self.add(
+                    DepolarizingError(lamb),
+                    qubits=qubits,
+                    conditions=[
+                        _Conditions().condition_gate_two,
+                        _Conditions(qubits).condition_qubits,
+                    ],
+                )
