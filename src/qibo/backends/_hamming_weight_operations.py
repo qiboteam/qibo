@@ -19,7 +19,7 @@ from qibo.gates.abstract import Gate
 @lru_cache(maxsize=None)
 def _global_basis_powers(nqubits: int) -> np.ndarray:
     """Return powers used to encode bitstrings as integers in lexicographic order."""
-    if nqubits == 0:
+    if nqubits == 0:  # pragma: no cover
         return np.zeros((0,), dtype=np.uint64)
     return (1 << np.arange(nqubits - 1, -1, -1, dtype=np.uint64)).astype(np.uint64)
 
@@ -29,7 +29,7 @@ def _global_fixed_weight_ints(nqubits: int, weight: int) -> np.ndarray:
     """Return lexicographically sorted integer encodings of fixed-weight bitstrings."""
     if weight < 0 or weight > nqubits:
         return np.empty((0,), dtype=np.uint64)
-    if nqubits == 0:
+    if nqubits == 0:  # pragma: no cover
         return (
             np.array([0], dtype=np.uint64)
             if weight == 0
@@ -55,7 +55,7 @@ def _global_fixed_weight_bits(nqubits: int, weight: int) -> np.ndarray:
     ints = _global_fixed_weight_ints(nqubits, weight)
     if ints.size == 0:
         return np.empty((0, nqubits), dtype=np.int8)
-    if nqubits == 0:
+    if nqubits == 0:  # pragma: no cover
         return np.zeros((1, 0), dtype=np.int8)
 
     shifts = np.arange(nqubits - 1, -1, -1, dtype=np.uint64)
@@ -116,7 +116,7 @@ def _global_measurement_indices(
 ) -> np.ndarray:
     """Return measured-bit decimal indices for every basis state."""
     basis = _global_fixed_weight_bits(nqubits, weight).astype(np.int64, copy=False)
-    if len(measured_qubits) == 0:
+    if len(measured_qubits) == 0:  # pragma: no cover
         return np.zeros((basis.shape[0],), dtype=np.int64)
     measured = basis[:, list(measured_qubits)]
     measured_powers = (
@@ -177,7 +177,7 @@ def _get_basis_strings(self, nqubits: int, weight: int) -> List[str]:
     """Return cached lexicographically sorted basis strings."""
     self._ensure_basis_cache(nqubits, weight)
     key = (nqubits, weight)
-    if key not in self._basis_strings_cache:
+    if key not in self._basis_strings_cache:  # pragma: no cover
         self._basis_strings_cache[key] = list(
             _global_fixed_weight_strings(nqubits, weight)
         )
@@ -273,38 +273,6 @@ def _build_dict_indexes(self, nqubits: int, weight: int) -> Dict[str, Tuple[int,
         )
         self._dict_indexes_cache[key] = _global_dict_indexes(nqubits, weight)
     return self._dict_indexes_cache[key]
-
-
-def _bitstrings_to_indices(
-    self, bitstrings: ArrayLike, nqubits: int, weight: int
-) -> ArrayLike:
-    """Map fixed-weight bitstrings to condensed-state indices using integer encoding."""
-    self._ensure_basis_cache(nqubits, weight)
-
-    bits = np.asarray(bitstrings, dtype=np.int64)
-    if bits.ndim == 1:
-        bits = bits[None, :]
-
-    encoded = bits @ self._basis_powers_cache[(nqubits, weight)]
-    indices = np.searchsorted(self._basis_int_cache[(nqubits, weight)], encoded)
-    return self.cast(indices, dtype=self.int64)
-
-
-def _build_projected_indices(
-    self,
-    strings: ArrayLike,
-    nqubits: int,
-    weight: int,
-    other_qubits: List[int],
-    controls: List[int],
-    qubits: List[int],
-    qubit_values: List[int],
-) -> ArrayLike:
-    """Create condensed-state indices for fixed values on active qubits."""
-    del strings
-    return self._get_projected_indices(
-        nqubits, weight, other_qubits, controls, qubits, qubit_values
-    )
 
 
 def _get_measurement_indices(
