@@ -843,12 +843,13 @@ def _apply_gate_n_qubit(
     if self._is_numpy_backend():
         coeffs = gate_matrix[host_cols, host_local_indices[host_rows]]
         values = coeffs * state[host_rows]
-        np.add.at(new_state, host_target_indices, values)
+        idcs = host_target_indices
     else:
         coeffs = gate_matrix[cols, local_indices[rows]]
         values = coeffs * state[rows]
-        self.add_at(new_state, target_indices, values)
+        idcs = target_indices
 
+    self.add_at(new_state, idcs, values)
     return new_state
 
 
@@ -913,11 +914,6 @@ def calculate_probabilities(
     rtype = self.real(state).dtype
     measured_indices = self._get_measurement_indices(nqubits, weight, qubits)
     weights_state = self.real(self.abs(state) ** 2)
-
-    if self._is_numpy_backend():
-        probs = np.zeros(2 ** len(qubits), dtype=rtype)
-        np.add.at(probs, measured_indices, weights_state)
-        return probs
 
     probs = self.zeros(2 ** len(qubits), dtype=rtype)
     self.add_at(probs, measured_indices, weights_state)
