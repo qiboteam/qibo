@@ -393,27 +393,6 @@ def execute_circuit(
         )
 
 
-def _gray_code(self, initial_string: ArrayLike) -> ArrayLike:
-    """Return all bitstrings of a fixed Hamming weight.
-
-    Uses the ``ehrlich_algorithm`` with an ``initial_string``.
-
-    Args:
-        initial_string (ArrayLike): Array of bits representing the input
-            of the Ehrlich algorithm.
-
-    Returns:
-        ArrayLike: All bitstrings with the same Hamming weight as ``initial_string``.
-    """
-    from qibo.models._encodings import _ehrlich_algorithm  # pylint: disable=C0415
-
-    strings = _ehrlich_algorithm(initial_string, return_indices=False)
-    strings = [[int(b) for b in string] for string in strings]
-    strings = self.cast(strings, dtype=self.int64)
-
-    return strings
-
-
 def _get_cached_strings(
     self, nqubits: int, weight: int, ncontrols: int = 0, two_qubit_gate: bool = True
 ) -> Union[ArrayLike, List[ArrayLike]]:
