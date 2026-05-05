@@ -844,13 +844,14 @@ def test_gth_noise(backend):
     "readout_one_qubit", [0.05, {"0": 0.05, "1": [0.02], "2": (0.01, 0.03)}]
 )
 @pytest.mark.parametrize("depolarizing_one_qubit", [0.1, {"0": 0.1}])
-@pytest.mark.parametrize("depolarizing_two_qubit", [0.2, {"0-1": 0.2}])
+@pytest.mark.parametrize("depolarizing_two_qubit", [0.2, {"0-1": 0.2, "1-2": 0.2}])
 def test_gth_from_dict_branches(
     phase_damping,
     amplitude_damping,
     readout_one_qubit,
     depolarizing_one_qubit,
     depolarizing_two_qubit,
+    backend,
 ):
 
     params = {
@@ -861,8 +862,21 @@ def test_gth_from_dict_branches(
         "depolarizing_two_qubit": depolarizing_two_qubit,
     }
 
-    model = GTHNoiseModel()
-    model.from_dict(params)
+    noise_model = GTHNoiseModel()
+    noise_model.from_dict(params)
+
+    c = Circuit(3, density_matrix=True)
+    c.add(gates.H(0))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.M(_i) for _i in range(3))
+
+    c_noisy = noise_model.apply(c)
+
+    backend.set_seed(2024)
+    res = backend.execute_circuit(c_noisy, nshots=5)
+
+    assert res is not None
 
 
 def test_readout_formats():
@@ -874,3 +888,66 @@ def test_readout_formats():
         "readout_one_qubit": {"0": 0.1, "1": [0.2], "2": (0.3, 0.4)},
     }
     GTHNoiseModel().from_dict(params)
+
+
+def test_gth_apply_executes_branches(backend):
+    params = {
+        "phase_damping": {"0": 0.1},
+        "amplitude_damping": {"0": 0.2},
+        "readout_one_qubit": {"0": 0.1, "1": [0.2], "2": (0.1, 0.3)},
+        "depolarizing_one_qubit": {"0": 0.1},
+        "depolarizing_two_qubit": {"0-1": 0.2, "1-2": 0.2},
+    }
+
+    noise_model = GTHNoiseModel()
+    noise_model.from_dict(params)
+
+    c = Circuit(3, density_matrix=True)
+    c.add(gates.H(0))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.M(_i) for _i in range(3))
+
+    c_noise = noise_model.apply(c)
+
+    d = Circuit(3, density_matrix=True)
+    d.add(gates.H(0))
+    d.add(gates.CNOT(0, 1))
+    d.add(gates.CNOT(1, 2))
+    d.add(gates.M(_i) for _i in range(3))
+
+    mix_noise = NoiseModel()
+    mix_noise.add(PhaseDampingError(0.1), conditions=_Conditions().condition_single)
+    mix_noise.add(AmplitudeDampingError(0.2), conditions=_Conditions().condition_single)
+    mix_noise.add(DepolarizingError(0.1), conditions=_Conditions().condition_single)
+    mix_noise.add(DepolarizingError(0.2), conditions=_Conditions().condition_two)
+
+    mix_noise.add(
+        ReadoutError(probabilities=np.array([[1 - 0.1, 0.1], [0.1, 1 - 0.1]])),
+        gate=gates.M,
+        qubits=0,
+    )
+    mix_noise.add(
+        ReadoutError(probabilities=np.array([[1 - 0.2, 0.2], [0.2, 1 - 0.2]])),
+        gate=gates.M,
+        qubits=1,
+    )
+    mix_noise.add(
+        ReadoutError(probabilities=np.array([[1 - 0.1, 0.1], [0.3, 1 - 0.3]])),
+        gate=gates.M,
+        qubits=2,
+    )
+
+    d_noise = mix_noise.apply(d)
+
+    backend.set_seed(2024)
+    state_c = backend.execute_circuit(c_noise, nshots=10)
+    backend.set_seed(2024)
+    state_target = backend.execute_circuit(d_noise, nshots=10)
+    backend.assert_allclose(state_c, state_target)
+
+    s = str(c_noise)
+    assert "PD" in s
+    assert "AD" in s
+    assert "D" in s
+    assert "RE" in s
