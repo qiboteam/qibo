@@ -129,7 +129,7 @@ def plot_circuit(
 
     labels = []
     for i in range(circuit.nqubits):
-        labels.append("q_" + str(i))
+        labels.append("q_{" + str(i) + "}")
 
     hash_unitary_gates = []
     all_gates = []
