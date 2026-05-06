@@ -1242,7 +1242,7 @@ For single-qubit operations, the GTH noise model applies a combination of:
 * :class:`qibo.gates.PhaseDampingChannel`, and
 * :class:`qibo.gates.ReadoutErrorChannel`
 
-For two-qubit operations, the model applies pair-specific two-qubit * :class:`qibo.gates.DepolarizingChannel`.
+For two-qubit operations, the model applies pair-specific two-qubit :class:`qibo.gates.DepolarizingChannel`.
 
 Although more sophisticated composite noise models may be constructed by including additional noise channels, it was found that this combination provides a sufficiently realistic approximation of hardware noise while remaining computationally practical.
 
