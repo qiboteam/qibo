@@ -2,9 +2,8 @@ import os
 import tempfile
 
 import numpy as np
-from scipy import sparse
-
 from matplotlib.figure import Figure
+from scipy import sparse
 
 
 def random_sparse_matrix(backend, n, sparse_type=None):
@@ -66,6 +65,7 @@ def fig2png(figure):
         if os.path.exists(temp_file_path):
             return temp_file_path
         return None
+
 
 def create_binary(fig: Figure, filename: str) -> None:
     array = fig2array(fig)

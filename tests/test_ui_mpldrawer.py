@@ -40,10 +40,7 @@ def test_plot_circuit(nqubits):
     _, fig = plot_circuit(circuit)
     test_file = f"{BASEPATH}/test_plot_circuit_{nqubits}.npy"
 
-    assert (
-        match_figure_image(fig, test_file)
-        == True
-    )
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
@@ -54,10 +51,7 @@ def test_circuit_measure(nqubits):
     _, fig = plot_circuit(circuit)
     test_file = f"{BASEPATH}/test_circuit_measure_{nqubits}.npy"
 
-    assert (
-        match_figure_image(fig, test_file)
-        == True
-    )
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5, 6])
@@ -181,16 +175,11 @@ def test_circuit_fused_gates(clustered):
     _, fig = plot_circuit(
         circuit.fuse(), scale=0.8, cluster_gates=clustered, style="quantumspain"
     )
-    
-    clustered_status = 'true' if clustered else 'false'
-    test_file = (
-        f"{BASEPATH}/test_circuit_fused_gates_{clustered_status}.npy"
-    )
 
-    assert (
-        match_figure_image(fig, test_file)
-        == True
-    )
+    clustered_status = "true" if clustered else "false"
+    test_file = f"{BASEPATH}/test_circuit_fused_gates_{clustered_status}.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 def test_empty_circuit():
@@ -213,16 +202,11 @@ def test_circuit_entangled_entropy(clustered):
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CallbackGate(entropy))
     _, fig = plot_circuit(circuit, scale=0.8, cluster_gates=clustered)
-    
-    clustered_status = 'true' if clustered else 'false'
-    test_file = (
-        f"{BASEPATH}/test_circuit_entangled_entropy_{clustered_status}.npy"
-    )
 
-    assert (
-        match_figure_image(fig, test_file)
-        == True
-    )
+    clustered_status = "true" if clustered else "false"
+    test_file = f"{BASEPATH}/test_circuit_entangled_entropy_{clustered_status}.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 def test_layered_circuit():
@@ -351,9 +335,7 @@ def test_plot_unitaries_same_init():
     _, fig = plot_circuit(circuit)
     test_file = f"{BASEPATH}/test_plot_unitaries_same_init.npy"
 
-    assert (
-        match_figure_image(fig, test_file) == True
-    )
+    assert match_figure_image(fig, test_file) == True
 
 
 def test_plot_unitaries_different_init():
@@ -368,10 +350,7 @@ def test_plot_unitaries_different_init():
     _, fig = plot_circuit(circuit)
     test_file = f"{BASEPATH}/test_plot_unitaries_different_init.npy"
 
-    assert (
-        match_figure_image(fig, test_file)
-        == True
-    )
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("fold", [-1, 3, 4, 5])
@@ -472,15 +451,9 @@ def test_plot_circuit_internal():
     test_file1 = f"{BASEPATH}/test_plot_circuit_internal_ax1.npy"
     test_file2 = f"{BASEPATH}/test_plot_circuit_internal_ax2.npy"
 
-    assert (
-        match_figure_image(ax1.figure, test_file1)
-        == True
-    )
+    assert match_figure_image(ax1.figure, test_file1) == True
 
-    assert (
-        match_figure_image(ax2.figure, test_file2)
-        == True
-    )
+    assert match_figure_image(ax2.figure, test_file2) == True
 
 
 def test_empty_gates():
