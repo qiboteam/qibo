@@ -502,6 +502,17 @@ def test_render_label_empty():
     assert _render_label("") == ""
 
 
+def test_render_label_multi_digit():
+    """Test render labels with multi-digit subscripts"""
+    # Test that multi-digit subscripts are properly wrapped in braces for LaTeX
+    assert _render_label("q_10") == r"$|q_{10}\rangle$"
+    assert _render_label("q_11") == r"$|q_{11}\rangle$"
+    assert _render_label("q_100") == r"$|q_{100}\rangle$"
+    # Single digit should remain unchanged
+    assert _render_label("q_9") == r"$|q_9\rangle$"
+    assert _render_label("q_0") == r"$|q_0\rangle$"
+
+
 def test_cluster_gates():
     """Test clustering gates"""
     pgates = [

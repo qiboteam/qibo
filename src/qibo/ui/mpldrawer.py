@@ -7,6 +7,7 @@
 # pylint: disable=protected-access,R0912,R0913,R0914,R0915,R0917
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterator, Optional, Union
 
@@ -1184,7 +1185,13 @@ def _render_label(label: str) -> str:
         str: Rendered label string.
     """
 
-    return rf"$|{label}\rangle$" if label else ""
+    if not label:
+        return ""
+
+    # Fix LaTeX subscripts with multiple characters: q_10 -> q_{10}
+    label = re.sub(r"(_)(\d{2,})", r"_{\2}", label)
+
+    return rf"$|{label}\rangle$"
 
 
 def _check_list_str(substrings: list, string: str) -> bool:
