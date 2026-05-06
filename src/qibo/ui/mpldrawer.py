@@ -1026,7 +1026,7 @@ def _get_flipped_index(target: str, labels: list) -> int:
     """
 
     if isinstance(target, str) and target.count("_") > 1:
-        end_index = target.find("_" + target.split("_")[2])
+        end_index = target.find("_{" + target.split("_")[2] + "}")
         target = target[:end_index]
 
     nq = len(labels)
@@ -1382,13 +1382,13 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
             for qbit in gate._target_qubits:
                 item = (init_label,)
                 qbit_item = qbit if qbit < nqubits else nqubits - 1
-                item += ("q_" + str(qbit_item),)
+                item += ("q_{" + str(qbit_item) + "}",)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
             for qbit in list(range(nqubits)):
                 item = (init_label,)
                 qbit_item = qbit if qbit < nqubits else nqubits - 1
-                item += ("q_" + str(qbit_item),)
+                item += ("q_{" + str(qbit_item) + "}",)
                 gates_plot.append(item)
         else:
             item = ()
@@ -1404,7 +1404,7 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
             for qbit in gate._target_qubits:
                 if isinstance(qbit, tuple):
                     qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
-                    item += ("q_" + str(qbit_item),)
+                    item += ("q_{" + str(qbit_item) + "}",)
                 else:
                     qbit_item = qbit if qbit < nqubits else nqubits - 1
                     u_param_hash = ""
@@ -1418,8 +1418,9 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
                         u_global_hash = _global_gate_hash(gate)
 
                     item += (
-                        "q_"
+                        "q_{"
                         + str(qbit_item)
+                        + "}"
                         + ("" if u_param_hash == "" else ("_" + u_param_hash))
                         + ("" if u_global_hash == "" else ("_" + u_global_hash))
                         + (
@@ -1441,10 +1442,10 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
             for qbit in gate._control_qubits:
                 if isinstance(qbit, tuple):
                     qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
-                    item += ("q_" + str(qbit_item),)
+                    item += ("q_{" + str(qbit_item) + "}",)
                 else:
                     qbit_item = qbit if qbit < nqubits else nqubits - 1
-                    item += ("q_" + str(qbit_item),)
+                    item += ("q_{" + str(qbit_item) + "}",)
 
             gates_plot.append(item)
 
