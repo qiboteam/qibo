@@ -168,11 +168,6 @@ def _global_n_qubit_flat_cache(
     )
 
 
-def _is_numpy_backend(self) -> bool:
-    """Return True when the active backend uses NumPy arrays on host."""
-    return getattr(self, "platform", None) == "numpy"
-
-
 def _get_basis_strings(self, nqubits: int, weight: int) -> List[str]:
     """Return cached lexicographically sorted basis strings."""
     self._ensure_basis_cache(nqubits, weight)
@@ -188,11 +183,10 @@ def _get_backend_index_array(
     self, cache_name: str, key, host_array: np.ndarray
 ) -> ArrayLike:
     """Return backend-native cached integer indices, or host indices for NumPy."""
-    host_array = np.asarray(host_array, dtype=np.int64)
-    if self._is_numpy_backend():
-        return host_array
-
-    cache = getattr(self, cache_name)
+    cache = getattr(self, cache_name, None)
+    if cache is None:
+        cache = {}
+        setattr(self, cache_name, cache)
     if key not in cache:
         cache[key] = self.cast(host_array, dtype=self.int64)
     return cache[key]
@@ -229,28 +223,22 @@ def _get_projected_indices(
 
 def _ensure_basis_cache(self, nqubits: int, weight: int):
     """Populate cached fixed-weight basis metadata used by hot paths."""
-    if not hasattr(self, "_basis_bits_cache"):
-        self._basis_bits_cache = {}
-    if not hasattr(self, "_basis_int_cache"):
-        self._basis_int_cache = {}
-    if not hasattr(self, "_basis_strings_cache"):
-        self._basis_strings_cache = {}
-    if not hasattr(self, "_basis_powers_cache"):
-        self._basis_powers_cache = {}
-    if not hasattr(self, "_dict_indexes_cache"):
-        self._dict_indexes_cache = {}
-    if not hasattr(self, "_single_index_cache"):
-        self._single_index_cache = {}
-    if not hasattr(self, "_double_index_cache"):
-        self._double_index_cache = {}
-    if not hasattr(self, "_phase_index_cache"):
-        self._phase_index_cache = {}
-    if not hasattr(self, "_measurement_index_cache"):
-        self._measurement_index_cache = {}
-    if not hasattr(self, "_projected_index_cache"):
-        self._projected_index_cache = {}
-    if not hasattr(self, "_n_qubit_flat_cache"):
-        self._n_qubit_flat_cache = {}
+
+    for cache_name in (
+        "_basis_bits_cache",
+        "_basis_int_cache",
+        "_basis_strings_cache",
+        "_basis_powers_cache",
+        "_dict_indexes_cache",
+        "_single_index_cache",
+        "_double_index_cache",
+        "_phase_index_cache",
+        "_measurement_index_cache",
+        "_projected_index_cache",
+        "_n_qubit_flat_cache",
+    ):
+        if not hasattr(self, cache_name):
+            setattr(self, cache_name, {})
 
     key = (nqubits, weight)
     if key not in self._basis_int_cache:
@@ -391,46 +379,6 @@ def execute_circuit(
             "Please switch the execution device to a "
             "different one using ``qibo.set_device``.",
         )
-
-
-def _get_cached_strings(
-    self, nqubits: int, weight: int, ncontrols: int = 0, two_qubit_gate: bool = True
-) -> Union[ArrayLike, List[ArrayLike]]:
-    """Generate list of strings necessary for the custom ``apply_gate`` method.
-
-    Given the total number of qubits ``nqubits``, the Hamming ``weight`` to be
-    preserved, and the number of controls ``ncontrols`` in the gate, returns a
-    sequence of bitstrings for the custom ``apply_gate`` method.
-
-    The sequence is generated for the first gate with a unique combination of ``nqubits``,
-    ``weight`` and ``ncontrols``, and then cached to be resued for similar gates.
-
-    Args:
-        nqubits (int): total number of qubits in the quantum system.
-        weight (int): Hamming weight of the state that gates are acting on.
-        ncontrols (int, optional): number of controls in the gate that is being
-            applied to the state. Defaults to :math:`0`.
-        two_qubit_gate (bool, optional): if ``True``, generate strings assuming the
-            gate is a two-qubit gate. If ``False``, it assumes the gate is a single-qubit
-            gate. Defaults to ``True``.
-
-    Returns:
-        ArrayLike or List[int]: Bitstrings for two-qubit gates or a list of two arrays
-        of bitstrings for single-qubit gates.
-    """
-    if two_qubit_gate:
-        n_other = nqubits - 2 - ncontrols
-        hw_other = weight - 1 - ncontrols
-        return _global_fixed_weight_bits(n_other, hw_other).astype(np.int64, copy=False)
-
-    n_other = nqubits - 1 - ncontrols
-    strings_0 = _global_fixed_weight_bits(n_other, weight - ncontrols).astype(
-        np.int64, copy=False
-    )
-    strings_1 = _global_fixed_weight_bits(n_other, weight - 1 - ncontrols).astype(
-        np.int64, copy=False
-    )
-    return [strings_0, strings_1]
 
 
 def _get_lexicographical_order(
@@ -728,16 +676,9 @@ def _apply_gate_n_qubit(
         full_dim = 2 ** (ntargets + ncontrols)
         ctrl_mask = (1 << ncontrols) - 1
         expanded_matrix = self.identity(full_dim, dtype=gate_matrix.dtype)
-
-        if self._is_numpy_backend():
-            active_rows = (
-                np.arange(2**ntargets, dtype=np.int64) << ncontrols
-            ) | ctrl_mask
-            expanded_matrix[np.ix_(active_rows, active_rows)] = gate_matrix
-        else:
-            target_rows = self.arange(2**ntargets)
-            row_index = (target_rows << ncontrols) | ctrl_mask
-            expanded_matrix[row_index[:, None], row_index[None, :]] = gate_matrix
+        target_rows = self.arange(2**ntargets, dtype=self.int64)
+        row_index = (target_rows << ncontrols) | ctrl_mask
+        expanded_matrix[row_index[:, None], row_index[None, :]] = gate_matrix
         gate_matrix = expanded_matrix
 
     active_qubits = qubits + controls
@@ -755,48 +696,29 @@ def _apply_gate_n_qubit(
         )
         self._n_qubit_flat_cache[key] = (
             self._get_backend_index_array(
-                "_n_qubit_flat_cache", key + ("local",), host_local_indices
+                "_backend_index_cache", key + ("local",), host_local_indices
             ),
             self._get_backend_index_array(
-                "_n_qubit_flat_cache", key + ("rows",), host_rows
+                "_backend_index_cache", key + ("rows",), host_rows
             ),
             self._get_backend_index_array(
-                "_n_qubit_flat_cache", key + ("cols",), host_cols
+                "_backend_index_cache", key + ("cols",), host_cols
             ),
             self._get_backend_index_array(
-                "_n_qubit_flat_cache", key + ("target",), host_target_indices
+                "_backend_index_cache", key + ("target",), host_target_indices
             ),
-            host_rows,
-            host_cols,
-            host_target_indices,
-            host_local_indices,
         )
 
-    (
-        local_indices,
-        rows,
-        cols,
-        target_indices,
-        host_rows,
-        host_cols,
-        host_target_indices,
-        host_local_indices,
-    ) = self._n_qubit_flat_cache[key]
+    local_indices, rows, cols, target_indices = self._n_qubit_flat_cache[key]
 
     d = state.shape[0]
     new_state = self.zeros(d, dtype=state.dtype)
     state = self.ascontiguousarray(state)
 
-    if self._is_numpy_backend():
-        coeffs = gate_matrix[host_cols, host_local_indices[host_rows]]
-        values = coeffs * state[host_rows]
-        idcs = host_target_indices
-    else:
-        coeffs = gate_matrix[cols, local_indices[rows]]
-        values = coeffs * state[rows]
-        idcs = target_indices
+    coeffs = gate_matrix[cols, local_indices[rows]]
+    values = coeffs * state[rows]
 
-    self.add_at(new_state, idcs, values)
+    self.add_at(new_state, target_indices, values)
     return new_state
 
 
@@ -891,18 +813,10 @@ def collapse_state(
     measured_indices = self._get_measurement_indices(nqubits, weight, qubits)
     shot_bits = self.samples_to_binary(shot, len(qubits))[0]
     shot_index = int("".join(str(s) for s in shot_bits), 2)
-
-    if self._is_numpy_backend():
-        keep_mask = measured_indices == shot_index
-        state = np.where(keep_mask, state, np.zeros_like(state))
-    else:
-        keep_mask = measured_indices == shot_index
-        state = self.where(
-            self.cast(keep_mask, dtype=bool), state, self.zeros_like(state)
-        )
+    keep_mask = measured_indices == shot_index
+    state = self.where(keep_mask, state, self.zeros_like(state))
 
     if normalize:
-        norm = self.sqrt(self.sum(self.abs(state) ** 2))
-        state = state / norm
+        state = state / self.vector_norm(state)
 
     return state
