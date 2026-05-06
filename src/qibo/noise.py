@@ -591,7 +591,39 @@ class GTHNoiseModel(NoiseModel):
     emulate generic or hypothetical hardware noise for simulation and testing
     purposes.
 
-    Example:
+    Example for 2-qubit noise (based on IQM Garnet device's qubits 1 and 4, dated 2025-09-01):
+
+    .. testcode::
+
+        from qibo import Circuit, gates
+        from qibo.noise import GTHNoiseModel
+        from qibo.backends import NumpyBackend
+        import numpy as np
+
+        # Define a dictionary containing 4-tuples representing:
+        # [depolarizing_error, amplitude_damping_error, dephasing_error, readout_error]:
+        single_qb_errors = {
+            1: [0.00799362, 0.00260128, 0.00304553, 0.00631564],
+            4: [0.00541111, 0.00270103, 0.00747088, 0.00748984],
+        }
+
+        # Define a dictionary containing two-qubit depolarizing error.
+        two_qb_errors = {(1, 4): 0.02199975}
+
+        # Construct composite noise model
+        noise_model = GTHNoiseModel.from_parameters(single_qb_errors, two_qb_errors)
+
+        # Apply to circuit
+        c = Circuit(5, density_matrix=True)
+        c.add(gates.PRX(1, np.pi/3, np.pi/4))
+        c.add(gates.PRX(4, np.pi/3, np.pi/2))
+        c.add(gates.CZ(1, 4))
+        c.add(gates.M(1))
+        c.add(gates.M(4))
+
+        c_noisy = noise_model.apply(c)
+
+    Example for 4-qubit noise (ficitious parameters):
 
     .. testcode::
 
@@ -606,7 +638,7 @@ class GTHNoiseModel(NoiseModel):
             1: [0.3, 0.4, 0.2, 0.1],
             2: [0.3, 0.4, 0.2, 0.3],
             4: [0.5, 0.3, 0.4, 0.6],
-            5: [0.5, 0.2, 0.4, 0.1]
+            5: [0.5, 0.2, 0.4, 0.1],
         }
 
         # Define a dictionary containing two-qubit depolarizing error.
@@ -614,7 +646,7 @@ class GTHNoiseModel(NoiseModel):
             (1, 4): 0.25,
             (4, 5): 0.1,
             (2, 5): 0.21,
-            (1, 2): 0.14
+            (1, 2): 0.14,
         }
 
         # Construct composite noise model
