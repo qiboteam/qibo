@@ -38,12 +38,9 @@ def test_plot_circuit(nqubits):
     circuit.add(gates.M(0))
     circuit.add(gates.M(1))
     _, fig = plot_circuit(circuit)
-    assert (
-        match_figure_image(
-            fig, BASEPATH + "/test_plot_circuit_" + str(nqubits) + ".npy"
-        )
-        == True
-    )
+    test_file = f"{BASEPATH}/test_plot_circuit_{nqubits}.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
@@ -52,12 +49,9 @@ def test_circuit_measure(nqubits):
     circuit = Circuit(nqubits)
     circuit.add(gates.M(qubit) for qubit in range(nqubits - 1))
     _, fig = plot_circuit(circuit)
-    assert (
-        match_figure_image(
-            fig, BASEPATH + "/test_circuit_measure_" + str(nqubits) + ".npy"
-        )
-        == True
-    )
+    test_file = f"{BASEPATH}/test_circuit_measure_{nqubits}.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5, 6])
@@ -129,17 +123,17 @@ def test_complex_circuit(clustered, fold):
     )
     _, fig2 = plot_circuit(circuit, cluster_gates=clustered, scale=0.70, fold=fold)
 
-    test_fig1_prefix = f"{BASEPATH}/test_complex_circuit_fig1_"
-    test_fig2_prefix = f"{BASEPATH}/test_complex_circuit_fig2_"
     clustered_status = "true" if clustered else "false"
     fold_suffix = f"_fold_{fold}" if fold > 0 else ""
-    extension = ".npy"
+    test_file1 = (
+        f"{BASEPATH}/test_complex_circuit_fig1_{clustered_status}{fold_suffix}.npy"
+    )
+    test_file2 = (
+        f"{BASEPATH}/test_complex_circuit_fig2_{clustered_status}{fold_suffix}.npy"
+    )
 
-    test_file_fig1 = f"{test_fig1_prefix}{clustered_status}{fold_suffix}{extension}"
-    test_file_fig2 = f"{test_fig2_prefix}{clustered_status}{fold_suffix}{extension}"
-
-    assert match_figure_image(fig1, test_file_fig1)
-    assert match_figure_image(fig2, test_file_fig2)
+    assert match_figure_image(fig1, test_file1)
+    assert match_figure_image(fig2, test_file2)
 
 
 def test_align_gate():
@@ -147,7 +141,9 @@ def test_align_gate():
     circuit = Circuit(3)
     circuit.add(gates.Align(0))
     _, fig = plot_circuit(circuit)
-    assert match_figure_image(fig, BASEPATH + "/test_align_gate.npy") == True
+    test_file = f"{BASEPATH}/test_align_gate.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("fold", [2, 3])
@@ -179,23 +175,20 @@ def test_circuit_fused_gates(clustered):
     _, fig = plot_circuit(
         circuit.fuse(), scale=0.8, cluster_gates=clustered, style="quantumspain"
     )
-    assert (
-        match_figure_image(
-            fig,
-            BASEPATH
-            + "/test_circuit_fused_gates_"
-            + ("true" if clustered else "false")
-            + ".npy",
-        )
-        == True
-    )
+
+    clustered_status = "true" if clustered else "false"
+    test_file = f"{BASEPATH}/test_circuit_fused_gates_{clustered_status}.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 def test_empty_circuit():
     """Test for printing empty circuit"""
     circuit = Circuit(2)
     _, fig = plot_circuit(circuit)
-    assert match_figure_image(fig, BASEPATH + "/test_empty_circuit.npy") == True
+    test_file = f"{BASEPATH}/test_empty_circuit.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -209,16 +202,11 @@ def test_circuit_entangled_entropy(clustered):
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CallbackGate(entropy))
     _, fig = plot_circuit(circuit, scale=0.8, cluster_gates=clustered)
-    assert (
-        match_figure_image(
-            fig,
-            BASEPATH
-            + "/test_circuit_entangled_entropy_"
-            + ("true" if clustered else "false")
-            + ".npy",
-        )
-        == True
-    )
+
+    clustered_status = "true" if clustered else "false"
+    test_file = f"{BASEPATH}/test_circuit_entangled_entropy_{clustered_status}.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 def test_layered_circuit():
@@ -242,8 +230,10 @@ def test_layered_circuit():
 
     ansatz.add(gates.RY(q, theta=0) for q in range(nqubits))
     ansatz.add(gates.M(qubit) for qubit in range(2))
+    test_file = f"{BASEPATH}/test_layered_circuit.npy"
     _, fig = plot_circuit(ansatz)
-    assert match_figure_image(fig, BASEPATH + "/test_layered_circuit.npy") == True
+
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("fold", [-1, 1])
@@ -304,7 +294,9 @@ def test_fuse_cluster():
     circuit.add(gates.X(1))
     circuit.add(gates.M(qubit) for qubit in range(2))
     _, fig = plot_circuit(circuit.fuse())
-    assert match_figure_image(fig, BASEPATH + "/test_fuse_cluster.npy") == True
+    test_file = f"{BASEPATH}/test_fuse_cluster.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("fold", [-1, 2, 3])
@@ -341,9 +333,9 @@ def test_plot_unitaries_same_init():
     circuit.add(gates.Unitary(array, 2, 1, 3))
 
     _, fig = plot_circuit(circuit)
-    assert (
-        match_figure_image(fig, BASEPATH + "/test_plot_unitaries_same_init.npy") == True
-    )
+    test_file = f"{BASEPATH}/test_plot_unitaries_same_init.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 def test_plot_unitaries_different_init():
@@ -356,10 +348,9 @@ def test_plot_unitaries_different_init():
     circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=44), 2, 1, 3))
 
     _, fig = plot_circuit(circuit)
-    assert (
-        match_figure_image(fig, BASEPATH + "/test_plot_unitaries_different_init.npy")
-        == True
-    )
+    test_file = f"{BASEPATH}/test_plot_unitaries_different_init.npy"
+
+    assert match_figure_image(fig, test_file) == True
 
 
 @pytest.mark.parametrize("fold", [-1, 3, 4, 5])
@@ -457,14 +448,12 @@ def test_plot_circuit_internal():
 
     ax1 = _plot_quantum_circuit(gates_plot, params, labels, scale=0.7)
     ax2 = _plot_quantum_circuit(gates_plot, params, [], scale=0.7)
-    assert (
-        match_figure_image(ax1.figure, BASEPATH + "/test_plot_circuit_internal_ax1.npy")
-        == True
-    )
-    assert (
-        match_figure_image(ax2.figure, BASEPATH + "/test_plot_circuit_internal_ax2.npy")
-        == True
-    )
+    test_file1 = f"{BASEPATH}/test_plot_circuit_internal_ax1.npy"
+    test_file2 = f"{BASEPATH}/test_plot_circuit_internal_ax2.npy"
+
+    assert match_figure_image(ax1.figure, test_file1) == True
+
+    assert match_figure_image(ax2.figure, test_file2) == True
 
 
 def test_empty_gates():

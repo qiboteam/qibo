@@ -1025,9 +1025,10 @@ def _get_flipped_index(target: str, labels: list) -> int:
         int: Index in plotting coordinates.
     """
 
-    if isinstance(target, str) and target.count("_") > 1:
-        end_index = target.find("_{" + target.split("_")[2] + "}")
-        target = target[:end_index]
+    if isinstance(target, str) and target.startswith("q_{") and target.count("_") > 1:
+        end_index = target.find("}")
+        if end_index != -1:
+            target = target[: end_index + 1]
 
     nq = len(labels)
     i = labels.index(target)
