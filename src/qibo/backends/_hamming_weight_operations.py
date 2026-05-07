@@ -134,7 +134,7 @@ def _gray_code(self, initial_string: ArrayLike) -> ArrayLike:
     from qibo.models._encodings import _ehrlich_algorithm  # pylint: disable=C0415
 
     strings = _ehrlich_algorithm(initial_string, return_indices=False)
-    strings = [list(string) for string in strings]
+    strings = [[int(b) for b in string] for string in strings]
     strings = self.cast(strings, dtype=self.int64)
 
     return strings
@@ -192,6 +192,14 @@ def _get_cached_strings(
     return strings
 
 
+def _cast_value_to_str(self, value):
+    return (
+        str(value.item())
+        if self.name == "hamming_weight" and self.platform == "pytorch"
+        else str(value)
+    )
+
+
 def _get_lexicographical_order(
     self, nqubits: int, weight: int
 ) -> Dict[str, Tuple[int, ...]]:
@@ -214,7 +222,8 @@ def _get_lexicographical_order(
 
     lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
     lexicographical_order = [
-        "".join(str(elem) for elem in item) for item in lexicographical_order
+        "".join(self._cast_value_to_str(elem) for elem in item)
+        for item in lexicographical_order
     ]
     lexicographical_order.sort()
     lexicographical_order_int = [int(item, base=2) for item in lexicographical_order]
@@ -402,7 +411,6 @@ def _apply_gate_two_qubit(
         self._dict_cached_strings_two[key] = self._get_cached_strings(
             nqubits, weight, ncontrols
         )
-
     strings = self._dict_cached_strings_two[key]
 
     matrix = gate.matrix(backend=self)
@@ -412,22 +420,37 @@ def _apply_gate_two_qubit(
 
     if weight - ncontrols > 0 and weight not in [0, nqubits]:
         indexes_in = self.zeros((len(strings), nqubits), dtype=self.int64)
-        indexes_in[:, other_qubits] = strings
+
+        strings_t = self.cast(strings, dtype=self.int64)
+        pair_10 = self.cast([1, 0], dtype=self.int64)
+        pair_01 = self.cast([0, 1], dtype=self.int64)
+
+        indexes_in[:, other_qubits] = strings_t
         if len(controls) > 0:
             indexes_in[:, controls] = 1
-        indexes_in[:, qubits] = [1, 0]
+        indexes_in[:, qubits] = pair_10
+
         indexes_out = self.cast(indexes_in, dtype=indexes_in.dtype, copy=True)
-        indexes_out[:, qubits] = [0, 1]
+        indexes_out[:, qubits] = pair_01
+
         indexes_in = self.cast(
             [
-                self._dict_indexes["".join(str(e) for e in elem)][0]
+                (
+                    self._dict_indexes[
+                        "".join(self._cast_value_to_str(e) for e in elem)
+                    ][0]
+                )
                 for elem in indexes_in
             ],
             dtype=self.int64,
         )
         indexes_out = self.cast(
             [
-                self._dict_indexes["".join(str(e) for e in elem)][0]
+                (
+                    self._dict_indexes[
+                        "".join((self._cast_value_to_str(e)) for e in elem)
+                    ][0]
+                )
                 for elem in indexes_out
             ],
             dtype=self.int64,
