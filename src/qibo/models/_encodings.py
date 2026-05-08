@@ -361,14 +361,14 @@ def _ehrlich_algorithm(
     """
     k = np.unique(initial_string, return_counts=True)
     if len(k[1]) == 1:  # pragma: no cover
-        return ["".join([str(item) for item in initial_string])]
+        return ["".join([str(item) for item in np.array(initial_string)])]
 
     k = k[1][1]
     n = len(initial_string)
     n_choose_k = int(binom(n, k))
 
     markers = _get_markers(initial_string, last_run=False)
-    string = initial_string
+    string = np.array(initial_string)
     strings = ["".join(str(elem) for elem in string[::-1])]
     controls_and_targets = []
     for _ in range(n_choose_k - 1):
@@ -732,6 +732,7 @@ def _get_int_type(x: int, backend: Optional[Backend] = None) -> DTypeLike:
 def _get_markers(bitstring: ArrayLike, last_run: bool = False) -> Set[int]:
     """Subroutine of the Ehrlich algorithm."""
     nqubits = len(bitstring)
+    bitstring = list(bitstring)
     markers = [len(bitstring) - 1]
     for ind, value in zip(range(nqubits - 2, -1, -1), bitstring[::-1][1:]):
         if value == bitstring[-1]:

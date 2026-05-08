@@ -3,10 +3,107 @@ import sys
 import numpy as np
 import pytest
 
+import qibo
 from qibo import Circuit, construct_backend, gates, list_available_backends, set_backend
 from qibo.backends import MetaBackend
 
 from .conftest import AVAILABLE_BACKENDS
+
+
+def test_validate_nqubits_state_allocation(backend):
+    """Test that state allocation raises ValueError when nqubits exceeds limits.
+
+    Note: some backends (e.g. qibojit) override ``zero_state`` without calling
+    ``super()``, so the base-class validation is bypassed for that method.
+    Methods that are not overridden (``plus_state``, ``minus_state``,
+    ``maximally_mixed_state``) are validated on all backends.
+    """
+    original_sv = qibo.get_max_qubits()
+    original_dm = qibo.get_max_qubits_dm()
+    try:
+        qibo.set_max_qubits(5)
+        qibo.set_max_qubits_dm(4)
+        # plus_state / minus_state are never overridden, so validation works everywhere
+        with pytest.raises(ValueError, match="set_max_qubits\\("):
+            backend.plus_state(10)
+        with pytest.raises(ValueError, match="state vector"):
+            backend.minus_state(10)
+        with pytest.raises(ValueError, match="set_max_qubits_dm\\("):
+            backend.plus_state(10, density_matrix=True)
+        with pytest.raises(ValueError, match="density matrix"):
+            backend.minus_state(10, density_matrix=True)
+        with pytest.raises(ValueError, match="density matrix"):
+            backend.maximally_mixed_state(10)
+        # zero_state may be overridden without calling super() (e.g. qibojit),
+        # so validation is not guaranteed; just verify it doesn't break
+        try:
+            backend.zero_state(10)
+        except ValueError as e:
+            assert "state vector" in str(e)
+        try:
+            backend.zero_state(10, density_matrix=True)
+        except ValueError as e:
+            assert "density matrix" in str(e)
+        # within limits should work
+        state = backend.zero_state(5)
+        assert state.shape == (2**5,)
+        state_dm = backend.zero_state(4, density_matrix=True)
+        assert state_dm.shape == (2**4, 2**4)
+    finally:
+        qibo.set_max_qubits(original_sv)
+        qibo.set_max_qubits_dm(original_dm)
+
+
+def test_validate_nqubits_circuit_execution(backend):
+    """Test that circuit execution raises ValueError when nqubits exceeds limits on any backend."""
+    original_sv = qibo.get_max_qubits()
+    original_dm = qibo.get_max_qubits_dm()
+    try:
+        qibo.set_max_qubits(3)
+        qibo.set_max_qubits_dm(3)
+        with pytest.raises(ValueError, match="state vector"):
+            c = Circuit(10)
+            c.add(gates.H(0))
+            backend.execute_circuit(c)
+        with pytest.raises(ValueError, match="density matrix"):
+            c = Circuit(10, density_matrix=True)
+            c.add(gates.H(0))
+            backend.execute_circuit(c)
+        # within limits should work
+        c = Circuit(3)
+        c.add(gates.H(0))
+        result = backend.execute_circuit(c)
+        assert result.state().shape == (2**3,)
+    finally:
+        qibo.set_max_qubits(original_sv)
+        qibo.set_max_qubits_dm(original_dm)
+
+
+def test_validate_nqubits_unlimited(backend):
+    """Test that setting -1 disables the qubit limit."""
+    original_sv = qibo.get_max_qubits()
+    original_dm = qibo.get_max_qubits_dm()
+    try:
+        qibo.set_max_qubits(-1)
+        qibo.set_max_qubits_dm(-1)
+        # circuit execution should not raise with limits disabled
+        c = Circuit(10)
+        c.add(gates.H(0))
+        result = backend.execute_circuit(c)
+        assert result.state().shape == (2**10,)
+    finally:
+        qibo.set_max_qubits(original_sv)
+        qibo.set_max_qubits_dm(original_dm)
+
+
+def test_validate_nqubits_invalid_type(backend):
+    """Test that _validate_nqubits rejects non-integer or non-positive nqubits."""
+    # plus_state is never overridden, so validation always runs
+    with pytest.raises(ValueError, match="positive integer"):
+        backend.plus_state(-1)
+    with pytest.raises(ValueError, match="positive integer"):
+        backend.plus_state(0)
+
 
 ####################### Test `matrix` #######################
 GATES = [
