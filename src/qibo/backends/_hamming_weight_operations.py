@@ -398,7 +398,21 @@ def _get_lexicographical_order(
     Returns:
         dict: Dictionary with the cached bitstrings and the aforementioned map.
     """
-    return self._build_dict_indexes(nqubits, weight)
+    n_choose_k = int(binom(nqubits, weight))
+    indexes = list(range(n_choose_k))
+
+    lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
+    lexicographical_order = [
+        "".join(self._cast_value_to_str(elem) for elem in item)
+        for item in lexicographical_order
+    ]
+    lexicographical_order.sort()
+    lexicographical_order_int = [int(item, base=2) for item in lexicographical_order]
+    _dict_indexes = dict(
+        zip(lexicographical_order, zip(indexes, lexicographical_order_int))
+    )
+
+    return _dict_indexes
 
 
 def _get_single_qubit_matrix(self, gate: Gate) -> Tuple[complex, ...]:
@@ -568,6 +582,43 @@ def _apply_gate_two_qubit(
     matrix_1001, matrix_1010 = matrix[2, 1], matrix[2, 2]
 
     if weight - ncontrols > 0 and weight not in [0, nqubits]:
+        indexes_in = self.zeros((len(strings), nqubits), dtype=self.int64)
+
+        strings_t = self.cast(strings, dtype=self.int64)
+        pair_10 = self.cast([1, 0], dtype=self.int64)
+        pair_01 = self.cast([0, 1], dtype=self.int64)
+
+        indexes_in[:, other_qubits] = strings_t
+        if len(controls) > 0:
+            indexes_in[:, controls] = 1
+        indexes_in[:, qubits] = pair_10
+
+        indexes_out = self.cast(indexes_in, dtype=indexes_in.dtype, copy=True)
+        indexes_out[:, qubits] = pair_01
+
+        indexes_in = self.cast(
+            [
+                (
+                    self._dict_indexes[
+                        "".join(self._cast_value_to_str(e) for e in elem)
+                    ][0]
+                )
+                for elem in indexes_in
+            ],
+            dtype=self.int64,
+        )
+        indexes_out = self.cast(
+            [
+                (
+                    self._dict_indexes[
+                        "".join((self._cast_value_to_str(e)) for e in elem)
+                    ][0]
+                )
+                for elem in indexes_out
+            ],
+            dtype=self.int64,
+        )
+
         old_in, old_out = state[indexes_in], state[indexes_out]
         new_amplitudes_in = matrix_1010 * old_in + matrix_1001 * old_out
         new_amplitudes_out = matrix_0101 * old_out + matrix_0110 * old_in
