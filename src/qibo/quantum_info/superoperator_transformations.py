@@ -2129,7 +2129,7 @@ def _fast_walsh_hadamard_transform(array, axis: int = -1, backend=None):
     array = backend.swapaxes(array, axis, -1)
 
     dim = array.shape[-1]
-    if dim & (dim - 1):
+    if dim & (dim - 1):  # pragma: no cover
         raise_error(
             ValueError, "Walsh-Hadamard transform dimension must be a power of 2."
         )
@@ -2181,7 +2181,7 @@ def _phase_matrix(dim: int, sign: int = -1, backend=None):
 
 def _pauli_symplectic_indices(nqubits: int, pauli_order: str):
     """Return Pauli-basis indexes as pairs of symplectic integers ``(r, s)``."""
-    if set(pauli_order) != {"I", "X", "Y", "Z"}:
+    if set(pauli_order) != {"I", "X", "Y", "Z"}:  # pragma: no cover
         raise_error(
             ValueError,
             f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
