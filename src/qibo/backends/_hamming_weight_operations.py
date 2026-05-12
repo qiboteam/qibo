@@ -17,50 +17,105 @@ from qibo.gates.abstract import Gate
 
 
 @lru_cache(maxsize=None)
-def _global_basis_powers(nqubits: int) -> np.ndarray:
-    """Return powers used to encode bitstrings as integers in lexicographic order."""
-    if nqubits == 0:  # pragma: no cover
-        return np.zeros((0,), dtype=np.uint64)
-    return (1 << np.arange(nqubits - 1, -1, -1, dtype=np.uint64)).astype(np.uint64)
+def _global_nstates(nqubits: int, weight: int) -> int:
+    """Return the dimension of the fixed-weight subspace."""
+    if weight < 0 or weight > nqubits:
+        return 0
+    return comb(nqubits, weight)
 
 
 @lru_cache(maxsize=None)
-def _global_fixed_weight_ints(nqubits: int, weight: int) -> np.ndarray:
-    """Return lexicographically sorted integer encodings of fixed-weight bitstrings."""
-    if weight < 0 or weight > nqubits:
-        return np.empty((0,), dtype=np.uint64)
-    if nqubits == 0:  # pragma: no cover
-        return (
-            np.array([0], dtype=np.uint64)
-            if weight == 0
-            else np.empty((0,), dtype=np.uint64)
-        )
+def _global_binom_table(nqubits: int, weight: int) -> np.ndarray:
+    """Return binomial coefficients C(n, k) for 0 <= n <= nqubits and 0 <= k <= weight."""
+    table = np.zeros((nqubits + 1, weight + 1), dtype=np.int64)
+    table[:, 0] = 1
+    for n in range(1, nqubits + 1):
+        upto = min(n, weight)
+        for k in range(1, upto + 1):
+            if k == n:
+                table[n, k] = 1
+            else:
+                table[n, k] = table[n - 1, k] + table[n - 1, k - 1]
+    return table
 
-    nstates = comb(nqubits, weight)
-    values = np.fromiter(
-        (
-            sum(1 << pos for pos in positions)
-            for positions in combinations(range(nqubits), weight)
-        ),
-        dtype=np.uint64,
-        count=nstates,
-    )
-    values.sort()
-    return values
+
+def _rank_fixed_weight_bitstrings(
+    bitstrings: np.ndarray, nqubits: int, weight: int
+) -> np.ndarray:
+    """Return lexicographic ranks of fixed-weight bitstrings."""
+    bits = np.asarray(bitstrings, dtype=np.int8)
+    if bits.ndim == 1:
+        bits = bits[None, :]
+
+    if bits.shape[1] != nqubits:
+        raise ValueError("Bitstrings have inconsistent length.")
+
+    table = _global_binom_table(nqubits, weight)
+    ranks = np.zeros(bits.shape[0], dtype=np.int64)
+    remaining = np.full(bits.shape[0], weight, dtype=np.int64)
+
+    for pos in range(nqubits):
+        ones_mask = bits[:, pos].astype(bool)
+        if np.any(ones_mask):
+            rem_positions = nqubits - pos - 1
+            ranks[ones_mask] += table[rem_positions, remaining[ones_mask]]
+            remaining[ones_mask] -= 1
+
+    return ranks
+
+
+def _lex_rank_from_one_positions(
+    nqubits: int, one_positions, weight: int, table: np.ndarray
+) -> int:
+    """Return lexicographic rank from sorted positions of ones."""
+    rank = 0
+    remaining = weight
+    for pos in one_positions:
+        rank += table[nqubits - pos - 1, remaining]
+        remaining -= 1
+    return rank
+
+
+def _lex_rank_from_zero_positions(
+    nqubits: int, zero_positions, nzeros: int, table: np.ndarray
+) -> int:
+    """Return lexicographic rank from sorted positions of zeros."""
+    rank = 0
+    start = 0
+    remaining = nzeros
+    for zpos in zero_positions:
+        for q in range(start, zpos):
+            rank += table[nqubits - q - 1, remaining - 1]
+        start = zpos + 1
+        remaining -= 1
+    return rank
 
 
 @lru_cache(maxsize=None)
 def _global_fixed_weight_bits(nqubits: int, weight: int) -> np.ndarray:
     """Return lexicographically sorted fixed-weight bitstrings."""
-    ints = _global_fixed_weight_ints(nqubits, weight)
-    if ints.size == 0:
+    nstates = _global_nstates(nqubits, weight)
+    if nstates == 0:
         return np.empty((0, nqubits), dtype=np.int8)
+
     if nqubits == 0:  # pragma: no cover
         return np.zeros((1, 0), dtype=np.int8)
 
-    shifts = np.arange(nqubits - 1, -1, -1, dtype=np.uint64)
-    bits = ((ints[:, None] >> shifts[None, :]) & 1).astype(np.int8, copy=False)
-    return bits
+    table = _global_binom_table(nqubits, weight)
+    nzeros = nqubits - weight
+
+    if weight <= nzeros:
+        basis = np.zeros((nstates, nqubits), dtype=np.int8)
+        for one_positions in combinations(range(nqubits), weight):
+            rank = _lex_rank_from_one_positions(nqubits, one_positions, weight, table)
+            basis[rank, one_positions] = 1
+    else:
+        basis = np.ones((nstates, nqubits), dtype=np.int8)
+        for zero_positions in combinations(range(nqubits), nzeros):
+            rank = _lex_rank_from_zero_positions(nqubits, zero_positions, nzeros, table)
+            basis[rank, zero_positions] = 0
+
+    return basis
 
 
 @lru_cache(maxsize=None)
@@ -74,11 +129,7 @@ def _global_fixed_weight_strings(nqubits: int, weight: int) -> Tuple[str, ...]:
 def _global_dict_indexes(nqubits: int, weight: int) -> Dict[str, Tuple[int, int]]:
     """Return the legacy string-to-condensed-index map."""
     strings = _global_fixed_weight_strings(nqubits, weight)
-    ints = _global_fixed_weight_ints(nqubits, weight)
-    return {
-        string: (index, int(encoded))
-        for index, (string, encoded) in enumerate(zip(strings, ints))
-    }
+    return {string: (index, int(string, 2)) for index, string in enumerate(strings)}
 
 
 @lru_cache(maxsize=None)
@@ -96,18 +147,14 @@ def _global_projected_indices(
     if other_bits.size == 0:
         return np.empty((0,), dtype=np.int64)
 
-    bits = np.zeros((len(other_bits), nqubits), dtype=np.int64)
+    bits = np.zeros((len(other_bits), nqubits), dtype=np.int8)
     if len(other_qubits) > 0:
-        bits[:, list(other_qubits)] = other_bits.astype(np.int64, copy=False)
+        bits[:, list(other_qubits)] = other_bits
     if len(controls) > 0:
         bits[:, list(controls)] = 1
-    bits[:, list(qubits)] = np.asarray(qubit_values, dtype=np.int64)
+    bits[:, list(qubits)] = np.asarray(qubit_values, dtype=np.int8)
 
-    encoded = bits @ _global_basis_powers(nqubits).astype(np.int64, copy=False)
-    indices = np.searchsorted(
-        _global_fixed_weight_ints(nqubits, weight).astype(np.int64, copy=False), encoded
-    )
-    return indices.astype(np.int64, copy=False)
+    return _rank_fixed_weight_bitstrings(bits, nqubits, weight)
 
 
 @lru_cache(maxsize=None)
@@ -130,7 +177,7 @@ def _global_n_qubit_flat_cache(
     nqubits: int, weight: int, active_qubits: Tuple[int, ...]
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Return host-side flattened transition data for the n-qubit fallback path."""
-    basis = _global_fixed_weight_bits(nqubits, weight).astype(np.int64, copy=False)
+    basis = _global_fixed_weight_bits(nqubits, weight)
     k = len(active_qubits)
     active_bits = basis[:, list(active_qubits)]
 
@@ -138,32 +185,33 @@ def _global_n_qubit_flat_cache(
     local_indices = (active_bits @ local_powers).astype(np.int64, copy=False)
 
     patterns = (
-        (np.arange(2**k, dtype=np.int64)[:, None] >> np.arange(k - 1, -1, -1)) & 1
-    ).astype(np.int64, copy=False)
+        (
+            np.arange(2**k, dtype=np.int64)[:, None]
+            >> np.arange(k - 1, -1, -1, dtype=np.int64)
+        )
+        & 1
+    ).astype(np.int8, copy=False)
     valid_mask = patterns.sum(axis=1)[None, :] == active_bits.sum(axis=1)[:, None]
 
-    full_powers = _global_basis_powers(nqubits).astype(np.int64, copy=False)
-    powers_active = full_powers[list(active_qubits)]
-    encoded_basis = _global_fixed_weight_ints(nqubits, weight).astype(
-        np.int64, copy=False
-    )
+    rows, cols = np.where(valid_mask)
+    rows = rows.astype(np.int64, copy=False)
+    cols = cols.astype(np.int64, copy=False)
 
-    active_contrib = active_bits @ powers_active
-    base_encoded = encoded_basis - active_contrib
-    pattern_encoded = patterns @ powers_active
-    encoded = base_encoded[:, None] + pattern_encoded[None, :]
+    target_indices = np.empty(rows.shape[0], dtype=np.int64)
+    chunk_rows = max(1, 8_000_000 // max(1, nqubits))
 
-    transitions = -np.ones(encoded.shape, dtype=np.int64)
-    valid_idx = np.where(valid_mask)
-    transitions[valid_idx] = np.searchsorted(encoded_basis, encoded[valid_idx])
-
-    rows, cols = np.where(transitions >= 0)
-    target_indices = transitions[rows, cols].astype(np.int64, copy=False)
+    for start in range(0, rows.shape[0], chunk_rows):
+        stop = min(start + chunk_rows, rows.shape[0])
+        transformed = basis[rows[start:stop]].copy()
+        transformed[:, list(active_qubits)] = patterns[cols[start:stop]]
+        target_indices[start:stop] = _rank_fixed_weight_bitstrings(
+            transformed, nqubits, weight
+        )
 
     return (
         local_indices.astype(np.int64, copy=False),
-        rows.astype(np.int64, copy=False),
-        cols.astype(np.int64, copy=False),
+        rows,
+        cols,
         target_indices,
     )
 
@@ -188,7 +236,7 @@ def _get_backend_index_array(
         cache = {}
         setattr(self, cache_name, cache)
     if key not in cache:
-        cache[key] = self.cast(host_array, dtype=self.int64)
+        cache[key] = self.cast(np.asarray(host_array, dtype=np.int64), dtype=self.int64)
     return cache[key]
 
 
@@ -226,9 +274,7 @@ def _ensure_basis_cache(self, nqubits: int, weight: int):
 
     for cache_name in (
         "_basis_bits_cache",
-        "_basis_int_cache",
         "_basis_strings_cache",
-        "_basis_powers_cache",
         "_dict_indexes_cache",
         "_single_index_cache",
         "_double_index_cache",
@@ -236,19 +282,14 @@ def _ensure_basis_cache(self, nqubits: int, weight: int):
         "_measurement_index_cache",
         "_projected_index_cache",
         "_n_qubit_flat_cache",
+        "_backend_index_cache",
     ):
         if not hasattr(self, cache_name):
             setattr(self, cache_name, {})
 
     key = (nqubits, weight)
-    if key not in self._basis_int_cache:
+    if key not in self._basis_bits_cache:
         self._basis_bits_cache[key] = _global_fixed_weight_bits(nqubits, weight)
-        self._basis_int_cache[key] = _global_fixed_weight_ints(nqubits, weight).astype(
-            np.int64, copy=False
-        )
-        self._basis_powers_cache[key] = _global_basis_powers(nqubits).astype(
-            np.int64, copy=False
-        )
 
 
 def _build_dict_indexes(self, nqubits: int, weight: int) -> Dict[str, Tuple[int, ...]]:
