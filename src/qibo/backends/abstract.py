@@ -1154,9 +1154,9 @@ class Backend:  # pylint: disable=R0904
             return self._apply_gate_controlled_by(gate, state, nqubits)
 
         matrix = gate.matrix(self)
-        matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
 
         if density_matrix:
+            matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
             matrix_conj = self.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
