@@ -24,14 +24,14 @@ class Mitiq(ErrorMitigationRoutine):
     def __post_init__(self):
         if self.method is None:
             raise_error(RuntimeError, "Missing mandatory `method` argument.")
-        self._run_method = f"run_with_{method}"
-        self.method = getattr(mitiq, self.method)
+        self._execute_method = f"execute_with_{self.method}"
+        self.method = getattr(getattr(mitiq, self.method), self.method)
         if self.method_kwargs is None:
             self.method_kwargs = {}
 
     @property
-    def _run(self) -> Callable:
-        return getattr(self.method, self._run_method)
+    def _execute(self) -> Callable:
+        return getattr(self.method, self._execute_method)
 
     def _qibo_observable_to_mitiq(
         self, observable: SymbolicHamiltonian
@@ -58,15 +58,17 @@ class Mitiq(ErrorMitigationRoutine):
 
     def __call__(
         self,
-        circuit: Circuit,
-        observable: SymbolicHamiltonian,
+        circuit: Optional[Circuit] = None,
+        observable: Optional[SymbolicHamiltonian] = None,
         nshots: Optional[int] = None,
         noise_model: Optional[NoiseModel] = None,
         **mitiq_kwargs,
     ):
-        circuit = self._circuit_preprocessing([circuit], noise_model)[0]
-        observable = self._observable(observable)
-        kwargs = self.method_kwargs.update(mitiq_kwargs)
-        if observable is not None:
-            kwargs["observable"] = observable
-        return self._run(circuit, **kwargs)
+        breakpoint()
+        circuit = self._circuit_preprocessing([self._circuit(circuit)], noise_model)[0]
+        #observable = self._observable(observable)
+        kwargs = self.method_kwargs.copy()
+        kwargs.update(mitiq_kwargs)
+        #if observable is not None:
+        #    kwargs["observable"] = observable
+        return self._execute(circuit, **kwargs)

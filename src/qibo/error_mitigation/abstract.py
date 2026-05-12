@@ -143,7 +143,8 @@ class ErrorMitigationRoutine(ABC):
         for circ in circuits:
             if noise is not None:
                 circ = noise.apply(circ)
-            circ, _ = self.transpiler(circ)
+            if self.transpiler is not None:
+                circ, _ = self.transpiler(circ)
             new_circuits.append(circ)
         return new_circuits
 

@@ -5,3 +5,4 @@ from qibo.error_mitigation.iterative_bayesian_unfolding import (
 )
 from qibo.error_mitigation.vncdr import VNCDR
 from qibo.error_mitigation.zne import ZNE
+from qibo.error_mitigation.mitiq import Mitiq
