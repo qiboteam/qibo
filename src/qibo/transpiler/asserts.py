@@ -36,7 +36,7 @@ def assert_transpiling(
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware.
             Defaults to :class:`qibo.transpiler.unroller.NativeGates.default()`.
         check_circuit_equivalence (bool, optional): Check if the transpiled circuit is equivalent to the original one.
-            Defaults to :math:`True`.
+            Defaults to ``True``.
     """
     assert_connectivity(circuit=transpiled_circuit, connectivity=connectivity)
     assert_decomposition(

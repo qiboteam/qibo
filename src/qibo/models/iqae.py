@@ -137,7 +137,7 @@ class IQAE:
                 *range(0, initialization_circuit_a.nqubits, 1)
             )
         )
-        for i in range(k):
+        for _ in range(k):
             qc = qc + amplification_circuit_q
         qc.add(gates.M(initialization_circuit_a.nqubits - 1))
         return qc

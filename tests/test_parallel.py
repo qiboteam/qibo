@@ -7,33 +7,38 @@ import sys
 import numpy as np
 import pytest
 
-import qibo
-from qibo import gates
-from qibo.models import QFT, Circuit
+from qibo import Circuit, gates
+from qibo.models import QFT
 from qibo.parallel import (
     parallel_circuits_execution,
     parallel_execution,
     parallel_parametrized_execution,
 )
+from qibo.quantum_info.random_ensembles import random_statevector
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_states_evaluation(backend):
     """Evaluate circuit for multiple input states."""
     nqubits = 10
-    np.random.seed(0)
-    c = QFT(nqubits)
+    backend.set_seed(0)
+    circuit = QFT(nqubits)
 
-    states = [np.random.random(2**nqubits) for i in range(5)]
+    states = [
+        random_statevector(2**nqubits, dtype=backend.complex128, backend=backend)
+        for _ in range(5)
+    ]
 
     r1 = []
     for state in states:
-        r1.append(backend.execute_circuit(c, state))
+        r1.append(backend.execute_circuit(circuit, state))
 
-    r2 = parallel_execution(c, states=states, processes=2, backend=backend)
+    r2 = parallel_execution(circuit, states=states, processes=2, backend=backend)
     r1 = [x.state() for x in r1]
     r2 = [x.state() for x in r2]
-    backend.assert_allclose(r1, r2)
+
+    for x, y in zip(r1, r2):
+        backend.assert_allclose(x, y)
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
@@ -60,8 +65,10 @@ def test_parallel_circuit_evaluation(backend, use_execute_circuits):
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_circuit_states_evaluation(backend):
     """Evaluate multiple circuits in parallel with different initial states."""
-    circuits = [QFT(n) for n in range(1, 11)]
-    states = [np.random.random(2**n) for n in range(1, 11)]
+    circuits = [QFT(nqubits) for nqubits in range(1, 11)]
+    states = [
+        random_statevector(2**nqubits, backend=backend) for nqubits in range(1, 11)
+    ]
 
     with pytest.raises(TypeError):
         r2 = parallel_circuits_execution(
@@ -88,28 +95,34 @@ def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
     nqubits = 5
     nlayers = 10
-    c = Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for l in range(nlayers):
-        c.add(gates.RY(q, theta=0) for q in range(nqubits))
-        c.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
-        c.add(gates.RY(q, theta=0) for q in range(nqubits))
-        c.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
-        c.add(gates.CZ(0, nqubits - 1))
-    c.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
+        circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
+        circuit.add(gates.CZ(0, nqubits - 1))
+    circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
 
-    size = len(c.get_parameters())
+    size = len(circuit.get_parameters())
     np.random.seed(0)
     parameters = [np.random.uniform(0, 2 * np.pi, size) for i in range(10)]
     state = np.random.random(2**nqubits)
 
     r1 = []
     for params in parameters:
-        c.set_parameters(params)
-        r1.append(backend.execute_circuit(c, backend.cast(state)))
+        circuit.set_parameters(params)
+        r1.append(backend.execute_circuit(circuit, backend.cast(state)))
 
     r2 = parallel_parametrized_execution(
-        c, parameters=parameters, initial_state=state, processes=2, backend=backend
+        circuit,
+        parameters=parameters,
+        initial_state=state,
+        processes=2,
+        backend=backend,
     )
     r1 = [x.state() for x in r1]
     r2 = [x.state() for x in r2]
-    backend.assert_allclose(r1, r2)
+
+    for x, y in zip(r1, r2):
+        backend.assert_allclose(x, y)

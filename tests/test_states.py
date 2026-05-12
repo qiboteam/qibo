@@ -12,18 +12,18 @@ def test_measurement_result_repr():
     assert str(result) == "MeasurementResult(qubits=(0,), nshots=None)"
 
 
-def test_measurement_result_error():
+def test_measurement_result_error(backend):
     result = MeasurementResult(gates.M(0).qubits)
     with pytest.raises(RuntimeError):
-        samples = result.samples()
+        samples = result.samples(backend=backend)
 
 
 @pytest.mark.parametrize("target", range(5))
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_state_representation(backend, target, density_matrix):
-    c = Circuit(5, density_matrix=density_matrix)
-    c.add(gates.H(target))
-    result = backend.execute_circuit(c)
+    circuit = Circuit(5, density_matrix=density_matrix)
+    circuit.add(gates.H(target))
+    result = backend.execute_circuit(circuit)
     bstring = target * "0" + "1" + (4 - target) * "0"
     if density_matrix:
         target_str = 3 * [
@@ -44,9 +44,9 @@ def test_state_representation(backend, target, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_state_representation_max_terms(backend, density_matrix):
-    c = Circuit(5, density_matrix=density_matrix)
-    c.add(gates.H(i) for i in range(5))
-    result = backend.execute_circuit(c)
+    circuit = Circuit(5, density_matrix=density_matrix)
+    circuit.add(gates.H(i) for i in range(5))
+    result = backend.execute_circuit(circuit)
     if density_matrix:
         assert (
             result.symbolic(max_terms=3)
@@ -73,16 +73,16 @@ def test_state_representation_max_terms(backend, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_state_probabilities(backend, density_matrix):
-    c = Circuit(4, density_matrix=density_matrix)
-    c.add(gates.H(i) for i in range(4))
-    result = backend.execute_circuit(c)
+    circuit = Circuit(4, density_matrix=density_matrix)
+    circuit.add(gates.H(i) for i in range(4))
+    result = backend.execute_circuit(circuit)
     # with pytest.raises(ValueError):
     #    final_probabilities = result.probabilities()
 
-    c = Circuit(4, density_matrix=density_matrix)
-    c.add(gates.H(i) for i in range(4))
-    c.add(gates.M(*range(4)))
-    result = backend.execute_circuit(c)
+    circuit = Circuit(4, density_matrix=density_matrix)
+    circuit.add(gates.H(i) for i in range(4))
+    circuit.add(gates.M(*range(4)))
+    result = backend.execute_circuit(circuit)
     final_probabilities = result.probabilities()
     target_probabilities = np.ones(16) / 16
     backend.assert_allclose(final_probabilities, target_probabilities)
@@ -100,17 +100,17 @@ def test_expectation_from_samples(backend):
     h_sym = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
     h_dense = hamiltonians.Hamiltonian(3, h_sym.matrix, backend=backend)
     h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
-    c = Circuit(4)
-    c.add(gates.RX(0, np.random.rand()))
-    c.add(gates.RX(1, np.random.rand()))
-    c.add(gates.RX(2, np.random.rand()))
-    c.add(gates.RX(3, np.random.rand()))
-    c.add(gates.M(0, 1, 2))
+    circuit = Circuit(4)
+    circuit.add(gates.RX(0, np.random.rand()))
+    circuit.add(gates.RX(1, np.random.rand()))
+    circuit.add(gates.RX(2, np.random.rand()))
+    circuit.add(gates.RX(3, np.random.rand()))
     nshots = 10**5
-    result = backend.execute_circuit(c, nshots=nshots)
+    expval = h1.expectation(circuit, nshots=nshots)
+    circuit.add(gates.M(0, 1, 2))
+    result = backend.execute_circuit(circuit, nshots=nshots)
     expval_sym = result.expectation_from_samples(h_sym)
     expval_dense = result.expectation_from_samples(h_dense)
-    expval = h1.expectation(result.state())
     backend.assert_allclose(expval_sym, expval_dense)
     backend.assert_allclose(expval_sym, expval, atol=10 / np.sqrt(nshots))
 
@@ -125,9 +125,9 @@ def test_state_numpy(backend):
 def test_state_dump_load(backend, agnostic_load):
     from os import remove
 
-    c = Circuit(1)
-    c.add(gates.H(0))
-    state = backend.execute_circuit(c)
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    state = backend.execute_circuit(circuit)
     state.dump("tmp.npy")
     if agnostic_load:
         loaded_state = load_result("tmp.npy")

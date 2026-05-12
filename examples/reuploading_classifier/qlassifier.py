@@ -49,11 +49,11 @@ class single_qubit_classifier:
 
     def _initialize_circuit(self):
         """Creates variational circuit."""
-        C = Circuit(1)
+        circuit = Circuit(1)
         for l in range(self.layers):
-            C.add(gates.RY(0, theta=0))
-            C.add(gates.RZ(0, theta=0))
-        return C
+            circuit.add(gates.RY(0, theta=0))
+            circuit.add(gates.RZ(0, theta=0))
+        return circuit
 
     def circuit(self, x):
         """Method creating the circuit for a point (in the datasets).

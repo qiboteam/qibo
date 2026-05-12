@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
@@ -31,13 +31,14 @@ class Channel(Gate):
         )
 
     def apply(self, backend, state, nqubits):  # pragma: no cover
-        raise_error(
-            NotImplementedError,
-            f"{self.__class__.__name__} cannot be applied to state vector.",
-        )
+        statevector = bool(len(state.shape) == 1)
+        if statevector:
+            raise_error(
+                NotImplementedError,
+                f"{self.__class__.__name__} cannot be applied to statevector.",
+            )
 
-    def apply_density_matrix(self, backend, state, nqubits):
-        return backend.apply_channel_density_matrix(self, state, nqubits)
+        return backend.apply_channel(self, state, nqubits)
 
     def apply_clifford(self, backend, state, nqubits):
         return backend.apply_channel(self, state, nqubits)
@@ -99,14 +100,19 @@ class Channel(Gate):
             kraus_op.append(gate)
             kraus_op = kraus_op.matrix(backend)
             kraus_op = vectorization(kraus_op, order=order, backend=backend)
-            super_op = super_op + coeff * backend.np.outer(
-                kraus_op, backend.np.conj(kraus_op)
+            super_op = super_op + coeff * backend.outer(
+                kraus_op, backend.conj(kraus_op)
             )
             del kraus_op
 
         return super_op
 
-    def to_liouville(self, nqubits: int = None, order: str = "row", backend=None):
+    def to_liouville(
+        self,
+        nqubits: Optional[int] = None,
+        order: str = "row",
+        backend: Optional[Backend] = None,
+    ):
         """Returns the Liouville representation of the channel.
 
         Args:
@@ -140,10 +146,10 @@ class Channel(Gate):
 
     def to_pauli_liouville(
         self,
-        nqubits: int = None,
+        nqubits: Optional[int] = None,
         normalize: bool = False,
         pauli_order: str = "IXYZ",
-        backend=None,
+        backend: Optional[Backend] = None,
     ):
         """Returns the Liouville representation of the channel
         in the Pauli basis.
@@ -180,9 +186,7 @@ class Channel(Gate):
             nqubits, normalize, pauli_order=pauli_order, backend=backend
         )
 
-        super_op = (
-            unitary @ super_op @ backend.np.transpose(backend.np.conj(unitary), (1, 0))
-        )
+        super_op = unitary @ super_op @ backend.transpose(backend.conj(unitary), (1, 0))
 
         return super_op
 
@@ -275,8 +279,8 @@ class KrausChannel(Channel):
                 operators = [
                     operators[k].on_qubits(
                         {
-                            operators[k].qubits[i]: qubits[k][i]
-                            for i in range(len(operators[k].qubits))
+                            operators[k].qubits[qubit]: qubits[k][qubit]
+                            for qubit in range(len(operators[k].qubits))
                         }
                     )
                     for k in range(len(operators))
@@ -511,8 +515,13 @@ class DepolarizingChannel(PauliNoiseChannel):
         self.init_args = [qubits]
         self.init_kwargs = {"lam": lam}
 
-    def apply_density_matrix(self, backend, state, nqubits):
-        return backend.depolarizing_error_density_matrix(self, state, nqubits)
+    def apply(self, backend, state, nqubits):
+        density_matrix = bool(len(state.shape) == 2)
+
+        if density_matrix:
+            return backend.depolarizing_error_density_matrix(self, state, nqubits)
+
+        return super().apply(backend, state, nqubits)
 
     def on_qubits(self, qubit_map: dict):
         _qubits = _get_new_qubit_map(self, self.init_args[0], qubit_map)
@@ -666,7 +675,7 @@ class ThermalRelaxationChannel(KrausChannel):
         parameters = self.init_args[1:] + [self.init_kwargs["excited_population"]]
         return self.__class__(qubit, parameters)
 
-    def apply_density_matrix(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits):
         qubit = self.target_qubits[0]
 
         if self.t_1 < self.t_2:
@@ -694,7 +703,7 @@ class ThermalRelaxationChannel(KrausChannel):
         return (
             backend.reset_error_density_matrix(self, state, nqubits)
             - p_z * backend.cast(state)
-            + p_z * backend.apply_gate_density_matrix(Z(0), state, nqubits)
+            + p_z * backend.apply_gate(Z(0), state, nqubits)
         )
 
 
@@ -874,7 +883,7 @@ class ResetChannel(KrausChannel):
         self.name = "ResetChannel"
         self.draw_label = "R"
 
-    def apply_density_matrix(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)
 
     def on_qubits(self, qubit_map: dict):

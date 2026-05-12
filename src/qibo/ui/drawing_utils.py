@@ -1,3 +1,6 @@
+"""Drawing utils for the UI module."""
+
+from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 
 QIBO_DEFAULT_COLOR = "#C194D8"
@@ -7,7 +10,8 @@ QIBO_COMPLEMENTARY_COLOR = "#DE8004"
 class FusedStartGateBarrier(Gate):
     """
     :class:`qibo.ui.drawer_utils.FusedStartGateBarrier` gives room to fused group of gates.
-    Inherit from ``qibo.gates.abstract.Gate``. A special gate barrier gate to pin the starting point of fused gates.
+    Inherit from ``qibo.gates.abstract.Gate``.
+    A special gate barrier gate to pin the starting point of fused gates.
     """
 
     def __init__(self, q_ctrl, q_trgt, nfused, equal_qbits=False):
@@ -26,11 +30,20 @@ class FusedStartGateBarrier(Gate):
         self.is_controlled_by = False
         self.nfused = nfused
 
+    def generator(self, backend):
+        """This function returns the gate's generator.
+
+        Returns:
+            ArrayLike: generator.
+        """
+        raise_error(NotImplementedError)
+
 
 class FusedEndGateBarrier(Gate):
     """
     :class:`qibo.ui.drawer_utils.FusedEndGateBarrier` gives room to fused group of gates.
-    Inherit from ``qibo.gates.abstract.Gate``. A special gate barrier gate to pin the ending point of fused gates.
+    Inherit from ``qibo.gates.abstract.Gate``.
+    A special gate barrier gate to pin the ending point of fused gates.
     """
 
     def __init__(self, q_ctrl, q_trgt):
@@ -43,6 +56,14 @@ class FusedEndGateBarrier(Gate):
         self.init_args = [q_trgt, q_ctrl] if q_ctrl != q_trgt else [q_ctrl]
         self.unitary = False
         self.is_controlled_by = False
+
+    def generator(self, backend):
+        """This function returns the gate's generator.
+
+        Returns:
+            ArrayLike: generator.
+        """
+        raise_error(NotImplementedError)
 
 
 def generate_bitstring_combinations(n):

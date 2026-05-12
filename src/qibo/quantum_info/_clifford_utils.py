@@ -102,11 +102,13 @@ def _string_product(operators: list):
     return f"{phases}{result}"
 
 
-def _decomposition_AG04(clifford):
+def _decomposition_AG04(clifford, **kwargs):
     """Returns a Clifford object decomposed into a circuit based on Aaronson-Gottesman method.
 
     Args:
         clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
@@ -118,17 +120,20 @@ def _decomposition_AG04(clifford):
     """
     nqubits = clifford.nqubits
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     if clifford._backend.platform == "cupy":  # pragma: no cover
         raise_error(
             NotImplementedError,
-            "``AG04`` algorithm currently not supported with the ``cupy`` engine, please use the ``BM20`` algorithm instead or switch clifford engine.",
+            "``AG04`` algorithm currently not supported with the ``cupy`` engine, "
+            + "please use the ``BM20`` algorithm instead or switch clifford engine.",
         )
 
     clifford_copy = clifford.copy(deep=True)
 
     if nqubits == 1:
-        return _single_qubit_clifford_decomposition(clifford_copy.symplectic_matrix)
+        return _single_qubit_clifford_decomposition(
+            clifford_copy.symplectic_matrix, **kwargs
+        )
 
     for k in range(nqubits):
         # put a 1 one into position by permuting and using Hadamards(i,i)
@@ -141,21 +146,23 @@ def _decomposition_AG04(clifford):
 
     for k in range(nqubits):
         if clifford_copy.symplectic_matrix[:nqubits, -1][k]:
-            clifford._backend.engine.Z(clifford_copy.symplectic_matrix, k, nqubits)
+            clifford._backend._platform.Z(clifford_copy.symplectic_matrix, k, nqubits)
             circuit.add(gates.Z(k))
         if clifford_copy.symplectic_matrix[nqubits:-1, -1][k]:
-            clifford._backend.engine.X(clifford_copy.symplectic_matrix, k, nqubits)
+            clifford._backend._platform.X(clifford_copy.symplectic_matrix, k, nqubits)
             circuit.add(gates.X(k))
 
     return circuit.invert()
 
 
-def _decomposition_BM20(clifford):
+def _decomposition_BM20(clifford, **kwargs):
     """Optimal CNOT-cost decomposition of a Clifford operator on :math:`n \\in \\{2, 3 \\}`
     into a circuit based on Bravyi-Maslov method.
 
     Args:
         clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
@@ -173,9 +180,11 @@ def _decomposition_BM20(clifford):
         )
 
     if nqubits == 1:
-        return _single_qubit_clifford_decomposition(clifford_copy.symplectic_matrix)
+        return _single_qubit_clifford_decomposition(
+            clifford_copy.symplectic_matrix, **kwargs
+        )
 
-    inverse_circuit = Circuit(nqubits)
+    inverse_circuit = Circuit(nqubits, **kwargs)
 
     cnot_cost = _cnot_cost(clifford_copy)
 
@@ -184,14 +193,15 @@ def _decomposition_BM20(clifford):
             clifford_copy, inverse_circuit, cnot_cost
         )
 
-    last_row = clifford_copy.engine.cast([False] * 3, dtype=bool)
+    last_row = clifford_copy._backend.cast([False] * 3, dtype=bool)
     circuit = Circuit(nqubits)
     for qubit in range(nqubits):
         position = [qubit, qubit + nqubits]
         single_qubit_circuit = _single_qubit_clifford_decomposition(
-            clifford_copy.engine.np.append(
+            clifford_copy._backend.append(
                 clifford_copy.symplectic_matrix[position][:, position + [-1]], last_row
-            ).reshape(3, 3)
+            ).reshape(3, 3),
+            **kwargs,
         )
         if len(single_qubit_circuit.queue) > 0:
             for gate in single_qubit_circuit.queue:
@@ -205,7 +215,7 @@ def _decomposition_BM20(clifford):
     return circuit
 
 
-def _single_qubit_clifford_decomposition(symplectic_matrix):
+def _single_qubit_clifford_decomposition(symplectic_matrix, **kwargs):
     """Decompose symplectic matrix of a single-qubit Clifford into a Clifford circuit.
 
     Args:
@@ -214,7 +224,7 @@ def _single_qubit_clifford_decomposition(symplectic_matrix):
     Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
     """
-    circuit = Circuit(nqubits=1)
+    circuit = Circuit(nqubits=1, **kwargs)
 
     destabilizer_phase, stabilizer_phase = symplectic_matrix[:-1, -1]
     if destabilizer_phase and not stabilizer_phase:
@@ -263,16 +273,18 @@ def _set_qubit_x_to_true(clifford, circuit: Circuit, qubit: int):
 
     for k in range(qubit + 1, nqubits):
         if x[k]:
-            clifford._backend.engine.SWAP(clifford.symplectic_matrix, k, qubit, nqubits)
+            clifford._backend._platform.SWAP(
+                clifford.symplectic_matrix, k, qubit, nqubits
+            )
             circuit.add(gates.SWAP(k, qubit))
             return
 
     for k in range(qubit, nqubits):
         if z[k]:
-            clifford._backend.engine.H(clifford.symplectic_matrix, k, nqubits)
+            clifford._backend._platform.H(clifford.symplectic_matrix, k, nqubits)
             circuit.add(gates.H(k))
             if k != qubit:
-                clifford._backend.engine.SWAP(
+                clifford._backend._platform.SWAP(
                     clifford.symplectic_matrix, k, qubit, nqubits
                 )
                 circuit.add(gates.SWAP(k, qubit))
@@ -297,23 +309,25 @@ def _set_row_x_to_zero(clifford, circuit: Circuit, qubit: int):
     # Check X first
     for k in range(qubit + 1, nqubits):
         if x[k]:
-            clifford._backend.engine.CNOT(clifford.symplectic_matrix, qubit, k, nqubits)
+            clifford._backend._platform.CNOT(
+                clifford.symplectic_matrix, qubit, k, nqubits
+            )
             circuit.add(gates.CNOT(qubit, k))
 
-    if np.any(z[qubit:]):
+    if clifford._backend.any(z[qubit:]):
         if not z[qubit]:
             # to treat Zs: make sure row.Z[k] to True
-            clifford._backend.engine.S(clifford.symplectic_matrix, qubit, nqubits)
+            clifford._backend._platform.S(clifford.symplectic_matrix, qubit, nqubits)
             circuit.add(gates.S(qubit))
 
         for k in range(qubit + 1, nqubits):
             if z[k]:
-                clifford._backend.engine.CNOT(
+                clifford._backend._platform.CNOT(
                     clifford.symplectic_matrix, k, qubit, nqubits
                 )
                 circuit.add(gates.CNOT(k, qubit))
 
-        clifford._backend.engine.S(clifford.symplectic_matrix, qubit, nqubits)
+        clifford._backend._platform.S(clifford.symplectic_matrix, qubit, nqubits)
         circuit.add(gates.S(qubit))
 
 
@@ -333,27 +347,27 @@ def _set_row_z_to_zero(clifford, circuit: Circuit, qubit: int):
     x = clifford.stabilizers(symplectic=True)
     x, z = x[:, :nqubits][qubit], x[:, nqubits:-1][qubit]
 
-    if np.any(z[qubit + 1 :]):
+    if clifford._backend.any(z[qubit + 1 :]):
         for k in range(qubit + 1, nqubits):
             if z[k]:
-                clifford._backend.engine.CNOT(
+                clifford._backend._platform.CNOT(
                     clifford.symplectic_matrix, k, qubit, nqubits
                 )
                 circuit.add(gates.CNOT(k, qubit))
 
-    if np.any(x[qubit:]):
-        clifford._backend.engine.H(clifford.symplectic_matrix, qubit, nqubits)
+    if clifford._backend.any(x[qubit:]):
+        clifford._backend._platform.H(clifford.symplectic_matrix, qubit, nqubits)
         circuit.add(gates.H(qubit))
         for k in range(qubit + 1, nqubits):
             if x[k]:
-                clifford._backend.engine.CNOT(
+                clifford._backend._platform.CNOT(
                     clifford.symplectic_matrix, qubit, k, nqubits
                 )
                 circuit.add(gates.CNOT(qubit, k))
         if z[qubit]:
-            clifford._backend.engine.S(clifford.symplectic_matrix, qubit, nqubits)
+            clifford._backend._platform.S(clifford.symplectic_matrix, qubit, nqubits)
             circuit.add(gates.S(qubit))
-        clifford._backend.engine.H(clifford.symplectic_matrix, qubit, nqubits)
+        clifford._backend._platform.H(clifford.symplectic_matrix, qubit, nqubits)
         circuit.add(gates.H(qubit))
 
 
@@ -379,8 +393,10 @@ def _rank_2(a: bool, b: bool, c: bool, d: bool):
     """Returns rank of 2x2 boolean matrix."""
     if (a & d) ^ (b & c):
         return 2
+
     if a or b or c or d:
         return 1
+
     return 0
 
 
@@ -439,7 +455,7 @@ def _cnot_cost3(clifford):  # pragma: no cover
                 symplectic_matrix[q1 + nqubits, q2 + nqubits],
             )
             mask = np.zeros(2 * nqubits, dtype=int)
-            mask = clifford.engine.cast(mask, dtype=mask.dtype)
+            mask = clifford._backend.cast(mask, dtype=mask.dtype)
             mask[[q2, q2 + nqubits]] = 1
             loc_y_x = np.array_equal(
                 symplectic_matrix[q1, :] & mask, symplectic_matrix[q1, :]
@@ -521,14 +537,16 @@ def _reduce_cost(clifford, inverse_circuit: Circuit, cost: int):  # pragma: no c
 
                 for qubit, n in [(control, n0), (target, n1)]:
                     if n == 1:
-                        matrix = reduced._backend.engine.SDG(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.H(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.SDG(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.H(matrix, qubit, nqubits)
                     elif n == 2:
-                        matrix = reduced._backend.engine.SDG(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.H(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.SDG(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.H(matrix, qubit, nqubits)
-                matrix = reduced._backend.engine.CNOT(matrix, control, target, nqubits)
+                        matrix = reduced._backend._platform.SDG(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.H(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.SDG(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.H(matrix, qubit, nqubits)
+                matrix = reduced._backend._platform.CNOT(
+                    matrix, control, target, nqubits
+                )
                 reduced.symplectic_matrix = (
                     reduced._backend._clifford_post_execution_reshape(matrix, nqubits)
                 )

@@ -39,7 +39,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
 
         index = 0
         encoder = Circuit(n_qubits)
-        for i in range(n_layers):
+        for _ in range(n_layers):
             for j in range(n_qubits):
                 encoder.add(gates.RX(j, params[index]))
                 encoder.add(gates.RY(j, params[index + 1]))
@@ -103,13 +103,13 @@ def main(n_layers, train_size, filename, plot, save_loss):
     print("Computing losses...")
     # Compute loss for standard data
     loss_s = []
-    for i in range(len(dataset_np_s)):
-        loss_s.append(compute_loss_test(encoder_test, dataset_s[i]).numpy())
+    for ind in range(len(dataset_np_s)):
+        loss_s.append(compute_loss_test(encoder_test, dataset_s[ind]).numpy())
 
     # Compute loss for anomalous data
     loss_a = []
-    for i in range(len(dataset_np_a)):
-        loss_a.append(compute_loss_test(encoder_test, dataset_a[i]).numpy())
+    for ind in range(len(dataset_np_a)):
+        loss_a.append(compute_loss_test(encoder_test, dataset_a[ind]).numpy())
 
     if save_loss:
         file_loss_standard = LOCAL_FOLDER / "results" / "losses_standard_data.npy"
@@ -146,8 +146,8 @@ def main(n_layers, train_size, filename, plot, save_loss):
         step = (ma - mi) / n_step
         fpr = []
         tpr = []
-        for i in range(n_step_int):
-            treshold = i * step + mi
+        for ind in range(n_step_int):
+            treshold = ind * step + mi
             c = 0
             for j in range(tot_neg):
                 if loss_s[j] > treshold:

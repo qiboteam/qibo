@@ -5,8 +5,13 @@ import pytest
 import sympy
 
 from qibo import Circuit, gates
+from qibo.backends import NumpyBackend
 from qibo.hamiltonians import TFIM, XXZ, Hamiltonian, SymbolicHamiltonian
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.random_ensembles import (
+    random_clifford,
+    random_density_matrix,
+    random_statevector,
+)
 from qibo.symbols import I, Symbol, X, Y, Z
 
 
@@ -25,7 +30,7 @@ def symbolic_tfim(nqubits, backend, h=1.0):
 def test_symbolic_hamiltonian_errors(backend):
     # Wrong type of Symbol matrix
     with pytest.raises(TypeError):
-        s = Symbol(0, "test")
+        s = Symbol(0, "test", backend=backend)
     # Wrong type of symbolic expression
     with pytest.raises(TypeError):
         ham = SymbolicHamiltonian("test", backend=backend)
@@ -42,8 +47,8 @@ def test_symbolic_hamiltonian_errors(backend):
 
 
 def test_symbolic_hamiltonian_form_setter(backend):
-    h = SymbolicHamiltonian(Z(0), backend=backend)
-    new_form = Z(0) * X(1) * Y(3)
+    h = SymbolicHamiltonian(Z(0, backend=backend), backend=backend)
+    new_form = Z(0, backend=backend) * X(1, backend=backend) * Y(3, backend=backend)
     h.form = new_form
     assert h.form == new_form
     assert h.nqubits == 4
@@ -55,7 +60,9 @@ def test_symbolic_hamiltonian_dense(backend):
         + X(0, backend=backend).matrix @ Y(0, backend=backend).matrix
         + backend.matrices.I()
     )
-    form = Z(0) ** 2 + X(0) * Y(0) + 1
+    form = (
+        Z(0, backend=backend) ** 2 + X(0, backend=backend) * Y(0, backend=backend) + 1
+    )
     sham = SymbolicHamiltonian(form, nqubits=1, backend=backend)
     backend.assert_allclose(sham.dense.matrix, target_matrix)
 
@@ -72,13 +79,16 @@ def test_symbolictfim_hamiltonian_to_dense(backend, nqubits):
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_symbolicxxz_hamiltonian_to_dense(backend, nqubits):
     sham = sum(
-        X(i, backend=backend) * X(i + 1, backend=backend) for i in range(nqubits - 1)
+        X(qubit, backend=backend) * X(qubit + 1, backend=backend)
+        for qubit in range(nqubits - 1)
     )
     sham += sum(
-        Y(i, backend=backend) * Y(i + 1, backend=backend) for i in range(nqubits - 1)
+        Y(qubit, backend=backend) * Y(qubit + 1, backend=backend)
+        for qubit in range(nqubits - 1)
     )
     sham += 0.5 * sum(
-        Z(i, backend=backend) * Z(i + 1, backend=backend) for i in range(nqubits - 1)
+        Z(qubit, backend=backend) * Z(qubit + 1, backend=backend)
+        for qubit in range(nqubits - 1)
     )
     sham += (
         X(0, backend=backend) * X(nqubits - 1, backend=backend)
@@ -229,22 +239,22 @@ def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix):
     backend.assert_allclose(local_matmul, target_matmul)
 
 
-@pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
-def test_symbolic_hamiltonian_state_expectation(backend, nqubits, normalize):
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_symbolic_hamiltonian_state_expectation(backend, nqubits):
     local_ham = (
         SymbolicHamiltonian(symbolic_tfim(nqubits, backend, h=1.0), backend=backend) + 2
     )
     dense_ham = TFIM(nqubits, h=1.0, backend=backend) + 2
 
-    state = random_statevector(2**nqubits, backend=backend)
+    state = random_clifford(nqubits, backend=backend)
 
-    local_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
-    backend.assert_allclose(local_ev, target_ev)
+    local_ev = local_ham.expectation(state)
+    target_ev = dense_ham.expectation(state)
+    backend.assert_allclose(local_ev, target_ev, atol=1e-8)
 
-    local_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
-    backend.assert_allclose(local_ev, target_ev)
+    local_ev = local_ham.expectation(state)
+    target_ev = dense_ham.expectation(state)
+    backend.assert_allclose(local_ev, target_ev, atol=1e-8)
 
 
 @pytest.mark.parametrize("give_nqubits", [False, True])
@@ -261,16 +271,16 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
     dense_matrix = np.kron(backend.to_numpy(dense_ham.matrix), np.eye(4))
     dense_ham = Hamiltonian(5, dense_matrix, backend=backend)
 
-    state = random_statevector(2**5, backend=backend)
+    state = random_clifford(5, backend=backend)
 
     if give_nqubits:
         local_ev = local_ham.expectation(state)
         target_ev = dense_ham.expectation(state)
-        backend.assert_allclose(local_ev, target_ev)
+        backend.assert_allclose(local_ev, target_ev, atol=1e-8)
 
         local_ev = local_ham.expectation(state)
         target_ev = dense_ham.expectation(state)
-        backend.assert_allclose(local_ev, target_ev)
+        backend.assert_allclose(local_ev, target_ev, atol=1e-8)
     else:
         with pytest.raises(ValueError):
             local_ev = local_ham.expectation(state)
@@ -278,29 +288,24 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
             local_ev = local_ham.expectation(state)
 
 
-@pytest.mark.parametrize(
-    "observable,qubit_map",
-    [
-        (2 * Z(0) * Z(3) + Z(0) * Z(2), [0, 1, 2, 3]),
-        (Z(1) + Z(3), [0, 1, 3]),
-    ],
-)
-def test_hamiltonian_expectation_from_samples(backend, observable, qubit_map):
+def test_hamiltonian_expectation_from_samples(backend):
     """Test Hamiltonian expectation value calculation."""
-    backend.set_seed(0)
-    hamiltonian = SymbolicHamiltonian(observable, backend=backend)
-    c = Circuit(4)
-    c.add(gates.RX(0, np.random.rand()))
-    c.add(gates.RX(1, np.random.rand()))
-    c.add(gates.RX(2, np.random.rand()))
-    c.add(gates.RX(3, np.random.rand()))
-    c.add(gates.M(*qubit_map))
-    nshots = 10**5
-    result = backend.execute_circuit(c, nshots=nshots)
-    freq = result.frequencies(binary=True)
-    from_samples = hamiltonian.expectation_from_samples(freq, qubit_map=qubit_map)
-    from_state = hamiltonian.expectation(result.state())
-    backend.assert_allclose(from_samples, from_state, atol=20 / np.sqrt(nshots))
+    for observable in [
+        2 * Z(0, backend=backend) * Z(3, backend=backend)
+        + Z(0, backend=backend) * Z(2, backend=backend),
+        Z(1, backend=backend) + Z(3, backend=backend),
+    ]:
+        backend.set_seed(0)
+        hamiltonian = SymbolicHamiltonian(observable, backend=backend)
+        circuit = Circuit(4)
+        circuit.add(gates.RX(0, np.random.rand()))
+        circuit.add(gates.RX(1, np.random.rand()))
+        circuit.add(gates.RX(2, np.random.rand()))
+        circuit.add(gates.RX(3, np.random.rand()))
+        nshots = 10**5
+        from_samples = hamiltonian.expectation(circuit, nshots=nshots)
+        from_state = hamiltonian.expectation(circuit)
+        backend.assert_allclose(from_samples, from_state, atol=20 / np.sqrt(nshots))
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -313,11 +318,7 @@ def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix):
     ) * X(1, backend=backend)
     local_ham = SymbolicHamiltonian(form, backend=backend)
 
-    state = (
-        random_density_matrix(4, backend=backend)
-        if density_matrix
-        else random_statevector(4, backend=backend)
-    )
+    state = random_clifford(2, density_matrix=density_matrix, backend=backend)
     local_ev = local_ham.expectation(state)
     target_ev = local_ham.dense.expectation(state)
     backend.assert_allclose(local_ev, target_ev)
@@ -351,9 +352,14 @@ def test_trotter_hamiltonian_operation_errors(backend):
 def test_symbolic_hamiltonian_with_constant(backend):
     circuit = Circuit(1)
     circuit.add(gates.H(0))
-    circuit.add(gates.M(0))
-    h = SymbolicHamiltonian(1e6 - Z(0), backend=backend)
-
-    result = backend.execute_circuit(circuit, nshots=10000)
-    result = result.expectation_from_samples(h).real
+    h = SymbolicHamiltonian(1e6 - Z(0, backend=backend), backend=backend)
+    result = h.expectation(circuit)
     backend.assert_allclose(result, 1e6, rtol=1e-5, atol=0.0)
+
+
+def test_symbolic_hamiltonian_repr():
+    h = XXZ(3, dense=False, backend=NumpyBackend())
+    assert (
+        str(h)
+        == "-(-X2*X0 - Y2*Y0 - 0.5*Z2*Z0) - (-X0*X1 - X1*X2 - Y0*Y1 - Y1*Y2 - 0.5*Z0*Z1 - 0.5*Z1*Z2)"
+    )

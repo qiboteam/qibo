@@ -5,14 +5,19 @@ import numpy as np
 import pytest
 from sympy import S
 
-from qibo import gates, symbols
+from qibo import Circuit, gates, symbols
+from qibo.backends import NumpyBackend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
+from qibo.symbols import Z
 from qibo.tomography.gate_set_tomography import (
     GST,
+    _extract_gate,
+    _extract_nqubits,
     _gate_tomography,
     _get_observable,
+    _get_swap_pairs,
     _measurement_basis,
     _prepare_state,
 )
@@ -115,51 +120,127 @@ def test__measurement_basis(j, nqubits):
 
 
 @pytest.mark.parametrize(
-    "j,nqubits",
+    "j, nqubits",
     INDEX_NQUBITS,
 )
 def test__get_observable(j, nqubits):
+    backend = NumpyBackend()
     correct_observables = {
         1: [
             (S(1),),
-            (symbols.Z(0),),
-            (symbols.Z(0),),
-            (symbols.Z(0),),
+            (Z(0, backend=backend),),
+            (Z(0, backend=backend),),
+            (Z(0, backend=backend),),
         ],
         2: [
             (S(1), S(1)),
-            (S(1), symbols.Z(1)),
-            (S(1), symbols.Z(1)),
-            (S(1), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
+            (S(1), Z(1, backend=backend)),
+            (S(1), Z(1, backend=backend)),
+            (S(1), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
         ],
     }
     correct_observables[1] = [
-        SymbolicHamiltonian(h[0]).form for h in correct_observables[1]
+        SymbolicHamiltonian(h[0], backend=backend).form for h in correct_observables[1]
     ]
     correct_observables[2] = [
-        SymbolicHamiltonian(reduce(lambda x, y: x * y, h)).form
+        SymbolicHamiltonian(reduce(lambda x, y: x * y, h), backend=backend).form
         for h in correct_observables[2]
     ]
     errors = {(0, 3): ValueError, (17, 1): IndexError}
     if (j, nqubits) in [(0, 3), (17, 1)]:
         with pytest.raises(errors[(j, nqubits)]):
-            prepared_observable = _get_observable(j, nqubits)
+            prepared_observable = _get_observable(j, nqubits, backend=str(backend))
     else:
-        prepared_observable = _get_observable(j, nqubits).form
+        prepared_observable = _get_observable(j, nqubits, backend=str(backend)).form
         groundtruth = correct_observables[nqubits][j]
         assert groundtruth == prepared_observable
+
+
+def test__extract_nqubits():
+    correct_nqubits = [1, 1, 2, 3]
+    gates_to_test = [gates.Z, (gates.RX, [np.pi / 2]), gates.CNOT, gates.TOFFOLI]
+    for idx in range(0, len(gates_to_test)):
+        gate = gates_to_test[idx]
+        if isinstance(gate, tuple):
+            gate, _ = gate
+        if idx < 3:
+            assert _extract_nqubits(gate) == correct_nqubits[idx]
+        else:
+            with pytest.raises(RuntimeError):
+                nqubits = _extract_nqubits(gate)
+
+
+def test__extract_gate_default_qubits():
+
+    gates_to_test = [
+        gates.T,
+        (gates.RX, [np.pi / 2]),
+        (gates.Unitary, [np.eye(2)]),
+        (gates.CRX, [np.pi / 3]),
+        (gates.Unitary, [np.eye(4)]),
+    ]
+
+    expected_qubits_list = [
+        (0,),
+        (0,),
+        (0,),
+        (0, 1),
+        (0, 1),
+    ]
+
+    for gate_spec, expected_qubits in zip(gates_to_test, expected_qubits_list):
+        extracted_gate, _ = _extract_gate(gate_spec, qubits=None)
+        assert extracted_gate.qubits == expected_qubits
+
+
+def test__extract_gate_user_defined_qubits():
+
+    gates_to_test = [
+        gates.T,
+        (gates.RX, [np.pi / 2]),
+        (gates.Unitary, [np.eye(2)]),
+        (gates.CRX, [np.pi / 3]),
+        (gates.Unitary, [np.eye(4)]),
+    ]
+
+    qubits_list = [2, 2, 2, (2, 3), (2, 3)]
+    expected_qubits_list = [
+        (2,),
+        (2,),
+        (2,),
+        (2, 3),
+        (2, 3),
+    ]
+
+    for gate_spec, qubit_spec, expected_qubits in zip(
+        gates_to_test, qubits_list, expected_qubits_list
+    ):
+        extracted_gate, _ = _extract_gate(gate_spec, qubits=qubit_spec)
+        assert extracted_gate.qubits == expected_qubits
+
+
+@pytest.mark.parametrize(
+    "gate, error_type",
+    [
+        (((gates.Unitary), np.array([[1, 2], [3, 4]])), ValueError),
+        ((gates.TOFFOLI), RuntimeError),
+    ],
+)
+def test__extract_gate_error(gate, error_type):
+    with pytest.raises(error_type):
+        extracted_gate, _ = _extract_gate(gate)
 
 
 @pytest.mark.parametrize(
@@ -173,7 +254,7 @@ def test_gate_tomography_value_error(backend, nqubits, gate):
     with pytest.raises(ValueError):
         matrix_jk = _gate_tomography(
             nqubits=nqubits,
-            gate=gate,
+            gate=[gate],
             nshots=int(1e4),
             noise_model=None,
             backend=backend,
@@ -189,7 +270,7 @@ def test_gate_tomography_noise_model(backend):
     # return noise_model
     target = _gate_tomography(
         nqubits=nqubits,
-        gate=gate,
+        gate=[gate],
         nshots=int(1e4),
         noise_model=noise_model,
         backend=backend,
@@ -202,6 +283,246 @@ def test_gate_tomography_noise_model(backend):
     )
 
 
+def test_gate_tomography_single_gate(backend):
+    gate = gates.X(0)
+    nqubits = 1
+    matrix_jk = _gate_tomography(
+        nqubits=nqubits,
+        gate=gate,
+        nshots=int(1e4),
+        noise_model=None,
+        backend=backend,
+    )
+
+    ground_truth_matrix = np.array(
+        [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, -1], [-1, 1, 0, 0]]
+    )
+    assert matrix_jk.shape == (4**nqubits, 4**nqubits)
+    backend.assert_allclose(matrix_jk, ground_truth_matrix, atol=1e-1)
+
+
+GROUND_TRUTH_GATE_X = np.array(
+    [[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [-1, -1, -1, -1]]
+)
+GROUND_TRUTH_GATE_XT_0 = np.array(
+    [
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [
+            0,
+            0,
+            1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+            0,
+            0,
+            1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+            0,
+            0,
+            1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+            0,
+            0,
+            1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+        ],
+        [
+            0,
+            0,
+            1 / np.sqrt(2),
+            1 / np.sqrt(2),
+            0,
+            0,
+            1 / np.sqrt(2),
+            1 / np.sqrt(2),
+            0,
+            0,
+            1 / np.sqrt(2),
+            1 / np.sqrt(2),
+            0,
+            0,
+            1 / np.sqrt(2),
+            1 / np.sqrt(2),
+        ],
+        [1, -1, 0, 0, 1, -1, 0, 0, 1, -1, 0, 0, 1, -1, 0, 0],
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+        [
+            0,
+            0,
+            -1 / np.sqrt(2),
+            1 / np.sqrt(2),
+            0,
+            0,
+            -1 / np.sqrt(2),
+            1 / np.sqrt(2),
+            0,
+            0,
+            -1 / np.sqrt(2),
+            1 / np.sqrt(2),
+            0,
+            0,
+            -1 / np.sqrt(2),
+            1 / np.sqrt(2),
+        ],
+        [
+            0,
+            0,
+            -1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+            0,
+            0,
+            -1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+            0,
+            0,
+            -1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+            0,
+            0,
+            -1 / np.sqrt(2),
+            -1 / np.sqrt(2),
+        ],
+        [-1, 1, 0, 0, -1, 1, 0, 0, -1, 1, 0, 0, -1, 1, 0, 0],
+    ],
+    dtype=np.complex128,
+)
+GROUND_TRUTH_GATE_XT_1 = np.array(
+    [
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1],
+        [0] * 16,
+        [0] * 16,
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1],
+        [-1, -1, -1, -1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0] * 16,
+        [0] * 16,
+        [-1, -1, -1, -1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    dtype=np.complex128,
+)
+GROUND_TRUTH_NULL_2 = np.array(
+    [
+        [1] * 16,
+        [0] * 16,
+        [0] * 16,
+        [1] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [0] * 16,
+        [1] * 16,
+        [0] * 16,
+        [0] * 16,
+        [1] * 16,
+    ],
+    dtype=np.complex128,
+)
+GROUND_TRUTH_I_2 = np.array(
+    [
+        [1] * 16,
+        [0] * 16,
+        [0] * 16,
+        [1] * 16,
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0] * 16,
+        [0] * 16,
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+        [0] * 16,
+        [0] * 16,
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+        [1, 1, 1, 1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0] * 16,
+        [0] * 16,
+        [1, 1, 1, 1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    dtype=np.complex128,
+)
+
+
+@pytest.mark.parametrize(
+    "nqubits, gate, ancilla, raise_error, ground_truth_matrix",
+    [
+        (1, [gates.X(0)], 0, False, GROUND_TRUTH_GATE_X),
+        (2, [gates.X(0), gates.T(1)], 0, False, GROUND_TRUTH_GATE_XT_0),
+        (2, [gates.X(0), gates.T(1)], 1, False, GROUND_TRUTH_GATE_XT_1),
+        (2, [], 2, False, GROUND_TRUTH_NULL_2),
+        (2, [gates.Unitary(np.eye(4), 0, 1)], 1, False, GROUND_TRUTH_I_2),
+        (2, [gates.X(0), gates.T(1), gates.S(0)], 1, True, np.nan),
+    ],
+)
+def test_gate_tomography_apply_ancillas(
+    backend, nqubits, gate, ancilla, raise_error, ground_truth_matrix
+):
+    if raise_error:
+        with pytest.raises(ValueError):
+            matrix_jk = _gate_tomography(
+                nqubits=nqubits,
+                gate=gate,
+                nshots=int(1e4),
+                noise_model=None,
+                backend=backend,
+                ancilla=ancilla,
+            )
+    else:
+        matrix_jk = _gate_tomography(
+            nqubits=nqubits,
+            gate=gate,
+            nshots=int(1e4),
+            noise_model=None,
+            backend=backend,
+            ancilla=ancilla,
+        )
+        backend.assert_allclose(matrix_jk, ground_truth_matrix, rtol=1e-1, atol=1e-1)
+        assert matrix_jk.shape == (4**nqubits, 4**nqubits)
+
+
+def test_gate_tomography_ancilla_error(backend):
+    ancilla = 3
+    nqubits = 2
+    gate_list = [gates.T(0), gates.TDG(0)]
+    with pytest.raises(ValueError):
+        matrix_jk = _gate_tomography(
+            nqubits=nqubits,
+            gate=gate_list,
+            nshots=int(1e4),
+            noise_model=None,
+            backend=backend,
+            ancilla=ancilla,
+        )
+
+
+def test__get_swap_pairs():
+    true_swap_pairs = [[(0, 2)], [(1, 2)], [(0, 2), (1, 3)]]
+    for ancilla in range(0, 3):
+        gate_list = [gates.T(0), gates.TDG(0)]
+
+        nqubits = 2
+        additional_qubits = 0 if ancilla is None else (1 if ancilla in (0, 1) else 2)
+        circ = Circuit(nqubits + additional_qubits, density_matrix=True)
+        swap_pairs = _get_swap_pairs(circ.nqubits, ancilla)
+
+        assert true_swap_pairs[ancilla] == swap_pairs
+
+
 @pytest.mark.parametrize(
     "target_gates",
     [
@@ -209,6 +530,7 @@ def test_gate_tomography_noise_model(backend):
             gates.SX(0),
             gates.RX(0, np.pi / 4),
             gates.PRX(0, np.pi, np.pi / 2),
+            gates.Unitary(np.array([[1, 0], [0, 1]]), 0),
             gates.CY(0, 1),
         ],
         [gates.TOFFOLI(0, 1, 2)],
@@ -231,7 +553,7 @@ def test_GST(backend, target_gates, pauli_liouville):
         for g in target_gates
     ]
 
-    if len(target_gates) == 4:
+    if len(target_gates) == 5:
         empty_1q, empty_2q, *approx_gates = GST(
             gate_set=gate_set,
             nshots=int(1e4),
@@ -239,11 +561,11 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-        T_2q = backend.np.kron(T, T)
+        T_2q = backend.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
-                G_inv = backend.np.linalg.inv(G)
+                G_inv = backend.inv(G)
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
                 estimate = T_matrix @ G_inv @ estimate @ G_inv
             backend.assert_allclose(
@@ -262,16 +584,90 @@ def test_GST(backend, target_gates, pauli_liouville):
             )
 
 
-def test_GST_invertible_matrix():
+def test_GST_2qb_basis_op_diff_registers(backend):
+    gate_set = [gates.T, gates.TDG, gates.S]
+    with pytest.raises(RuntimeError):
+        matrices = GST(
+            gate_set=gate_set,
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
+
+
+@pytest.mark.parametrize(
+    "gate_set",
+    [
+        [gates.T, gates.T, gates.T],
+        [gates.CNOT],
+        [gates.CNOT, gates.CNOT],
+    ],
+)
+def test_GST_2qb_basis_op_diff_registers_incorrect_gates(backend, gate_set):
+    with pytest.raises(RuntimeError):
+        matrices = GST(
+            gate_set=gate_set,
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
+
+
+def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
+    gate_set = [
+        [gates.T, gates.TDG],
+        [(gates.RX, [np.pi / 4]), (gates.RY, [np.pi / 3])],
+        [(gates.Unitary, [np.eye(2)]), (gates.Unitary, [np.eye(2)])],
+    ]
+
+    ground_truth_matrices = [
+        np.kron(gates.T(0).matrix(backend), gates.TDG(0).matrix(backend)),
+        np.kron(
+            gates.RX(0, np.pi / 4).matrix(backend),
+            gates.RY(0, np.pi / 3).matrix(backend),
+        ),
+        np.eye(4),
+    ]
+
+    for _i in range(0, 3):
+        test_matrix = GST(
+            gate_set=gate_set[_i],
+            nshots=int(1e4),
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
+        ground_truth_matrix = GST(
+            gate_set=[((gates.Unitary), ground_truth_matrices[_i])],
+            nshots=int(1e4),
+            include_empty=False,
+        )
+        backend.assert_allclose(test_matrix[0], ground_truth_matrix[0], atol=1e-1)
+
+
+def test_GST_invertible_matrix(backend):
+
+    ground_truths = [
+        np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]]),
+        np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]]),
+        np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]),
+    ]
+
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
-    assert True
+    matrices = GST(
+        gate_set=[gates.X, gates.Y, gates.Z],
+        pauli_liouville=True,
+        gauge_matrix=T,
+        backend=backend,
+    )
+
+    for ground_truth, test_matrix in zip(ground_truths, matrices):
+        backend.assert_allclose(test_matrix, ground_truth, atol=1e-1)
 
 
-def test_GST_non_invertible_matrix():
+def test_GST_non_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
-        matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
+        matrices = GST(
+            gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend
+        )
 
 
 def test_GST_with_transpiler(backend, star_connectivity):
