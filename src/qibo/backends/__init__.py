@@ -45,8 +45,8 @@ class MetaBackend:
                 CliffordBackend if backend == "clifford" else HammingWeightBackend
             )
 
-            engine = kwargs.pop("platform", None)
-            kwargs["engine"] = engine
+            platform = kwargs.pop("platform", None)
+            kwargs["platform"] = platform
 
             return backend_class(**kwargs)
 
@@ -147,8 +147,8 @@ class _Global:
         from qibo.transpiler.router import Sabre
         from qibo.transpiler.unroller import NativeGates, Unroller
 
-        qubits = cls._backend.qubits
-        natives = cls._backend.natives
+        qubits = cls.backend().qubits
+        natives = cls.backend().natives
         connectivity_edges = cls._backend.connectivity
         if qubits is not None and natives is not None:
             connectivity = (
@@ -189,9 +189,11 @@ class QiboMatrices:
         if dtype in ("complex64", "complex128"):
             self.Y = self.matrices.Y
             self.SX = self.matrices.SX
+            self.SXDG = self.matrices.SXDG
             self.S = self.matrices.S
-            self.T = self.matrices.T
             self.SDG = self.matrices.SDG
+            self.T = self.matrices.T
+            self.TDG = self.matrices.TDG
             self.CY = self.matrices.CY
             self.CSX = self.matrices.CSX
             self.CSXDG = self.matrices.CSXDG
@@ -348,26 +350,10 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
 
 
 def _check_backend_and_local_state(seed, backend):
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
     backend = _check_backend(backend)
 
-    if seed is None or isinstance(seed, int):
-        if backend.__class__.__name__ in [
-            "CupyBackend",
-            "CuQuantumBackend",
-        ]:  # pragma: no cover
-            local_state = backend.np.random.default_rng(seed)
-        else:
-            local_state = np.random.default_rng(seed)
-    else:
-        local_state = seed
+    local_state = (
+        backend.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
 
     return backend, local_state

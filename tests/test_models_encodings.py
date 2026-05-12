@@ -11,10 +11,13 @@ from scipy.optimize import curve_fit
 from scipy.special import binom
 
 from qibo import Circuit, gates
-from qibo.models.encodings import (
+from qibo.models._encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
-    _get_next_bistring,
+    _ehrlich_codewords_up_to_k,
+    _get_int_type,
+)
+from qibo.models.encodings import (
     binary_encoder,
     comp_basis_encoder,
     dicke_state,
@@ -27,6 +30,7 @@ from qibo.models.encodings import (
     sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
+    up_to_k_hamming_weight_encoder,
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
@@ -77,91 +81,138 @@ def test_phase_encoder(backend, rotation, kind):
     with pytest.raises(TypeError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
-        phase_encoder(data, rotation=True)
+        phase_encoder(nqubits, data=data, rotation=True)
     with pytest.raises(ValueError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
-        phase_encoder(data, rotation="rzz")
+        phase_encoder(nqubits, data=data, rotation="rzz")
 
-    phases = backend.np.random.rand(nqubits)
+    phases = backend.random_sample(nqubits)
 
     gate = getattr(gates, rotation)
     target = reduce(
-        backend.np.kron,
+        backend.kron,
         [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
     )[:, 0]
 
     if kind is not None:
         phases = kind(phases)
 
-    state = phase_encoder(phases, rotation=rotation, backend=backend)
+    state = phase_encoder(nqubits, data=phases, rotation=rotation, backend=backend)
     state.draw()
     state = backend.execute_circuit(state).state()
 
     backend.assert_allclose(state, target)
 
 
+@pytest.mark.parametrize("keep_antictrls", [False, True])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("not_power_of_two", [False, True])
 @pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("data", [False, True])
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_binary_encoder(backend, nqubits, parametrization, complex_data):
-    if parametrization == "hopf" and complex_data:
-        pytest.skip(
-            "``binary_encoder`` in Hopf coordinates not implemented for complex data."
+def test_binary_encoder(
+    backend,
+    nqubits,
+    parametrization,
+    data,
+    complex_data,
+    not_power_of_two,
+    custom_codewords,
+    keep_antictrls,
+):
+    if complex_data:
+        parametrization += "-complex"
+
+    if parametrization in ("hopf", "hopf-complex"):
+        if complex_data:
+            with pytest.raises(NotImplementedError):
+                test = binary_encoder(nqubits, "hopf-complex")
+
+            pytest.skip(
+                "``binary_encoder`` in Hopf coordinates not implemented for complex data."
+            )
+        else:
+            with pytest.raises(ValueError):
+                test = backend.random_sample(5)
+                test = binary_encoder(
+                    data=test,
+                    parametrization=parametrization,
+                    nqubits=nqubits,
+                    backend=backend,
+                )
+
+    dims = (
+        2**nqubits - 2
+        if parametrization == "hyperspherical" and not_power_of_two
+        else 2**nqubits
+    )
+
+    if data:
+        target = random_statevector(
+            dims,
+            dtype=backend.complex128 if complex_data else backend.float64,
+            seed=10,
+            backend=backend,
         )
+    else:
+        target = None
 
-    with pytest.raises(ValueError):
-        dims = 5
-        test = np.random.rand(dims)
-        test = backend.cast(test, dtype=test.dtype)
-        test = binary_encoder(test)
+    codewords = backend.arange(dims) if custom_codewords else None
 
-    dims = 2**nqubits
-
-    target = random_statevector(dims, seed=10, backend=backend)
-    if not complex_data:
-        target = backend.np.real(target)
-        target /= backend.np.linalg.norm(target)
-
-    circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
+    circuit = binary_encoder(
+        nqubits,
+        parametrization=parametrization,
+        data=target,
+        backend=backend,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+    )
     state = backend.execute_circuit(circuit).state()
 
-    backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
+    if not data:
+        target = backend.zero_state(nqubits)
+
+    if parametrization == "hyperspherical" and not_power_of_two:
+        # need to insert zeros at the end of target to get
+        # matching shapes
+        trail_zeros = backend.zeros(
+            2 ** int(math.ceil(math.log2(dims))) - dims, dtype=target.dtype
+        )
+        target = backend.concatenate((target, trail_zeros))
+
+    backend.assert_allclose(state, target[: len(state)], atol=1e-10, rtol=1e-4)
 
 
-@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("seed", [1])
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
 @pytest.mark.parametrize("nqubits", [8])
-def test_unary_encoder(backend, nqubits, architecture, kind):
-    sampler = np.random.default_rng(1)
-
+def test_unary_encoder(backend, nqubits, architecture, seed):
     with pytest.raises(TypeError):
-        data = sampler.random(nqubits)
-        data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data, architecture=True)
+        data = backend.random_sample(nqubits, seed=seed)
+        test = unary_encoder(nqubits, data=data, architecture=True)
     with pytest.raises(ValueError):
-        data = sampler.random(nqubits)
-        data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data, architecture="semi-diagonal")
+        data = backend.random_sample(nqubits, seed=seed)
+        test = unary_encoder(nqubits, data=data, architecture="semi-diagonal")
     if architecture == "tree":
         with pytest.raises(ValueError):
-            data = sampler.random(nqubits + 1)
-            data = backend.cast(data, dtype=data.dtype)
-            unary_encoder(data, architecture=architecture)
+            data = backend.random_sample(nqubits + 1, seed=seed)
+            test = unary_encoder(nqubits, data=data, architecture=architecture)
 
     # sampling random data in interval [-1, 1]
-    sampler = np.random.default_rng(1)
-    data = 2 * sampler.random(nqubits) - 1
-    data = kind(data) if kind is not None else backend.cast(data, dtype=data.dtype)
+    data = 2 * backend.random_sample(nqubits) - 1
 
-    circuit = unary_encoder(data, architecture=architecture, backend=backend)
+    circuit = unary_encoder(
+        nqubits, data=data, architecture=architecture, backend=backend
+    )
     state = backend.execute_circuit(circuit).state()
-    indexes = np.flatnonzero(backend.to_numpy(state))
-    state = backend.np.real(state[indexes])
+    indexes = backend.flatnonzero(state)
+    state = backend.real(state[indexes])
 
     backend.assert_allclose(
         state,
-        backend.cast(data, dtype=np.float64) / backend.calculate_vector_norm(data, 2),
+        backend.cast(data, dtype=backend.float64) / backend.vector_norm(data, 2),
         rtol=1e-5,
     )
 
@@ -220,12 +271,14 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
 @pytest.mark.parametrize("optimize_controls", [False, True])
 @pytest.mark.parametrize("complex_data", [False, True])
 @pytest.mark.parametrize("full_hwp", [False, True])
+@pytest.mark.parametrize("data", [False, True])
 @pytest.mark.parametrize("weight", [1, 2, 3])
 @pytest.mark.parametrize("nqubits", [4, 5, 6])
 def test_hamming_weight_encoder(
     backend,
     nqubits,
     weight,
+    data,
     full_hwp,
     complex_data,
     optimize_controls,
@@ -233,29 +286,26 @@ def test_hamming_weight_encoder(
 ):
     n_choose_k = int(binom(nqubits, weight))
     dims = 2**nqubits
-    dtype = complex if complex_data else float
+    dtype = backend.complex128 if complex_data else backend.float64
 
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     indices = _ehrlich_algorithm(initial_string, False)
     indices = [int(string, 2) for string in indices]
     indices_lex = np.sort(np.copy(indices))
 
-    rng = np.random.default_rng(seed)
-    data = rng.random(n_choose_k)
-    if complex_data:
-        data = data.astype(complex) + 1j * rng.random(n_choose_k)
-    data /= np.linalg.norm(data)
-
-    target = np.zeros(dims, dtype=dtype)
-    target[indices_lex] = data
-    target = backend.cast(target, dtype=target.dtype)
-
-    data = backend.cast(data, dtype=data.dtype)
+    if data:
+        _data = random_statevector(n_choose_k, dtype=dtype, seed=seed, backend=backend)
+        target = backend.zeros(dims, dtype=dtype)
+        target[indices_lex] = _data
+    else:
+        _data = None
+        target = comp_basis_encoder([0] * (nqubits - weight) + [1] * weight)
+        target = backend.execute_circuit(target).state()
 
     circuit = hamming_weight_encoder(
-        data,
         nqubits=nqubits,
         weight=weight,
+        data=_data,
         full_hwp=full_hwp,
         optimize_controls=optimize_controls,
         backend=backend,
@@ -269,7 +319,75 @@ def test_hamming_weight_encoder(
     backend.assert_allclose(state, target, atol=1e-7)
 
 
-@pytest.mark.parametrize("seed", [10, 20])
+@pytest.mark.parametrize("keep_antictrls", [False, True])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("data", [False, True])
+@pytest.mark.parametrize("up_to_k", [1, 2, 7])
+@pytest.mark.parametrize("nqubits", [4, 5, 6])
+def test_up_to_k_hamming_weight_encoder(
+    backend,
+    nqubits,
+    up_to_k,
+    data,
+    complex_data,
+    custom_codewords,
+    keep_antictrls,
+):
+
+    seed = 10
+    dim = int(sum(binom(nqubits, weight) for weight in range(up_to_k + 1)))
+    dtype = backend.complex128 if complex_data else backend.float64
+
+    codewords = backend.arange(dim) if custom_codewords else None
+
+    with pytest.raises(ValueError):
+        _data = random_statevector(dim + 10, dtype=dtype, seed=seed, backend=backend)
+        _ = up_to_k_hamming_weight_encoder(
+            data=_data,
+            nqubits=nqubits,
+            up_to_k=up_to_k,
+            codewords=codewords,
+            keep_antictrls=keep_antictrls,
+            backend=backend,
+        )
+
+    if data:
+        _data = random_statevector(dim, dtype=dtype, seed=seed, backend=backend)
+    else:
+        _data = None
+
+    if up_to_k > nqubits:
+        with pytest.raises(ValueError):
+            _ = list(_ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend))
+    else:
+        indices = _ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend)
+        indices = [int(string, 2) for string in indices]
+        indices_lex = np.sort(np.copy(indices))
+
+        if data:
+            target = backend.zeros(2**nqubits, dtype=dtype)
+            if codewords is None:
+                target[indices_lex] = _data
+            else:
+                target[codewords] = _data
+        else:
+            target = backend.zero_state(nqubits, dtype=dtype)
+
+        circuit = up_to_k_hamming_weight_encoder(
+            data=_data,
+            nqubits=nqubits,
+            up_to_k=up_to_k,
+            codewords=codewords,
+            keep_antictrls=keep_antictrls,
+            backend=backend,
+        )
+        state = backend.execute_circuit(circuit).state()
+
+        backend.assert_allclose(state, target, atol=1e-7)
+
+
+@pytest.mark.parametrize("seed", [10])
 @pytest.mark.parametrize("zip_input", [False, True])
 @pytest.mark.parametrize("integers", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 7])
@@ -278,12 +396,12 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     dims = 2**nqubits
     sparsity = nqubits
 
-    data = random_statevector(sparsity, seed=10, backend=backend)
+    data = random_statevector(sparsity, seed=seed, backend=backend)
     np.random.seed(seed)
     indices = np.random.choice(range(dims), size=sparsity, replace=False)
     indices = backend.cast(indices, dtype=int)
 
-    target = backend.cast(backend.np.zeros(dims))
+    target = backend.cast(backend.zeros(dims))
     target[indices] = data
 
     if not integers:
@@ -309,11 +427,18 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     backend.assert_allclose(state, target)
 
 
+def test_sparse_encoder_helpers_errors(backend):
+    with pytest.raises(ValueError):
+        _get_int_type(backend.engine.iinfo(backend.int64).max + 1, backend=backend)
+
+
 @pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
 def test_permutation_synthesis_errors(sigma, backend):
 
     with pytest.raises(TypeError):
-        permutation_synthesis(backend.np.array(sigma), m=2, backend=backend)
+        permutation_synthesis(
+            backend.cast(sigma, dtype=backend.int64), m=2, backend=backend
+        )
     with pytest.raises(ValueError):
         permutation_synthesis([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):
@@ -443,12 +568,14 @@ def test_circuit_kwargs(backend, density_matrix):
     test = entangling_layer(5, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
-    data = backend.cast(np.random.rand(5), dtype=backend.np.float64)
-    test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
+    data = backend.cast(np.random.rand(5), dtype=backend.float64)
+    test = phase_encoder(
+        nqubits=5, data=data, density_matrix=density_matrix, backend=backend
+    )
     assert test.density_matrix is density_matrix
 
     test = unary_encoder(
-        data, "diagonal", density_matrix=density_matrix, backend=backend
+        5, "diagonal", data, density_matrix=density_matrix, backend=backend
     )
     assert test.density_matrix is density_matrix
 
@@ -474,7 +601,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         state = backend.execute_circuit(GHZ_circ).state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -517,7 +644,7 @@ def test_dicke_state(backend, nqubits, weight, all_to_all, density_matrix):
         state = result.state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -570,8 +697,8 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
             target = backend.cast(target, dtype=target.dtype)
 
             if density_matrix:
-                initial = backend.np.outer(initial, backend.np.conj(initial.T))
-                target = backend.np.outer(target, backend.np.conj(target.T))
+                initial = backend.outer(initial, backend.conj(initial.T))
+                target = backend.outer(target, backend.conj(target.T))
 
             result = backend.execute_circuit(wbd_circ, initial_state=initial)
             state = result.state()

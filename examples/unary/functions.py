@@ -176,7 +176,7 @@ def load_quantum_sim(qu, S0, sig, r, T):
         values (np.array): price values associated to the unary basis.
         pdf (np.array): probability distribution for the asset's price evolution.
     """
-    (values, pdf) = get_pdf(qu, S0, sig, r, T)
+    values, pdf = get_pdf(qu, S0, sig, r, T)
     q, ancilla, circuit = create_qc(qu)
     lognormal_parameters = rw_parameters(
         qu, pdf

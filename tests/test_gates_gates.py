@@ -233,7 +233,7 @@ def test_align(backend):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     gate_matrix = gate.matrix(backend)
-    identity = backend.identity_density_matrix(nqubits, normalize=False)
+    identity = backend.identity(2**nqubits)
     backend.assert_allclose(gate_matrix, identity, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
@@ -395,10 +395,13 @@ def test_gpi(backend):
     matrix = np.array([[0, np.conj(phase)], [phase, 0]])
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    assert gates.GPI(0, phi).qasm_label == "gpi"
+    assert gates.GPI(0, phi).qasm_label == (
+        "gpi",
+        "gate gpi(phi) q {u3(pi, phi - pi/2, pi/2 - phi) q;}",
+    )
     assert not gates.GPI(0, phi).clifford
     assert not gates.GPI(0, phi).hamming_weight
     assert gates.GPI(0, phi).unitary
@@ -416,10 +419,13 @@ def test_gpi2(backend):
     matrix = np.array([[1, -1.0j * np.conj(phase)], [-1.0j * phase, 1]]) / np.sqrt(2)
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    assert gates.GPI2(0, phi).qasm_label == "gpi2"
+    assert gates.GPI2(0, phi).qasm_label == (
+        "gpi2",
+        "gate gpi2(phi) q {u3(pi/2, phi - pi/2, pi/2 - phi) q;}",
+    )
     assert not gates.GPI2(0, phi).clifford
     assert not gates.GPI2(0, phi).hamming_weight
     assert gates.GPI2(0, phi).unitary
@@ -487,17 +493,18 @@ def test_u3(backend, seed_state, seed_observable):
     matrix = np.array([[ep.conj() * cost, -em.conj() * sint], [em * sint, ep * cost]])
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
+
+    print(type(observable))
+
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
-        @ observable
-        @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T)
+        backend.conj(final_state_decompose).T @ observable @ final_state_decompose,
+        backend.conj(backend.cast(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -527,7 +534,7 @@ def test_u1q(backend, seed_state):
     )
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -572,7 +579,7 @@ def test_cy(backend, seed_state, seed_observable):
     )
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     # test decomposition
     final_state_decompose = apply_gates(
         backend,
@@ -590,10 +597,10 @@ def test_cy(backend, seed_state, seed_observable):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -615,7 +622,7 @@ def test_cz(backend, seed_state, seed_observable):
     matrix[3, 3] = -1
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     # test decomposition
     final_state_decompose = apply_gates(
         backend,
@@ -633,10 +640,10 @@ def test_cz(backend, seed_state, seed_observable):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -746,7 +753,7 @@ def test_cun(backend, name, params):
 
     gate = getattr(gates, name)(0, 1, **params)
 
-    if name == "CRY":
+    if name in ("CRX", "CRY", "CRZ"):
         decomposition = gate.decompose()
 
     assert gate.unitary
@@ -787,11 +794,11 @@ def test_cun(backend, name, params):
     _matrix = gate.matrix(backend)
     gate = backend.cast(_matrix, dtype=_matrix.dtype)
 
-    target_state = backend.np.matmul(gate, initial_state)
+    target_state = backend.matmul(gate, initial_state)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    if name == "CRY":
+    if name in ("CRX", "CRY", "CRZ"):
         matrix = Circuit(2)
         matrix.add(decomposition)
         matrix = matrix.unitary(backend=backend)
@@ -809,6 +816,14 @@ def test_swap(backend):
     assert gates.SWAP(0, 1).hamming_weight
     assert gates.SWAP(0, 1).unitary
 
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.SWAP(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 def test_iswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.iSWAP(0, 1)], nqubits=2)
@@ -821,6 +836,14 @@ def test_iswap(backend):
     assert gates.iSWAP(0, 1).hamming_weight
     assert gates.iSWAP(0, 1).unitary
 
+    circuit = Circuit(2)
+    circuit.add(gates.iSWAP(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.iSWAP(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 def test_siswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)
@@ -832,6 +855,22 @@ def test_siswap(backend):
     assert not gates.SiSWAP(0, 1).clifford
     assert gates.SiSWAP(0, 1).hamming_weight
     assert gates.SiSWAP(0, 1).unitary
+
+    circuit = Circuit(2)
+    circuit.add(gates.SiSWAP(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.SiSWAP(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target, atol=1e-10)
+
+    circuit = Circuit(2)
+    circuit.add(gates.SiSWAPDG(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.SiSWAPDG(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 def test_fswap(backend):
@@ -893,7 +932,7 @@ def test_fsim(backend):
     matrix[1:3, 1:3] = rotation
     matrix[3, 3] = np.exp(-1j * phi)
     matrix = backend.cast(matrix)
-    target_state = backend.np.matmul(matrix, backend.cast(target_state))
+    target_state = backend.matmul(matrix, backend.cast(target_state))
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -1007,6 +1046,14 @@ def test_rxx(backend, theta):
     else:
         assert not gates.RXX(0, 1, theta).hamming_weight
 
+    circuit = Circuit(2)
+    circuit.add(gates.RXX(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RXX(0, 1, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 @pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
 def test_ryy(backend, theta):
@@ -1034,6 +1081,15 @@ def test_ryy(backend, theta):
     else:
         assert not gates.RYY(0, 1, theta).hamming_weight
 
+    circuit = Circuit(2)
+    circuit.add(gates.RYY(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RYY(0, 1, theta).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
+
 
 def test_rzz(backend):
     theta = 0.1234
@@ -1048,6 +1104,14 @@ def test_rzz(backend):
     assert not gates.RZZ(0, 1, theta).clifford
     assert gates.RZZ(0, 1, theta).hamming_weight
     assert gates.RZZ(0, 1, theta).unitary
+
+    circuit = Circuit(2)
+    circuit.add(gates.RZZ(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RZZ(0, 1, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
 
 
 @pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
@@ -1131,10 +1195,10 @@ def test_rxxyy(backend):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
     # testing random expectation value due to global phase difference
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T) @ observable @ target_state,
+        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
         atol=1e-6,
     )
 
@@ -1170,7 +1234,7 @@ def test_ms(backend, theta):
     matrix[1, 2] = -1.0j * np.conj(minus)
     matrix /= np.sqrt(2)
     matrix = backend.cast(matrix)
-    target_state = backend.np.matmul(matrix, backend.cast(target_state))
+    target_state = backend.matmul(matrix, backend.cast(target_state))
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -1298,10 +1362,10 @@ def test_ecr(backend):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T) @ observable @ target_state,
+        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
         atol=1e-6,
     )
 
@@ -1350,7 +1414,7 @@ def test_toffoli_congruent(backend):
     target = backend.matrices.TOFFOLI
     target[4, 4] = -1
 
-    assert backend.calculate_matrix_norm(congruent - target) < 1e-8
+    assert backend.matrix_norm(congruent - target) < 1e-8
 
 
 def test_ccz(backend):
@@ -1435,6 +1499,41 @@ def test_deutsch(backend, theta):
     else:
         assert not gates.DEUTSCH(0, 1, 2, theta).hamming_weight
 
+    circuit = Circuit(3)
+    circuit.add(gates.DEUTSCH(0, 1, 2, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.DEUTSCH(0, 1, 2, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
+
+@pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
+def test_fanout(backend, qubits):
+    with pytest.raises(ValueError):
+        gate = gates.FanOut(0)
+
+    nqubits = len(qubits)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.CNOT(qubits[0], qubit) for qubit in qubits[1:])
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    gate = gates.FanOut(*qubits)
+    circuit.add(gate)
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate.decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
+    assert gate.clifford
+
 
 @pytest.mark.parametrize(
     "qubits_in,qubits_out",
@@ -1457,13 +1556,6 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
         nqubits=nqubits,
         initial_state=initial_state,
     )
-    # test decomposition
-    final_state_decompose = apply_gates(
-        backend,
-        gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).decompose(),
-        nqubits=nqubits,
-        initial_state=initial_state,
-    )
 
     matrix = np.eye(2**nqubits, dtype=complex)
     exp, sin, cos = np.exp(1j * phi), np.sin(theta), np.cos(theta)
@@ -1475,7 +1567,6 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state_decompose, target_state)
 
     with pytest.raises(NotImplementedError):
         gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).qasm_label
@@ -1489,16 +1580,27 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
             qubits_in, qubits_out, theta, phi
         ).hamming_weight
 
+    # test decomposition
+    circuit = Circuit(nqubits)
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1))
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1).decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
 
 @pytest.mark.parametrize("seed", [10])
 def test_generalized_rbs_apply(backend, seed):
-    rng = np.random.default_rng(seed)
-
+    np.random.seed(seed)
+    backend.set_seed(seed)
     nqubits = 4
     dims = 2**nqubits
-    theta, phi = 2 * np.pi * rng.random(2)
+    theta, phi = 2 * np.pi * np.random.random(2)
 
-    qubit_ids = rng.choice(np.arange(0, nqubits), size=nqubits - 1, replace=False)
+    qubit_ids = np.random.choice(np.arange(0, nqubits), size=nqubits - 1, replace=False)
     qubits_in, qubits_out = qubit_ids[:1], qubit_ids[1:]
 
     gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi)
@@ -1506,7 +1608,7 @@ def test_generalized_rbs_apply(backend, seed):
     matrix.add(gate)
     matrix = matrix.unitary(backend=backend)
 
-    state = random_statevector(dims, seed=rng, backend=backend)
+    state = random_statevector(dims, seed=seed, backend=backend)
     target = matrix @ state
 
     state = gate.apply(backend, state, nqubits)
@@ -1527,7 +1629,6 @@ def test_unitary(backend, nqubits):
 
 
 def test_unitary_initialization(backend):
-
     matrix = np.random.random((4, 4))
     gate = gates.Unitary(matrix, 0, 1)
     backend.assert_allclose(gate.parameters[0], matrix, atol=1e-6)
@@ -1658,6 +1759,15 @@ def test_controlled_u1(backend):
     gate = gates.U1(0, theta).controlled_by(1)
     assert gate.__class__.__name__ == "CU1"
 
+    circuit = Circuit(2)
+    circuit.add(gates.CU1(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU1(0, 1, theta).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary / unitary[0, 0], target)
+
 
 def test_controlled_u2(backend):
     phi = 0.1234
@@ -1672,6 +1782,15 @@ def test_controlled_u2(backend):
     # for coverage
     gate = gates.CU2(0, 1, phi, lam)
     assert gate.parameters == (phi, lam)
+
+    circuit = Circuit(2)
+    circuit.add(gates.CU2(0, 1, phi, lam).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU2(0, 1, phi, lam).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 def test_controlled_u3(backend):
@@ -1688,6 +1807,15 @@ def test_controlled_u3(backend):
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
     assert gate.parameters == (theta, phi, lam)
+
+    circuit = Circuit(2)
+    circuit.add(gates.CU3(0, 1, theta, phi, lam).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU3(0, 1, theta, phi, lam).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 @pytest.mark.parametrize("applyx", [False, True])
@@ -1869,8 +1997,8 @@ def test_unitary_dagger(backend, nqubits):
     gate = gates.Unitary(matrix, *range(nqubits))
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
-    target_state = backend.np.matmul(matrix, initial_state)
-    target_state = backend.np.matmul(backend.np.conj(matrix).T, target_state)
+    target_state = backend.matmul(matrix, initial_state)
+    target_state = backend.matmul(backend.conj(matrix).T, target_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
@@ -1938,9 +2066,9 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
     initial_state = random_statevector(2**nqubits, backend=backend)
-    target_state = backend.apply_gate(gate, backend.np.copy(initial_state), nqubits)
+    target_state = backend.apply_gate(gate, backend.copy(initial_state), nqubits)
     dgates = gate.decompose(*free, use_toffolis=use_toffolis)
-    final_state = backend.np.copy(initial_state)
+    final_state = backend.copy(initial_state)
     for gate in dgates:
         final_state = backend.apply_gate(gate, final_state, nqubits)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
@@ -1972,3 +2100,39 @@ def test_clifford_condition_update(backend, gate):
 
 
 ###############################################################################
+
+
+@pytest.mark.parametrize(
+    "gate, qubits, params",
+    [
+        ["X", (1,), ()],
+        ["I", (2,), ()],
+        ["I", (2, 3), ()],
+        ["Align", (0,), (1,)],
+        ["FanOut", (0, 2, 3), ()],
+        ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1,)],
+        ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1, 0.5)],
+    ],
+)
+def test_matrix(backend, gate, qubits, params):
+    gate = getattr(gates, gate)
+    gate = gate(*qubits, *params)
+
+    backend.assert_allclose(gate.matrix(backend), backend.matrix(gate))
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.RX(0, 0.123),
+        gates.RY(0, 0.123),
+        gates.RZ(0, 0.123),
+    ],
+)
+def test_gradient_rn(backend, gate):
+    """Test gradient for Rn gates"""
+    generator = gate.generator(backend)
+    target_gradient = (
+        -1j * gate.generator_eigenvalue() * (generator @ gate.matrix(backend))
+    )
+    backend.assert_allclose(gate.gradient(backend).matrix(backend), target_gradient)

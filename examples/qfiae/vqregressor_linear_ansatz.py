@@ -41,15 +41,15 @@ class VQRegressor_linear_ansatz:
     def linear_ansatz(self, weights, x=None):
         """Variational Quantum Circuit of the Quantum Neural Network that performs the fit of f(x)."""
 
-        c = Circuit(self.nqubits)
+        circuit = Circuit(self.nqubits)
         # First unitary, Layer 0
-        self.A(c, weights[0:3])
+        self.A(circuit, weights[0:3])
         # Adding different layers
         for i in range(3, len(weights), 3):
-            self.S(c, x)
-            self.A(c, weights[i : i + 3])
-        c.add(gates.M(0))
-        return c
+            self.S(circuit, x)
+            self.A(circuit, weights[i : i + 3])
+        circuit.add(gates.M(0))
+        return circuit
 
     def label_points(self, x):
         """

@@ -36,15 +36,15 @@ class VQRegressor:
             layers: integer, number of layers which compose the circuit
         Returns: abstract qibo circuit
         """
-        c = Circuit(self.nqubits)
+        circuit = Circuit(self.nqubits)
 
-        c.add(gates.H(q=0))
+        circuit.add(gates.H(q=0))
         for l in range(layers):
-            c.add(gates.RY(q=0, theta=0))
-            c.add(gates.H(0))
-            c.add(gates.RZ(q=0, theta=0))
-        c.add(gates.M(0))
-        return c
+            circuit.add(gates.RY(q=0, theta=0))
+            circuit.add(gates.H(0))
+            circuit.add(gates.RZ(q=0, theta=0))
+        circuit.add(gates.M(0))
+        return circuit
 
     def label_points(self, x):
         """

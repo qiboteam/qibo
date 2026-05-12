@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
 
-from qibo import callbacks, hamiltonians, models
+from qibo.callbacks import Overlap
+from qibo.hamiltonians import TFIM
+from qibo.models import StateEvolution
 
 matplotlib.rcParams["mathtext.fontset"] = "cm"
 matplotlib.rcParams["font.family"] = "STIXGeneral"
@@ -36,18 +38,18 @@ def main(nqubits, hfield, T, save):
         T (float): Total time of the adiabatic evolution.
         save (bool): Whether to save the plots.
     """
-    dense_h = hamiltonians.TFIM(nqubits, h=hfield)
-    trotter_h = hamiltonians.TFIM(nqubits, h=hfield, dense=False)
+    dense_h = TFIM(nqubits, h=hfield)
+    trotter_h = TFIM(nqubits, h=hfield, dense=False)
     initial_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
 
     nsteps_list = np.arange(50, 550, 50)
     overlaps = []
     for nsteps in nsteps_list:
-        exact_ev = models.StateEvolution(dense_h, dt=T / nsteps)
-        trotter_ev = models.StateEvolution(trotter_h, dt=T / nsteps)
+        exact_ev = StateEvolution(dense_h, dt=T / nsteps)
+        trotter_ev = StateEvolution(trotter_h, dt=T / nsteps)
         exact_state = exact_ev(final_time=T, initial_state=np.copy(initial_state))
         trotter_state = trotter_ev(final_time=T, initial_state=np.copy(initial_state))
-        ovlp = callbacks.Overlap(exact_state).apply(dense_h.backend, trotter_state)
+        ovlp = Overlap(exact_state).apply(dense_h.backend, trotter_state)
         overlaps.append(dense_h.backend.to_numpy(ovlp))
 
     dt_list = T / nsteps_list

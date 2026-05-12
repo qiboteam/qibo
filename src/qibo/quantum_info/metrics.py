@@ -3,13 +3,15 @@
 from typing import Optional, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy import sparse
 
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
+from qibo.models.circuit import Circuit
 
 
-def purity(state, backend=None):
+def purity(state: ArrayLike, backend: Optional[Backend] = None) -> float:
     """Purity of a quantum state :math:`\\rho`.
 
     This is given by
@@ -18,7 +20,11 @@ def purity(state, backend=None):
         \\text{purity}(\\rho) = \\text{tr}(\\rho^{2}) \\, .
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
     Returns:
         float: Purity of quantum ``state`` :math:`\\rho`.
     """
@@ -33,29 +39,36 @@ def purity(state, backend=None):
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if len(state.shape) == 1:
-        pur = backend.np.real(backend.calculate_vector_norm(state)) ** 2
-    else:
-        pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
+    pur = (
+        backend.real(backend.vector_norm(state)) ** 2
+        if len(state.shape) == 1
+        else backend.real(backend.trace(state @ state))
+    )
+
     return float(pur)
 
 
-def impurity(state, backend=None):
+def impurity(state: ArrayLike, backend: Optional[Backend] = None) -> float:
     """Impurity of quantum state :math:`\\rho`.
 
     This is given by :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
     is defined in :func:`qibo.quantum_info.purity`.
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
 
     Returns:
-        float: impurity of ``state`` :math:`\\rho`.
+        float: Impurity of ``state`` :math:`\\rho`.
     """
     return 1 - purity(state, backend=backend)
 
 
-def trace_distance(state, target, backend=None):
+def trace_distance(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
     """Trace distance between two quantum states, :math:`\\rho` and
     :math:`\\sigma`:
 
@@ -67,8 +80,8 @@ def trace_distance(state, target, backend=None):
     where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -92,17 +105,19 @@ def trace_distance(state, target, backend=None):
         )
 
     if len(state.shape) == 1:
-        state = backend.np.outer(backend.np.conj(state), state)
-        target = backend.np.outer(backend.np.conj(target), target)
+        state = backend.outer(backend.conj(state), state)
+        target = backend.outer(backend.conj(target), target)
 
     distance = state - target
-    distance = backend.np.conj(distance.T) @ distance
-    distance = backend.calculate_matrix_sqrt(distance)
+    distance = backend.conj(distance.T) @ distance
+    distance = backend.matrix_sqrt(distance)
 
-    return backend.np.trace(distance) / 2
+    return backend.trace(distance) / 2
 
 
-def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
+def hilbert_schmidt_inner_product(
+    operator_A: ArrayLike, operator_B: ArrayLike, backend: Optional[Backend] = None
+) -> float:
     """Calculate the Hilbert-Schmidt inner product between two operators.
 
     Given two operators :math:`A, \\, B \\in \\mathcal{H}`, the Hilbert-Schmidt
@@ -112,8 +127,8 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
         \\braket{A, \\, B}_{\\text{HS}} = \\text{tr}\\left(A^{\\dagger} \\, B\\right) \\, .
 
     Args:
-        operator_A (ndarray): operator :math:`A`.
-        operator_B (ndarray): operator :math:`B`.
+        operator_A (ArrayLike): operator :math:`A`.
+        operator_B (ArrayLike): operator :math:`B`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -123,12 +138,14 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
     """
     backend = _check_backend(backend)
 
-    inner_product = backend.np.trace(backend.np.conj(operator_A.T) @ operator_B)
+    inner_product = backend.trace(backend.conj(operator_A.T) @ operator_B)
 
-    return backend.np.real(inner_product)
+    return backend.real(inner_product)
 
 
-def hilbert_schmidt_distance(state, target, backend=None):
+def hilbert_schmidt_distance(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
     """Calculate the Hilbert-Schmidt distance between two quantum states:
 
     .. math::
@@ -139,8 +156,8 @@ def hilbert_schmidt_distance(state, target, backend=None):
     :func:`qibo.quantum_info.hilbert_schmidt_inner_product`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -170,15 +187,20 @@ def hilbert_schmidt_distance(state, target, backend=None):
         )
 
     if len(state.shape) == 1:
-        state = backend.np.outer(backend.np.conj(state), state)
-        target = backend.np.outer(backend.np.conj(target), target)
+        state = backend.outer(backend.conj(state), state)
+        target = backend.outer(backend.conj(target), target)
 
     difference = state - target
 
     return hilbert_schmidt_inner_product(difference, difference, backend=backend)
 
 
-def fidelity(state, target, backend=None):
+def fidelity(
+    state: ArrayLike,
+    target: ArrayLike,
+    precision_tol: float = 1e-8,
+    backend: Optional[Backend] = None,
+) -> float:
     """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho` and
     ``target`` state :math:`\\sigma`. In general,
 
@@ -194,6 +216,9 @@ def fidelity(state, target, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
+        precision_tol (float, optional): precision tolerance in :func:`qibo.quantum_info.impurity`
+            used to decide if ``state`` and ``target`` are pure or mixed states.
+            Defaults to :math:`10^{-8}`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -219,32 +244,31 @@ def fidelity(state, target, backend=None):
 
     # check purity if both states are density matrices
     if len(state.shape) == 2 and len(target.shape) == 2:
-        purity_state = purity(state, backend=backend)
-        purity_target = purity(target, backend=backend)
+        impurity_state = impurity(state, backend=backend)
+        impurity_target = impurity(target, backend=backend)
 
         # if both states are mixed, default to full fidelity calculation
-        if (
-            abs(purity_state - 1) > PRECISION_TOL
-            and abs(purity_target - 1) > PRECISION_TOL
-        ):
-            fid = backend.calculate_matrix_sqrt(state)
-            fid = fid @ backend.np.conj(target.T) @ fid
-            fid = backend.calculate_matrix_sqrt(fid)
-            fid = backend.np.real(backend.np.trace(fid))
+        if impurity_state > precision_tol and impurity_target > precision_tol:
+            fid = backend.matrix_sqrt(state)
+            fid = fid @ backend.conj(target.T) @ fid
+            fid = backend.matrix_sqrt(fid)
+            fid = backend.real(backend.trace(fid))
 
             return fid**2
 
     # if any of the states is pure, perform lighter calculation
     fid = (
-        backend.np.abs(backend.np.matmul(backend.np.conj(state), target)) ** 2
+        backend.abs(backend.conj(state) @ target) ** 2
         if len(state.shape) == 1
-        else backend.np.real(backend.np.trace(backend.np.matmul(state, target)))
+        else backend.real(backend.trace(state @ target))
     )
 
     return fid
 
 
-def infidelity(state, target, backend=None):
+def infidelity(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
     """Infidelity between ``state`` :math:`\\rho` and ``target`` state
     :math:`\\sigma`, which is given by
 
@@ -255,8 +279,8 @@ def infidelity(state, target, backend=None):
     between ``state`` and ``target``.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -267,7 +291,295 @@ def infidelity(state, target, backend=None):
     return 1 - fidelity(state, target, backend=backend)
 
 
-def bures_angle(state, target, backend=None):
+def a_fidelity(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
+    """Return the :math:`A`-fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the :math:`A`-fidelity is defined as:
+
+    .. math::
+        F_{\\text{A}}(\\rho, \\, \\sigma) = \\text{tr}^{2}(\\sqrt{\\rho} \\, \\sqrt{\\sigma}) \\, .
+
+    Args:
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: :math:`A`-fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. Z. Ma, F.-L. Zhang, and J.-L. Chen. *Geometric interpretation for the A ﬁdelity and its
+        relation with the Bures ﬁdelity*, `Phys. Rev. A, 78(6):064305, (2008)
+        <https://doi.org/10.1103/PhysRevA.78.064305>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    test_state = bool(backend.abs(purity_state - 1) <= PRECISION_TOL)
+    test_target = bool(backend.abs(purity_target - 1) <= PRECISION_TOL)
+
+    if test_state and test_target:
+        return fidelity(state, target, backend=backend) ** 2
+
+    state_sqrt = backend.matrix_sqrt(state) if not test_state else state
+    target_sqrt = backend.matrix_sqrt(target) if not test_target else target
+
+    if test_state and not test_target:
+        trace = (
+            backend.conj(state) @ target_sqrt @ state
+            if len(state.shape) == 1
+            else backend.trace(state @ target_sqrt)
+        )
+        return backend.real(trace) ** 2
+
+    if not test_state and test_target:
+        trace = (
+            backend.conj(target) @ state_sqrt @ target
+            if len(target.shape) == 1
+            else backend.trace(state_sqrt @ target)
+        )
+        return backend.real(trace) ** 2
+
+    return backend.real(backend.trace(state_sqrt @ target_sqrt)) ** 2
+
+
+def n_fidelity(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
+    """Return the :math:`N`-fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the :math:`N`-fidelity is defined as:
+
+    .. math::
+        F_{\\text{N}}(\\rho, \\, \\sigma) = \\text{tr}(\\rho \\, \\sigma) +
+            \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`.
+
+    Args:
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: :math:`N`-fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. P. E. M. F. Mendonça, R. d. J. Napolitano, M. A. Marchiolli, C. J. Foster, and
+        Y.-C. Liang. *Alternative ﬁdelity measure between quantum states*,
+        `Phys. Rev. A, 78 052330 (2008) <https://doi.org/10.1103/PhysRevA.78.052330>`_.
+
+        3. A. Miszczak, Z. Puchala, P. Horodecki, A. Uhlmann, and K. Zyczkowski.
+        *Sub- and super-ﬁdelity as bounds for quantum ﬁdelity*.
+        `Quantum Inf. Comput., 9(1):103–130, (2009)
+        <https://dl.acm.org/doi/10.5555/2021256.2021263>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    if (
+        backend.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
+
+    fid = backend.trace(state @ target)
+    fid += backend.sqrt(1 - purity_state) * backend.sqrt(1 - purity_target)
+
+    return backend.real(fid)
+
+
+def chen_fidelity(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
+    """Return the Chen fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the Chen fidelity is defined as:
+
+    .. math::
+        F_{\\text{C}}(\\rho, \\, \\sigma) = \\frac{1 - r}{2} + \\frac{1 + r}{2} \\,
+            F_{\\text{N}}(\\rho, \\, \\sigma)  \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Chen fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. J.-L. Chen, L. Fu, A. A. Ungar, and X.-G. Zhao, *Alternative fidelity measure between
+        two states of an N-state quantum system*, `Phys. Rev. A 65, 054304 (2002)
+        <https://doi.org/10.1103/PhysRevA.65.054304>`_.
+
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    dims = len(state)
+
+    coeff = 1 / (dims - 1)
+
+    fid = (1 - coeff) / 2
+    fid += ((1 + coeff) / 2) * n_fidelity(state, target, backend=backend)
+
+    return fid
+
+
+def geometric_mean_fidelity(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
+    """Return the geometric-mean fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the geometric-mean fidelity is defined as:
+
+    .. math::
+        F_{\\text{GM}}(\\rho, \\, \\sigma) = \\frac{\\text{tr}(\\rho \\, \\sigma)}
+            {\\sqrt{\\text{tr}(\\rho^{2}) \\, \\text{tr}(\\sigma^{2})}} \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`. If at least one of the quantum states is pure,
+    then the geometric-mean fidelity reduces to the usual :class:`qibo.quantum_info.fidelity`.
+
+    Args:
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Geometric-mean fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. X. Wang, C.-S. Yu, and X.X. Yi. *An alternative quantum ﬁdelity for mixed states
+        of qudits*. `Phys. Lett. A, 373(1):58–60, (2008)
+        <https://doi.org/10.1016/j.physleta.2008.10.083>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    if (
+        backend.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
+
+    gm_fid = backend.trace(state @ target)
+    gm_fid /= backend.sqrt(purity_state * purity_target)
+
+    return backend.real(gm_fid)
+
+
+def max_fidelity(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
+    """Return max fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the max fidelity is defined as:
+
+    .. math::
+        F_{\\text{max}}(\\rho, \\, \\sigma) = \\frac{\\text{tr}(\\rho \\, \\sigma)}
+            {\\text{max}(\\text{tr}(\\rho^{2}), \\, \\text{tr}(\\sigma^{2}))} \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`. If at least one of the quantum states is pure,
+    then the max fidelity reduces to the usual :class:`qibo.quantum_info.fidelity`.
+
+    Args:
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Max fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    if (
+        backend.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
+
+    max_fid = backend.trace(state @ target)
+    max_fid /= max(purity_state, purity_target)
+
+    return max_fid
+
+
+def bures_angle(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
     """Calculates the Bures angle :math:`D_{A}` between a ``state``
     :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -278,8 +590,8 @@ def bures_angle(state, target, backend=None):
     between `state` and `target`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -289,12 +601,14 @@ def bures_angle(state, target, backend=None):
     """
     backend = _check_backend(backend)
 
-    angle = backend.np.arccos(backend.np.sqrt(fidelity(state, target, backend=backend)))
+    angle = backend.arccos(backend.sqrt(fidelity(state, target, backend=backend)))
 
     return angle
 
 
-def bures_distance(state, target, backend=None):
+def bures_distance(
+    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+) -> float:
     """Calculates the Bures distance :math:`D_{B}` between a ``state``
     :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -305,8 +619,8 @@ def bures_distance(state, target, backend=None):
     between `state` and `target`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -316,13 +630,18 @@ def bures_distance(state, target, backend=None):
     """
     backend = _check_backend(backend)
 
-    sqrt_fid = backend.np.sqrt(fidelity(state, target, backend=backend))
-    distance = backend.np.sqrt(2 * (1 - sqrt_fid))
+    sqrt_fid = backend.sqrt(fidelity(state, target, backend=backend))
+    distance = backend.sqrt(2 * (1 - sqrt_fid))
 
     return distance
 
 
-def process_fidelity(channel, target=None, check_unitary: bool = False, backend=None):
+def process_fidelity(
+    channel: ArrayLike,
+    target: Optional[ArrayLike] = None,
+    check_unitary: bool = False,
+    backend: Optional[Backend] = None,
+) -> float:
     """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and
     a ``target`` unitary channel :math:`U`. The process fidelity is defined as
 
@@ -331,8 +650,8 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
             \\text{tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`U`. If ``None``, target is the
+        channel (ArrayLike): quantum channel :math:`\\mathcal{E}`.
+        target (ArrayLike, optional): quantum channel :math:`U`. If ``None``, target is the
             Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
@@ -356,22 +675,16 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if check_unitary is True:
         norm_channel = float(
-            backend.calculate_matrix_norm(
-                backend.np.matmul(
-                    backend.np.conj(backend.np.transpose(channel, (1, 0))), channel
-                )
-                - backend.np.eye(dim**2)
+            backend.matrix_norm(
+                (backend.conj(channel.T) @ channel) - backend.identity(dim**2)
             )
         )
         if target is None and norm_channel > PRECISION_TOL:
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
             norm_target = float(
-                backend.calculate_vector_norm(
-                    backend.np.matmul(
-                        backend.np.conj(backend.np.transpose(target, (1, 0))), target
-                    )
-                    - backend.np.eye(dim**2)
+                backend.vector_norm(
+                    (backend.conj(target.T) @ target) - backend.identity(dim**2)
                 )
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
@@ -379,20 +692,23 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        process_fid = backend.np.real(backend.np.trace(channel)) / dim**2
+        process_fid = backend.real(backend.trace(channel)) / dim**2
         process_fid = float(process_fid)
 
         return process_fid
 
-    process_fid = backend.np.matmul(
-        backend.np.transpose(backend.np.conj(channel), (1, 0)), target
-    )
-    process_fid = backend.np.real(backend.np.trace(process_fid)) / dim**2
+    process_fid = backend.conj(channel.T) @ target
+    process_fid = backend.real(backend.trace(process_fid)) / dim**2
 
     return process_fid
 
 
-def process_infidelity(channel, target=None, check_unitary: bool = False, backend=None):
+def process_infidelity(
+    channel: ArrayLike,
+    target: Optional[ArrayLike] = None,
+    check_unitary: bool = False,
+    backend: Optional[Backend] = None,
+) -> float:
     """Process infidelity between quantum channel :math:`\\mathcal{E}` and a
     ``target`` unitary channel :math:`U`. The process infidelity is defined as
 
@@ -402,8 +718,8 @@ def process_infidelity(channel, target=None, check_unitary: bool = False, backen
     where :math:`F_{\\text{pro}}` is the :func:`qibo.quantum_info.process_fidelity`.
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`U`. If ``None``, target is the
+        channel (ArrayLike): quantum channel :math:`\\mathcal{E}`.
+        target (ArrayLike, optional): quantum channel :math:`U`. If ``None``, target is the
             Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Defaults to ``False``.
@@ -422,8 +738,11 @@ def process_infidelity(channel, target=None, check_unitary: bool = False, backen
 
 
 def average_gate_fidelity(
-    channel, target=None, check_unitary: bool = False, backend=None
-):
+    channel: ArrayLike,
+    target: Optional[ArrayLike] = None,
+    check_unitary: bool = False,
+    backend: Optional[Backend] = None,
+) -> float:
     """Average gate fidelity between a quantum ``channel`` :math:`\\mathcal{E}`
     and a ``target`` unitary channel :math:`U`. The average gate fidelity is
     defined as
@@ -439,8 +758,8 @@ def average_gate_fidelity(
     channel :math:`\\mathcal{U}`.
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`\\mathcal{U}`.
+        channel (ArrayLike): quantum channel :math:`\\mathcal{E}`.
+        target (ArrayLike, optional): quantum channel :math:`\\mathcal{U}`.
             If ``None``, target is the Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
@@ -463,7 +782,12 @@ def average_gate_fidelity(
     return process_fid
 
 
-def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
+def gate_error(
+    channel: ArrayLike,
+    target: Optional[ArrayLike] = None,
+    check_unitary: bool = False,
+    backend: Optional[Backend] = None,
+) -> float:
     """Gate error between a quantum ``channel`` :math:`\\mathcal{E}` and a
     ``target`` unitary channel :math:`U`, which is defined as
 
@@ -474,8 +798,8 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     :func:`qibo.quantum_info.average_gate_fidelity`.
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
+        channel (ArrayLike): quantum channel :math:`\\mathcal{E}`.
+        target (ArrayLike, optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
             target is the Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
@@ -494,7 +818,12 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     return error
 
 
-def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no cover
+def diamond_norm(
+    channel: ArrayLike,
+    target: Optional[ArrayLike] = None,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> float:  # pragma: no cover
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
     ``channel`` :math:`\\mathcal{E}`, which is given by
 
@@ -524,8 +853,8 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
         dnorm = diamond_norm(unitary, unitary_2)
 
     Args:
-        channel (ndarray): row-vectorized Choi representation of a quantum channel.
-        target (ndarray, optional): row-vectorized Choi representation of a target
+        channel (ArrayLike): row-vectorized Choi representation of a quantum channel.
+        target (ArrayLike, optional): row-vectorized Choi representation of a target
             quantum channel. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
@@ -540,7 +869,7 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
     .. note::
         This function requires the optional CVXPY package to be installed.
     """
-    import cvxpy
+    import cvxpy  # pylint: disable=import-outside-toplevel  #type: ignore
 
     backend = _check_backend(backend)
 
@@ -560,9 +889,9 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
 
     channel = backend.to_numpy(channel)
 
-    channel = backend.np.transpose(channel, (1, 0))
-    channel_real = backend.np.real(channel)
-    channel_imag = backend.np.imag(channel)
+    channel = backend.transpose(channel, (1, 0))
+    channel_real = backend.real(channel)
+    channel_imag = backend.imag(channel)
 
     dim = int(np.sqrt(channel.shape[0]))
 
@@ -627,12 +956,12 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
 
 
 def expressibility(
-    circuit,
+    circuit: Circuit,
     power_t: int,
     samples: int,
-    order: Optional[Union[int, float, str]] = 2,
-    backend=None,
-):
+    order: Union[int, float, str] = 2,
+    backend: Optional[Backend] = None,
+) -> float:
     """Returns the expressibility :math:`\\|A\\|` of a parametrized circuit,
     where
 
@@ -678,17 +1007,17 @@ def expressibility(
         circuit.nqubits, power_t, samples=None, backend=backend
     ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = float(backend.calculate_vector_norm(deviation, order=order))
+    fid = float(backend.vector_norm(deviation, order=order))
 
     return fid
 
 
 def frame_potential(
-    circuit,
+    circuit: Circuit,
     power_t: int,
-    samples: int = None,
-    backend=None,
-):
+    samples: int,
+    backend: Optional[Backend] = None,
+) -> float:
     """Returns the frame potential of a parametrized circuit under uniform
     sampling of the parameters.
 
@@ -742,19 +1071,23 @@ def frame_potential(
     potential = 0
     for _ in range(samples):
         unitary_1 = circuit.copy()
-        params_1 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params_1 = backend.random_uniform(
+            -float(np.pi), float(np.pi), size=circuit.trainable_gates.nparams
+        )
         unitary_1.set_parameters(params_1)
-        unitary_1 = unitary_1.unitary(backend) / np.sqrt(dim)
+        unitary_1 = unitary_1.unitary(backend) / float(np.sqrt(dim))
 
         for _ in range(samples):
             unitary_2 = circuit.copy()
-            params_2 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+            params_2 = backend.random_uniform(
+                -float(np.pi), float(np.pi), size=circuit.trainable_gates.nparams
+            )
             unitary_2.set_parameters(params_2)
-            unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
+            unitary_2 = unitary_2.unitary(backend) / float(np.sqrt(dim))
 
-            potential += backend.np.abs(
-                backend.np.trace(
-                    backend.np.transpose(backend.np.conj(unitary_1), (1, 0)) @ unitary_2
+            potential += backend.abs(
+                backend.trace(
+                    backend.transpose(backend.conj(unitary_1), (1, 0)) @ unitary_2
                 )
             ) ** (2 * power_t)
 
@@ -762,12 +1095,12 @@ def frame_potential(
 
 
 def quantum_fisher_information_matrix(
-    circuit,
-    parameters=None,
-    initial_state=None,
+    circuit: Circuit,
+    parameters: Optional[ArrayLike] = None,
+    initial_state: Optional[ArrayLike] = None,
     return_complex: bool = True,
-    backend=None,
-):
+    backend: Optional[Backend] = None,
+) -> ArrayLike:  # pragma: no cover
     """Calculate the Quantum Fisher Information Matrix (QFIM) of a parametrized ``circuit``.
 
     Given a set of ``parameters`` :math:`\\theta = \\{\\theta_{k}\\}_{k\\in[M]}` and a
@@ -807,16 +1140,14 @@ def quantum_fisher_information_matrix(
 
     if parameters is None:
         parameters = circuit.get_parameters()
-        parameters = backend.cast(parameters, dtype=float).flatten()
+        parameters = backend.cast(parameters, dtype=backend.float64).flatten()
 
-    jacobian = backend.calculate_jacobian_matrix(
-        circuit, parameters, initial_state, return_complex
-    )
+    jacobian = backend.jacobian(circuit, parameters, initial_state, return_complex)
 
     if return_complex:
         jacobian = jacobian[0] + 1j * jacobian[1]
 
-    jacobian = backend.cast(jacobian, dtype=np.complex128)
+    jacobian = backend.cast(jacobian, dtype=backend.complex128)
 
     copied = circuit.copy(deep=True)
     copied.set_parameters(parameters)
@@ -826,6 +1157,6 @@ def quantum_fisher_information_matrix(
     overlaps = jacobian.T @ state
 
     qfim = jacobian.T @ jacobian
-    qfim = qfim - backend.np.outer(overlaps, backend.np.conj(overlaps.T))
+    qfim = qfim - backend.outer(overlaps, backend.conj(overlaps.T))
 
-    return 4 * backend.np.real(qfim)
+    return 4 * backend.real(qfim)

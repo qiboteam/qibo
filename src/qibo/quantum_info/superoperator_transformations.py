@@ -12,6 +12,7 @@ from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
+from qibo.quantum_info.utils import _get_single_paulis, _pauli_basis_normalization
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -53,47 +54,31 @@ def vectorization(state, order: str = "row", backend=None):
             f"Object must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), but have dims {state.shape}.",
         )
 
-    if not isinstance(order, str):
+    if order not in ["row", "column", "system"]:
         raise_error(
-            TypeError, f"order must be type str, but it is type {type(order)} instead."
+            ValueError,
+            f"order must be either 'row' or 'column' or 'system', but it is {order}.",
         )
-    else:
-        if order not in ["row", "column", "system"]:
-            raise_error(
-                ValueError,
-                f"order must be either 'row' or 'column' or 'system', but it is {order}.",
-            )
 
     backend = _check_backend(backend)
 
     dims = state.shape[-1]
 
     if len(state.shape) == 1:
-        state = backend.np.outer(state, backend.np.conj(state))
+        state = backend.outer(state, backend.conj(state))
     elif len(state.shape) == 3 and state.shape[1] == 1:
-        state = backend.np.einsum(
-            "aij,akl->aijkl", state, backend.np.conj(state)
-        ).reshape(state.shape[0], dims, dims)
+        state = backend.einsum("aij,akl->aijkl", state, backend.conj(state)).reshape(
+            state.shape[0], dims, dims
+        )
 
     if order == "row":
-        state = backend.np.reshape(state, (-1, dims**2))
+        state = backend.qinfo._vectorization_row(state, dims)
     elif order == "column":
-        indices = list(range(len(state.shape)))
-        indices[-2:] = reversed(indices[-2:])
-        state = backend.np.transpose(state, indices)
-        state = backend.np.reshape(state, (-1, dims**2))
+        state = backend.qinfo._vectorization_column(state, dims)
     else:
-        nqubits = int(np.log2(state.shape[-1]))
+        state = backend.qinfo._vectorization_system(state)
 
-        new_axis = [0]
-        for qubit in range(nqubits):
-            new_axis.extend([qubit + nqubits + 1, qubit + 1])
-
-        state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
-        state = backend.np.transpose(state, new_axis)
-        state = backend.np.reshape(state, (-1, 2 ** (2 * nqubits)))
-
-    state = backend.np.squeeze(
+    state = backend.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
     )
 
@@ -111,8 +96,10 @@ def unvectorization(state, order: str = "row", backend=None):
             &= \\text{unvectorization}(\\text{vectorization}(\\rho)) \\nonumber
         \\end{align}
 
+    If ``state`` has shape (N, k), it is interpreted as a batch of states.
+
     Args:
-        state: quantum state in Liouville representation.
+        state: quantum state or batch of states in the Liouville representation.
         order (str, optional): If ``"row"``, unvectorization is performed
             row-wise. If ``"column"``, unvectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
@@ -125,40 +112,27 @@ def unvectorization(state, order: str = "row", backend=None):
         ndarray: Density matrix of ``state``.
     """
 
-    if len(state.shape) != 1:
+    if len(state.shape) not in (1, 2):
         raise_error(
             TypeError,
-            f"Object must have dims (k,), but have dims {state.shape}.",
+            f"Object must have dims (k,) or (N, k), but have dims {state.shape}.",
         )
 
-    if not isinstance(order, str):
+    if order not in ["row", "column", "system"]:
         raise_error(
-            TypeError, f"order must be type str, but it is type {type(order)} instead."
+            ValueError,
+            f"order must be either 'row' or 'column' or 'system', but it is {order}.",
         )
-    else:
-        if order not in ["row", "column", "system"]:
-            raise_error(
-                ValueError,
-                f"order must be either 'row' or 'column' or 'system', but it is {order}.",
-            )
-
     backend = _check_backend(backend)
-    state = backend.cast(state)
+    state = backend.cast(state, dtype=state.dtype)
 
-    dim = int(np.sqrt(len(state)))
-
-    if order in ["row", "column"]:
-        order = "C" if order == "row" else "F"
-        state = backend.cast(
-            np.reshape(backend.to_numpy(state), (dim, dim), order=order)
-        )
-    else:
-        nqubits = int(np.log2(dim))
-        axes_old = list(np.arange(0, 2 * nqubits))
-        state = backend.np.reshape(state, [2] * 2 * nqubits)
-        state = backend.np.transpose(state, axes_old[1::2] + axes_old[0::2])
-        state = backend.np.reshape(state, [2**nqubits] * 2)
-
+    dim = int(np.sqrt(state.shape[-1]))
+    if len(state.shape) == 1:
+        state = state.reshape(1, -1)
+    func = getattr(backend.qinfo, f"_unvectorization_{order}")
+    state = func(state, dim)
+    if state.shape[0] == 1:
+        state = backend.squeeze(state, 0)
     return state
 
 
@@ -186,10 +160,8 @@ def to_choi(channel, order: str = "row", backend=None):
     """
     backend = _check_backend(backend)
 
-    channel = vectorization(channel, order=order, backend=backend)
-    channel = backend.np.outer(channel, backend.np.conj(channel))
-
-    return channel
+    func_order = getattr(backend.qinfo, f"_to_choi_{order}")
+    return func_order(channel)
 
 
 def to_liouville(channel, order: str = "row", backend=None):
@@ -212,10 +184,8 @@ def to_liouville(channel, order: str = "row", backend=None):
     """
     backend = _check_backend(backend)
 
-    channel = to_choi(channel, order=order, backend=backend)
-    channel = _reshuffling(channel, order=order, backend=backend)
-
-    return channel
+    func_order = getattr(backend.qinfo, f"_to_liouville_{order}")
+    return func_order(channel)
 
 
 def to_pauli_liouville(
@@ -247,21 +217,15 @@ def to_pauli_liouville(
     Returns:
         ndarray: quantum channel in its Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
-
     backend = _check_backend(backend)
 
-    nqubits = int(np.log2(channel.shape[0]))
-
-    channel = to_liouville(channel, order=order, backend=backend)
-
-    unitary = comp_basis_to_pauli(
-        nqubits, normalize, pauli_order=pauli_order, backend=backend
+    normalization = (
+        _pauli_basis_normalization(int(np.log2(channel.shape[0]))) if normalize else 1.0
     )
-
-    channel = unitary @ channel @ backend.np.conj(unitary).T
-
-    return channel
+    func_order = getattr(backend.qinfo, f"_to_pauli_liouville_{order}")
+    return func_order(
+        channel, *_get_single_paulis(pauli_order, backend), normalization=normalization
+    )
 
 
 def to_chi(
@@ -490,88 +454,42 @@ def choi_to_kraus(
         with the left- and right-generalized Kraus operators as well as the square root of
         their corresponding singular values.
     """
-
-    if precision_tol is not None and not isinstance(precision_tol, float):
-        raise_error(
-            TypeError,
-            f"precision_tol must be type float, but it is type {type(precision_tol)}",
-        )
-
-    if precision_tol is not None and precision_tol < 0:
-        raise_error(
-            ValueError,
-            f"precision_tol must be a non-negative float, but it is {precision_tol}.",
-        )
-
     if precision_tol is None:  # pragma: no cover
         precision_tol = PRECISION_TOL
 
-    if not isinstance(validate_cp, bool):
-        raise_error(
-            TypeError,
-            f"validate_cp must be type bool, but it is type {type(validate_cp)}.",
-        )
-
     backend = _check_backend(backend)
-    choi_super_op = backend.cast(choi_super_op)
+    choi_super_op = backend.cast(choi_super_op, dtype=choi_super_op.dtype)
 
     if validate_cp:
         norm = float(
-            backend.calculate_matrix_norm(
-                choi_super_op - backend.np.conj(choi_super_op).T, order=2
-            )
+            backend.matrix_norm(choi_super_op - backend.conj(choi_super_op).T, order=2)
         )
         if norm > PRECISION_TOL:
             non_cp = True
         else:
             # using eigh because, in this case, choi_super_op is
             # *already confirmed* to be Hermitian
-            eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+            eigenvalues, eigenvectors = backend.eigenvectors(choi_super_op)
             eigenvectors = eigenvectors.T
 
-            non_cp = bool(any(backend.np.real(eigenvalues) < -PRECISION_TOL))
+            non_cp = bool(any(backend.real(eigenvalues) < -PRECISION_TOL))
     else:
         non_cp = False
         # using eigh because, in this case, choi_super_op is
         # *assumed* to be Hermitian
-        eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+        eigenvalues, eigenvectors = backend.eigenvectors(choi_super_op)
         eigenvectors = eigenvectors.T
 
     if non_cp:
         warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        U, coefficients, V = singular_value_decomposition(
-            choi_super_op, backend=backend
-        )
-        U = U.T
-        coefficients = backend.np.sqrt(coefficients)
-        V = backend.np.conj(V)
-
-        kraus_left, kraus_right = [], []
-        for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
-            kraus_left.append(
-                coeff * unvectorization(eigenvector_left, order=order, backend=backend)
-            )
-            kraus_right.append(
-                coeff * unvectorization(eigenvector_right, order=order, backend=backend)
-            )
-        kraus_left = backend.cast(kraus_left)
-        kraus_right = backend.cast(kraus_right)
-        kraus_ops = backend.cast([kraus_left, kraus_right])
+        func_order = getattr(backend.qinfo, f"_choi_to_kraus_{order}")
+        kraus_ops, coefficients = func_order(choi_super_op)
     else:
         # when choi_super_op is CP
-        kraus_ops, coefficients = [], []
-        for eig, kraus in zip(eigenvalues, eigenvectors):
-            if backend.np.abs(eig) > precision_tol:
-                eig = backend.np.sqrt(eig)
-                kraus_ops.append(
-                    eig * unvectorization(kraus, order=order, backend=backend)
-                )
-                coefficients.append(eig)
-
-    kraus_ops = backend.cast(kraus_ops)
-    coefficients = backend.cast(coefficients)
+        func_order = getattr(backend.qinfo, f"_choi_to_kraus_cp_{order}")
+        kraus_ops, coefficients = func_order(eigenvalues, eigenvectors, precision_tol)
 
     return kraus_ops, coefficients
 
@@ -727,19 +645,16 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
-    dim = 2**nqubits
 
-    super_op = np.zeros((dim**2, dim**2), dtype=complex)
-    super_op = backend.cast(super_op, dtype=super_op.dtype)
+    kraus_ops = []
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_op = kraus_op.matrix(backend)
-        kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        kraus_ops.append(kraus_op.matrix(backend)[None, :])
         del kraus_op
-
-    return super_op
+    kraus_ops = backend.vstack(kraus_ops)
+    func_order = getattr(backend.qinfo, f"_kraus_to_choi_{order}")
+    return func_order(kraus_ops)
 
 
 def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
@@ -875,7 +790,7 @@ def kraus_to_chi(
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
-        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        super_op = super_op + backend.outer(kraus_op, backend.conj(kraus_op))
         del kraus_op
 
     return super_op
@@ -932,38 +847,24 @@ def kraus_to_stinespring(
     if nqubits is None:
         nqubits = 1 + max(target_qubits)
 
-    dim = 2**nqubits
     dim_env = len(kraus_ops)
-    dim_stinespring = dim * dim_env
 
     if initial_state_env is None:
-        initial_state_env = np.zeros(dim_env, dtype=complex)
+        initial_state_env = backend.zeros(dim_env, dtype=backend.complex128)
         initial_state_env[0] = 1.0
-        initial_state_env = backend.cast(
-            initial_state_env, dtype=initial_state_env.dtype
-        )
 
     # only utility is for outer product,
     # so np.conj here to only do it once
-    initial_state_env = backend.np.conj(initial_state_env)
+    initial_state_env = backend.conj(initial_state_env)
 
-    stinespring = np.zeros((dim_stinespring, dim_stinespring), dtype=complex)
-    stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
-    for alpha, gate in enumerate(gates):
-        vector_alpha = np.zeros(dim_env, dtype=complex)
-        vector_alpha[alpha] = 1.0
-        vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
+    kraus_ops = []
+    for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_op = kraus_op.matrix(backend)
-        kraus_op = backend.cast(kraus_op, dtype=kraus_op.dtype)
-        stinespring = stinespring + backend.np.kron(
-            kraus_op,
-            backend.np.outer(vector_alpha, initial_state_env),
-        )
-        del kraus_op, vector_alpha
-
-    return stinespring
+        kraus_ops.append(kraus_op.matrix(backend)[None, :])
+        del kraus_op
+    kraus_ops = backend.vstack(kraus_ops)
+    return backend.qinfo._kraus_to_stinespring(kraus_ops, initial_state_env, dim_env)
 
 
 def liouville_to_choi(super_op, order: str = "row", backend=None):
@@ -1030,29 +931,26 @@ def liouville_to_pauli(
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli
+    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
 
     backend = _check_backend(backend)
 
-    dim = int(np.sqrt(len(super_op)))
-    nqubits = int(np.log2(dim))
+    dim = np.sqrt(len(super_op))
+    nqubits = np.log2(dim)
 
-    if (
-        super_op.shape[0] != super_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(nqubits, 1) != 0
-    ):
+    # backend-agnostic way to check if nqubits and dim are integers
+    if super_op.shape[0] != super_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     comp_to_pauli = comp_basis_to_pauli(
-        nqubits,
+        int(nqubits),
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
         backend=backend,
     )
 
-    return comp_to_pauli @ super_op @ backend.np.conj(comp_to_pauli.T)
+    return comp_to_pauli @ super_op @ backend.conj(comp_to_pauli.T)
 
 
 def liouville_to_kraus(
@@ -1235,25 +1133,21 @@ def pauli_to_liouville(
 
     backend = _check_backend(backend)
 
-    dim = int(np.sqrt(len(pauli_op)))
-    nqubits = int(np.log2(dim))
+    dim = np.sqrt(len(pauli_op))
+    nqubits = np.log2(dim)
 
-    if (
-        pauli_op.shape[0] != pauli_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(nqubits, 1) != 0
-    ):
+    if pauli_op.shape[0] != pauli_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
         raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
 
     pauli_to_comp = pauli_to_comp_basis(
-        nqubits,
+        int(nqubits),
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
         backend=backend,
     )
 
-    return pauli_to_comp @ pauli_op @ backend.np.conj(pauli_to_comp).T
+    return pauli_to_comp @ pauli_op @ backend.conj(pauli_to_comp).T
 
 
 def pauli_to_choi(
@@ -1942,24 +1836,8 @@ def stinespring_to_kraus(
     """
     backend = _check_backend(backend)
 
-    if isinstance(dim_env, int) is False:
-        raise_error(
-            TypeError, f"dim_env must be type int, but it is type {type(dim_env)}."
-        )
-
-    if dim_env <= 0:
-        raise_error(ValueError, "dim_env must be a positive integer.")
-
     if initial_state_env is not None and len(initial_state_env.shape) != 1:
         raise_error(ValueError, "initial_state_env must be a statevector.")
-
-    if nqubits is not None:
-        if isinstance(nqubits, int) is False:
-            raise_error(
-                TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
-            )
-        if nqubits <= 0:
-            raise_error(ValueError, "nqubits must be a positive integer.")
 
     dim_stinespring = stinespring.shape[0]
 
@@ -1980,19 +1858,9 @@ def stinespring_to_kraus(
         initial_state_env = backend.cast(
             initial_state_env, dtype=initial_state_env.dtype
         )
-
-    stinespring = backend.np.reshape(stinespring, (dim, dim_env, dim, dim_env))
-    stinespring = backend.np.swapaxes(stinespring, 1, 2)
-
-    kraus_ops = []
-    for alpha in range(dim_env):
-        vector_alpha = np.zeros(dim_env, dtype=complex)
-        vector_alpha[alpha] = 1.0
-        vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        kraus = backend.np.conj(vector_alpha) @ stinespring @ initial_state_env
-        kraus_ops.append(kraus)
-
-    return kraus_ops
+    return backend.qinfo._stinespring_to_kraus(
+        stinespring, initial_state_env, dim, dim_env
+    )
 
 
 def stinespring_to_chi(
@@ -2132,7 +2000,7 @@ def kraus_to_unitaries(
         for prob, oper in zip(x0, operators):
             operator = operator + prob * oper
 
-        return float(backend.calculate_matrix_norm(target - operator, order=2))
+        return float(backend.matrix_norm(target - operator, order=2))
 
     # initial parameters as flat distribution
     x0 = [1.0 / (len(kraus_ops) + 1)] * len(kraus_ops)
@@ -2196,44 +2064,24 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     Returns:
         ndarray: Choi (Liouville) representation of the quantum channel.
     """
-    if not isinstance(order, str):
-        raise_error(TypeError, f"order must be type str, but it is type {type(order)}.")
-
-    orders = ["row", "column", "system"]
-    if order not in orders:
+    if order not in ("row", "column"):
         raise_error(
             ValueError,
-            f"order must be either 'row' or 'column' or 'system', but it is {order}.",
+            f"Unsupported {order} order, please pick one in ('row', 'column').",
         )
-    del orders
-
-    if order == "system":
-        raise_error(
-            NotImplementedError, "reshuffling not implemented for system vectorization."
-        )
-
     backend = _check_backend(backend)
-
-    super_op = backend.cast(super_op, dtype=super_op.dtype)
 
     dim = np.sqrt(super_op.shape[0])
 
     if (
         super_op.shape[0] != super_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(np.log2(int(dim)), 1) != 0
+        or dim % 1 != 0
+        or np.log2(int(dim)) % 1 != 0
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
-    dim = int(dim)
-    super_op = backend.np.reshape(super_op, [dim] * 4)
-
     axes = [1, 2] if order == "row" else [0, 3]
-    super_op = backend.np.swapaxes(super_op, *axes)
-
-    super_op = backend.np.reshape(super_op, [dim**2, dim**2])
-
-    return super_op
+    return backend.qinfo._reshuffling(super_op, *axes)
 
 
 def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
@@ -2290,7 +2138,7 @@ def _individual_kraus_to_liouville(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        kraus_op = backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        kraus_op = backend.outer(kraus_op, backend.conj(kraus_op))
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops

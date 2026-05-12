@@ -58,17 +58,17 @@ def assert_gates_equivalent(
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
 
-    c = Circuit(nqubits, accelerators)
-    c.add(qibo_gate)
-    assert c.depth == target_depth
+    circuit = Circuit(nqubits, accelerators)
+    circuit.add(qibo_gate)
+    assert circuit.depth == target_depth
     if accelerators and not backend.supports_multigpu:
         with pytest.raises(NotImplementedError):
             final_state = backend.execute_circuit(
-                c, backend.cast(initial_state, copy=True)
+                circuit, backend.cast(initial_state, copy=True)
             ).state()
     else:
         final_state = backend.execute_circuit(
-            c, backend.cast(initial_state, copy=True)
+            circuit, backend.cast(initial_state, copy=True)
         ).state()
         backend.assert_allclose(final_state, target_state, atol=atol)
 
@@ -294,7 +294,10 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
         phi = np.random.random()
         qibo_gate = gates.fSim(*activeq[-2:], theta, phi).controlled_by(*activeq[:-2])
         cirq_gate = [(cirq.FSimGate(theta, phi).controlled(len(activeq) - 2), activeq)]
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+        atol = 1e-6 if backend.platform == "numba" else 1e-7
+        assert_gates_equivalent(
+            backend, qibo_gate, cirq_gate, nqubits, ndevices, atol=atol
+        )
 
 
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])

@@ -1,12 +1,8 @@
-from itertools import product
 from typing import Optional
 
-import numpy as np
-
-from qibo import matrices
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-from qibo.quantum_info.superoperator_transformations import vectorization
+from qibo.quantum_info.utils import _get_single_paulis, _pauli_basis_normalization
 
 
 def pauli_basis(
@@ -16,7 +12,7 @@ def pauli_basis(
     sparse: bool = False,
     order: Optional[str] = None,
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
 
@@ -46,33 +42,6 @@ def pauli_basis(
             elements and an array with their row-wise indexes.
     """
 
-    if nqubits <= 0:
-        raise_error(ValueError, "nqubits must be a positive int.")
-
-    if not isinstance(normalize, bool):
-        raise_error(
-            TypeError,
-            f"normalize must be type bool, but it is type {type(normalize)} instead.",
-        )
-
-    if not isinstance(vectorize, bool):
-        raise_error(
-            TypeError,
-            f"vectorize must be type bool, but it is type {type(vectorize)} instead.",
-        )
-
-    if not isinstance(sparse, bool):
-        raise_error(
-            TypeError,
-            f"sparse must be type bool, but it is type {type(sparse)} instead.",
-        )
-
-    if not isinstance(pauli_order, str):
-        raise_error(
-            TypeError,
-            f"pauli_order must be type str, but it is type {type(pauli_order)} instead.",
-        )
-
     if set(pauli_order) != {"I", "X", "Y", "Z"}:
         raise_error(
             ValueError,
@@ -89,43 +58,19 @@ def pauli_basis(
         )
 
     backend = _check_backend(backend)
-
-    pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
-    dim = 2**nqubits
-    basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
-    einsum = np.einsum if backend.platform == "tensorflow" else backend.np.einsum
-
-    if nqubits > 1:
-        input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
-        output_indices = (i for indices in zip(*input_indices) for i in indices)
-        operands = [basis_single for _ in range(nqubits)]
-        inputs = [item for pair in zip(operands, input_indices) for item in pair]
-        basis_full = einsum(*inputs, output_indices).reshape(4**nqubits, dim, dim)
-    else:
-        basis_full = basis_single
+    fname = f"_pauli_basis_{order}"
+    normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
 
     if vectorize and sparse:
-        if backend.platform == "pytorch":
-            nonzero = lambda x: backend.np.nonzero(x, as_tuple=True)
-        else:
-            nonzero = backend.np.nonzero
-        basis = vectorization(basis_full, order=order, backend=backend)
-        indices = nonzero(backend.np.abs(basis))  # abs needed because of ``tensorflow``
-        basis = basis[indices].reshape(-1, dim)
-        indices = indices[1].reshape(-1, dim)
-
-    elif vectorize and not sparse:
-        basis = vectorization(basis_full, order=order, backend=backend)
+        func = getattr(backend.qinfo, f"_vectorize_sparse{fname}")
+    elif vectorize:
+        func = getattr(backend.qinfo, f"_vectorize{fname}")
     else:
-        basis = basis_full
+        func = backend.qinfo._pauli_basis
 
-    if normalize:
-        basis = basis / np.sqrt(2**nqubits)
-
-    if vectorize and sparse:
-        return basis, indices
-
-    return basis
+    return func(
+        nqubits, *_get_single_paulis(pauli_order, backend), normalization=normalization
+    )
 
 
 def comp_basis_to_pauli(
@@ -195,7 +140,7 @@ def comp_basis_to_pauli(
             pauli_order=pauli_order,
             backend=backend,
         )
-        elements = backend.np.conj(elements)
+        elements = backend.conj(elements)
 
         return elements, indexes
 
@@ -209,7 +154,7 @@ def comp_basis_to_pauli(
         backend=backend,
     )
 
-    unitary = backend.np.conj(unitary)
+    unitary = backend.conj(unitary)
 
     return unitary
 
@@ -259,7 +204,16 @@ def pauli_to_comp_basis(
     """
     backend = _check_backend(backend)
 
-    unitary = pauli_basis(
+    if sparse:
+        normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
+        func = getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")
+        return func(
+            nqubits,
+            *_get_single_paulis(pauli_order, backend),
+            normalization=normalization,
+        )
+
+    return pauli_basis(
         nqubits,
         normalize,
         vectorize=True,
@@ -267,19 +221,4 @@ def pauli_to_comp_basis(
         order=order,
         pauli_order=pauli_order,
         backend=backend,
-    )
-    unitary = unitary.T
-
-    if sparse:
-        elements, indexes = [], []
-        for row in unitary:
-            index_list = backend.np.flatnonzero(row)
-            indexes.append(index_list)
-            elements.append(row[index_list])
-
-        elements = backend.cast(elements)
-        indexes = backend.cast(indexes)
-
-        return elements, indexes
-
-    return unitary
+    ).T

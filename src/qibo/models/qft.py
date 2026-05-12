@@ -52,8 +52,8 @@ def QFT(nqubits: int, with_swaps: bool = True, accelerators=None, **kwargs) -> C
             circuit.add(gates.CU1(i2, i1, theta))
 
     if with_swaps:
-        for i in range(nqubits // 2):
-            circuit.add(gates.SWAP(i, nqubits - i - 1))
+        for qubit in range(nqubits // 2):
+            circuit.add(gates.SWAP(qubit, nqubits - qubit - 1))
 
     return circuit
 

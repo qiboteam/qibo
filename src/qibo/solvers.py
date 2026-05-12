@@ -133,24 +133,23 @@ class RungeKutta45(BaseSolver):
 
 
 def get_solver(solver_name, dt, hamiltonian):
-    if solver_name == "exp":
-        if isinstance(hamiltonian, AbstractHamiltonian):
-            h0 = hamiltonian
-        elif isinstance(hamiltonian, BaseAdiabaticHamiltonian):
-            h0 = hamiltonian.h0
-        else:
-            h0 = hamiltonian(0)
+    if solver_name not in ("exp", "rk4", "rk45"):
+        raise_error(ValueError, f"Unknown solver {solver_name}.")
 
-        if isinstance(h0, SymbolicHamiltonian):
-            return TrotterizedExponential(dt, hamiltonian)
-        else:
-            return Exponential(dt, hamiltonian)
-
-    elif solver_name == "rk4":
+    if solver_name == "rk4":
         return RungeKutta4(dt, hamiltonian)
 
-    elif solver_name == "rk45":
+    if solver_name == "rk45":
         return RungeKutta45(dt, hamiltonian)
 
-    else:  # pragma: no cover
-        raise_error(ValueError, f"Unknown solver {solver_name}.")
+    if isinstance(hamiltonian, AbstractHamiltonian):
+        h0 = hamiltonian
+    elif isinstance(hamiltonian, BaseAdiabaticHamiltonian):
+        h0 = hamiltonian.h0
+    else:
+        h0 = hamiltonian(0)
+
+    if isinstance(h0, SymbolicHamiltonian):
+        return TrotterizedExponential(dt, hamiltonian)
+
+    return Exponential(dt, hamiltonian)

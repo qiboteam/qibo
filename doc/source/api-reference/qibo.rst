@@ -174,14 +174,6 @@ Grover's Algorithm
     :member-order: bysource
 
 
-Travelling Salesman Problem
-"""""""""""""""""""""""""""
-
-.. automodule:: qibo.models.tsp
-    :members:
-    :member-order: bysource
-
-
 Iterative Quantum Amplitude Estimation (IQAE)
 """""""""""""""""""""""""""""""""""""""""""""
 
@@ -221,6 +213,13 @@ Data Encoders
 
 We provide a family of algorithms that encode classical data into quantum circuits.
 
+
+Binary encoder
+""""""""""""""
+
+.. autofunction:: qibo.models.encodings.binary_encoder
+
+
 Computational Basis Encoder
 """""""""""""""""""""""""""
 
@@ -253,6 +252,63 @@ For instance, the following two circuit generations are equivalent:
 .. autofunction:: qibo.models.encodings.comp_basis_encoder
 
 
+Dicke state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.dicke_state
+
+
+Entangling layer
+""""""""""""""""
+
+Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
+With the exception of :class:`qibo.gates.gates.GeneralizedfSim`,
+any of the two-qubit gates implemented in ``qibo`` can be selected to customize the entangling layer.
+If the chosen gate is parametrized, all phases are set to :math:`0.0`.
+Note that these phases can be updated a posterior by using
+:meth:`qibo.models.Circuit.set_parameters`.
+The possible choices of layer ``architecture`` are the following, in alphabetical order:
+``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``, ``shifted``, ``v``, and ``x``.
+For instance, we show below an example of four of those architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
+
+
+.. image:: ../_static/entangling_layer.png
+   :width: 800
+   :height: 450
+   :align: center
+
+
+If ``closed_boundary`` is set to ``True``, then an extra gate is added connecting the last and the first qubit,
+with the last qubit as the control qubit and the first qubit as a target qubit.
+
+
+.. autofunction:: qibo.models.encodings.entangling_layer
+
+
+Greenberger-Horne-Zeilinger (GHZ) state
+"""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.ghz_state
+
+
+Graph state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.graph_state
+
+
+Fixed Hamming-weight Encoder
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.hamming_weight_encoder
+
+
+Permutation synthesis
+"""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.permutation_synthesis
+
+
 Phase Encoder
 """""""""""""
 
@@ -273,7 +329,7 @@ For instance, the following two circuit generations are equivalent:
     nqubits = 3
     phases = np.random.rand(nqubits)
 
-    circuit_1 = phase_encoder(phases, rotation="RX")
+    circuit_1 = phase_encoder(nqubits, rotation="RX", data=phases)
 
     circuit_2 = Circuit(3)
     circuit_2.add(gates.RX(qubit, phases[qubit]) for qubit in range(nqubits))
@@ -292,12 +348,6 @@ Sparse encoder
 """"""""""""""
 
 .. autofunction:: qibo.models.encodings.sparse_encoder
-
-
-Binary encoder
-""""""""""""""
-
-.. autofunction:: qibo.models.encodings.binary_encoder
 
 
 Unary Encoder
@@ -368,62 +418,14 @@ of the :math:`d`-dimensional array is sampled from a Gaussian distribution
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
 
-Fixed Hamming-weight Encoder
-""""""""""""""""""""""""""""
+Up-to-Hamming-weight-:math:`k` Encoder
+""""""""""""""""""""""""""""""""""""""
 
-.. autofunction:: qibo.models.encodings.hamming_weight_encoder
+.. autofunction:: qibo.models.encodings.up_to_k_hamming_weight_encoder
 
-
-Entangling layer
-""""""""""""""""
-
-Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
-With the exception of :class:`qibo.gates.gates.GeneralizedfSim`,
-any of the two-qubit gates implemented in ``qibo`` can be selected to customize the entangling layer.
-If the chosen gate is parametrized, all phases are set to :math:`0.0`.
-Note that these phases can be updated a posterior by using
-:meth:`qibo.models.Circuit.set_parameters`.
-The possible choices of layer ``architecture`` are the following, in alphabetical order:
-``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``, ``shifted``, ``v``, and ``x``.
-For instance, we show below an example of four of those architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
-
-
-.. image:: ../_static/entangling_layer.png
-   :width: 800
-   :height: 450
-   :align: center
-
-
-If ``closed_boundary`` is set to ``True``, then an extra gate is added connecting the last and the first qubit,
-with the last qubit as the control qubit and the first qubit as a target qubit.
-
-
-.. autofunction:: qibo.models.encodings.entangling_layer
-
-
-Greenberger-Horne-Zeilinger (GHZ) state
-"""""""""""""""""""""""""""""""""""""""
-
-.. autofunction:: qibo.models.encodings.ghz_state
-
-
-Dicke state
-"""""""""""
-
-.. autofunction:: qibo.models.encodings.dicke_state
-
-
-Graph state
-"""""""""""
-
-.. autofunction:: qibo.models.encodings.graph_state
-
-Permutation synthesis
-"""""""""""""""""""""
-
-.. autofunction:: qibo.models.encodings.permutation_synthesis
 
 .. _error-mitigation:
+
 
 Error Mitigation
 ^^^^^^^^^^^^^^^^
@@ -968,6 +970,14 @@ Deutsch
     :member-order: bysource
 
 
+Fan-out
+"""""""
+
+.. autoclass:: qibo.gates.FanOut
+    :members:
+    :member-order: bysource
+
+
 Generalized Reconfigurable Beam Splitter (RBS)
 """"""""""""""""""""""""""""""""""""""""""""""
 
@@ -1320,23 +1330,12 @@ Max Cut
     :members:
     :member-order: bysource
 
+LABS
+^^^^
 
-.. note::
-    All pre-coded Hamiltonians can be created as
-    :class:`qibo.hamiltonians.Hamiltonian` using ``dense=True``
-    or :class:`qibo.hamiltonians.SymbolicHamiltonian`
-    using the ``dense=False``. In the first case the Hamiltonian is created
-    using its full matrix representation of size ``(2 ** n, 2 ** n)``
-    where ``n`` is the number of qubits that the Hamiltonian acts on. This
-    matrix is used to calculate expectation values by direct matrix multiplication
-    to the state and for time evolution by exact exponentiation.
-    In contrast, when ``dense=False`` the Hamiltonian contains a more compact
-    representation as a sum of local terms. This compact representation can be
-    used to calculate expectation values via a sum of the local term expectations
-    and time evolution via the Trotter decomposition of the evolution operator.
-    This is useful for systems that contain many qubits for which constructing
-    the full matrix is intractable.
-
+.. autoclass:: qibo.hamiltonians.LABS
+    :members:
+    :member-order: bysource
 
 Heisenberg model
 ^^^^^^^^^^^^^^^^
@@ -1360,6 +1359,31 @@ Heisenberg XXZ
 .. autoclass:: qibo.hamiltonians.XXZ
     :members:
     :member-order: bysource
+
+
+Graph Partitioning Problem
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.GPP
+    :members:
+    :member-order: bysource
+
+
+.. note::
+    All pre-coded Hamiltonians can be created as
+    :class:`qibo.hamiltonians.Hamiltonian` using ``dense=True``
+    or :class:`qibo.hamiltonians.SymbolicHamiltonian`
+    using the ``dense=False``. In the first case the Hamiltonian is created
+    using its full matrix representation of size ``(2 ** n, 2 ** n)``
+    where ``n`` is the number of qubits that the Hamiltonian acts on. This
+    matrix is used to calculate expectation values by direct matrix multiplication
+    to the state and for time evolution by exact exponentiation.
+    In contrast, when ``dense=False`` the Hamiltonian contains a more compact
+    representation as a sum of local terms. This compact representation can be
+    used to calculate expectation values via a sum of the local term expectations
+    and time evolution via the Trotter decomposition of the evolution operator.
+    This is useful for systems that contain many qubits for which constructing
+    the full matrix is intractable.
 
 _______________________
 
@@ -1688,7 +1712,7 @@ passing a symplectic matrix to the constructor.
    # construct the |00...0> state
    backend = CliffordBackend("numpy")
    symplectic_matrix = backend.zero_state(nqubits=3)
-   clifford = Clifford(symplectic_matrix, engine="numpy")
+   clifford = Clifford(symplectic_matrix, platform="numpy")
 
 The generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
@@ -1703,21 +1727,21 @@ or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted 
 The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
 
 We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ package.
-It is possible to run Clifford circuits using `stim` as an engine:
+It is possible to run Clifford circuits using `stim` as a platform:
 
 .. code-block::  python
 
     from qibo.backends import CliffordBackend
     from qibo.quantum_info import Clifford, random_clifford
 
-    clifford_backend = CliffordBackend(engine="stim")
+    clifford_backend = CliffordBackend(platform="stim")
 
     circuit = random_clifford(nqubits)
     result = clifford_backend.execute_circuit(circuit)
 
     ## Note that the execution above is equivalent to the one below
 
-    result = Clifford.from_circuit(circuit, engine="stim")
+    result = Clifford.from_circuit(circuit, platform="stim")
 
 
 .. autoclass:: qibo.quantum_info.clifford.Clifford
@@ -1908,6 +1932,36 @@ Infidelity
 """"""""""
 
 .. autofunction:: qibo.quantum_info.infidelity
+
+
+A fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.a_fidelity
+
+
+N fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.n_fidelity
+
+
+Chen fidelity
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.chen_fidelity
+
+
+Geometric-mean fidelity
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.geometric_mean_fidelity
+
+
+Max fidelity
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.max_fidelity
 
 
 Bures angle
@@ -2588,6 +2642,246 @@ References:
 .. autofunction:: qibo.tomography.gate_set_tomography.GST
 
 
+.. _Transpiler:
+
+Transpiler
+----------
+
+This module provides tools for transpilation of generic quantum circuits
+into a given set of native gates.
+
+.. automodule:: qibo.transpiler
+   :members:
+   :member-order: bysource
+
+
+Abstract classes
+^^^^^^^^^^^^^^^^
+
+
+Optimizer
+"""""""""
+
+.. autoclass:: qibo.transpiler.abstract.Optimizer
+    :members:
+    :member-order: bysource
+
+
+Placer
+""""""
+
+.. autoclass:: qibo.transpiler.abstract.Placer
+    :members:
+    :member-order: bysource
+
+
+Router
+""""""
+
+.. autoclass:: qibo.transpiler.abstract.Router
+    :members:
+    :member-order: bysource
+
+
+Asserts
+^^^^^^^
+
+Assert circuit equivalence
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.asserts.assert_circuit_equivalence
+
+
+Assert connectivity
+"""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.asserts.assert_connectivity
+
+
+Assert decomposition
+""""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.asserts.assert_decomposition
+
+
+Assert placement
+""""""""""""""""
+
+.. autofunction:: qibo.transpiler.asserts.assert_placement
+
+
+Assert transpilation
+""""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.asserts.assert_transpiling
+
+
+Blocks
+^^^^^^
+
+Block
+"""""
+
+.. autoclass:: qibo.transpiler.blocks.Block
+    :members:
+    :member-order: bysource
+
+
+Circuit block
+"""""""""""""
+
+.. autoclass:: qibo.transpiler.blocks.CircuitBlock
+    :members:
+    :member-order: bysource
+
+
+Block decomposition
+"""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.blocks.block_decomposition
+
+
+Decompositions
+^^^^^^^^^^^^^^
+
+Gate decomposition
+""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.decompositions.GateDecomposition
+    :members:
+    :member-order: bysource
+
+
+Optimizer
+^^^^^^^^^
+
+Preprocessing
+"""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.Preprocessing
+    :members:
+    :member-order: bysource
+
+
+Rearrange
+"""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.Rearrange
+    :members:
+    :member-order: bysource
+
+
+Pipeline
+^^^^^^^^
+
+Passes
+""""""
+
+.. autoclass:: qibo.transpiler.pipeline.Passes
+    :members:
+    :member-order: bysource
+
+
+Restrict qubit connectivity
+"""""""""""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.pipeline.restrict_connectivity_qubits
+
+
+Placer
+^^^^^^
+
+Random
+""""""
+
+.. autoclass:: qibo.transpiler.placer.Random
+    :members:
+    :member-order: bysource
+
+
+Reverse traversal
+"""""""""""""""""
+
+.. autoclass:: qibo.transpiler.placer.ReverseTraversal
+    :members:
+    :member-order: bysource
+
+
+Subgraph
+""""""""
+
+.. autoclass:: qibo.transpiler.placer.Subgraph
+    :members:
+    :member-order: bysource
+
+
+Star connectivity
+"""""""""""""""""
+
+.. autoclass:: qibo.transpiler.placer.StarConnectivityPlacer
+    :members:
+    :member-order: bysource
+
+
+Router
+^^^^^^
+
+Circuit map
+"""""""""""
+
+.. autoclass:: qibo.transpiler.router.CircuitMap
+    :members:
+    :member-order: bysource
+
+
+Sabre
+"""""
+
+.. autoclass:: qibo.transpiler.router.Sabre
+    :members:
+    :member-order: bysource
+
+
+Shorterst paths
+"""""""""""""""
+
+.. autoclass:: qibo.transpiler.router.ShortestPaths
+    :members:
+    :member-order: bysource
+
+
+Start connectivity
+""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.router.StarConnectivityRouter
+    :members:
+    :member-order: bysource
+
+
+Unroller
+^^^^^^^^
+
+Native gates
+""""""""""""
+
+.. autoclass:: qibo.transpiler.unroller.NativeGates
+    :members:
+    :member-order: bysource
+
+
+Unroller
+""""""""
+
+.. autoclass:: qibo.transpiler.unroller.Unroller
+    :members:
+    :member-order: bysource
+
+
+Translate gate
+""""""""""""""
+
+.. autofunction:: qibo.transpiler.unroller.translate_gate
+
 
 .. _Parallel:
 
@@ -2618,10 +2912,11 @@ Backends
 --------
 
 :class:`qibo.backends.abstract.Backend` is the main calculation engine to execute circuits.
-Qibo provides backends for quantum simulation on classical hardware, as well as quantum hardware management and control.
-For a complete list of available backends, refer to the :ref:`Packages <packages>` section.
-To create new backends, inherit from :class:`qibo.backends.abstract.Backend` and implement
-its abstract methods. This abstract class defines the required methods for circuit execution.
+Qibo provides backends for quantum simulation on classical hardware, as well as quantum hardware
+management and control. For a complete list of available backends, refer to the
+:ref:`Packages <packages>` section. To create new backends, inherit from
+:class:`qibo.backends.abstract.Backend` and implement its new methods.
+This abstract class defines the required methods for circuit execution.
 
 
 The user can set the backend using the :func:`qibo.set_backend` function.
@@ -2803,3 +3098,34 @@ cloud service providers, such as IBM and QRC-TII, are provided by the optional q
 `qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_.
 For more information please refer to the
 `official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.
+
+.. _Configuration:
+
+Configuration
+-------------
+
+The :func:`set_max_qubits`` and :func:`set_max_qubits_dm` functions control the
+maximum number of qubits allowed for state vector and density matrix
+allocations, respectively. These limits help prevent uncontrolled memory
+consumption; memory scales as ``2^n * 16`` bytes (complex128) for state vectors
+and ``4^n * 16`` bytes (complex128) for density matrices. The corresponding
+constant values can be accessed via :func:`get_max_qubits` and
+:func:`get_max_qubits_dm` functions. Both functions can also be configured via
+environment variables ``QIBO_MAX_QUBITS`` and ``QIBO_MAX_QUBITS_DM``
+respectively.
+
+.. code-block::  python
+
+    import qibo
+
+    # Set maximum to 20 qubits for state vectors
+    qibo.set_max_qubits(20)
+
+    # Get current maximum
+    max_qubits = qibo.get_max_qubits()
+
+    # Set maximum to 15 qubits for density matrices
+    qibo.set_max_qubits_dm(15)
+
+    # Get current maximum for density matrices
+    max_qubits_dm = qibo.get_max_qubits_dm()

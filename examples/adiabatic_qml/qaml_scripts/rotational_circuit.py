@@ -202,28 +202,28 @@ class rotational_circuit:
     def rotations_circuit(self, t):
         psi, theta, phi = self.rotation_angles(t)
 
-        c = Circuit(self.nqubits, density_matrix=True)
+        circuit = Circuit(self.nqubits, density_matrix=True)
 
         # H gate
-        c.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
-        c.add(gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
-        c.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
+        circuit.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
+        circuit.add(gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
+        circuit.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
 
         # RZ(psi)
-        c.add(gates.RZ(q=self.q, theta=psi))
+        circuit.add(gates.RZ(q=self.q, theta=psi))
 
         # RX(theta)
-        c.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
-        c.add(gates.RX(q=self.q, theta=-np.pi / 2, trainable=False))
-        c.add(gates.RZ(q=self.q, theta=-theta))
-        c.add(gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
+        circuit.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
+        circuit.add(gates.RX(q=self.q, theta=-np.pi / 2, trainable=False))
+        circuit.add(gates.RZ(q=self.q, theta=-theta))
+        circuit.add(gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
 
         # RZ(phi)
-        c.add(gates.RZ(q=self.q, theta=phi))
+        circuit.add(gates.RZ(q=self.q, theta=phi))
 
-        c.add(gates.M(self.q))
+        circuit.add(gates.M(self.q))
 
-        return c
+        return circuit
 
     @lru_cache
     def numeric_derivative(self, t, h=1e-7):

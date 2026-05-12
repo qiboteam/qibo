@@ -7,14 +7,14 @@ from qibo.config import raise_error
 def calculate_derivatives(func):
     """Calculates derivatives w.r.t. to all parameters of a target function `func`."""
     vars = []
-    for i in range(func.__code__.co_argcount):
-        vars.append(sp.Symbol(f"p{i}"))
+    for elem in range(func.__code__.co_argcount):
+        vars.append(sp.Symbol(f"p{elem}"))
 
     expr = sp.sympify(func(*vars))
 
     derivatives = []
-    for i in range(len(vars)):
-        derivative_expr = sp.diff(expr, vars[i])
+    for elem in range(len(vars)):
+        derivative_expr = sp.diff(expr, vars[elem])
         derivatives.append(sp.lambdify(vars, derivative_expr))
 
     return derivatives

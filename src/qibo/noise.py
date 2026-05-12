@@ -411,7 +411,7 @@ class IBMQNoiseModel(NoiseModel):
 
         # creating circuit
         phases = list(range(nqubits))
-        circuit = phase_encoder(phases, rotation="RY")
+        circuit = phase_encoder(nqubits, rotation="RY", data=phases)
         circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
         circuit.add(gates.M(qubit) for qubit in range(1, nqubits - 1))
 

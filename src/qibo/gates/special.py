@@ -12,7 +12,7 @@ class CallbackGate(SpecialGate):
         callback (:class:`qibo.callbacks.Callback`): Callback object to calculate.
     """
 
-    def __init__(self, callback: "Callback"):
+    def __init__(self, callback: "Callback"):  # type: ignore
         super().__init__()
         self.name = callback.__class__.__name__
         self.draw_label = "".join([c for c in self.name if c.isupper()])
@@ -22,11 +22,6 @@ class CallbackGate(SpecialGate):
     def apply(self, backend, state, nqubits):
         self.callback.nqubits = nqubits
         self.callback.apply(backend, state)
-        return state
-
-    def apply_density_matrix(self, backend, state, nqubits):
-        self.callback.nqubits = nqubits
-        self.callback.apply_density_matrix(backend, state)
         return state
 
 

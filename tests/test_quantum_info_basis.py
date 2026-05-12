@@ -25,16 +25,7 @@ from qibo.quantum_info import (
 def test_pauli_basis(
     backend, nqubits, normalize, vectorize, sparse, order, pauli_order
 ):
-    with pytest.raises(ValueError):
-        pauli_basis(nqubits=-1, backend=backend)
-    with pytest.raises(TypeError):
-        pauli_basis(nqubits="1", backend=backend)
-    with pytest.raises(TypeError):
-        pauli_basis(nqubits=1, normalize="True", backend=backend)
-    with pytest.raises(TypeError):
-        pauli_basis(nqubits=1, normalize=False, vectorize="True", backend=backend)
-    with pytest.raises(TypeError):
-        pauli_basis(nqubits=1, normalize=False, sparse="True", backend=backend)
+
     with pytest.raises(TypeError):
         pauli_basis(nqubits=1, normalize=False, pauli_order=1, backend=backend)
     with pytest.raises(ValueError):

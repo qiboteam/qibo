@@ -65,7 +65,7 @@ class qPDF:
         Returs:
             The qPDF object following the (1-z)/(1+z) structure.
         """
-        z = hamiltonian.expectation(state)
+        z = hamiltonian.expectation_from_state(state)
         y = (1 - z) / (1 + z)
         return y
 

@@ -2,6 +2,7 @@ import os
 import tempfile
 
 import numpy as np
+from matplotlib.figure import Figure
 from scipy import sparse
 
 
@@ -14,9 +15,19 @@ def random_sparse_matrix(backend, n, sparse_type=None):
 
         return backend.tf.sparse.SparseTensor(indices, data, (n, n))
 
-    re = sparse.rand(n, n, format=sparse_type)
-    im = sparse.rand(n, n, format=sparse_type)
-    return re + 1j * im
+    n_tries = 0
+    while n_tries < 100:
+        re = sparse.rand(n, n, format=sparse_type, dtype=complex)
+        im = sparse.rand(n, n, format=sparse_type, dtype=complex)
+        try:
+            matrix = re + 1j * im
+            break
+        except ValueError:
+            n_tries += 1
+            continue
+    if n_tries == 100:
+        raise RuntimeError("Maximum number of tries reached for random sparse matrix.")
+    return matrix
 
 
 def fig2array(fig):
@@ -54,3 +65,8 @@ def fig2png(figure):
         if os.path.exists(temp_file_path):
             return temp_file_path
         return None
+
+
+def create_binary(fig: Figure, filename: str) -> None:
+    array = fig2array(fig)
+    np.save(filename, array)

@@ -1,13 +1,14 @@
 import argparse
 
-from qibo import hamiltonians, models
+from qibo.hamiltonians import XXZ
+from qibo.models import FALQON
 
 
 def main(nqubits, delta_t=0.1, max_layers=100):
     # create XXZ Hamiltonian for nqubits qubits
-    hamiltonian = hamiltonians.XXZ(nqubits)
+    hamiltonian = XXZ(nqubits)
     # create FALQON model for this Hamiltonian
-    falqon = models.FALQON(hamiltonian)
+    falqon = FALQON(hamiltonian)
 
     best_energy, final_parameters = falqon.minimize(delta_t, max_layers)[:2]
 
