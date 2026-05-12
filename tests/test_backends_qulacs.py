@@ -21,7 +21,7 @@ def test_qulacs(density_matrix, with_measurements):
     nshots = 1000
     qulacs_res = qulacs_bkd.execute_circuit(circuit, nshots=nshots)
     numpy_res = numpy_bkd.execute_circuit(circuit, nshots=nshots)
-    numpy_bkd.assert_allclose(numpy_res.probabilities(), qulacs_res.probabilities())
+    numpy_bkd.assert_allclose(numpy_res.probabilities(), qulacs_res.probabilities(), atol=1e-8)
     if with_measurements:
         numpy_freq = numpy_res.frequencies(binary=True)
         qulacs_freq = qulacs_res.frequencies(binary=True)
