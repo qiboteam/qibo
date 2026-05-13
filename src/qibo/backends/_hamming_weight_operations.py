@@ -44,12 +44,6 @@ def _rank_fixed_weight_bitstrings(
 ) -> np.ndarray:
     """Return lexicographic ranks of fixed-weight bitstrings."""
     bits = np.asarray(bitstrings, dtype=np.int8)
-    if bits.ndim == 1:
-        bits = bits[None, :]
-
-    if bits.shape[1] != nqubits:
-        raise ValueError("Bitstrings have inconsistent length.")
-
     table = _global_binom_table(nqubits, weight)
     ranks = np.zeros(bits.shape[0], dtype=np.int64)
     remaining = np.full(bits.shape[0], weight, dtype=np.int64)
@@ -232,7 +226,7 @@ def _get_backend_index_array(
 ) -> ArrayLike:
     """Return backend-native cached integer indices, or host indices for NumPy."""
     cache = getattr(self, cache_name, None)
-    if cache is None:
+    if cache is None:  # pragma: no cover
         cache = {}
         setattr(self, cache_name, cache)
     if key not in cache:
