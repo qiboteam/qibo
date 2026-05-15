@@ -16,34 +16,34 @@ from qibo.quantum_info.random_ensembles import random_density_matrix, random_sta
 
 @pytest.mark.parametrize("check_purity", [True, False])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-@pytest.mark.parametrize("bipartition", [[0], [1]])
-def test_concurrence_and_formation(backend, bipartition, base, check_purity):
+@pytest.mark.parametrize("partition", [[0], [1]])
+def test_concurrence_and_formation(backend, partition, base, check_purity):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         test = concurrence(
-            state, bipartition=bipartition, check_purity=check_purity, backend=backend
+            state, partition=partition, check_purity=check_purity, backend=backend
         )
     with pytest.raises(TypeError):
         state = random_statevector(4, backend=backend)
         test = concurrence(
-            state, bipartition=bipartition, check_purity="True", backend=backend
+            state, partition=partition, check_purity="True", backend=backend
         )
 
     if check_purity is True:
         with pytest.raises(NotImplementedError):
             state = backend.identity(4)
-            test = concurrence(state, bipartition=bipartition, backend=backend)
+            test = concurrence(state, partition=partition, backend=backend)
 
     nqubits = 2
     dim = 2**nqubits
     state = random_statevector(dim, backend=backend)
     concur = concurrence(
-        state, bipartition=bipartition, check_purity=check_purity, backend=backend
+        state, partition=partition, check_purity=check_purity, backend=backend
     )
     ent_form = entanglement_of_formation(
         state,
-        bipartition=bipartition,
+        partition=partition,
         base=base,
         check_purity=check_purity,
         backend=backend,
@@ -55,10 +55,10 @@ def test_concurrence_and_formation(backend, bipartition, base, check_purity):
         random_density_matrix(2, pure=True, backend=backend),
         random_density_matrix(2, pure=True, backend=backend),
     )
-    concur = concurrence(state, bipartition, check_purity=check_purity, backend=backend)
+    concur = concurrence(state, partition, check_purity=check_purity, backend=backend)
     ent_form = entanglement_of_formation(
         state,
-        bipartition=bipartition,
+        partition=partition,
         base=base,
         check_purity=check_purity,
         backend=backend,
