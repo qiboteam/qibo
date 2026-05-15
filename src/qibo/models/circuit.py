@@ -761,18 +761,23 @@ class Circuit:
 
         return [(i, g) for i, g in enumerate(self.queue) if isinstance(g, gate)]
 
-    def _set_parameters_list(self, parameters: ArrayLike, n: int) -> None:
+    def _set_parameters_list(
+        self, parameters: ArrayLike, n: int, include_not_trainable: bool = False
+    ) -> None:
         """Helper method for ``set_parameters`` when a list is given.
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
         """
-        if n == len(self.trainable_gates):
-            for i, gate in enumerate(self.trainable_gates):
+        _gates = (
+            self.parametrized_gates if include_not_trainable else self.trainable_gates
+        )
+        if n == len(_gates):
+            for i, gate in enumerate(_gates):
                 gate.parameters = parameters[i]
-        elif n == self.trainable_gates.nparams:
+        elif n == _gates.nparams:
             parameters = list(parameters)
             k = 0
-            for i, gate in enumerate(self.trainable_gates):
+            for i, gate in enumerate(_gates):
                 if gate.nparams == 1:
                     gate.parameters = parameters[i + k]
                 else:
@@ -782,11 +787,13 @@ class Circuit:
             raise_error(
                 ValueError,
                 f"Given list of parameters has length {n} while "
-                + f"the circuit contains {len(self.trainable_gates)} parametrized gates.",
+                + f"the circuit contains {len(_gates)} parametrized gates.",
             )
 
     def set_parameters(
-        self, parameters: Union[List[float], Dict[str, float], ArrayLike]
+        self,
+        parameters: Union[List[float], Dict[str, float], ArrayLike],
+        include_not_trainable: bool = False,
     ) -> None:
         """Updates the parameters of the circuit's parametrized gates.
 
@@ -833,10 +840,13 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 circuit.set_parameters(params)
         """
+        _gates = (
+            self.parametrized_gates if include_not_trainable else self.trainable_gates
+        )
         # reset the final state
         self._final_state = None
         if isinstance(parameters, dict):
-            diff = set(parameters.keys()) - self.trainable_gates.set
+            diff = set(parameters.keys()) - _gates.set
             if diff:
                 raise_error(
                     KeyError,
@@ -852,7 +862,9 @@ class Circuit:
                 nparams = int(parameters.shape[0])
             except AttributeError:
                 nparams = len(parameters)
-            self._set_parameters_list(parameters, nparams)
+            self._set_parameters_list(
+                parameters, nparams, include_not_trainable=include_not_trainable
+            )
         else:
             raise_error(TypeError, f"Invalid type of parameters {type(parameters)}.")
 
