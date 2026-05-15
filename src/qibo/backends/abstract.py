@@ -1154,9 +1154,9 @@ class Backend:  # pylint: disable=R0904
             return self._apply_gate_controlled_by(gate, state, nqubits)
 
         matrix = gate.matrix(self)
-        matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
 
         if density_matrix:
+            matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
             matrix_conj = self.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
@@ -1164,8 +1164,12 @@ class Backend:  # pylint: disable=R0904
             state = self.einsum(right, state, matrix_conj)
             state = self.einsum(left, state, matrix)
         else:
-            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
-            state = self.einsum(opstring, state, matrix)
+            fwd_perm, inv_perm = einsum_utils.permutations(gate.qubits, nqubits)
+            state = self.transpose(state, fwd_perm)
+            state = self.reshape(state, (2 ** len(gate.qubits), -1))
+            state = matrix @ state
+            state = self.reshape(state, shape)
+            state = self.transpose(state, inv_perm)
 
         shape = (2**nqubits,)
         if density_matrix:
