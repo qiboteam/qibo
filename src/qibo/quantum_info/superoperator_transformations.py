@@ -2117,7 +2117,10 @@ def _check_pauli_superoperator_shape(super_op, name: str):
     nqubits = math.log2(dim)
 
     if super_op.shape[0] != super_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
-        raise_error(ValueError, f"{name} must be of shape (4^n, 4^n), but it is {super_op.shape}")
+        raise_error(
+            ValueError,
+            f"{name} must be of shape (4^n, 4^n), but it is {super_op.shape}",
+        )
 
     return int(dim), int(nqubits)
 
