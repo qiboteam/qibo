@@ -2113,8 +2113,8 @@ def _check_pauli_transform_method(method: Optional[str]):
 
 def _check_pauli_superoperator_shape(super_op, name: str):
     """Validate the shape of a Pauli or Liouville superoperator."""
-    dim = np.sqrt(len(super_op))
-    nqubits = np.log2(dim)
+    dim = math.sqrt(len(super_op))
+    nqubits = math.log2(dim)
 
     if super_op.shape[0] != super_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
         raise_error(ValueError, f"{name} must be of shape (4^n, 4^n)")
