@@ -2171,8 +2171,8 @@ def _phase_matrix(dim: int, sign: int = -1, backend=None):
     """Return ``(sign * i) ** |r & s|`` for all pairs ``(r, s)``."""
     backend = _check_backend(backend)
 
-    rows = np.arange(dim)[:, None]
-    columns = np.arange(dim)[None, :]
+    rows = backend.arange(dim)[:, None]
+    columns = backend.arange(dim)[None, :]
     weights = np.vectorize(lambda value: int(value).bit_count())(
         np.bitwise_and(rows, columns)
     )
