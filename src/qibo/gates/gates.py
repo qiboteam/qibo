@@ -2872,7 +2872,7 @@ def _check_engine(array: ArrayLike):
 def _is_clifford_given_angle(angle: Union[float, int]):
     """Helper function to update Clifford boolean condition according to
     the given angle ``angle``."""
-    return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
+    return isinstance(angle, (float, int)) and bool(np.isclose(angle % (np.pi / 2), 0))
 
 
 def _is_hamming_weight_given_angle(angle: Union[float, int], target: float = 2 * np.pi):
