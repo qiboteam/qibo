@@ -1925,7 +1925,7 @@ class SYC(Gate):
 
     def _dagger(self) -> Gate:
         """"""
-        return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
+        return fSim(*self.target_qubits, -math.pi / 2, -math.pi / 6)
 
 
 class GeneralizedfSim(ParametrizedGate):
@@ -2648,7 +2648,7 @@ class DEUTSCH(ParametrizedGate):
 
     @property
     def hamming_weight(self) -> bool:
-        return _is_hamming_weight_given_angle(self.parameters[0], np.pi)
+        return _is_hamming_weight_given_angle(self.parameters[0], math.pi)
 
 
 class FanOut(Gate):
@@ -2872,10 +2872,15 @@ def _check_engine(array: ArrayLike):
 def _is_clifford_given_angle(angle: Union[float, int]):
     """Helper function to update Clifford boolean condition according to
     the given angle ``angle``."""
-    return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
+
+    aux = angle % (math.pi / 2)
+
+    return isinstance(angle, (float, int)) and aux.is_integer() and aux != 1.0
 
 
-def _is_hamming_weight_given_angle(angle: Union[float, int], target: float = 2 * np.pi):
+def _is_hamming_weight_given_angle(
+    angle: Union[float, int], target: float = 2 * math.pi
+):
     """Helper function to update Hamming weight boolean condition according to
     the given angles ``angle`` and ``target``."""
     return isinstance(angle, (float, int)) and (angle % target).is_integer()
