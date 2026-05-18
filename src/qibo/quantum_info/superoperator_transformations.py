@@ -1162,8 +1162,8 @@ def pauli_to_liouville(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
     method: Optional[str] = None,
+    backend: Optional[Backend] = None,
 ):
     r"""Converts Pauli-Liouville representation of a quantum channel to its
     Liouville representation :math:`\\mathcal{E}`.
