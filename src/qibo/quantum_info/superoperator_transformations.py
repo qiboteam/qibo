@@ -970,12 +970,12 @@ def liouville_to_pauli(
             If ``"system"``, it assumes block-vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements in the basis. Defaults to "IXYZ".
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.
         method (str, optional): If ``None`` or ``"fht"``, uses the Fast
             Walsh-Hadamard transform. If ``"standard"``, uses the dense
             Pauli basis-change matrix. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+           to be used in the execution. If ``None``, it uses
+           the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
