@@ -236,12 +236,12 @@ def to_pauli_liouville(
             performed. Default is ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements. Default is "IXYZ".
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.
         method (str, optional): If ``None`` or ``"fht"``, uses the Fast
             Walsh-Hadamard transform. If ``"standard"``, uses the dense
             Pauli basis-change matrix. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+           to be used in the execution. If ``None``, it uses
+           the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: quantum channel in its Pauli-Liouville representation.
