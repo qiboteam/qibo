@@ -2210,7 +2210,7 @@ def _pauli_symplectic_indices(nqubits: int, pauli_order: str):
     return rows, columns
 
 
-def _operator_to_pauli_coefficients_fht(operators, dim: int, backend=None):
+def _operator_to_pauli_coefficients_fht(operators, dim: int, backend: Optional[Backend] = None):
     """Return Pauli decomposition coefficients for a batch of operators."""
     backend = _check_backend(backend)
 
