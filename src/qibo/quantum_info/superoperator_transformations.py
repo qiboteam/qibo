@@ -1,12 +1,13 @@
 """Module with the most commom superoperator transformations."""
 
+import math
 import warnings
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from scipy.optimize import minimize
 
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
@@ -2184,7 +2185,9 @@ def _phase_matrix(dim: int, sign: int = -1, backend=None):
     return backend.cast(phase, dtype=phase.dtype)
 
 
-def _pauli_symplectic_indices(nqubits: int, pauli_order: str):
+def _pauli_symplectic_indices(
+    nqubits: int, pauli_order: str, backend: Optional[Backend] = None
+):
     """Return Pauli-basis indexes as pairs of symplectic integers ``(r, s)``."""
     if set(pauli_order) != {"I", "X", "Y", "Z"}:  # pragma: no cover
         raise_error(
@@ -2256,7 +2259,7 @@ def _operator_to_pauli_vectors_fht(
     backend = _check_backend(backend)
 
     coefficients = _operator_to_pauli_coefficients_fht(operators, dim, backend=backend)
-    rows, columns = _pauli_symplectic_indices(nqubits, pauli_order)
+    rows, columns = _pauli_symplectic_indices(nqubits, pauli_order, backend)
     normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
     coefficients = coefficients[..., rows, columns] * dim / normalization
 
@@ -2275,7 +2278,7 @@ def _pauli_vectors_to_operator_fht(
     """Convert vectorized Pauli-basis coordinates to computational operators."""
     backend = _check_backend(backend)
 
-    rows, columns = _pauli_symplectic_indices(nqubits, pauli_order)
+    rows, columns = _pauli_symplectic_indices(nqubits, pauli_order, backend)
     normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
     symplectic_to_pauli = np.empty(dim**2, dtype=int)
     symplectic_to_pauli[rows * dim + columns] = np.arange(dim**2)
