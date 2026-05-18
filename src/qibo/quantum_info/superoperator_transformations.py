@@ -2160,7 +2160,7 @@ def _xor_transform(array, backend=None):
     backend = _check_backend(backend)
 
     dim = array.shape[-1]
-    indices = np.arange(dim)
+    indices = backend.arange(dim)
     row_indices = indices[:, None] ^ indices[None, :]
     column_indices = np.broadcast_to(indices[None, :], (dim, dim))
 
