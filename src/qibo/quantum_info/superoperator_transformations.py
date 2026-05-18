@@ -2159,61 +2159,169 @@ def _fast_walsh_hadamard_transform(array, axis: int = -1, backend=None):
     return backend.swapaxes(array, axis, -1)
 
 
+def _slice_axis(array, axis: int, index: int):
+    """Return ``array`` sliced at ``index`` along ``axis``."""
+    slices = [slice(None)] * len(array.shape)
+    slices[axis] = index
+
+    return array[tuple(slices)]
+
+
+def _reorder_axis(array, axis: int, permutation, backend=None):
+    """Reorder one axis using only scalar slicing and concatenation."""
+    backend = _check_backend(backend)
+
+    axis = axis % len(array.shape)
+    reordered = []
+    for index in permutation:
+        reordered.append(backend.expand_dims(_slice_axis(array, axis, index), axis))
+
+    return backend.concatenate(reordered, axis=axis)
+
+
+def _xor_pair_axis(array, axis: int, backend=None):
+    r"""Apply ``(r, q) -> (r \oplus q, q)`` to two adjacent binary axes."""
+    backend = _check_backend(backend)
+
+    axis = axis % len(array.shape)
+    next_axis = axis + 1
+
+    row_0_col_0 = _slice_axis(_slice_axis(array, axis, 0), next_axis - 1, 0)
+    row_0_col_1 = _slice_axis(_slice_axis(array, axis, 0), next_axis - 1, 1)
+    row_1_col_0 = _slice_axis(_slice_axis(array, axis, 1), next_axis - 1, 0)
+    row_1_col_1 = _slice_axis(_slice_axis(array, axis, 1), next_axis - 1, 1)
+
+    row_0 = backend.concatenate(
+        (
+            backend.expand_dims(row_0_col_0, next_axis - 1),
+            backend.expand_dims(row_1_col_1, next_axis - 1),
+        ),
+        axis=next_axis - 1,
+    )
+    row_1 = backend.concatenate(
+        (
+            backend.expand_dims(row_1_col_0, next_axis - 1),
+            backend.expand_dims(row_0_col_1, next_axis - 1),
+        ),
+        axis=next_axis - 1,
+    )
+
+    return backend.concatenate(
+        (backend.expand_dims(row_0, axis), backend.expand_dims(row_1, axis)),
+        axis=axis,
+    )
+
+
 def _xor_transform(array, backend=None):
     """Apply the self-inverse XOR permutation along the last two axes."""
     backend = _check_backend(backend)
 
     dim = array.shape[-1]
-    indices = backend.arange(dim)
-    row_indices = indices[:, None] ^ indices[None, :]
-    column_indices = np.broadcast_to(indices[None, :], (dim, dim))
+    nqubits = int(math.log2(dim))
+    batch_shape = array.shape[:-2]
 
-    return array[..., row_indices, column_indices]
+    array = backend.reshape(array, batch_shape + (2,) * (2 * nqubits))
+    offset = len(batch_shape)
+    axes = tuple(range(offset)) + tuple(
+        offset + index for pair in range(nqubits) for index in (pair, nqubits + pair)
+    )
+    array = backend.transpose(array, axes)
+
+    for qubit in range(nqubits):
+        array = _xor_pair_axis(array, offset + 2 * qubit, backend=backend)
+
+    inverse_axes = [0] * len(axes)
+    for index, axis in enumerate(axes):
+        inverse_axes[axis] = index
+    array = backend.transpose(array, tuple(inverse_axes))
+
+    return backend.reshape(array, batch_shape + (dim, dim))
 
 
 def _phase_matrix(dim: int, sign: int = -1, backend=None):
     """Return ``(sign * i) ** |r & s|`` for all pairs ``(r, s)``."""
     backend = _check_backend(backend)
 
-    rows = backend.arange(dim)[:, None]
-    columns = backend.arange(dim)[None, :]
-    weights = np.vectorize(lambda value: int(value).bit_count())(
-        np.bitwise_and(rows, columns)
-    )
-    phase = (sign * 1.0j) ** weights
+    phase = backend.cast([[1.0, 1.0], [1.0, sign * 1.0j]], dtype=backend.complex128)
+    for _ in range(1, int(math.log2(dim))):
+        phase = backend.kron(
+            phase,
+            backend.cast([[1.0, 1.0], [1.0, sign * 1.0j]], dtype=backend.complex128),
+        )
 
-    return backend.cast(phase, dtype=phase.dtype)
+    return phase
 
 
-def _pauli_symplectic_indices(
-    nqubits: int, pauli_order: str, backend: Optional[Backend] = None
-):
-    """Return Pauli-basis indexes as pairs of symplectic integers ``(r, s)``."""
-    if set(pauli_order) != {"I", "X", "Y", "Z"}:  # pragma: no cover
+def _check_pauli_order(pauli_order: str):
+    """Validate the single-qubit Pauli order."""
+    if set(pauli_order) != {"I", "X", "Y", "Z"}:
         raise_error(
             ValueError,
             f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
         )
 
-    mapping = {"I": (0, 0), "X": (1, 0), "Y": (1, 1), "Z": (0, 1)}
-    npaulis = 4**nqubits
-    rows = backend.zeros(npaulis, dtype=backend.int64)
-    columns = backend.zeros(npaulis, dtype=backend.int64)
 
-    for index in range(npaulis):
-        quotient = index
-        row = 0
-        column = 0
-        for bit_position in range(nqubits):
-            power = 4 ** (nqubits - 1 - bit_position)
-            pauli_index, quotient = divmod(quotient, power)
-            r_bit, s_bit = mapping[pauli_order[pauli_index]]
-            row |= r_bit << (nqubits - 1 - bit_position)
-            column |= s_bit << (nqubits - 1 - bit_position)
-        rows[index] = row
-        columns[index] = column
+def _symplectic_coefficients_to_pauli_order(
+    coefficients,
+    nqubits: int,
+    dim: int,
+    pauli_order: str = "IXYZ",
+    backend: Optional[Backend] = None,
+):
+    """Vectorize coefficients ``alpha[r, s]`` according to ``pauli_order``."""
+    backend = _check_backend(backend)
+    _check_pauli_order(pauli_order)
 
-    return rows, columns
+    batch_shape = coefficients.shape[:-2]
+    coefficients = backend.reshape(coefficients, batch_shape + (2,) * (2 * nqubits))
+    offset = len(batch_shape)
+    axes = tuple(range(offset)) + tuple(
+        offset + index for pair in range(nqubits) for index in (pair, nqubits + pair)
+    )
+    coefficients = backend.transpose(coefficients, axes)
+    coefficients = backend.reshape(coefficients, batch_shape + (4,) * nqubits)
+
+    canonical_order = "IZXY"
+    permutation = tuple(canonical_order.index(pauli) for pauli in pauli_order)
+    for qubit in range(nqubits):
+        coefficients = _reorder_axis(
+            coefficients, offset + qubit, permutation, backend=backend
+        )
+
+    return backend.reshape(coefficients, batch_shape + (dim**2,))
+
+
+def _pauli_order_to_symplectic_coefficients(
+    vectors,
+    nqubits: int,
+    dim: int,
+    pauli_order: str = "IXYZ",
+    backend: Optional[Backend] = None,
+):
+    """Convert Pauli-ordered vectors to coefficients ``alpha[r, s]``."""
+    backend = _check_backend(backend)
+    _check_pauli_order(pauli_order)
+
+    batch_shape = vectors.shape[:-1]
+    coefficients = backend.reshape(vectors, batch_shape + (4,) * nqubits)
+
+    offset = len(batch_shape)
+    canonical_order = "IZXY"
+    permutation = tuple(pauli_order.index(pauli) for pauli in canonical_order)
+    for qubit in range(nqubits):
+        coefficients = _reorder_axis(
+            coefficients, offset + qubit, permutation, backend=backend
+        )
+
+    coefficients = backend.reshape(coefficients, batch_shape + (2,) * (2 * nqubits))
+    axes = (
+        tuple(range(offset))
+        + tuple(offset + 2 * qubit for qubit in range(nqubits))
+        + tuple(offset + 2 * qubit + 1 for qubit in range(nqubits))
+    )
+    coefficients = backend.transpose(coefficients, axes)
+
+    return backend.reshape(coefficients, batch_shape + (dim, dim))
 
 
 def _operator_to_pauli_coefficients_fht(
@@ -2259,11 +2367,16 @@ def _operator_to_pauli_vectors_fht(
     backend = _check_backend(backend)
 
     coefficients = _operator_to_pauli_coefficients_fht(operators, dim, backend=backend)
-    rows, columns = _pauli_symplectic_indices(nqubits, pauli_order, backend)
     normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
-    coefficients = coefficients[..., rows, columns] * dim / normalization
+    coefficients = _symplectic_coefficients_to_pauli_order(
+        coefficients,
+        nqubits=nqubits,
+        dim=dim,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
 
-    return coefficients
+    return coefficients * dim / normalization
 
 
 def _pauli_vectors_to_operator_fht(
@@ -2278,12 +2391,14 @@ def _pauli_vectors_to_operator_fht(
     """Convert vectorized Pauli-basis coordinates to computational operators."""
     backend = _check_backend(backend)
 
-    rows, columns = _pauli_symplectic_indices(nqubits, pauli_order, backend)
     normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
-    symplectic_to_pauli = np.empty(dim**2, dtype=int)
-    symplectic_to_pauli[rows * dim + columns] = np.arange(dim**2)
-    coefficients = vectors[..., symplectic_to_pauli] / normalization
-    coefficients = backend.reshape(coefficients, vectors.shape[:-1] + (dim, dim))
+    coefficients = _pauli_order_to_symplectic_coefficients(
+        vectors * normalization / dim,
+        nqubits=nqubits,
+        dim=dim,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
 
     return _pauli_coefficients_to_operator_fht(coefficients, dim, backend=backend)
 
