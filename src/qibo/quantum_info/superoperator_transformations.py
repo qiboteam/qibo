@@ -2228,7 +2228,7 @@ def _operator_to_pauli_coefficients_fht(
     return coefficients
 
 
-def _pauli_coefficients_to_operator_fht(coefficients, dim: int, backend=None):
+def _pauli_coefficients_to_operator_fht(coefficients, dim: int, backend: Optional[Backend] = None):
     """Reconstruct a batch of operators from Pauli decomposition coefficients."""
     backend = _check_backend(backend)
 
