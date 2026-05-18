@@ -2099,14 +2099,16 @@ def kraus_to_unitaries(
 
 def _check_pauli_transform_method(method: Optional[str]):
     """Validate ``method`` for Pauli-basis conversions."""
+    if method is not None and method not in ("dense", "fht", "standard"):
+        raise_error(
+            ValueError,
+            f"``method`` must be either None, 'fht', 'standard', or 'dense', but it is {method}.",
+        )
+
     if method is None or method == "fht":
         return "fht"
-    if method in ("standard", "dense"):
-        return "standard"
-    raise_error(
-        ValueError,
-        f"method must be either None, 'fht', 'standard', or 'dense', but it is {method}.",
-    )
+
+    return "standard"
 
 
 def _check_pauli_superoperator_shape(super_op, name: str):
