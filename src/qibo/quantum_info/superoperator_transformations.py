@@ -2243,7 +2243,7 @@ def _operator_to_pauli_vectors_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert a batch of operators to vectorized Pauli-basis coordinates."""
     backend = _check_backend(backend)
