@@ -2268,7 +2268,7 @@ def _pauli_vectors_to_operator_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert vectorized Pauli-basis coordinates to computational operators."""
     backend = _check_backend(backend)
