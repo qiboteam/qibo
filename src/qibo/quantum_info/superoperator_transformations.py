@@ -2288,7 +2288,7 @@ def _to_pauli_liouville_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts ``channel`` to Pauli-Liouville representation using FHT."""
     backend = _check_backend(backend)
