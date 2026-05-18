@@ -2316,7 +2316,7 @@ def _liouville_to_pauli_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Liouville representation to Pauli-Liouville using FHT."""
     backend = _check_backend(backend)
