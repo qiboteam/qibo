@@ -336,7 +336,7 @@ def test_to_pauli_liouville(backend, normalize, order, pauli_order):
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
 def test_to_pauli_liouville_fht_method(backend, normalize, order, pauli_order):
-    channel = backend.cast(matrices.X, dtype=matrices.X.dtype)
+    channel = backend.matrices.X
 
     pauli_default = to_pauli_liouville(
         channel,

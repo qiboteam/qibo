@@ -193,8 +193,8 @@ def to_pauli_liouville(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
     method: Optional[str] = None,
+    backend: Optional[Backend] = None,
 ):
     r"""Converts quantum ``channel`` :math:`U` to its Pauli-Liouville
     representation :math:`\\mathcal{E}`. It uses the Liouville representation
@@ -236,12 +236,12 @@ def to_pauli_liouville(
             performed. Default is ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements. Default is "IXYZ".
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.
         method (str, optional): If ``None`` or ``"fht"``, uses the Fast
             Walsh-Hadamard transform. If ``"standard"``, uses the dense
             Pauli basis-change matrix. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+           to be used in the execution. If ``None``, it uses
+           the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: quantum channel in its Pauli-Liouville representation.
@@ -948,8 +948,8 @@ def liouville_to_pauli(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
     method: Optional[str] = None,
+    backend: Optional[Backend] = None,
 ):
     r"""Converts Liouville representation :math:`\\mathcal{E}` of a
     quantum channel to its Pauli-Liouville representation.
@@ -970,12 +970,12 @@ def liouville_to_pauli(
             If ``"system"``, it assumes block-vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements in the basis. Defaults to "IXYZ".
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.
         method (str, optional): If ``None`` or ``"fht"``, uses the Fast
             Walsh-Hadamard transform. If ``"standard"``, uses the dense
             Pauli basis-change matrix. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+           to be used in the execution. If ``None``, it uses
+           the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
@@ -1162,8 +1162,8 @@ def pauli_to_liouville(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
     method: Optional[str] = None,
+    backend: Optional[Backend] = None,
 ):
     r"""Converts Pauli-Liouville representation of a quantum channel to its
     Liouville representation :math:`\\mathcal{E}`.
@@ -1184,12 +1184,12 @@ def pauli_to_liouville(
             block-vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements. Defaults to "IXYZ".
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.
         method (str, optional): If ``None`` or ``"fht"``, uses the Fast
             Walsh-Hadamard transform. If ``"standard"``, uses the dense
             Pauli basis-change matrix. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+           to be used in the execution. If ``None``, it uses
+           the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Liouville representation.
@@ -2099,23 +2099,28 @@ def kraus_to_unitaries(
 
 def _check_pauli_transform_method(method: Optional[str]):
     """Validate ``method`` for Pauli-basis conversions."""
+    if method is not None and method not in ("dense", "fht", "standard"):
+        raise_error(
+            ValueError,
+            f"``method`` must be either None, 'fht', 'standard', or 'dense', but it is {method}.",
+        )
+
     if method is None or method == "fht":
         return "fht"
-    if method in ("standard", "dense"):
-        return "standard"
-    raise_error(
-        ValueError,
-        f"method must be either None, 'fht', 'standard', or 'dense', but it is {method}.",
-    )
+
+    return "standard"
 
 
 def _check_pauli_superoperator_shape(super_op, name: str):
     """Validate the shape of a Pauli or Liouville superoperator."""
-    dim = np.sqrt(len(super_op))
-    nqubits = np.log2(dim)
+    dim = math.sqrt(len(super_op))
+    nqubits = math.log2(dim)
 
     if super_op.shape[0] != super_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
-        raise_error(ValueError, f"{name} must be of shape (4^n, 4^n)")
+        raise_error(
+            ValueError,
+            f"{name} must be of shape (4^n, 4^n), but it is {super_op.shape}",
+        )
 
     return int(dim), int(nqubits)
 
@@ -2158,7 +2163,7 @@ def _xor_transform(array, backend=None):
     backend = _check_backend(backend)
 
     dim = array.shape[-1]
-    indices = np.arange(dim)
+    indices = backend.arange(dim)
     row_indices = indices[:, None] ^ indices[None, :]
     column_indices = np.broadcast_to(indices[None, :], (dim, dim))
 
@@ -2169,8 +2174,8 @@ def _phase_matrix(dim: int, sign: int = -1, backend=None):
     """Return ``(sign * i) ** |r & s|`` for all pairs ``(r, s)``."""
     backend = _check_backend(backend)
 
-    rows = np.arange(dim)[:, None]
-    columns = np.arange(dim)[None, :]
+    rows = backend.arange(dim)[:, None]
+    columns = backend.arange(dim)[None, :]
     weights = np.vectorize(lambda value: int(value).bit_count())(
         np.bitwise_and(rows, columns)
     )
@@ -2189,8 +2194,8 @@ def _pauli_symplectic_indices(nqubits: int, pauli_order: str):
 
     mapping = {"I": (0, 0), "X": (1, 0), "Y": (1, 1), "Z": (0, 1)}
     npaulis = 4**nqubits
-    rows = np.zeros(npaulis, dtype=int)
-    columns = np.zeros(npaulis, dtype=int)
+    rows = backend.zeros(npaulis, dtype=backend.int64)
+    columns = backend.zeros(npaulis, dtype=backend.int64)
 
     for index in range(npaulis):
         quotient = index
@@ -2208,7 +2213,9 @@ def _pauli_symplectic_indices(nqubits: int, pauli_order: str):
     return rows, columns
 
 
-def _operator_to_pauli_coefficients_fht(operators, dim: int, backend=None):
+def _operator_to_pauli_coefficients_fht(
+    operators, dim: int, backend: Optional[Backend] = None
+):
     """Return Pauli decomposition coefficients for a batch of operators."""
     backend = _check_backend(backend)
 
@@ -2221,7 +2228,9 @@ def _operator_to_pauli_coefficients_fht(operators, dim: int, backend=None):
     return coefficients
 
 
-def _pauli_coefficients_to_operator_fht(coefficients, dim: int, backend=None):
+def _pauli_coefficients_to_operator_fht(
+    coefficients, dim: int, backend: Optional[Backend] = None
+):
     """Reconstruct a batch of operators from Pauli decomposition coefficients."""
     backend = _check_backend(backend)
 
@@ -2241,7 +2250,7 @@ def _operator_to_pauli_vectors_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert a batch of operators to vectorized Pauli-basis coordinates."""
     backend = _check_backend(backend)
@@ -2261,7 +2270,7 @@ def _pauli_vectors_to_operator_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert vectorized Pauli-basis coordinates to computational operators."""
     backend = _check_backend(backend)
@@ -2281,7 +2290,7 @@ def _to_pauli_liouville_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts ``channel`` to Pauli-Liouville representation using FHT."""
     backend = _check_backend(backend)
@@ -2307,7 +2316,7 @@ def _liouville_to_pauli_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Liouville representation to Pauli-Liouville using FHT."""
     backend = _check_backend(backend)
@@ -2344,7 +2353,7 @@ def _pauli_to_liouville_fht(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Pauli-Liouville representation to Liouville using FHT."""
     backend = _check_backend(backend)
