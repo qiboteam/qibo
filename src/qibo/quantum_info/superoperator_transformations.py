@@ -2191,8 +2191,8 @@ def _pauli_symplectic_indices(nqubits: int, pauli_order: str):
 
     mapping = {"I": (0, 0), "X": (1, 0), "Y": (1, 1), "Z": (0, 1)}
     npaulis = 4**nqubits
-    rows = np.zeros(npaulis, dtype=int)
-    columns = np.zeros(npaulis, dtype=int)
+    rows = backend.zeros(npaulis, dtype=backend.int64)
+    columns = backend.zeros(npaulis, dtype=backend.int64)
 
     for index in range(npaulis):
         quotient = index
