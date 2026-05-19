@@ -2406,7 +2406,7 @@ def _pauli_vectors_to_operator_fht(
 
     normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
     coefficients = _pauli_order_to_symplectic_coefficients(
-        vectors * normalization / dim**2,
+        vectors / normalization,
         nqubits=nqubits,
         dim=dim,
         pauli_order=pauli_order,
