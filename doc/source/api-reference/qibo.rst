@@ -1215,7 +1215,7 @@ In Qibo, it is possible to build noisy circuits based on IBMQ's reported noise m
 for its quantum computer by using the :class:`qibo.noise.IBMQNoiseModel` class.
 The noise model is built using a combination of the
 :class:`qibo.gates.ThermalRelaxationChannel` and :class:`qibo.gates.DepolarizingChannel`
-channels. . At the end of the circuit, if the qubit is measured,
+channels. At the end of the circuit, if the qubit is measured,
 bitflips errors are set. Moreover, the model handles idle qubits by applying a thermal
 relaxation channel for the duration of the idle-time.
 
@@ -1227,6 +1227,72 @@ example on :ref:`Simulating quantum hardware <noise-hardware-example>`.
     :members:
     :member-order: bysource
 
+
+GTH Noise Model
+^^^^^^^^^^^^^^^
+
+The GST-trained heuristic (GTH) noise model is a composite noise model designed to approximate hardware noise using a combination of theoretical quantum noise channels.
+
+The model was introduced in `arXiv:2502.19872 <https://arxiv.org/abs/2502.19872>`_, where gate set tomography (GST) training data is used to train neural networks that subsequently infer effective noise parameters from GST data obtained from hardware devices.
+
+For single-qubit operations, the GTH noise model applies a combination of:
+
+* :class:`qibo.gates.DepolarizingChannel`
+* :class:`qibo.gates.AmplitudeDampingChannel`
+* :class:`qibo.gates.PhaseDampingChannel`, and
+* :class:`qibo.gates.ReadoutErrorChannel`
+
+For two-qubit operations, the model applies pair-specific two-qubit :class:`qibo.gates.DepolarizingChannel`.
+
+Although more sophisticated composite noise models may be constructed by including additional noise channels, it was found that this combination provides a sufficiently realistic approximation of hardware noise while remaining computationally practical.
+
+The model accepts:
+
+* a 4-tuple for each qubit in the format
+
+  ``[depolarizing, amplitude damping, dephasing, readout]``
+
+* and pair-specific two-qubit depolarizing parameters.
+
+Example
+"""""""
+
+Below is an example of how to use input the noise parameters inferred from the GST on the IQM Garnet's qubit 1 and 4 (dated: ``2025-09-01``).
+
+.. code-block:: python
+
+    from qibo.noise import GTHNoiseModel
+
+    single_qb_errors = {
+        1: [0.00799362, 0.00260128, 0.00304553, 0.00631564],
+        4: [0.00541111, 0.00270103, 0.00747088, 0.00748984],
+    }
+
+    two_qb_errors = {(1, 4): 0.02199975}
+
+    noise_model = GTHNoiseModel.from_parameters(single_qb_errors, two_qb_errors)
+
+These parameters correspond to:
+
+* qubit 1:
+
+  ``[0.00799362, 0.00260128, 0.00304553, 0.00631564]``
+
+* qubit 4:
+
+  ``[0.00541111, 0.00270103, 0.00747088, 0.00748984]``
+
+* coupled qubit pair ``(1, 4)``:
+
+  ``0.02199975``
+
+Alternatively, arbitrary (fictitious) parameters may also be supplied to emulate generic or hypothetical hardware devices for simulation and testing purposes.
+
+More information can be found at `arXiv:2502.19872 <https://arxiv.org/abs/2502.19872>`_.
+
+.. autoclass:: qibo.noise.GTHNoiseModel
+    :members:
+    :member-order: bysource
 
 _______________________
 
