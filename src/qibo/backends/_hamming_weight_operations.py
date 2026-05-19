@@ -52,8 +52,7 @@ def _rank_fixed_weight_bitstrings(
     bits = backend.cast(bitstrings, dtype=bool)
     table = _global_binom_table(nqubits, weight, backend)
     ranks = backend.zeros(bits.shape[0], dtype=backend.int64)
-    # remaining = backend.full(bits.shape[0], weight, dtype=backend.int64)
-    remaining = np.full(bits.shape[0], weight, dtype=backend.int64)
+    remaining = backend.full(bits.shape[0], weight, dtype=backend.int64)
 
     for pos in range(nqubits):
         ones_mask = bits[:, pos]
