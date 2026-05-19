@@ -4,6 +4,9 @@ specifies the contraction indices is created using the following methods and
 used by :meth:`qibo.backends.numpy.NumpyEngine.apply_gate`.
 """
 
+from functools import cache
+from typing import List, Tuple
+
 from qibo.config import EINSUM_CHARS, raise_error
 
 
@@ -86,3 +89,22 @@ def reverse_order(order):
     for i, r in enumerate(order):
         rorder[r] = i
     return rorder
+
+
+@cache
+def permutations(qubits: Tuple[int, ...], nqubits: int) -> Tuple[List[int], List[int]]:
+    """Compute the permutations of the indices needed for gate application
+    through unfolding and matrix product. The first permutation moves the
+    contracted axes, i.e. the interested qubits, to the front, the second
+    premutation reverts the first one.
+
+    Args:
+        qubits (Tuple[int, ...]): the interested qubits.
+        nqubits (int): the total number of qubits of the system.
+    Returns:
+        (Tuple[List[int], List[int]]) the two permuations of the indices.
+    """
+    fwd_perm = list(qubits) + [q for q in range(nqubits) if q not in qubits]
+    inv_perm = zip(list(range(nqubits)), fwd_perm)
+    inv_perm, _ = list(zip(*sorted(inv_perm, key=lambda x: x[1])))
+    return fwd_perm, inv_perm
