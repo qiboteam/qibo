@@ -1316,7 +1316,14 @@ Non-interacting Pauli-Z
     :members:
     :member-order: bysource
 
-Transverse field Ising model
+Ising model
+^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.Ising
+    :members:
+    :member-order: bysource
+
+Transverse-field Ising model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.TFIM
