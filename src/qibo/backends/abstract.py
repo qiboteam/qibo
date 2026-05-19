@@ -380,6 +380,14 @@ class Backend:  # pylint: disable=R0904
     def floor(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.floor(array, **kwargs)
 
+    def full(
+        self,
+        shape: Union[Tuple[int, ...], List[int]],
+        fill_value: Union[complex, float, int],
+        **kwargs,
+    ) -> ArrayLike:  # pragma: no cover
+        return self.engine.full(shape, fill_value, **kwargs)
+
     def hstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         return self.engine.hstack(arrays, **kwargs)
 
