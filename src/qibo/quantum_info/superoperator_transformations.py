@@ -2,6 +2,7 @@
 
 import math
 import warnings
+from functools import reduce
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -2243,7 +2244,7 @@ def _phase_matrix(dim: int, sign: int = -1, backend=None):
     backend = _check_backend(backend)
 
     phase = backend.cast([[1.0, 1.0], [1.0, sign * 1.0j]], dtype=backend.complex128)
-    phase = reduce(backend.kron, [phase]*int(math.log2(dim)))
+    phase = reduce(backend.kron, [phase] * int(math.log2(dim)))
 
     return phase
 
