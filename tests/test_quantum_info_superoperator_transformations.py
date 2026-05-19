@@ -335,6 +335,62 @@ def test_to_pauli_liouville(backend, normalize, order, pauli_order):
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
+def test_to_pauli_liouville_fht_method(backend, normalize, order, pauli_order):
+    channel = backend.matrices.X
+
+    pauli_default = to_pauli_liouville(
+        channel,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+    pauli_fht = to_pauli_liouville(
+        channel,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+        method="fht",
+    )
+    pauli_standard = to_pauli_liouville(
+        channel,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+        method="standard",
+    )
+
+    backend.assert_allclose(pauli_default, pauli_fht, atol=PRECISION_TOL)
+    backend.assert_allclose(pauli_fht, pauli_standard, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_to_pauli_liouville_fht_bitflip(backend, normalize, order, pauli_order):
+    channel = backend.cast(matrices.X, dtype=matrices.X.dtype)
+    pauli_op = to_pauli_liouville(
+        channel,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+        method="fht",
+    )
+
+    elements = {"I": 1.0, "X": 1.0, "Y": -1.0, "Z": -1.0}
+    target = np.diag([elements[pauli] for pauli in pauli_order])
+    target = 2 * target if normalize is False else target
+    target = backend.cast(target, dtype=target.dtype)
+
+    backend.assert_allclose(pauli_op, target, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
 def test_to_chi(backend, normalize, order, pauli_order):
     test_a0_ = backend.cast(test_a0)
     test_a1_ = backend.cast(test_a1)
@@ -631,6 +687,52 @@ def test_liouville_to_pauli(backend, normalize, order, pauli_order, test_superop
     backend.assert_allclose(test_pauli / aux, pauli_op, atol=PRECISION_TOL)
 
 
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_liouville_to_pauli_fht_method(backend, normalize, order, pauli_order):
+    rng = np.random.default_rng(1234)
+    super_op = rng.normal(size=(16, 16)) + 1.0j * rng.normal(size=(16, 16))
+    super_op = backend.cast(super_op, dtype=super_op.dtype)
+
+    pauli_default = liouville_to_pauli(
+        super_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+    pauli_fht = liouville_to_pauli(
+        super_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+        method="fht",
+    )
+    pauli_standard = liouville_to_pauli(
+        super_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+        method="standard",
+    )
+
+    backend.assert_allclose(pauli_default, pauli_fht, atol=PRECISION_TOL)
+    backend.assert_allclose(pauli_fht, pauli_standard, atol=PRECISION_TOL)
+
+    with pytest.raises(ValueError):
+        liouville_to_pauli(
+            super_op,
+            normalize=normalize,
+            order=order,
+            pauli_order=pauli_order,
+            backend=backend,
+            method="wrong",
+        )
+
+
 @pytest.mark.parametrize("test_a1", [test_a1])
 @pytest.mark.parametrize("test_a0", [test_a0])
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -848,6 +950,52 @@ def test_pauli_to_liouville(backend, normalize, order, pauli_order, test_superop
     )
 
     backend.assert_allclose(test_superop, super_op, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_pauli_to_liouville_fht_method(backend, normalize, order, pauli_order):
+    rng = np.random.default_rng(4321)
+    pauli_op = rng.normal(size=(16, 16)) + 1.0j * rng.normal(size=(16, 16))
+    pauli_op = backend.cast(pauli_op, dtype=pauli_op.dtype)
+
+    super_op_default = pauli_to_liouville(
+        pauli_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+    super_op_fht = pauli_to_liouville(
+        pauli_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+        method="fht",
+    )
+    super_op_standard = pauli_to_liouville(
+        pauli_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+        method="standard",
+    )
+
+    backend.assert_allclose(super_op_default, super_op_fht, atol=PRECISION_TOL)
+    backend.assert_allclose(super_op_fht, super_op_standard, atol=PRECISION_TOL)
+
+    with pytest.raises(ValueError):
+        pauli_to_liouville(
+            pauli_op,
+            normalize=normalize,
+            order=order,
+            pauli_order=pauli_order,
+            backend=backend,
+            method="wrong",
+        )
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
