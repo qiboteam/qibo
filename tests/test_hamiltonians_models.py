@@ -7,7 +7,7 @@ import pytest
 
 from qibo import hamiltonians, matrices, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.hamiltonians.models import GPP, LABS, TFIM, XXX, Heisenberg, MaxCut
+from qibo.hamiltonians.models import GPP, LABS, TFIM, XXX, Heisenberg, Ising, MaxCut
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
@@ -185,11 +185,60 @@ def test_tfim_boundary(backend, h, closed_boundary, dense):
 
     target *= -1
     target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
-    print(target)
     target = backend.real(target.matrix)
 
     hamiltonian = TFIM(
         nqubits, h=h, closed_boundary=closed_boundary, dense=dense, backend=backend
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("local_field_strengths", [1.0, (0, 0.5)])
+@pytest.mark.parametrize("coupling_constants", [1.0, [1, 2]])
+def test_ising(
+    backend, coupling_constants, local_field_strengths, closed_boundary, dense
+):
+    nqubits = 3
+
+    I = lambda x: symbols.I(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    if isinstance(coupling_constants, (int, float)):
+        _coupling_constants = [coupling_constants] * 2
+        if closed_boundary:
+            _coupling_constants.append(_coupling_constants[-1])
+    elif isinstance(coupling_constants, list):
+        _coupling_constants = coupling_constants.copy()
+        if closed_boundary:
+            _coupling_constants.append(coupling_constants[0])
+
+    target = _coupling_constants[0] * Z(0) * Z(1)
+    target += _coupling_constants[1] * Z(1) * Z(2)
+    if closed_boundary:
+        target += _coupling_constants[2] * Z(2) * Z(0)
+
+    if isinstance(local_field_strengths, float):
+        target += local_field_strengths * (Z(0) + Z(1) + Z(2))
+        target += local_field_strengths * (X(0) + X(1) + X(2))
+    elif isinstance(local_field_strengths, tuple):
+        target += local_field_strengths[0] * (Z(0) + Z(1) + Z(2))
+        target += local_field_strengths[1] * (X(0) + X(1) + X(2))
+
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Ising(
+        nqubits=nqubits,
+        coupling_constants=_coupling_constants,
+        local_field_strengths=local_field_strengths,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
     )
     hamiltonian = backend.real(hamiltonian.matrix)
 

@@ -265,7 +265,7 @@ def Ising(
         ):
             raise_error(
                 ValueError,
-                f"``coupling_constants`` do not have the correct len ({len(coupling_constants)}) "
+                f"``coupling_constants`` does not have the correct len ({len(coupling_constants)}) "
                 + f" for the given ``closed_boundary`` condition ({closed_boundary}).",
             )
 
@@ -277,17 +277,11 @@ def Ising(
             coupling_constants.append(coupling_constants[-1])
 
     if isinstance(local_field_strengths, (int, float)):
-        coeffs_z = [local_field_strengths] * (nqubits - 1)
-        coeffs_x = [local_field_strengths] * (nqubits - 1)
-        if closed_boundary:
-            coeffs_x.append(local_field_strengths)
-            coeffs_z.append(local_field_strengths)
+        coeffs_z = [local_field_strengths] * nqubits
+        coeffs_x = [local_field_strengths] * nqubits
     elif isinstance(local_field_strengths, tuple):
-        coeffs_z = [local_field_strengths[0]] * (nqubits - 1)
-        coeffs_x = [local_field_strengths[1]] * (nqubits - 1)
-        if closed_boundary:
-            coeffs_z.append(local_field_strengths[0])
-            coeffs_x.append(local_field_strengths[1])
+        coeffs_z = [local_field_strengths[0]] * nqubits
+        coeffs_x = [local_field_strengths[1]] * nqubits
     else:
         coeffs_z = local_field_strengths[:, 0]
         coeffs_x = local_field_strengths[:, 1]
@@ -297,7 +291,7 @@ def Ising(
     if dense:
         matrix = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
         base_string = [backend.matrices.I()] * nqubits
-        for qubit, coeff in zip(qubits[:-1], coupling_constants[:-1]):
+        for qubit, coeff in zip(qubits[:-1], coupling_constants):
             base_string[qubit] = backend.matrices.Z
             base_string[qubit + 1] = backend.matrices.Z
             matrix += coeff * reduce(backend.kron, base_string)
@@ -334,7 +328,7 @@ def Ising(
 
     form = sum(
         coeff * interaction(qubit, qubit + 1)
-        for qubit, coeff in zip(qubits[:-1], coupling_constants[:-1])
+        for qubit, coeff in zip(qubits[:-1], coupling_constants)
     )
 
     if closed_boundary and nqubits > 2:
