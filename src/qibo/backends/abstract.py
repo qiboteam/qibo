@@ -382,7 +382,7 @@ class Backend:  # pylint: disable=R0904
 
     def full(
         self,
-        shape: Union[Tuple[int, ...], List[int]],
+        shape: Union[int, Tuple[int, ...], List[int]],
         fill_value: Union[complex, float, int],
         **kwargs,
     ) -> ArrayLike:  # pragma: no cover
