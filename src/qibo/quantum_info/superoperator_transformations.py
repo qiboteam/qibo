@@ -6,6 +6,7 @@ from functools import reduce
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.optimize import minimize
 
 from qibo.backends import Backend, _check_backend
@@ -17,7 +18,7 @@ from qibo.quantum_info.linalg_operations import singular_value_decomposition
 from qibo.quantum_info.utils import _get_single_paulis, _pauli_basis_normalization
 
 
-def vectorization(state, order: str = "row", backend=None):
+def vectorization(state, order: str = "row", backend: Optional[Backend] = None):
     """Returns state :math:`\\rho` in its Liouville representation :math:`|\\rho)`.
 
     If ``order="row"``, then:
@@ -87,7 +88,7 @@ def vectorization(state, order: str = "row", backend=None):
     return state
 
 
-def unvectorization(state, order: str = "row", backend=None):
+def unvectorization(state, order: str = "row", backend: Optional[Backend] = None):
     """Returns state :math:`\\rho` from its Liouville
     representation :math:`|\\rho)`. This operation is
     the inverse function of :func:`vectorization`, i.e.
@@ -128,7 +129,7 @@ def unvectorization(state, order: str = "row", backend=None):
     backend = _check_backend(backend)
     state = backend.cast(state, dtype=state.dtype)
 
-    dim = int(np.sqrt(state.shape[-1]))
+    dim = int(math.sqrt(state.shape[-1]))
     if len(state.shape) == 1:
         state = state.reshape(1, -1)
     func = getattr(backend.qinfo, f"_unvectorization_{order}")
@@ -138,7 +139,7 @@ def unvectorization(state, order: str = "row", backend=None):
     return state
 
 
-def to_choi(channel, order: str = "row", backend=None):
+def to_choi(channel, order: str = "row", backend: Optional[Backend] = None):
     """Converts quantum ``channel`` :math:`U` to its Choi representation :math:`\\Lambda`.
 
     .. math::
@@ -166,7 +167,7 @@ def to_choi(channel, order: str = "row", backend=None):
     return func_order(channel)
 
 
-def to_liouville(channel, order: str = "row", backend=None):
+def to_liouville(channel, order: str = "row", backend: Optional[Backend] = None):
     """Converts quantum ``channel`` :math:`U` to its Liouville representation
     :math:`\\mathcal{E}`. It uses the Choi representation as an
     intermediate step.
@@ -261,7 +262,9 @@ def to_pauli_liouville(
         )
 
     normalization = (
-        _pauli_basis_normalization(int(np.log2(channel.shape[0]))) if normalize else 1.0
+        _pauli_basis_normalization(int(math.log2(channel.shape[0])))
+        if normalize
+        else 1.0
     )
     func_order = getattr(backend.qinfo, f"_to_pauli_liouville_{order}")
     return func_order(
@@ -274,7 +277,7 @@ def to_chi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts quantum ``channel`` :math:`U` to its :math:`\\chi`-representation.
 
@@ -313,7 +316,7 @@ def to_stinespring(
     partition: Optional[Union[List[int], Tuple[int, ...]]] = None,
     nqubits: Optional[int] = None,
     initial_state_env=None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert quantum ``channel`` :math:`U` to its Stinespring representation :math:`U_{0}`.
 
@@ -339,7 +342,7 @@ def to_stinespring(
     backend = _check_backend(backend)
 
     if partition is None:
-        nqubits_channel = int(np.log2(channel.shape[-1]))
+        nqubits_channel = int(math.log2(channel.shape[-1]))
         partition = tuple(range(nqubits_channel))
 
     channel = kraus_to_stinespring(
@@ -352,7 +355,9 @@ def to_stinespring(
     return channel
 
 
-def choi_to_liouville(choi_super_op, order: str = "row", backend=None):
+def choi_to_liouville(
+    choi_super_op, order: str = "row", backend: Optional[Backend] = None
+):
     """Converts Choi representation :math:`\\Lambda` of quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
 
@@ -394,7 +399,7 @@ def choi_to_pauli(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Choi representation :math:`\\Lambda` of a quantum channel
     to its Pauli-Liouville representation.
@@ -429,7 +434,7 @@ def choi_to_kraus(
     precision_tol: Optional[float] = None,
     order: str = "row",
     validate_cp: bool = True,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Choi representation :math:`\\Lambda` of a quantum channel :math:`\\mathcal{E}`
     into Kraus operators :math:`\\{ K_{\\alpha} \\}_{\\alpha}`.
@@ -540,7 +545,7 @@ def choi_to_chi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Choi representation :math:`\\Lambda` of quantum channel
     to  its :math:`\\chi`-matrix representation.
@@ -586,7 +591,7 @@ def choi_to_stinespring(
     validate_cp: bool = True,
     nqubits: Optional[int] = None,
     initial_state_env=None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Choi representation :math:`\\Lambda` of quantum channel
     to its Stinespring representation :math:`U_{0}`.
@@ -640,7 +645,7 @@ def choi_to_stinespring(
         )
 
     if nqubits is None:
-        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+        nqubits = int(math.log2(kraus_ops[0].shape[0]))
 
     nqubits_list = [tuple(range(nqubits))] * len(kraus_ops)
 
@@ -653,7 +658,7 @@ def choi_to_stinespring(
     return stinespring
 
 
-def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
+def kraus_to_choi(kraus_ops, order: str = "row", backend: Optional[Backend] = None):
     """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Choi representation :math:`\\Lambda`.
 
@@ -667,7 +672,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+            and :math:`A_k` is the corresponding matrix as a ``ArrayLike``.
         order (str, optional): If ``"row"``, reshuffling is performed
             with respect to row-wise vectorization. If ``"column"``,
             reshuffling is performed with respect to column-wise
@@ -698,7 +703,9 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     return func_order(kraus_ops)
 
 
-def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
+def kraus_to_liouville(
+    kraus_ops, order: str = "row", backend: Optional[Backend] = None
+):
     """Converts from Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Liouville representation :math:`\\mathcal{E}`.
     It uses the Choi representation as an intermediate step.
@@ -710,7 +717,7 @@ def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+            and :math:`A_k` is the corresponding matrix as a ``ArrayLike``.
         order (str, optional): If ``"row"``, reshuffling is performed
             with respect to row-wise vectorization. If ``"column"``,
             reshuffling is performed with respect to column-wise
@@ -736,7 +743,7 @@ def kraus_to_pauli(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of a quantum channel to its Pauli-Liouville representation.
@@ -744,7 +751,7 @@ def kraus_to_pauli(
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+            and :math:`A_k` is the corresponding matrix as a ``ArrayLike``.
         normalize (bool, optional): If ``True`` superoperator is returned
             in the normalized Pauli basis. If ``False``, it is returned
             in the unnormalized Pauli basis. Defaults to ``False``.
@@ -772,7 +779,7 @@ def kraus_to_chi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to  its :math:`\\chi`-matrix representation.
@@ -787,7 +794,7 @@ def kraus_to_chi(
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+            and :math:`A_k` is the corresponding matrix as a ``ArrayLike``.
         normalize (bool, optional): If ``True`` assumes the normalized
             Pauli basis. If ``False``, it assumes unnormalized
             Pauli basis. Defaults to ``False``.
@@ -823,7 +830,7 @@ def kraus_to_chi(
         backend=backend,
     )
 
-    super_op = np.zeros((dim**2, dim**2), dtype=complex)
+    super_op = backend.zeros((dim**2, dim**2), dtype=complex)
     super_op = backend.cast(super_op, dtype=super_op.dtype)
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
@@ -838,7 +845,10 @@ def kraus_to_chi(
 
 
 def kraus_to_stinespring(
-    kraus_ops, nqubits: Optional[int] = None, initial_state_env=None, backend=None
+    kraus_ops,
+    nqubits: Optional[int] = None,
+    initial_state_env=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Stinespring representation :math:`U_{0}`, i.e.
@@ -855,7 +865,7 @@ def kraus_to_stinespring(
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+            and :math:`A_k` is the corresponding matrix as a ``ArrayLike``.
         nqubits (int, optional): total number of qubits in the system that is
             interacting with the environment. Must be equal or greater than
             the number of qubits ``kraus_ops`` acts on. If ``None``,
@@ -894,8 +904,6 @@ def kraus_to_stinespring(
         initial_state_env = backend.zeros(dim_env, dtype=backend.complex128)
         initial_state_env[0] = 1.0
 
-    # only utility is for outer product,
-    # so np.conj here to only do it once
     initial_state_env = backend.conj(initial_state_env)
 
     kraus_ops = []
@@ -908,7 +916,7 @@ def kraus_to_stinespring(
     return backend.qinfo._kraus_to_stinespring(kraus_ops, initial_state_env, dim_env)
 
 
-def liouville_to_choi(super_op, order: str = "row", backend=None):
+def liouville_to_choi(super_op, order: str = "row", backend: Optional[Backend] = None):
     """Converts Liouville representation of quantum channel :math:`\\mathcal{E}`
     to its Choi representation :math:`\\Lambda`. Indexing :math:`\\mathcal{E}` as
     :math:`\\mathcal{E}_{\\alpha\\beta, \\, \\gamma\\delta} \\,\\,`, then
@@ -1012,7 +1020,10 @@ def liouville_to_pauli(
 
 
 def liouville_to_kraus(
-    super_op, precision_tol: Optional[float] = None, order: str = "row", backend=None
+    super_op,
+    precision_tol: Optional[float] = None,
+    order: str = "row",
+    backend: Optional[Backend] = None,
 ):
     """Converts Liouville representation :math:`\\mathcal{E}` of a quantum
     channel to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
@@ -1056,7 +1067,7 @@ def liouville_to_chi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Liouville representation of quantum channel :math:`\\mathcal{E}`
     to its :math:`\\chi`-matrix representation.
@@ -1106,7 +1117,7 @@ def liouville_to_stinespring(
     validate_cp: bool = True,
     nqubits: Optional[int] = None,
     initial_state_env=None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Liouville representation :math:`\\mathcal{E}` of quantum channel
     to its Stinespring representation :math:`U_{0}`.
@@ -1230,7 +1241,7 @@ def pauli_to_choi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Pauli-Liouville representation of a quantum channel
     to its Choi representation :math:`\\Lambda`.
@@ -1266,7 +1277,7 @@ def pauli_to_kraus(
     order: str = "row",
     pauli_order: str = "IXYZ",
     precision_tol: Optional[float] = None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Pauli-Liouville representation of a quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
@@ -1307,7 +1318,7 @@ def pauli_to_chi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Pauli-Liouville representation of a quantum channel
     to its :math:`\\chi`-matrix representation.
@@ -1348,7 +1359,7 @@ def pauli_to_stinespring(
     validate_cp: bool = True,
     nqubits: Optional[int] = None,
     initial_state_env=None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Pauli-Liouville representation :math:`\\mathcal{E}_{P}` of quantum channel
     to its Stinespring representation :math:`U_{0}`.
@@ -1415,7 +1426,7 @@ def chi_to_choi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert the :math:`\\chi`-matrix representation of a quantum channel
     to its Choi representation :math:`\\Lambda`.
@@ -1460,7 +1471,7 @@ def chi_to_liouville(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts the :math:`\\chi`-matrix representation of a quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
@@ -1506,7 +1517,7 @@ def chi_to_pauli(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Convert :math:`\\chi`-matrix representation of a quantum channel
     to its Pauli-Liouville representation :math:`\\mathcal{E}_P`.
@@ -1560,7 +1571,7 @@ def chi_to_kraus(
     order: str = "row",
     pauli_order: str = "IXYZ",
     validate_cp: bool = True,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts the :math:`\\chi`-matrix representation of a quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
@@ -1625,7 +1636,7 @@ def chi_to_stinespring(
     validate_cp: bool = True,
     nqubits: Optional[int] = None,
     initial_state_env=None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts :math:`\\chi`-representation of quantum channel
     to its Stinespring representation :math:`U_{0}`.
@@ -1703,7 +1714,7 @@ def stinespring_to_choi(
     initial_state_env=None,
     nqubits: Optional[int] = None,
     order: str = "row",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Stinespring representation :math:`U_{0}` of quantum channel
     to its Choi representation :math:`\\Lambda`.
@@ -1741,7 +1752,7 @@ def stinespring_to_choi(
     )
 
     if nqubits is None:
-        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+        nqubits = int(math.log2(kraus_ops[0].shape[0]))
 
     nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
 
@@ -1758,7 +1769,7 @@ def stinespring_to_liouville(
     initial_state_env=None,
     nqubits: Optional[int] = None,
     order: str = "row",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Stinespring representation :math:`U_{0}` of quantum channel
     to its Liouville representation :math:`\\mathcal{E}` via Stinespring Dilation,
@@ -1797,7 +1808,7 @@ def stinespring_to_liouville(
     )
 
     if nqubits is None:
-        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+        nqubits = int(math.log2(kraus_ops[0].shape[0]))
 
     nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
 
@@ -1816,7 +1827,7 @@ def stinespring_to_pauli(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Stinespring representation :math:`U_{0}` of quantum channel
     to its Pauli-Liouville representation :math:`\\mathcal{E}_{P}` via
@@ -1857,7 +1868,7 @@ def stinespring_to_pauli(
     )
 
     if nqubits is None:
-        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+        nqubits = int(math.log2(kraus_ops[0].shape[0]))
 
     nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
 
@@ -1879,7 +1890,7 @@ def stinespring_to_kraus(
     dim_env: int,
     initial_state_env=None,
     nqubits: Optional[int] = None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts the Stinespring representation :math:`U_{0}` of quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`, i.e.
@@ -1917,7 +1928,7 @@ def stinespring_to_kraus(
     dim_stinespring = stinespring.shape[0]
 
     if nqubits is None:
-        nqubits = int(np.log2(dim_stinespring / dim_env))
+        nqubits = int(math.log2(dim_stinespring / dim_env))
 
     dim = 2**nqubits
 
@@ -1928,7 +1939,7 @@ def stinespring_to_kraus(
         )
 
     if initial_state_env is None:
-        initial_state_env = np.zeros(dim_env, dtype=complex)
+        initial_state_env = backend.zeros(dim_env, dtype=complex)
         initial_state_env[0] = 1.0
         initial_state_env = backend.cast(
             initial_state_env, dtype=initial_state_env.dtype
@@ -1946,7 +1957,7 @@ def stinespring_to_chi(
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Converts Stinespring representation :math:`U_{0}` of quantum channel
     to its :math:`\\chi`-matrix representation via Stinespring Dilation, i.e.
@@ -1989,7 +2000,7 @@ def stinespring_to_chi(
     )
 
     if nqubits is None:
-        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+        nqubits = int(math.log2(kraus_ops[0].shape[0]))
 
     nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
 
@@ -2007,7 +2018,10 @@ def stinespring_to_chi(
 
 
 def kraus_to_unitaries(
-    kraus_ops, order: str = "row", precision_tol: Optional[float] = None, backend=None
+    kraus_ops,
+    order: str = "row",
+    precision_tol: Optional[float] = None,
+    backend: Optional[Backend] = None,
 ):
     """Tries to convert Kraus operators into a probabilistc sum of unitaries.
 
@@ -2019,7 +2033,7 @@ def kraus_to_unitaries(
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+            and :math:`A_k` is the corresponding matrix as a ``ArrayLike``.
         order (str, optional): _description_. Defaults to "row".
         precision_tol (float, optional): Precision tolerance for the minimization
             of the Frobenius norm :math:`\\| \\mathcal{E}_{K} - \\mathcal{E}_{U} \\|_{F}`,
@@ -2050,7 +2064,7 @@ def kraus_to_unitaries(
     backend = _check_backend(backend)
 
     target_qubits = [q for q, _ in kraus_ops]
-    nqubits = 1 + np.max(target_qubits)
+    nqubits = 1 + backend.max(target_qubits)
     dim = 2**nqubits
 
     target = kraus_to_liouville(kraus_ops, order=order, backend=backend)
@@ -2060,8 +2074,6 @@ def kraus_to_unitaries(
     for _, kraus in kraus_ops:
         Q, _ = np.linalg.qr(kraus)
         unitaries.append(Q)
-    # unitaries = np.array(unitaries)
-    # unitaries = backend.cast(unitaries)
 
     # unitaries in Liouville representation
     unitaries_liouville = _individual_kraus_to_liouville(
@@ -2070,7 +2082,7 @@ def kraus_to_unitaries(
 
     # function to minimize
     def function(x0, operators):
-        operator = (1 - np.sum(x0)) * np.eye(dim**2, dtype=complex)
+        operator = (1 - backend.sum(x0)) * backend.identity(dim**2, dtype=complex)
         operator = backend.cast(operator, dtype=operator.dtype)
         for prob, oper in zip(x0, operators):
             operator = operator + prob * oper
@@ -2127,12 +2139,15 @@ def _check_pauli_superoperator_shape(super_op, name: str):
     return int(dim), int(nqubits)
 
 
-def _fast_walsh_hadamard_transform(array, axis: int = -1, backend=None):
+def _fast_walsh_hadamard_transform(
+    array, axis: int = -1, backend: Optional[Backend] = None
+):
     """Apply an unnormalized Fast Walsh-Hadamard transform along ``axis``."""
     backend = _check_backend(backend)
 
     axis = axis % len(array.shape)
-    array = backend.cast(array, dtype=array.dtype, copy=True)
+    # array = backend.cast(array, dtype=array.dtype, copy=True)
+    array = backend.cast(array, dtype=array.dtype)
     array = backend.swapaxes(array, axis, -1)
 
     dim = array.shape[-1]
@@ -2168,7 +2183,7 @@ def _slice_axis(array, axis: int, index: int):
     return array[tuple(slices)]
 
 
-def _reorder_axis(array, axis: int, permutation, backend=None):
+def _reorder_axis(array, axis: int, permutation, backend: Optional[Backend] = None):
     """Reorder one axis using only scalar slicing and concatenation."""
     backend = _check_backend(backend)
 
@@ -2180,7 +2195,7 @@ def _reorder_axis(array, axis: int, permutation, backend=None):
     return backend.concatenate(reordered, axis=axis)
 
 
-def _xor_pair_axis(array, axis: int, backend=None):
+def _xor_pair_axis(array, axis: int, backend: Optional[Backend] = None):
     r"""Apply ``(r, q) -> (r \oplus q, q)`` to two adjacent binary axes."""
     backend = _check_backend(backend)
 
@@ -2213,7 +2228,7 @@ def _xor_pair_axis(array, axis: int, backend=None):
     )
 
 
-def _xor_transform(array, backend=None):
+def _xor_transform(array, backend: Optional[Backend] = None):
     """Apply the self-inverse XOR permutation along the last two axes."""
     backend = _check_backend(backend)
 
@@ -2239,7 +2254,7 @@ def _xor_transform(array, backend=None):
     return backend.reshape(array, batch_shape + (dim, dim))
 
 
-def _phase_matrix(dim: int, sign: int = -1, backend=None):
+def _phase_matrix(dim: int, sign: int = -1, backend: Optional[Backend] = None):
     """Return ``(sign * i) ** |r & s|`` for all pairs ``(r, s)``."""
     backend = _check_backend(backend)
 
@@ -2251,7 +2266,8 @@ def _phase_matrix(dim: int, sign: int = -1, backend=None):
 
 def _check_pauli_order(pauli_order: str):
     """Validate the single-qubit Pauli order."""
-    if set(pauli_order) != {"I", "X", "Y", "Z"}:
+    # if set(pauli_order) != {"I", "X", "Y", "Z"}:
+    if len(pauli_order) != 4 or set(pauli_order) != {"I", "X", "Y", "Z"}:
         raise_error(
             ValueError,
             f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
@@ -2499,7 +2515,7 @@ def _pauli_to_liouville_fht(
     return backend.conj(rows)
 
 
-def _reshuffling(super_op, order: str = "row", backend=None):
+def _reshuffling(super_op, order: str = "row", backend: Optional[Backend] = None):
     """Reshuffling operation used to convert Lioville representation
     of quantum channels to their Choi representation (and vice-versa).
 
@@ -2546,14 +2562,17 @@ def _reshuffling(super_op, order: str = "row", backend=None):
         )
     backend = _check_backend(backend)
 
-    dim = np.sqrt(super_op.shape[0])
+    dim = math.sqrt(super_op.shape[0])
 
     if (
         super_op.shape[0] != super_op.shape[1]
         or dim % 1 != 0
-        or np.log2(int(dim)) % 1 != 0
+        or math.log2(int(dim)) % 1 != 0
     ):
-        raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
+        raise_error(
+            ValueError,
+            f"`super_op` must be of shape (4^n, 4^n), but it is {super_op.shape}",
+        )
 
     axes = [1, 2] if order == "row" else [0, 3]
     return backend.qinfo._reshuffling(super_op, *axes)
@@ -2566,7 +2585,7 @@ def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+            and :math:`A_k` is the corresponding matrix as a ``ArrayLike``.
 
     Returns:
         (tuple, tuple): gates and their respective target qubits.
@@ -2596,7 +2615,7 @@ def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
 
 
 def _individual_kraus_to_liouville(
-    kraus_ops, order: str = "row", backend=None
+    kraus_ops, order: str = "row", backend: Optional[Backend] = None
 ):  # pragma: no cover
     """Auxiliary, modified version of :func:`qibo.quantum_info.kraus_to_choi`
     to be used in :func:`qibo.quantum_info.kraus_to_unitaries`. In principle,
