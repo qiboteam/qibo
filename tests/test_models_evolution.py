@@ -175,7 +175,7 @@ def test_adiabatic_evolution_hamiltonian(backend, dense):
         adev.hamiltonian(0.1)
 
     m1 = np.array([[0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]])
-    m2 = np.diag([2, -2, -2, 2])
+    m2 = np.diag([1, -1, -1, 1])
     ham = lambda t, T: -(1 - t / T) * m1 - (t / T) * m2
 
     adev.hamiltonian.total_time = 1
