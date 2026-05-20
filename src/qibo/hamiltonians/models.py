@@ -42,7 +42,7 @@ def GPP(
     Args:
         adjacency_matrix (ndarray): Square symmetric matrix with weigths :math:`A_{jk}`
             representing the edges of the graph. For an unweighted graph,
-            :math:`\\A_{jk} = 1, \\,\\, \\forall \\, j,k`.
+            :math:`A_{jk} = 1, \\,\\, \\forall \\, j,k`.
         penalty_coeff (float or int, optional): hyperparameter :math:`\\lambda` defining the
             strength of the penalty term. Defaults to :math:`0.0`.
         node_weights (ArrayLike, optional): Weight of the nodes of the graph.
