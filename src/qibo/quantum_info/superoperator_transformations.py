@@ -2515,7 +2515,9 @@ def _pauli_to_liouville_fht(
     return backend.conj(rows)
 
 
-def _reshuffling(super_op: ArrayLike, order: str = "row", backend: Optional[Backend] = None) -> ArrayLike:
+def _reshuffling(
+    super_op: ArrayLike, order: str = "row", backend: Optional[Backend] = None
+) -> ArrayLike:
     """Reshuffling operation used to convert Lioville representation
     of quantum channels to their Choi representation (and vice-versa).
 
