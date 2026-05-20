@@ -847,7 +847,7 @@ def kraus_to_chi(
 def kraus_to_stinespring(
     kraus_ops,
     nqubits: Optional[int] = None,
-    initial_state_env=None,
+    initial_state_env: Optional[ArrayLike] = None,
     backend: Optional[Backend] = None,
 ):
     """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
