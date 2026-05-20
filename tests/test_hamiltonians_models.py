@@ -202,6 +202,15 @@ def test_tfim_boundary(backend, h, closed_boundary, dense):
 def test_ising(
     backend, coupling_constants, local_field_strengths, closed_boundary, dense
 ):
+    with pytest.raises(ValueError):
+        test = Ising(
+            3,
+            (0.1, 0.2),
+            local_field_strengths=1.0,
+            closed_boundary=True,
+            backend=backend,
+        )
+
     I = lambda x: symbols.I(x, backend=backend)
     X = lambda x: symbols.X(x, backend=backend)
     Z = lambda x: symbols.Z(x, backend=backend)
