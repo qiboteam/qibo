@@ -198,29 +198,39 @@ def test_tfim_boundary(backend, h, closed_boundary, dense):
 @pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("closed_boundary", [False, True])
 @pytest.mark.parametrize("local_field_strengths", [1.0, (0, 0.5)])
-@pytest.mark.parametrize("coupling_constants", [1.0, [1, 2]])
+@pytest.mark.parametrize("coupling_constants", ["number", "tuple", "array"])
 def test_ising(
     backend, coupling_constants, local_field_strengths, closed_boundary, dense
 ):
-    nqubits = 3
-
     I = lambda x: symbols.I(x, backend=backend)
     X = lambda x: symbols.X(x, backend=backend)
     Z = lambda x: symbols.Z(x, backend=backend)
+
+    nqubits = 3
+
+    if coupling_constants == "number":
+        coupling_constants = 1.0
+    elif coupling_constants == "tuple":
+        coupling_constants = [1.0, 2.0]
+        if closed_boundary:
+            coupling_constants.append(1.0)
+    else:
+        coupling_constants = [1.0, 2.0]
+        if closed_boundary:
+            coupling_constants.append(1.0)
+        coupling_constants = backend.cast(coupling_constants, dtype=backend.float64)
 
     if isinstance(coupling_constants, (int, float)):
         _coupling_constants = [coupling_constants] * 2
         if closed_boundary:
             _coupling_constants.append(_coupling_constants[-1])
-    elif isinstance(coupling_constants, list):
+    else:
         _coupling_constants = coupling_constants.copy()
-        if closed_boundary:
-            _coupling_constants.append(coupling_constants[0])
 
-    target = _coupling_constants[0] * Z(0) * Z(1)
-    target += _coupling_constants[1] * Z(1) * Z(2)
+    target = float(_coupling_constants[0]) * Z(0) * Z(1)
+    target += float(_coupling_constants[1]) * Z(1) * Z(2)
     if closed_boundary:
-        target += _coupling_constants[2] * Z(2) * Z(0)
+        target += float(_coupling_constants[2]) * Z(2) * Z(0)
 
     if isinstance(local_field_strengths, float):
         target += local_field_strengths * (Z(0) + Z(1) + Z(2))
@@ -234,7 +244,7 @@ def test_ising(
 
     hamiltonian = Ising(
         nqubits=nqubits,
-        coupling_constants=_coupling_constants,
+        coupling_constants=coupling_constants,
         local_field_strengths=local_field_strengths,
         dense=dense,
         closed_boundary=closed_boundary,

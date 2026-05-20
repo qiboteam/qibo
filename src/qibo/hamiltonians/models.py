@@ -294,7 +294,7 @@ def Ising(
         for qubit, coeff in zip(qubits[:-1], coupling_constants):
             base_string[qubit] = backend.matrices.Z
             base_string[qubit + 1] = backend.matrices.Z
-            matrix += coeff * reduce(backend.kron, base_string)
+            matrix += float(coeff) * reduce(backend.kron, base_string)
             base_string[qubit] = backend.matrices.I()
             base_string[qubit + 1] = backend.matrices.I()
 
@@ -310,14 +310,14 @@ def Ising(
             base_string = [backend.matrices.I()] * nqubits
             for qubit, coeff in zip(qubits, coeffs_z):
                 base_string[qubit] = backend.matrices.Z
-                matrix += coeff * reduce(backend.kron, base_string)
+                matrix += float(coeff) * reduce(backend.kron, base_string)
                 base_string[qubit] = backend.matrices.I()
 
         if any(coeff != 0 for coeff in coeffs_x):
             base_string = [backend.matrices.I()] * nqubits
             for qubit, coeff in zip(qubits, coeffs_x):
                 base_string[qubit] = backend.matrices.X
-                matrix += coeff * reduce(backend.kron, base_string)
+                matrix += float(coeff) * reduce(backend.kron, base_string)
                 base_string[qubit] = backend.matrices.I()
 
         return Hamiltonian(nqubits, matrix, backend=backend)
@@ -327,22 +327,22 @@ def Ising(
     )
 
     form = sum(
-        coeff * interaction(qubit, qubit + 1)
+        float(coeff) * interaction(qubit, qubit + 1)
         for qubit, coeff in zip(qubits[:-1], coupling_constants)
     )
 
     if closed_boundary and nqubits > 2:
-        form += coupling_constants[-1] * interaction(nqubits - 1, 0)
+        form += float(coupling_constants[-1]) * interaction(nqubits - 1, 0)
 
     if any(coeff != 0 for coeff in coeffs_z):
         form += sum(
-            coeff * symbols.Z(qubit, backend=backend)
+            float(coeff) * symbols.Z(qubit, backend=backend)
             for qubit, coeff in zip(qubits, coeffs_z)
         )
 
     if any(coeff != 0 for coeff in coeffs_x):
         form += sum(
-            coeff * symbols.X(qubit, backend=backend)
+            float(coeff) * symbols.X(qubit, backend=backend)
             for qubit, coeff in zip(qubits, coeffs_x)
         )
 
