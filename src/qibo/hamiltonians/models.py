@@ -279,7 +279,7 @@ def Ising(
     if isinstance(local_field_strengths, (int, float)):
         coeffs_z = [local_field_strengths] * nqubits
         coeffs_x = [local_field_strengths] * nqubits
-    elif isinstance(local_field_strengths, tuple):
+    elif isinstance(local_field_strengths, (tuple, list)):
         coeffs_z = [local_field_strengths[0]] * nqubits
         coeffs_x = [local_field_strengths[1]] * nqubits
     else:

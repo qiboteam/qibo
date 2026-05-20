@@ -197,7 +197,7 @@ def test_tfim_boundary(backend, h, closed_boundary, dense):
 
 @pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("closed_boundary", [False, True])
-@pytest.mark.parametrize("local_field_strengths", [1.0, (0, 0.5)])
+@pytest.mark.parametrize("local_field_strengths", ["number", "tuple", "array"])
 @pytest.mark.parametrize("coupling_constants", ["number", "tuple", "array"])
 def test_ising(
     backend, coupling_constants, local_field_strengths, closed_boundary, dense
@@ -229,6 +229,20 @@ def test_ising(
             coupling_constants.append(1.0)
         coupling_constants = backend.cast(coupling_constants, dtype=backend.float64)
 
+    if local_field_strengths == "number":
+        local_field_strengths = 1.0
+    elif local_field_strengths == "tuple":
+        local_field_strengths = (1.0, 0.5)
+        if closed_boundary:
+            local_field_strengths += (1.0,)
+    else:
+        local_field_strengths = [[1.0, 0.5], [0.1, 2.0]]
+        if closed_boundary:
+            local_field_strengths.append([1.0, 0.5])
+        local_field_strengths = backend.cast(
+            local_field_strengths, dtype=backend.float64
+        )
+
     if isinstance(coupling_constants, (int, float)):
         _coupling_constants = [coupling_constants] * 2
         if closed_boundary:
@@ -244,10 +258,18 @@ def test_ising(
     if isinstance(local_field_strengths, float):
         target += local_field_strengths * (Z(0) + Z(1) + Z(2))
         target += local_field_strengths * (X(0) + X(1) + X(2))
-    elif isinstance(local_field_strengths, tuple):
-        target += local_field_strengths[0] * (Z(0) + Z(1) + Z(2))
-        target += local_field_strengths[1] * (X(0) + X(1) + X(2))
-
+    elif isinstance(local_field_strengths, (tuple, list)):
+        target += float(local_field_strengths[0]) * (Z(0) + Z(1) + Z(2))
+        target += float(local_field_strengths[1]) * (X(0) + X(1) + X(2))
+    else:
+        target += sum(
+            float(strength) * Z(qubit)
+            for qubit, strength in zip([0, 1, 2], local_field_strengths[:, 0])
+        )
+        target += sum(
+            float(strength) * X(qubit)
+            for qubit, strength in zip([0, 1, 2], local_field_strengths[:, 1])
+        )
     target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
     target = backend.real(target.matrix)
 
