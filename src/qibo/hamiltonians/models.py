@@ -700,7 +700,6 @@ def FermiHubbard(
     is the Coulomb potential.
 
 
-
     Args:
         nsites (int): total number of sites in the chain.
         hopping_strength (float or int, optional): tunneling amplitude. Defaults to :math:`-1.0`.
