@@ -682,6 +682,45 @@ def FermiHubbard(
     closed_boundary: bool = True,
     backend: Optional[Backend] = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
+    """Jordan-Wigner-transformed Fermi-Hubbard model for an one-dimensional spin chain.
+
+    In second quantization, the Hamiltonian is defined as
+
+    .. math::
+        H_{\\textrm{FH}} = t \\, \\sum_{j,\\,\\sigma} \\, \\left(
+            a_{j,\\sigma}^{\\dagger} \\, a_{j+1,\\sigma}
+            + a_{j+1,\\sigma}^{\\dagger} \\, a_{j,\\sigma}
+            \\right)
+            + U \\, \\sum_{j} \\, n_{j,\\uparrow} \\, n_{j,\\downarrow} \\, ,
+
+    where :math:`a_{j,\\sigma}` (:math:`a_{j,\\dagger}^{\\dagger}`) is the annihilation (creation)
+    operator for spin :math:`\\sigma \\in \\{\\uparrow, \\, \\downarrow \\}` at site :math:`j`,
+    :math:`n_{j,\\sigma} = a_{j,\\sigma}^{\\dagger}\\,a_{j,\\sigma}` is the number operator for
+    spin :math:`\\sigma` at site :math:`j`, :math:`t` is the tunneling amplitude, and :math:`U`
+    is the Coulomb potential.
+
+
+
+    Args:
+        nsites (int): total number of sites in the chain.
+        hopping_strength (float or int, optional): tunneling amplitude. Defaults to :math:`-1.0`.
+        interaction_strength (float or int, optional): Coulomb potential.
+            Defaults to :math:`0.5`.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns Fermi-Hubbard model with periodic
+            boundary condition. If ``False``, returns Hamiltonian with open boundaries.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Fermi-Hubbard Hamiltonian :math:`H_{\\textrm{FH}}`.
+    """
     backend = _check_backend(backend)
 
     nqubits = 2 * nsites
