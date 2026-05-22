@@ -639,7 +639,7 @@ def _gpp_dense(
     return Hamiltonian(nqubits, backend.diag(hamiltonian), backend=backend)
 
 
-def _multikron(matrix_list: List[ArrayLike], backend: Backend) -> ArrayLike:
+def _multikron(matrix_list: List[ArrayLike], backend: Backend = None) -> ArrayLike:
     """Calculates Kronecker product of a list of matrices.
 
     Args:
@@ -648,6 +648,8 @@ def _multikron(matrix_list: List[ArrayLike], backend: Backend) -> ArrayLike:
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
+    backend = _check_backend(backend)
+
     return reduce(backend.kron, matrix_list)
 
 
@@ -670,3 +672,100 @@ def _one_body_pauli(
     form = sum([-1 * operator(qubit, backend=backend) for qubit in range(nqubits)])
     ham = SymbolicHamiltonian(form=form, backend=backend)
     return ham
+
+
+def FermiHubbard(
+    nsites: int,
+    hopping_strength: Union[float, int] = -1.0,
+    interaction_strength: Union[float, int] = 0.5,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    backend = _check_backend(backend)
+
+    nqubits = 2 * nsites
+
+    if dense:
+        I, X, Y, Z = (
+            backend.matrices.I(),
+            backend.matrices.X,
+            backend.matrices.Y,
+            backend.matrices.Z,
+        )
+        number_op = (I - Z) / 2
+
+        hamiltonian = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
+
+        # interaction terms
+        base_string = [I] * nqubits
+        for site in range(0, nqubits - 1, 2):
+            base_string[site] = number_op
+            base_string[site + 1] = number_op
+            term = interaction_strength * _multikron(base_string, backend=backend)
+            hamiltonian += term
+            del term
+            base_string[site] = I
+            base_string[site + 1] = I
+
+        # hopping terms
+        for site in range(nqubits - 2):
+            for pauli in (X, Y):
+                base_string[site] = pauli
+                base_string[site + 2] = pauli
+                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
+                hamiltonian += term
+                del term
+            base_string[site] = I
+            base_string[site + 2] = I
+
+        if closed_boundary and nsites > 2:
+            for pauli in (X, Y):
+                base_string[0] = pauli
+                base_string[nqubits - 2] = pauli
+                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
+                hamiltonian += term
+                del term
+                base_string[0] = I
+                base_string[nqubits - 2] = I
+
+                base_string[1] = pauli
+                base_string[nqubits - 1] = pauli
+                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
+                hamiltonian += term
+                del term
+                base_string[1] = I
+                base_string[nqubits - 1] = I
+
+        return Hamiltonian(nqubits, hamiltonian, backend=backend)
+
+    I, X, Y, Z = (
+        lambda q: symbols.I(q, backend=backend),
+        lambda q: symbols.X(q, backend=backend),
+        lambda q: symbols.Y(q, backend=backend),
+        lambda q: symbols.Z(q, backend=backend),
+    )
+    number_op = lambda q: (I(q) - Z(q)) / 2
+
+    # interaction terms
+    hamiltonian = interaction_strength * sum(
+        number_op(site) * number_op(site + 1) for site in range(0, nqubits - 1, 2)
+    )
+
+    # hopping terms
+    hamiltonian += (hopping_strength / 2) * sum(
+        (X(site) * X(site + 2) + Y(site) * Y(site + 2)) for site in range(nqubits - 2)
+    )
+    if closed_boundary and nsites > 2:
+        hamiltonian += (hopping_strength / 2) * (
+            X(nqubits - 2) * X(0) + Y(nqubits - 2) * Y(0)
+        )
+        hamiltonian += (hopping_strength / 2) * (
+            X(nqubits - 1) * X(1) + Y(nqubits - 1) * Y(1)
+        )
+
+    hamiltonian = SymbolicHamiltonian(
+        form=hamiltonian, nqubits=nqubits, backend=backend
+    )
+
+    return hamiltonian
