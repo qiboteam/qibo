@@ -31,8 +31,12 @@ from qibo.backends import (
 )
 from qibo.config import (
     get_batch_size,
+    get_max_qubits,
+    get_max_qubits_dm,
     get_metropolis_threshold,
     set_batch_size,
+    set_max_qubits,
+    set_max_qubits_dm,
     set_metropolis_threshold,
 )
 from qibo.models.circuit import Circuit

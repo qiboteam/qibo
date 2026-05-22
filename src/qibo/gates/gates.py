@@ -937,7 +937,7 @@ class _Un_(ParametrizedGate):
 
 
 class U1(_Un_):
-    """First general unitary gate.
+    """First general unitary gate. Also known as `Phase` gate or `P` gate.
 
     Corresponds to the following unitary matrix
 
@@ -1494,7 +1494,7 @@ class _CUn_(ParametrizedGate):
 
 
 class CU1(_CUn_):
-    """Controlled first general unitary gate.
+    """Controlled first general unitary gate. Also known as `CPhase`.
 
     Corresponds to the following unitary matrix
 
@@ -2869,10 +2869,12 @@ def _check_engine(array: ArrayLike):
     return np
 
 
-def _is_clifford_given_angle(angle: Union[float, int]):
+def _is_clifford_given_angle(angle: Union[float, int], precision_tol: float = 1e-8):
     """Helper function to update Clifford boolean condition according to
     the given angle ``angle``."""
-    return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
+    return isinstance(angle, (float, int)) and bool(
+        angle % (math.pi / 2) < precision_tol
+    )
 
 
 def _is_hamming_weight_given_angle(angle: Union[float, int], target: float = 2 * np.pi):
