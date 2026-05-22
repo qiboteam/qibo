@@ -2179,7 +2179,12 @@ def _slice_axis(array: ArrayLike, axis: int, index: int) -> ArrayLike:
     return array[tuple(slices)]
 
 
-def _reorder_axis(array: ArrayLike, axis: int, permutation: Union[List[int], Tuple[int, ...], ArrayLike], backend: Optional[Backend] = None) -> ArrayLike:
+def _reorder_axis(
+    array: ArrayLike,
+    axis: int,
+    permutation: Union[List[int], Tuple[int, ...], ArrayLike],
+    backend: Optional[Backend] = None,
+) -> ArrayLike:
     """Reorder one axis using only scalar slicing and concatenation."""
     backend = _check_backend(backend)
 
@@ -2191,7 +2196,9 @@ def _reorder_axis(array: ArrayLike, axis: int, permutation: Union[List[int], Tup
     return backend.concatenate(reordered, axis=axis)
 
 
-def _xor_pair_axis(array: ArrayLike, axis: int, backend: Optional[Backend] = None) -> ArrayLike:
+def _xor_pair_axis(
+    array: ArrayLike, axis: int, backend: Optional[Backend] = None
+) -> ArrayLike:
     r"""Apply ``(r, q) -> (r \oplus q, q)`` to two adjacent binary axes."""
     backend = _check_backend(backend)
 
@@ -2250,7 +2257,9 @@ def _xor_transform(array: ArrayLike, backend: Optional[Backend] = None) -> Array
     return backend.reshape(array, batch_shape + (dim, dim))
 
 
-def _phase_matrix(dim: int, sign: int = -1, backend: Optional[Backend] = None) -> ArrayLike:
+def _phase_matrix(
+    dim: int, sign: int = -1, backend: Optional[Backend] = None
+) -> ArrayLike:
     """Return ``(sign * i) ** |r & s|`` for all pairs ``(r, s)``."""
     backend = _check_backend(backend)
 
