@@ -830,8 +830,7 @@ def kraus_to_chi(
         backend=backend,
     )
 
-    super_op = backend.zeros((dim**2, dim**2), dtype=complex)
-    super_op = backend.cast(super_op, dtype=super_op.dtype)
+    super_op = backend.zeros((dim**2, dim**2), dtype=backend.complex128)
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
@@ -2111,7 +2110,7 @@ def kraus_to_unitaries(
     return unitaries, probabilities
 
 
-def _check_pauli_transform_method(method: Optional[str]):
+def _check_pauli_transform_method(method: Optional[str]) -> str:
     """Validate ``method`` for Pauli-basis conversions."""
     if method is not None and method not in ("dense", "fht", "standard"):
         raise_error(
@@ -2125,7 +2124,7 @@ def _check_pauli_transform_method(method: Optional[str]):
     return "standard"
 
 
-def _check_pauli_superoperator_shape(super_op, name: str):
+def _check_pauli_superoperator_shape(super_op: ArrayLike, name: str) -> Tuple[int, int]:
     """Validate the shape of a Pauli or Liouville superoperator."""
     dim = math.sqrt(len(super_op))
     nqubits = math.log2(dim)
@@ -2140,8 +2139,8 @@ def _check_pauli_superoperator_shape(super_op, name: str):
 
 
 def _fast_walsh_hadamard_transform(
-    array, axis: int = -1, backend: Optional[Backend] = None
-):
+    array: ArrayLike, axis: int = -1, backend: Optional[Backend] = None
+) -> ArrayLike:
     """Apply an unnormalized Fast Walsh-Hadamard transform along ``axis``."""
     backend = _check_backend(backend)
 
@@ -2175,7 +2174,7 @@ def _fast_walsh_hadamard_transform(
     return backend.swapaxes(array, axis, -1)
 
 
-def _slice_axis(array, axis: int, index: int):
+def _slice_axis(array: ArrayLike, axis: int, index: int) -> ArrayLike:
     """Return ``array`` sliced at ``index`` along ``axis``."""
     slices = [slice(None)] * len(array.shape)
     slices[axis] = index
@@ -2183,7 +2182,7 @@ def _slice_axis(array, axis: int, index: int):
     return array[tuple(slices)]
 
 
-def _reorder_axis(array, axis: int, permutation, backend: Optional[Backend] = None):
+def _reorder_axis(array: ArrayLike, axis: int, permutation: Union[List[int], Tuple[int, ...], ArrayLike], backend: Optional[Backend] = None) -> ArrayLike:
     """Reorder one axis using only scalar slicing and concatenation."""
     backend = _check_backend(backend)
 
@@ -2195,7 +2194,7 @@ def _reorder_axis(array, axis: int, permutation, backend: Optional[Backend] = No
     return backend.concatenate(reordered, axis=axis)
 
 
-def _xor_pair_axis(array, axis: int, backend: Optional[Backend] = None):
+def _xor_pair_axis(array: ArrayLike, axis: int, backend: Optional[Backend] = None) -> ArrayLike:
     r"""Apply ``(r, q) -> (r \oplus q, q)`` to two adjacent binary axes."""
     backend = _check_backend(backend)
 
@@ -2228,7 +2227,7 @@ def _xor_pair_axis(array, axis: int, backend: Optional[Backend] = None):
     )
 
 
-def _xor_transform(array, backend: Optional[Backend] = None):
+def _xor_transform(array: ArrayLike, backend: Optional[Backend] = None) -> ArrayLike:
     """Apply the self-inverse XOR permutation along the last two axes."""
     backend = _check_backend(backend)
 
@@ -2254,7 +2253,7 @@ def _xor_transform(array, backend: Optional[Backend] = None):
     return backend.reshape(array, batch_shape + (dim, dim))
 
 
-def _phase_matrix(dim: int, sign: int = -1, backend: Optional[Backend] = None):
+def _phase_matrix(dim: int, sign: int = -1, backend: Optional[Backend] = None) -> ArrayLike:
     """Return ``(sign * i) ** |r & s|`` for all pairs ``(r, s)``."""
     backend = _check_backend(backend)
 
@@ -2264,7 +2263,7 @@ def _phase_matrix(dim: int, sign: int = -1, backend: Optional[Backend] = None):
     return phase
 
 
-def _check_pauli_order(pauli_order: str):
+def _check_pauli_order(pauli_order: str) -> None:
     """Validate the single-qubit Pauli order."""
     # if set(pauli_order) != {"I", "X", "Y", "Z"}:
     if len(pauli_order) != 4 or set(pauli_order) != {"I", "X", "Y", "Z"}:
@@ -2275,12 +2274,12 @@ def _check_pauli_order(pauli_order: str):
 
 
 def _symplectic_coefficients_to_pauli_order(
-    coefficients,
+    coefficients: ArrayLike,
     nqubits: int,
     dim: int,
     pauli_order: str = "IXYZ",
     backend: Optional[Backend] = None,
-):
+) -> ArrayLike:
     """Vectorize coefficients ``alpha[r, s]`` according to ``pauli_order``."""
     backend = _check_backend(backend)
     _check_pauli_order(pauli_order)
@@ -2305,12 +2304,12 @@ def _symplectic_coefficients_to_pauli_order(
 
 
 def _pauli_order_to_symplectic_coefficients(
-    vectors,
+    vectors: ArrayLike,
     nqubits: int,
     dim: int,
     pauli_order: str = "IXYZ",
     backend: Optional[Backend] = None,
-):
+) -> ArrayLike:
     """Convert Pauli-ordered vectors to coefficients ``alpha[r, s]``."""
     backend = _check_backend(backend)
     _check_pauli_order(pauli_order)
@@ -2338,8 +2337,8 @@ def _pauli_order_to_symplectic_coefficients(
 
 
 def _operator_to_pauli_coefficients_fht(
-    operators, dim: int, backend: Optional[Backend] = None
-):
+    operators: ArrayLike, dim: int, backend: Optional[Backend] = None
+) -> ArrayLike:
     """Return Pauli decomposition coefficients for a batch of operators."""
     backend = _check_backend(backend)
 
@@ -2353,8 +2352,8 @@ def _operator_to_pauli_coefficients_fht(
 
 
 def _pauli_coefficients_to_operator_fht(
-    coefficients, dim: int, backend: Optional[Backend] = None
-):
+    coefficients: ArrayLike, dim: int, backend: Optional[Backend] = None
+) -> ArrayLike:
     """Reconstruct a batch of operators from Pauli decomposition coefficients."""
     backend = _check_backend(backend)
 
@@ -2368,14 +2367,14 @@ def _pauli_coefficients_to_operator_fht(
 
 
 def _operator_to_pauli_vectors_fht(
-    operators,
+    operators: ArrayLike,
     nqubits: int,
     dim: int,
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
     backend: Optional[Backend] = None,
-):
+) -> ArrayLike:
     """Convert a batch of operators to vectorized Pauli-basis coordinates."""
     backend = _check_backend(backend)
 
@@ -2393,14 +2392,14 @@ def _operator_to_pauli_vectors_fht(
 
 
 def _pauli_vectors_to_operator_fht(
-    vectors,
+    vectors: ArrayLike,
     nqubits: int,
     dim: int,
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
     backend: Optional[Backend] = None,
-):
+) -> ArrayLike:
     """Convert vectorized Pauli-basis coordinates to computational operators."""
     backend = _check_backend(backend)
 
@@ -2417,12 +2416,12 @@ def _pauli_vectors_to_operator_fht(
 
 
 def _to_pauli_liouville_fht(
-    channel,
+    channel: ArrayLike,
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
     backend: Optional[Backend] = None,
-):
+) -> ArrayLike:
     """Converts ``channel`` to Pauli-Liouville representation using FHT."""
     backend = _check_backend(backend)
 
@@ -2441,14 +2440,14 @@ def _to_pauli_liouville_fht(
 
 
 def _liouville_to_pauli_fht(
-    super_op,
+    super_op: ArrayLike,
     nqubits: int,
     dim: int,
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
     backend: Optional[Backend] = None,
-):
+) -> ArrayLike:
     """Converts Liouville representation to Pauli-Liouville using FHT."""
     backend = _check_backend(backend)
 
@@ -2478,14 +2477,14 @@ def _liouville_to_pauli_fht(
 
 
 def _pauli_to_liouville_fht(
-    pauli_op,
+    pauli_op: ArrayLike,
     nqubits: int,
     dim: int,
     normalize: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
     backend: Optional[Backend] = None,
-):
+) -> ArrayLike:
     """Converts Pauli-Liouville representation to Liouville using FHT."""
     backend = _check_backend(backend)
 
