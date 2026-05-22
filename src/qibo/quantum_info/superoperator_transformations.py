@@ -225,9 +225,6 @@ def to_pauli_liouville(
             \sum_{q = 0}^{2^{n} - 1} a_{q \oplus r, q}
             (H^{\otimes n})_{q, s}.
 
-    Setting ``method="standard"`` recovers the previous dense basis-change
-    implementation.
-
     Args:
         channel (ndarray): quantum channel.
         normalize (bool, optional): If ``True`` superoperator is returned
