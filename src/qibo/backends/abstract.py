@@ -626,8 +626,10 @@ class Backend:  # pylint: disable=R0904
     def right_shift(self, *args, **kwargs) -> ArrayLike:
         return self.engine.right_shift(*args, **kwargs)
 
-    def roll(self, array: ArrayLike, **kwargs):
-        return self.engine.roll(array, **kwargs)
+    def roll(
+        self, array: ArrayLike, shift: Union[int, List[int], Tuple[int, ...]], **kwargs
+    ):
+        return self.engine.roll(array, shift, **kwargs)
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         return self.engine.round(array, decimals, **kwargs)
