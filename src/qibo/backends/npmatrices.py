@@ -165,6 +165,14 @@ class NumpyMatrices:
         )
 
     @cached_property
+    def CH(self):
+        elem = 1 / math.sqrt(2)
+        return self._cast(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, elem, elem], [0, 0, elem, -elem]],
+            dtype=self.dtype,
+        )
+
+    @cached_property
     def CSX(self):
         a = (1 + 1j) / 2
         b = (1 - 1j) / 2
