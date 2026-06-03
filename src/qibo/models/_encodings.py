@@ -235,11 +235,14 @@ def _binary_codewords_ehrlich(dims: int, backend: Optional[Backend] = None):
     # no final singleton: we've generated exactly d bitstrings (0..d-1)
 
 
-def _mottonen_gray_code(rank: int) -> np.ndarray:
+def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLike:
     """Return Gray code of given rank as integer array."""
-    code = np.array([0, 1])
-    for _ in range(1, rank):
-        code = np.concatenate([code, code[::-1] + 2**_])
+    backend = _check_backend(backend)
+
+    code = backend.cast([0, 1], dtype=backend.int8)
+    for elem in range(1, rank):
+        code = backend.concatenate([code, code[::-1] + 2**elem])
+
     return code
 
 
