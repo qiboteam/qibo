@@ -289,7 +289,7 @@ def _mottonen_alpha_y(
     See Eq. (8) in Möttönen et al. (2004).
     ``amplitudes`` must be non-negative (absolute values of state amplitudes).
     """
-    a = backend.to_numpy(amplitudes)
+    backend = _check_backend(backend)
 
     indices_numerator = (np.arange(1, 2 ** (n - k + 1) + 1, 2) * 2 ** (k - 1))[
         :, None
