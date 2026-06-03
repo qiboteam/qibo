@@ -778,7 +778,7 @@ Controlled-NOT (CNOT)
     :member-order: bysource
 
 Controlled-Y (CY)
-"""""""""""""""""""""
+"""""""""""""""""
 
 .. autoclass:: qibo.gates.CY
     :members:
