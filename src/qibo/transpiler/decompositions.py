@@ -546,6 +546,18 @@ standard_decompositions.add(
 standard_decompositions.add(gates.CY, [gates.SDG(1), gates.CNOT(0, 1), gates.S(1)])
 standard_decompositions.add(gates.CZ, [gates.H(1), gates.CNOT(0, 1), gates.H(1)])
 standard_decompositions.add(
+    gates.CH,
+    [
+        gates.S(1),
+        gates.H(1),
+        gates.T(1),
+        gates.CNOT(0, 1),
+        gates.TDG(1),
+        gates.H(1),
+        gates.SDG(1),
+    ],
+)
+standard_decompositions.add(
     gates.CSX, [gates.H(1), gates.CU1(0, 1, math.pi / 2), gates.H(1)]
 )
 standard_decompositions.add(
