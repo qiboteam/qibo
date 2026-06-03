@@ -246,7 +246,7 @@ def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLi
     return code
 
 
-def _mottonen_compute_theta(alpha: ArrayLike) -> np.ndarray:
+def _mottonen_compute_theta(alpha: ArrayLike, backend: Optional[Backend] = None) -> ArrayLike:
     """Map uniformly controlled rotation angles to Gray-code decomposition angles.
 
     See Eq. (3) in Möttönen et al. (2004).
