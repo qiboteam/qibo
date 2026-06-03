@@ -255,7 +255,9 @@ def _mottonen_compute_theta(alpha: ArrayLike) -> np.ndarray:
         return alpha
 
     broadcasted = len(orig_shape) > 1
-    new_shape = (orig_shape[0],) + (2,) * num_qubits if broadcasted else (2,) * num_qubits
+    new_shape = (
+        (orig_shape[0],) + (2,) * num_qubits if broadcasted else (2,) * num_qubits
+    )
     theta = alpha.reshape(new_shape)
 
     hadamard = np.array([[1, 1], [1, -1]]) / 2
@@ -263,9 +265,9 @@ def _mottonen_compute_theta(alpha: ArrayLike) -> np.ndarray:
         theta = np.tensordot(hadamard, theta, axes=[[1], [i]])
 
     if num_qubits > 1:
-        cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]).reshape(
-            (2, 2, 2, 2)
-        )
+        cnot = np.array(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+        ).reshape((2, 2, 2, 2))
         theta = np.tensordot(
             cnot, theta, axes=[[2, 3], [num_qubits - 1, num_qubits - 2]]
         )
@@ -291,9 +293,9 @@ def _mottonen_alpha_y(
     ] + np.arange(2 ** (k - 1))[None]
     numerator = np.sum(a[indices_numerator] ** 2, axis=-1)
 
-    indices_denominator = (np.arange(2 ** (n - k)) * 2**k)[:, None] + np.arange(2**k)[
-        None
-    ]
+    indices_denominator = (np.arange(2 ** (n - k)) * 2**k)[:, None] + np.arange(
+        2**k
+    )[None]
     denominator = np.sum(a[indices_denominator] ** 2, axis=-1)
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -302,7 +304,9 @@ def _mottonen_alpha_y(
     return 2 * np.arcsin(np.sqrt(division))
 
 
-def _mottonen_alpha_z(phases: ArrayLike, n: int, k: int, backend: Backend) -> np.ndarray:
+def _mottonen_alpha_z(
+    phases: ArrayLike, n: int, k: int, backend: Backend
+) -> np.ndarray:
     """Rotation angles for uniformly controlled Z rotation on qubit k."""
     omega = backend.to_numpy(phases)
 

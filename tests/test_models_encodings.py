@@ -150,7 +150,9 @@ def test_binary_encoder(
     )
 
     if parametrization in ("mottonen", "mottonen-complex") and not_power_of_two:
-        pytest.skip("``mottonen`` parametrization requires data length to be a power of 2.")
+        pytest.skip(
+            "``mottonen`` parametrization requires data length to be a power of 2."
+        )
 
     if parametrization in ("mottonen", "mottonen-complex") and (
         custom_codewords or keep_antictrls
