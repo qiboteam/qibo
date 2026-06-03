@@ -791,6 +791,13 @@ Controlled-phase (CZ)
     :members:
     :member-order: bysource
 
+Controlled-Hadamard (CH)
+""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CH
+    :members:
+    :member-order: bysource
+
 Controlled-Square Root of X (CSX)
 """""""""""""""""""""""""""""""""
 
