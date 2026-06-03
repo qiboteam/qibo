@@ -271,7 +271,7 @@ def _mottonen_compute_theta(alpha: ArrayLike, backend: Optional[Backend] = None)
 
     if num_qubits > 1:
         cnot = backend.reshape(backend.matrices.CNOT, (2, 2, 2, 2))
-        theta = np.tensordot(
+        theta = backend.tensordot(
             cnot, theta, axes=[[2, 3], [num_qubits - 1, num_qubits - 2]]
         )
         for i in range(broadcasted + 1, num_qubits + broadcasted - 1):
