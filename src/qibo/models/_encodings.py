@@ -276,9 +276,9 @@ def _mottonen_compute_theta(alpha: ArrayLike, backend: Optional[Backend] = None)
         )
         for i in range(broadcasted + 1, num_qubits + broadcasted - 1):
             theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, num_qubits - 1]])
-        theta = np.moveaxis(theta, 0, 1)
+        theta = backend.moveaxis(theta, 0, 1)
 
-    return np.reshape(np.transpose(theta), orig_shape)
+    return backend.reshape(backend.transpose(theta), orig_shape)
 
 
 def _mottonen_alpha_y(
