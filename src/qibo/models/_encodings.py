@@ -324,7 +324,7 @@ def _mottonen_alpha_z(
         + np.arange(2 ** (k - 1))[None]
     )
 
-    return np.sum((omega[indices1] - omega[indices2]) / 2 ** (k - 1), axis=-1)
+    return backend.sum((phases[indices_1] - phases[indices_2]) / 2 ** (k - 1), axis=-1)
 
 
 def _binary_encoder_mottonen(
