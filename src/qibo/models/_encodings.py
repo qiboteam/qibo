@@ -246,7 +246,9 @@ def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLi
     return code
 
 
-def _mottonen_compute_theta(alpha: ArrayLike, backend: Optional[Backend] = None) -> ArrayLike:
+def _mottonen_compute_theta(
+    alpha: ArrayLike, backend: Optional[Backend] = None
+) -> ArrayLike:
     """Map uniformly controlled rotation angles to Gray-code decomposition angles.
 
     See Eq. (3) in Möttönen et al. (2004).
@@ -291,7 +293,9 @@ def _mottonen_alpha_y(
     """
     backend = _check_backend(backend)
 
-    indices_numerator = (backend.arange(1, 2 ** (n - k + 1) + 1, 2) * 2 ** (k - 1))[:, None]
+    indices_numerator = (backend.arange(1, 2 ** (n - k + 1) + 1, 2) * 2 ** (k - 1))[
+        :, None
+    ]
     indices_numerator += backend.arange(2 ** (k - 1))[None]
 
     numerator = backend.sum(amplitudes[indices_numerator] ** 2, axis=-1)
@@ -317,7 +321,6 @@ def _mottonen_alpha_z(
 
     indices_2 = backend.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (k - 1)
     indices_2 += backend.arange(2 ** (k - 1))[None]
-
 
     return backend.sum((phases[indices_1] - phases[indices_2]) / 2 ** (k - 1), axis=-1)
 
