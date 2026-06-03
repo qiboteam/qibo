@@ -255,8 +255,8 @@ def _mottonen_compute_theta(alpha: ArrayLike, backend: Optional[Backend] = None)
 
     alpha = backend.cast(alpha, dtype=backend.float64)
     orig_shape = alpha.shape
-    num_qubits = int(np.log2(orig_shape[-1]))
-    if num_qubits == 0:
+    nqubits = int(math.log2(orig_shape[-1]))
+    if nqubits == 0:
         return alpha
 
     broadcasted = len(orig_shape) > 1
