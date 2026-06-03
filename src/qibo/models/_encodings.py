@@ -307,10 +307,10 @@ def _mottonen_alpha_y(
 
 
 def _mottonen_alpha_z(
-    phases: ArrayLike, n: int, k: int, backend: Backend
-) -> np.ndarray:
+    phases: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+) -> ArrayLike:
     """Rotation angles for uniformly controlled Z rotation on qubit k."""
-    omega = backend.to_numpy(phases)
+    backend = _check_backend(backend)
 
     indices_1 = backend.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (k - 1)
     indices_1 += backend.arange(2 ** (k - 1))[None]
