@@ -313,14 +313,12 @@ def _mottonen_alpha_z(
     """Rotation angles for uniformly controlled Z rotation on qubit k."""
     omega = backend.to_numpy(phases)
 
-    indices1 = (
-        np.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (k - 1)
-        + np.arange(2 ** (k - 1))[None]
-    )
-    indices2 = (
-        np.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (k - 1)
-        + np.arange(2 ** (k - 1))[None]
-    )
+    indices_1 = backend.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (k - 1)
+    indices_1 += backend.arange(2 ** (k - 1))[None]
+
+    indices_2 = backend.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (k - 1)
+    indices_2 += backend.arange(2 ** (k - 1))[None]
+
 
     return backend.sum((phases[indices_1] - phases[indices_2]) / 2 ** (k - 1), axis=-1)
 
