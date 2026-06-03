@@ -36,6 +36,7 @@ GATES_CONTROLLED_BY_DEFAULT = [
     "cx",
     "cy",
     "cz",
+    "ch",
     "csx",
     "csxdg",
     "crx",
