@@ -263,7 +263,7 @@ def _mottonen_compute_theta(alpha: ArrayLike, backend: Optional[Backend] = None)
     new_shape = (
         (orig_shape[0],) + (2,) * num_qubits if broadcasted else (2,) * num_qubits
     )
-    theta = alpha.reshape(new_shape)
+    theta = backend.reshape(alpha, new_shape)
 
     hadamard = np.array([[1, 1], [1, -1]]) / 2
     for i in range(broadcasted, num_qubits + broadcasted):
