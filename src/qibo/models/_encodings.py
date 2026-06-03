@@ -301,10 +301,9 @@ def _mottonen_alpha_y(
     )[None]
     denominator = np.sum(a[indices_denominator] ** 2, axis=-1)
 
-    with np.errstate(divide="ignore", invalid="ignore"):
-        division = np.where(denominator != 0.0, numerator / denominator, 0.0)
+    division = backend.where(denominator != 0.0, numerator / denominator, 0.0)
 
-    return 2 * np.arcsin(np.sqrt(division))
+    return 2 * backend.arcsin(backend.sqrt(division))
 
 
 def _mottonen_alpha_z(
