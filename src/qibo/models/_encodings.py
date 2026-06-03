@@ -296,10 +296,10 @@ def _mottonen_alpha_y(
 
     numerator = backend.sum(amplitudes[indices_numerator] ** 2, axis=-1)
 
-    indices_denominator = (np.arange(2 ** (n - k)) * 2**k)[:, None] + np.arange(
-        2**k
-    )[None]
-    denominator = np.sum(a[indices_denominator] ** 2, axis=-1)
+    indices_denominator = (backend.arange(2 ** (n - k)) * 2**k)[:, None]
+    indices_denominator += backend.arange(2**k)[None]
+
+    denominator = backend.sum(amplitudes[indices_denominator] ** 2, axis=-1)
 
     division = backend.where(denominator != 0.0, numerator / denominator, 0.0)
 
