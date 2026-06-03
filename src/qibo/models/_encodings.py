@@ -269,7 +269,7 @@ def _mottonen_compute_theta(
 
     hadamard = np.array([[1, 1], [1, -1]]) / 2
     for i in range(broadcasted, num_qubits + broadcasted):
-        theta = np.tensordot(hadamard, theta, axes=[[1], [i]])
+        theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
 
     if num_qubits > 1:
         cnot = backend.reshape(backend.matrices.CNOT, (2, 2, 2, 2))
