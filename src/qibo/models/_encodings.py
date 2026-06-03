@@ -282,8 +282,8 @@ def _mottonen_compute_theta(alpha: ArrayLike, backend: Optional[Backend] = None)
 
 
 def _mottonen_alpha_y(
-    amplitudes: ArrayLike, n: int, k: int, backend: Backend
-) -> np.ndarray:
+    amplitudes: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+) -> ArrayLike:
     """Rotation angles for uniformly controlled Y rotation on qubit k.
 
     See Eq. (8) in Möttönen et al. (2004).
