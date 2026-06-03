@@ -110,7 +110,7 @@ def test_phase_encoder(backend, rotation, kind):
 @pytest.mark.parametrize("not_power_of_two", [False, True])
 @pytest.mark.parametrize("complex_data", [False, True])
 @pytest.mark.parametrize("data", [False, True])
-@pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
+@pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical", "mottonen"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_binary_encoder(
     backend,
@@ -148,6 +148,16 @@ def test_binary_encoder(
         if parametrization == "hyperspherical" and not_power_of_two
         else 2**nqubits
     )
+
+    if parametrization in ("mottonen", "mottonen-complex") and not_power_of_two:
+        pytest.skip("``mottonen`` parametrization requires data length to be a power of 2.")
+
+    if parametrization in ("mottonen", "mottonen-complex") and (
+        custom_codewords or keep_antictrls
+    ):
+        pytest.skip(
+            "``codewords`` and ``keep_antictrls`` are not used by the ``mottonen`` parametrization."
+        )
 
     if data:
         target = random_statevector(
