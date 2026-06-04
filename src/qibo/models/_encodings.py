@@ -263,21 +263,21 @@ def _mottonen_compute_theta(
 
     broadcasted = len(orig_shape) > 1
     new_shape = (
-        (orig_shape[0],) + (2,) * num_qubits if broadcasted else (2,) * num_qubits
+        (orig_shape[0],) + (2,) * nqubits if broadcasted else (2,) * nqubits
     )
     theta = backend.reshape(alpha, new_shape)
 
     hadamard = np.array([[1, 1], [1, -1]]) / 2
-    for i in range(broadcasted, num_qubits + broadcasted):
+    for i in range(broadcasted, nqubits + broadcasted):
         theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
 
-    if num_qubits > 1:
+    if nqubits > 1:
         cnot = backend.reshape(backend.matrices.CNOT, (2, 2, 2, 2))
         theta = backend.tensordot(
-            cnot, theta, axes=[[2, 3], [num_qubits - 1, num_qubits - 2]]
+            cnot, theta, axes=[[2, 3], [nqubits - 1, nqubits - 2]]
         )
-        for i in range(broadcasted + 1, num_qubits + broadcasted - 1):
-            theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, num_qubits - 1]])
+        for i in range(broadcasted + 1, nqubits + broadcasted - 1):
+            theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, nqubits - 1]])
         theta = backend.moveaxis(theta, 0, 1)
 
     return backend.reshape(backend.transpose(theta), orig_shape)
