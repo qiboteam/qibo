@@ -389,7 +389,7 @@ def _binary_encoder_mottonen(
 
         global_phase = -float(backend.sum(phases) / dims)
         if abs(global_phase) > np.finfo(float).eps:
-            unitary = np.exp(-1j * global_phase) * np.eye(dims)
+            unitary = math.exp(-1j * global_phase) * backend.identity(dims)
             circuit.add(
                 gates.Unitary(
                     unitary, *range(nqubits), trainable=False, check_unitary=False
