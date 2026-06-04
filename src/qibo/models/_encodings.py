@@ -356,7 +356,7 @@ def _binary_encoder_mottonen(
         alpha_y = _mottonen_alpha_y(amplitudes, nqubits, k, backend)
         target = nqubits - k
         control = list(reversed(range(nqubits - k)))
-        theta_y = _mottonen_compute_theta(alpha_y)
+        theta_y = _mottonen_compute_theta(alpha_y, backend=backend)
         if len(control) == 0:
             circuit.add(gates.RY(target, theta_y[0]))
             parameters.append(theta_y[0])
