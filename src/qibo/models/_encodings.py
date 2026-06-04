@@ -374,9 +374,9 @@ def _binary_encoder_mottonen(
             alpha_z = _mottonen_alpha_z(phases, nqubits, k, backend)
             target = nqubits - k
             control = list(reversed(range(nqubits - k)))
-            theta_z = _mottonen_compute_theta(alpha_z)
+            theta_z = _mottonen_compute_theta(alpha_z, backend=backend)
             if len(control) == 0:
-                circuit.add(gates.RZ(target, theta_z[0], trainable=True))
+                circuit.add(gates.RZ(target, theta_z[0]))
                 parameters.append(theta_z[0])
             else:
                 code = _mottonen_gray_code(len(control), backend=backend)
