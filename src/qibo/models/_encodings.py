@@ -379,10 +379,11 @@ def _binary_encoder_mottonen(
                 circuit.add(gates.RZ(target, theta_z[0], trainable=True))
                 parameters.append(theta_z[0])
             else:
-                code = _mottonen_gray_code(len(control))
-                control_indices = np.log2(code ^ np.roll(code, -1)).astype(int)
+                code = _mottonen_gray_code(len(control), backend=backend)
+                control_indices = backend.log2(code ^ backend.roll(code, -1))
+                control_indices = backend.cast(control_indices, dtype=backend.int64)
                 for i, control_index in enumerate(control_indices):
-                    circuit.add(gates.RZ(target, theta_z[i], trainable=True))
+                    circuit.add(gates.RZ(target, theta_z[i]))
                     circuit.add(gates.CNOT(control[control_index], target))
                     parameters.append(theta_z[i])
 
