@@ -2271,8 +2271,12 @@ def _phase_matrix(
 
 def _check_pauli_order(pauli_order: str) -> None:
     """Validate the single-qubit Pauli order."""
-    # if set(pauli_order) != {"I", "X", "Y", "Z"}:
-    if len(pauli_order) != 4 or set(pauli_order) != {"I", "X", "Y", "Z"}:
+    if len(pauli_order) != 4 or set(pauli_order) != {
+        "I",
+        "X",
+        "Y",
+        "Z",
+    }:  # pragma: no cover
         raise_error(
             ValueError,
             f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
