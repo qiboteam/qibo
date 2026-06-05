@@ -59,7 +59,7 @@ nbsphinx = "^0.8.12"
 qulacs = { version = "^0.6.4", python = "<3.13" }
 seaborn = "^0.13.2"
 ipykernel = "^6.29.4"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "ch" }
 
 [tool.poetry.group.tests]
 optional = true
@@ -69,7 +69,7 @@ pytest = ">=7.2.1,<10.0.0"
 pytest-cov = "^4.0.0"
 pylint = "^3.3.5"
 matplotlib = "^3.7.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "ch" }
 stim = "^1.15.0"
 qulacs = { version = "^0.6.4", python = "<3.13" }
 qiskit = "^2.2.3"
@@ -91,7 +91,7 @@ optional = true
 [tool.poetry.group.cuda11.dependencies]
 cupy-cuda11x = "^13.1.0"
 cuquantum-python-cu11 = "^24.1.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "ch" }
 
 
 [tool.poetry.group.cuda12]
@@ -100,7 +100,7 @@ optional = true
 [tool.poetry.group.cuda12.dependencies]
 cupy-cuda12x = "^13.1.0"
 cuquantum-python-cu12 = "^24.1.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "ch" }
 
 [tool.poetry.extras]
 qinfo = ["stim"]
