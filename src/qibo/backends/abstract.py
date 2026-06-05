@@ -482,6 +482,9 @@ class Backend:  # pylint: disable=R0904
     ) -> ArrayLike:  # pragma: no cover
         return self.engine.mod(dividend, divisor, **kwargs)
 
+    def moveaxis(self, array: ArrayLike, *args, **kwargs):  # pragma: no cover
+        return self.engine.moveaxis(array, *args, **kwargs)
+
     def nonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.nonzero(array)
 
@@ -625,6 +628,11 @@ class Backend:  # pylint: disable=R0904
 
     def right_shift(self, *args, **kwargs) -> ArrayLike:
         return self.engine.right_shift(*args, **kwargs)
+
+    def roll(
+        self, array: ArrayLike, shift: Union[int, List[int], Tuple[int, ...]], **kwargs
+    ):  # pragma: no cover
+        return self.engine.roll(array, shift, **kwargs)
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         return self.engine.round(array, decimals, **kwargs)
