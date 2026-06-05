@@ -345,9 +345,14 @@ def _binary_encoder_mottonen(
             f"``data`` length must be {2**nqubits} for {nqubits} qubits, got {dims}.",
         )
 
-    data_complex = backend.cast(data, dtype=backend.complex128)
-    amplitudes = backend.abs(data_complex)
-    phases = backend.angle(data_complex)
+    dtype = backend.complex128 if complex_data else backend.float64
+    data_typed = backend.cast(data, dtype=dtype)
+    amplitudes = backend.abs(data_typed)
+    phases = (
+        backend.angle(data_typed)
+        if complex_data
+        else backend.where(data_typed < 0, np.pi, 0.0)
+    )
 
     circuit = Circuit(nqubits, **kwargs)
     parameters = []
