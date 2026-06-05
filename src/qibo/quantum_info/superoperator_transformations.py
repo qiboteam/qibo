@@ -841,7 +841,7 @@ def kraus_to_chi(
 
 
 def kraus_to_stinespring(
-    kraus_ops,
+    kraus_ops: List[Tuple[Tuple[int, ...], ArrayLike]],
     nqubits: Optional[int] = None,
     initial_state_env: Optional[ArrayLike] = None,
     backend: Optional[Backend] = None,
