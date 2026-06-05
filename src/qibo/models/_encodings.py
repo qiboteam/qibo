@@ -1,5 +1,6 @@
 """Helper functions for the `models.encodings` module."""
 
+import cmath
 import math
 from inspect import signature
 from typing import List, Optional, Set, Tuple, Union
@@ -293,13 +294,13 @@ def _mottonen_alpha_y(
 
     indices_numerator = (backend.arange(1, 2 ** (n - k + 1) + 1, 2) * 2 ** (k - 1))[
         :, None
-    ]
-    indices_numerator += backend.arange(2 ** (k - 1))[None]
+    ] + backend.arange(2 ** (k - 1))[None]
 
     numerator = backend.sum(amplitudes[indices_numerator] ** 2, axis=-1)
 
-    indices_denominator = (backend.arange(2 ** (n - k)) * 2**k)[:, None]
-    indices_denominator += backend.arange(2**k)[None]
+    indices_denominator = (backend.arange(2 ** (n - k)) * 2**k)[
+        :, None
+    ] + backend.arange(2**k)[None]
 
     denominator = backend.sum(amplitudes[indices_denominator] ** 2, axis=-1)
 
@@ -314,11 +315,15 @@ def _mottonen_alpha_z(
     """Rotation angles for uniformly controlled Z rotation on qubit k."""
     backend = _check_backend(backend)
 
-    indices_1 = backend.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (k - 1)
-    indices_1 += backend.arange(2 ** (k - 1))[None]
+    indices_1 = backend.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (
+        k - 1
+    )
+    indices_1 = indices_1 + backend.arange(2 ** (k - 1))[None]
 
-    indices_2 = backend.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (k - 1)
-    indices_2 += backend.arange(2 ** (k - 1))[None]
+    indices_2 = backend.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (
+        k - 1
+    )
+    indices_2 = indices_2 + backend.arange(2 ** (k - 1))[None]
 
     return backend.sum((phases[indices_1] - phases[indices_2]) / 2 ** (k - 1), axis=-1)
 
@@ -392,7 +397,7 @@ def _binary_encoder_mottonen(
 
         global_phase = -float(backend.sum(phases) / dims)
         if abs(global_phase) > np.finfo(float).eps:
-            unitary = math.exp(-1j * global_phase) * backend.identity(dims)
+            unitary = cmath.exp(-1j * global_phase) * backend.identity(dims)
             circuit.add(
                 gates.Unitary(
                     unitary, *range(nqubits), trainable=False, check_unitary=False
