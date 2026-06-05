@@ -2014,7 +2014,7 @@ def stinespring_to_chi(
 
 
 def kraus_to_unitaries(
-    kraus_ops,
+    kraus_ops: ArrayLike,
     order: str = "row",
     precision_tol: Optional[float] = None,
     backend: Optional[Backend] = None,
