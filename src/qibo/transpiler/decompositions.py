@@ -1035,3 +1035,10 @@ if pygridsynth:
         gates.FanOut,
         lambda gate: [gates.CNOT(0, qub) for qub in range(1, len(gate.qubits))],
     )
+
+from qibo.transpiler.multi_controlled_su2 import (  # noqa: E402
+    _decompose_multi_controlled_su2,
+    _decompose_multi_controlled_su2_real,
+    decompose_multi_controlled_single_qubit,
+    expand_controlled_single_qubit_gates,
+)
