@@ -273,6 +273,8 @@ def test_fermi_hubbard(backend, nsites, dense, closed_boundary):
     backend.assert_allclose(hamiltonian.matrix, target)
 
 
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
 @pytest.mark.parametrize("local_field_strengths", ["number", "tuple", "array"])
 @pytest.mark.parametrize("coupling_constants", ["number", "tuple", "array"])
 def test_ising(
