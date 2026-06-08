@@ -150,6 +150,13 @@ def test_binary_encoder(
     )
 
     if parametrization in ("mottonen", "mottonen-complex") and not_power_of_two:
+        with pytest.raises(ValueError):
+            test = binary_encoder(
+                nqubits=nqubits,
+                data=backend.random_sample(5),
+                parametrization=parametrization,
+                backend=backend,
+            )
         pytest.skip(
             "``mottonen`` parametrization requires data length to be a power of 2."
         )
