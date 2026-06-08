@@ -7,7 +7,16 @@ import pytest
 
 from qibo import hamiltonians, matrices, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.hamiltonians.models import GPP, LABS, TFIM, XXX, Heisenberg, MaxCut
+from qibo.hamiltonians.models import (
+    GPP,
+    LABS,
+    TFIM,
+    XXX,
+    FermiHubbard,
+    Heisenberg,
+    MaxCut,
+    _multikron,
+)
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
@@ -194,3 +203,71 @@ def test_tfim_boundary(backend, h, closed_boundary, dense):
     hamiltonian = backend.real(hamiltonian.matrix)
 
     backend.assert_allclose(hamiltonian, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nsites", [2, 3])
+def test_fermi_hubbard(backend, nsites, dense, closed_boundary):
+    t, U = -1.5, 3 / 2
+
+    I, X, Y, Z = (
+        backend.matrices.I(),
+        backend.matrices.X,
+        backend.matrices.Y,
+        backend.matrices.Z,
+    )
+
+    target = 0
+    if nsites == 2:
+        target += (t / 2) * (
+            _multikron([X, I, X, I], backend=backend)
+            + _multikron([Y, I, Y, I], backend=backend)
+            + _multikron([I, X, I, X], backend=backend)
+            + _multikron([I, Y, I, Y], backend=backend)
+        )
+        target += (U / 4) * (
+            nsites * backend.identity(4**nsites)
+            - _multikron([Z, I, I, I], backend=backend)
+            - _multikron([I, Z, I, I], backend=backend)
+            - _multikron([I, I, Z, I], backend=backend)
+            - _multikron([I, I, I, Z], backend=backend)
+            + _multikron([Z, Z, I, I], backend=backend)
+            + _multikron([I, I, Z, Z], backend=backend)
+        )
+    else:
+        target = (t / 2) * (
+            _multikron([X, I, X, I, I, I], backend=backend)
+            + _multikron([Y, I, Y, I, I, I], backend=backend)
+            + _multikron([I, X, I, X, I, I], backend=backend)
+            + _multikron([I, Y, I, Y, I, I], backend=backend)
+            + _multikron([I, I, X, I, X, I], backend=backend)
+            + _multikron([I, I, Y, I, Y, I], backend=backend)
+            + _multikron([I, I, I, X, I, X], backend=backend)
+            + _multikron([I, I, I, Y, I, Y], backend=backend)
+        )
+        if closed_boundary:
+            target += (t / 2) * (
+                _multikron([X, I, I, I, X, I], backend=backend)
+                + _multikron([Y, I, I, I, Y, I], backend=backend)
+                + _multikron([I, X, I, I, I, X], backend=backend)
+                + _multikron([I, Y, I, I, I, Y], backend=backend)
+            )
+        target += (U / 4) * (
+            nsites * backend.identity(4**nsites)
+            - _multikron([Z, I, I, I, I, I], backend=backend)
+            - _multikron([I, Z, I, I, I, I], backend=backend)
+            - _multikron([I, I, Z, I, I, I], backend=backend)
+            - _multikron([I, I, I, Z, I, I], backend=backend)
+            - _multikron([I, I, I, I, Z, I], backend=backend)
+            - _multikron([I, I, I, I, I, Z], backend=backend)
+            + _multikron([Z, Z, I, I, I, I], backend=backend)
+            + _multikron([I, I, Z, Z, I, I], backend=backend)
+            + _multikron([I, I, I, I, Z, Z], backend=backend)
+        )
+
+    hamiltonian = FermiHubbard(
+        nsites, t, U, dense=dense, closed_boundary=closed_boundary, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target)

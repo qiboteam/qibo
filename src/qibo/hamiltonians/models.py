@@ -28,7 +28,7 @@ def X(
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, symbols.X, dense, backend=backend)
+    return _one_body_pauli(nqubits, symbols.X, dense, backend=backend)
 
 
 def Y(
@@ -48,7 +48,7 @@ def Y(
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, symbols.Y, dense, backend=backend)
+    return _one_body_pauli(nqubits, symbols.Y, dense, backend=backend)
 
 
 def Z(
@@ -68,7 +68,7 @@ def Z(
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, symbols.Z, dense, backend=backend)
+    return _one_body_pauli(nqubits, symbols.Z, dense, backend=backend)
 
 
 def TFIM(
@@ -77,7 +77,7 @@ def TFIM(
     dense: bool = True,
     closed_boundary: bool = True,
     backend: Optional[Backend] = None,
-):
+) -> Hamiltonian | ArrayLike:
     """:math:`n`-qubit Transverse field Ising model.
 
     .. math::
@@ -332,7 +332,7 @@ def Heisenberg(
             matrix = (
                 matrix
                 + external_field_strengths[ind]
-                * _OneBodyPauli(nqubits, pauli, dense, backend).matrix
+                * _one_body_pauli(nqubits, pauli, dense, backend).matrix
             )
 
         return Hamiltonian(nqubits, matrix, backend=backend)
@@ -366,7 +366,7 @@ def XXX(
     external_field_strengths: Union[float, int, list, tuple] = [0.5, 0, 0],
     dense: bool = True,
     backend: Optional[Backend] = None,
-):
+) -> Hamiltonian | ArrayLike:
     """Heisenberg :math:`\\mathrm{XXX}` model with periodic boundary conditions.
 
     The :math:`n`-qubit :math:`\\mathrm{XXX}` Hamiltonian is given by
@@ -464,7 +464,7 @@ def GPP(
     node_weights: Optional[ArrayLike] = None,
     dense: bool = True,
     backend: Optional[Backend] = None,
-):
+) -> Hamiltonian | ArrayLike:
     """The Graph Partitioning Problem (GPP) as a quadratic function.
 
     For a (possibly weighted) graph :math:`G = (V, E)` defined by its set :math:`V` of vertices
@@ -548,6 +548,23 @@ def GPP(
     return _gpp_dense(adjacency_matrix, penalty_coeff, node_weights, backend)
 
 
+def _build_spin_model(
+    nqubits: int, matrix: ArrayLike, condition: Callable, backend: Backend
+) -> ArrayLike:
+    """Helper method for building nearest-neighbor spin model Hamiltonians."""
+    h = sum(
+        reduce(
+            backend.kron,
+            (
+                matrix if condition(qubit_i, qubit_j) else backend.matrices.I()
+                for qubit_j in range(nqubits)
+            ),
+        )
+        for qubit_i in range(nqubits)
+    )
+    return h
+
+
 def _gpp_symbolic(
     adjacency_matrix: ArrayLike,
     penalty_coeff: float | int,
@@ -622,7 +639,7 @@ def _gpp_dense(
     return Hamiltonian(nqubits, backend.diag(hamiltonian), backend=backend)
 
 
-def _multikron(matrix_list: List[ArrayLike], backend: Backend) -> ArrayLike:
+def _multikron(matrix_list: List[ArrayLike], backend: Backend = None) -> ArrayLike:
     """Calculates Kronecker product of a list of matrices.
 
     Args:
@@ -631,27 +648,12 @@ def _multikron(matrix_list: List[ArrayLike], backend: Backend) -> ArrayLike:
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
+    backend = _check_backend(backend)
+
     return reduce(backend.kron, matrix_list)
 
 
-def _build_spin_model(
-    nqubits: int, matrix: ArrayLike, condition: Callable, backend: Backend
-) -> ArrayLike:
-    """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(
-        reduce(
-            backend.kron,
-            (
-                matrix if condition(qubit_i, qubit_j) else backend.matrices.I()
-                for qubit_j in range(nqubits)
-            ),
-        )
-        for qubit_i in range(nqubits)
-    )
-    return h
-
-
-def _OneBodyPauli(
+def _one_body_pauli(
     nqubits: int,
     operator: Callable,
     dense: bool = True,
@@ -670,3 +672,138 @@ def _OneBodyPauli(
     form = sum([-1 * operator(qubit, backend=backend) for qubit in range(nqubits)])
     ham = SymbolicHamiltonian(form=form, backend=backend)
     return ham
+
+
+def FermiHubbard(
+    nsites: int,
+    hopping_strength: Union[float, int] = -1.0,
+    interaction_strength: Union[float, int] = 0.5,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Jordan-Wigner-transformed Fermi-Hubbard model for an one-dimensional spin chain.
+
+    In second quantization, the Hamiltonian is defined as
+
+    .. math::
+        H_{\\textrm{FH}} = t \\, \\sum_{j,\\,\\sigma} \\, \\left(
+            a_{j,\\sigma}^{\\dagger} \\, a_{j+1,\\sigma}
+            + a_{j+1,\\sigma}^{\\dagger} \\, a_{j,\\sigma}
+            \\right)
+            + U \\, \\sum_{j} \\, n_{j,\\uparrow} \\, n_{j,\\downarrow} \\, ,
+
+    where :math:`a_{j,\\sigma}` (:math:`a_{j,\\dagger}^{\\dagger}`) is the annihilation (creation)
+    operator for spin :math:`\\sigma \\in \\{\\uparrow, \\, \\downarrow \\}` at site :math:`j`,
+    :math:`n_{j,\\sigma} = a_{j,\\sigma}^{\\dagger}\\,a_{j,\\sigma}` is the number operator for
+    spin :math:`\\sigma` at site :math:`j`, :math:`t` is the tunneling amplitude, and :math:`U`
+    is the Coulomb potential.
+
+
+    Args:
+        nsites (int): total number of sites in the chain.
+        hopping_strength (float or int, optional): tunneling amplitude. Defaults to :math:`-1.0`.
+        interaction_strength (float or int, optional): Coulomb potential.
+            Defaults to :math:`0.5`.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns Fermi-Hubbard model with periodic
+            boundary condition. If ``False``, returns Hamiltonian with open boundaries.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Fermi-Hubbard Hamiltonian :math:`H_{\\textrm{FH}}`.
+    """
+    backend = _check_backend(backend)
+
+    nqubits = 2 * nsites
+
+    if dense:
+        I, X, Y, Z = (
+            backend.matrices.I(),
+            backend.matrices.X,
+            backend.matrices.Y,
+            backend.matrices.Z,
+        )
+        number_op = (I - Z) / 2
+
+        hamiltonian = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
+
+        # interaction terms
+        base_string = [I] * nqubits
+        for site in range(0, nqubits - 1, 2):
+            base_string[site] = number_op
+            base_string[site + 1] = number_op
+            term = interaction_strength * _multikron(base_string, backend=backend)
+            hamiltonian += term
+            del term
+            base_string[site] = I
+            base_string[site + 1] = I
+
+        # hopping terms
+        for site in range(nqubits - 2):
+            for pauli in (X, Y):
+                base_string[site] = pauli
+                base_string[site + 2] = pauli
+                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
+                hamiltonian += term
+                del term
+            base_string[site] = I
+            base_string[site + 2] = I
+
+        if closed_boundary and nsites > 2:
+            for pauli in (X, Y):
+                base_string[0] = pauli
+                base_string[nqubits - 2] = pauli
+                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
+                hamiltonian += term
+                del term
+                base_string[0] = I
+                base_string[nqubits - 2] = I
+
+                base_string[1] = pauli
+                base_string[nqubits - 1] = pauli
+                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
+                hamiltonian += term
+                del term
+                base_string[1] = I
+                base_string[nqubits - 1] = I
+
+        return Hamiltonian(nqubits, hamiltonian, backend=backend)
+
+    I, X, Y, Z = (
+        lambda q: symbols.I(q, backend=backend),
+        lambda q: symbols.X(q, backend=backend),
+        lambda q: symbols.Y(q, backend=backend),
+        lambda q: symbols.Z(q, backend=backend),
+    )
+    number_op = lambda q: (I(q) - Z(q)) / 2
+
+    # interaction terms
+    hamiltonian = interaction_strength * sum(
+        number_op(site) * number_op(site + 1) for site in range(0, nqubits - 1, 2)
+    )
+
+    # hopping terms
+    hamiltonian += (hopping_strength / 2) * sum(
+        (X(site) * X(site + 2) + Y(site) * Y(site + 2)) for site in range(nqubits - 2)
+    )
+    if closed_boundary and nsites > 2:
+        hamiltonian += (hopping_strength / 2) * (
+            X(nqubits - 2) * X(0) + Y(nqubits - 2) * Y(0)
+        )
+        hamiltonian += (hopping_strength / 2) * (
+            X(nqubits - 1) * X(1) + Y(nqubits - 1) * Y(1)
+        )
+
+    hamiltonian = SymbolicHamiltonian(
+        form=hamiltonian, nqubits=nqubits, backend=backend
+    )
+
+    return hamiltonian
