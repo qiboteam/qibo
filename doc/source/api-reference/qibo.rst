@@ -1344,6 +1344,15 @@ LABS
     :members:
     :member-order: bysource
 
+
+Fermi-Hubbard model
+^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.FermiHubbard
+    :members:
+    :member-order: bysource
+
+
 Heisenberg model
 ^^^^^^^^^^^^^^^^
 

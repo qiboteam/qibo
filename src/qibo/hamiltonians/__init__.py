@@ -9,6 +9,7 @@ from qibo.hamiltonians.models import (
     TFIM,
     XXX,
     XXZ,
+    FermiHubbard,
     Heisenberg,
     Ising,
     MaxCut,
