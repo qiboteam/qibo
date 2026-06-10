@@ -1,5 +1,6 @@
 """Helper functions for the `models.encodings` module."""
 
+import cmath
 import math
 from inspect import signature
 from typing import List, Optional, Set, Tuple, Union
@@ -233,6 +234,175 @@ def _binary_codewords_ehrlich(dims: int, backend: Optional[Backend] = None):
         else:
             prefix += "0"
     # no final singleton: we've generated exactly d bitstrings (0..d-1)
+
+
+def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLike:
+    """Return Gray code of given rank as integer array."""
+    backend = _check_backend(backend)
+
+    code = backend.cast([0, 1], dtype=backend.int8)
+    for elem in range(1, rank):
+        code = backend.concatenate([code, code[::-1] + 2**elem])
+
+    return code
+
+
+def _mottonen_compute_theta(
+    alpha: ArrayLike, backend: Optional[Backend] = None
+) -> ArrayLike:
+    """Map uniformly controlled rotation angles to Gray-code decomposition angles.
+
+    See Eq. (3) in Möttönen et al. (2004).
+    """
+    backend = _check_backend(backend)
+
+    alpha = backend.cast(alpha, dtype=backend.float64)
+    orig_shape = alpha.shape
+    nqubits = int(math.log2(orig_shape[-1]))
+    if nqubits == 0:
+        return alpha
+
+    broadcasted = len(orig_shape) > 1
+    new_shape = (orig_shape[0],) + (2,) * nqubits if broadcasted else (2,) * nqubits
+    theta = backend.reshape(alpha, new_shape)
+
+    hadamard = np.array([[1, 1], [1, -1]]) / 2
+    for i in range(broadcasted, nqubits + broadcasted):
+        theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
+
+    if nqubits > 1:
+        cnot = backend.reshape(backend.matrices.CNOT, (2, 2, 2, 2))
+        theta = backend.tensordot(
+            cnot, theta, axes=[[2, 3], [nqubits - 1, nqubits - 2]]
+        )
+        for i in range(broadcasted + 1, nqubits + broadcasted - 1):
+            theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, nqubits - 1]])
+        theta = backend.moveaxis(theta, 0, 1)
+
+    return backend.reshape(backend.transpose(theta), orig_shape)
+
+
+def _mottonen_alpha_y(
+    amplitudes: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+) -> ArrayLike:
+    """Rotation angles for uniformly controlled Y rotation on qubit k.
+
+    See Eq. (8) in Möttönen et al. (2004).
+    ``amplitudes`` must be non-negative (absolute values of state amplitudes).
+    """
+    backend = _check_backend(backend)
+
+    indices_numerator = (backend.arange(1, 2 ** (n - k + 1) + 1, 2) * 2 ** (k - 1))[
+        :, None
+    ] + backend.arange(2 ** (k - 1))[None]
+
+    numerator = backend.sum(amplitudes[indices_numerator] ** 2, axis=-1)
+
+    indices_denominator = (backend.arange(2 ** (n - k)) * 2**k)[
+        :, None
+    ] + backend.arange(2**k)[None]
+
+    denominator = backend.sum(amplitudes[indices_denominator] ** 2, axis=-1)
+
+    division = backend.where(denominator != 0.0, numerator / denominator, 0.0)
+
+    return 2 * backend.arcsin(backend.sqrt(division))
+
+
+def _mottonen_alpha_z(
+    phases: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+) -> ArrayLike:
+    """Rotation angles for uniformly controlled Z rotation on qubit k."""
+    backend = _check_backend(backend)
+
+    indices_1 = backend.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (k - 1)
+    indices_1 = indices_1 + backend.arange(2 ** (k - 1))[None]
+
+    indices_2 = backend.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (k - 1)
+    indices_2 = indices_2 + backend.arange(2 ** (k - 1))[None]
+
+    return backend.sum((phases[indices_1] - phases[indices_2]) / 2 ** (k - 1), axis=-1)
+
+
+def _binary_encoder_mottonen(
+    data: ArrayLike,
+    nqubits: int,
+    complex_data: bool,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> Circuit:
+    """Binary encoder circuit using Möttönen uniformly controlled rotations.
+
+    See Möttönen et al. (2004), https://arxiv.org/abs/quant-ph/0407010.
+    """
+    backend = _check_backend(backend)
+
+    dims = len(data)
+    if dims != 2**nqubits:
+        raise_error(
+            ValueError,
+            f"``data`` length must be {2**nqubits} for {nqubits} qubits, got {dims}.",
+        )
+
+    dtype = backend.complex128 if complex_data else backend.float64
+    data_typed = backend.cast(data, dtype=dtype)
+    amplitudes = backend.abs(data_typed)
+    phases = (
+        backend.angle(data_typed)
+        if complex_data
+        else backend.where(data_typed < 0, np.pi, 0.0)
+    )
+
+    circuit = Circuit(nqubits, **kwargs)
+    parameters = []
+
+    for k in range(nqubits, 0, -1):
+        alpha_y = _mottonen_alpha_y(amplitudes, nqubits, k, backend)
+        target = nqubits - k
+        control = list(reversed(range(nqubits - k)))
+        theta_y = _mottonen_compute_theta(alpha_y, backend=backend)
+        if len(control) == 0:
+            circuit.add(gates.RY(target, theta_y[0]))
+            parameters.append(theta_y[0])
+        else:
+            code = _mottonen_gray_code(len(control), backend=backend)
+            control_indices = backend.log2(code ^ backend.roll(code, -1))
+            control_indices = backend.cast(control_indices, dtype=backend.int64)
+            for i, control_index in enumerate(control_indices):
+                circuit.add(gates.RY(target, theta_y[i]))
+                circuit.add(gates.CNOT(control[control_index], target))
+                parameters.append(theta_y[i])
+
+    if complex_data or not backend.allclose(phases, 0):
+        for k in range(nqubits, 0, -1):
+            alpha_z = _mottonen_alpha_z(phases, nqubits, k, backend)
+            target = nqubits - k
+            control = list(reversed(range(nqubits - k)))
+            theta_z = _mottonen_compute_theta(alpha_z, backend=backend)
+            if len(control) == 0:
+                circuit.add(gates.RZ(target, theta_z[0]))
+                parameters.append(theta_z[0])
+            else:
+                code = _mottonen_gray_code(len(control), backend=backend)
+                control_indices = backend.log2(code ^ backend.roll(code, -1))
+                control_indices = backend.cast(control_indices, dtype=backend.int64)
+                for i, control_index in enumerate(control_indices):
+                    circuit.add(gates.RZ(target, theta_z[i]))
+                    circuit.add(gates.CNOT(control[control_index], target))
+                    parameters.append(theta_z[i])
+
+        global_phase = -float(backend.sum(phases) / dims)
+        if abs(global_phase) > np.finfo(float).eps:
+            unitary = cmath.exp(-1j * global_phase) * backend.identity(dims)
+            circuit.add(
+                gates.Unitary(
+                    unitary, *range(nqubits), trainable=False, check_unitary=False
+                )
+            )
+
+    circuit.set_parameters(parameters)
+
+    return circuit
 
 
 def _binary_encoder_hopf(
