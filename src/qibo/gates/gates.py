@@ -1142,6 +1142,21 @@ class U1q(_Un_):
         return self.__class__(self.init_args[0], -theta, phi)
 
 
+class CH(Gate):
+    def __init__(self, q0: int, q1: int):
+        super().__init__()
+        self.name = "ch"
+        self.draw_label = "H"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+        self.unitary = True
+
+    @property
+    def qasm_label(self) -> str:
+        return "ch"
+
+
 class CNOT(Gate):
     """The Controlled-NOT gate.
 

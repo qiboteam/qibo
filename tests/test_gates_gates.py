@@ -656,6 +656,44 @@ def test_cz(backend, seed_state, seed_observable):
     assert gate.unitary
 
 
+def test_ch(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.CH(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.CH(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    elem = 1 / np.sqrt(2)
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, elem, elem],
+            [0, 0, elem, -elem],
+        ]
+    )
+    matrix = backend.cast(matrix)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
+
+    assert gates.CH(0, 1).qasm_label == "ch"
+    assert not gates.CH(0, 1).clifford
+    assert not gates.CH(0, 1).hamming_weight
+    assert gates.CH(0, 1).unitary
+
+
 def test_csx(backend):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, backend=backend)
