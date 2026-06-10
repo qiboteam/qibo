@@ -14,6 +14,7 @@ from qibo.hamiltonians.models import (
     XXX,
     FermiHubbard,
     Heisenberg,
+    Ising,
     MaxCut,
     _multikron,
 )
@@ -194,7 +195,6 @@ def test_tfim_boundary(backend, h, closed_boundary, dense):
 
     target *= -1
     target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
-    print(target)
     target = backend.real(target.matrix)
 
     hamiltonian = TFIM(
@@ -271,3 +271,94 @@ def test_fermi_hubbard(backend, nsites, dense, closed_boundary):
     )
 
     backend.assert_allclose(hamiltonian.matrix, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("local_field_strengths", ["number", "tuple", "array"])
+@pytest.mark.parametrize("coupling_constants", ["number", "tuple", "array"])
+def test_ising(
+    backend, coupling_constants, local_field_strengths, closed_boundary, dense
+):
+    with pytest.raises(ValueError):
+        test = Ising(
+            3,
+            (0.1, 0.2),
+            local_field_strengths=1.0,
+            closed_boundary=True,
+            backend=backend,
+        )
+
+    I = lambda x: symbols.I(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    nqubits = 3
+
+    if coupling_constants == "number":
+        coupling_constants = 1.0
+    elif coupling_constants == "tuple":
+        coupling_constants = [1.0, 2.0]
+        if closed_boundary:
+            coupling_constants.append(1.0)
+    else:
+        coupling_constants = [1.0, 2.0]
+        if closed_boundary:
+            coupling_constants.append(1.0)
+        coupling_constants = backend.cast(coupling_constants, dtype=backend.float64)
+
+    if local_field_strengths == "number":
+        local_field_strengths = 1.0
+    elif local_field_strengths == "tuple":
+        local_field_strengths = (1.0, 0.5)
+        if closed_boundary:
+            local_field_strengths += (1.0,)
+    else:
+        local_field_strengths = [[1.0, 0.5], [0.1, 2.0]]
+        if closed_boundary:
+            local_field_strengths.append([1.0, 0.5])
+        local_field_strengths = backend.cast(
+            local_field_strengths, dtype=backend.float64
+        )
+
+    if isinstance(coupling_constants, (int, float)):
+        _coupling_constants = [coupling_constants] * 2
+        if closed_boundary:
+            _coupling_constants.append(_coupling_constants[-1])
+    else:
+        _coupling_constants = coupling_constants.copy()
+
+    target = float(_coupling_constants[0]) * Z(0) * Z(1)
+    target += float(_coupling_constants[1]) * Z(1) * Z(2)
+    if closed_boundary:
+        target += float(_coupling_constants[2]) * Z(2) * Z(0)
+
+    if isinstance(local_field_strengths, float):
+        target += local_field_strengths * (Z(0) + Z(1) + Z(2))
+        target += local_field_strengths * (X(0) + X(1) + X(2))
+    elif isinstance(local_field_strengths, (tuple, list)):
+        target += float(local_field_strengths[0]) * (Z(0) + Z(1) + Z(2))
+        target += float(local_field_strengths[1]) * (X(0) + X(1) + X(2))
+    else:
+        target += sum(
+            float(strength) * Z(qubit)
+            for qubit, strength in zip([0, 1, 2], local_field_strengths[:, 0])
+        )
+        target += sum(
+            float(strength) * X(qubit)
+            for qubit, strength in zip([0, 1, 2], local_field_strengths[:, 1])
+        )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Ising(
+        nqubits=nqubits,
+        coupling_constants=coupling_constants,
+        local_field_strengths=local_field_strengths,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target)

@@ -10,670 +10,6 @@ from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 
 
-def X(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
-) -> Hamiltonian | ArrayLike:
-    """Non-interacting Pauli-:math:`X` Hamiltonian.
-
-    .. math::
-        H = - \\sum _{k=0}^N \\, X_{k} \\, .
-
-    Args:
-        nqubits (int): number of qubits.
-        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-            Defaults to ``True``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-    """
-    return _one_body_pauli(nqubits, symbols.X, dense, backend=backend)
-
-
-def Y(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
-) -> Hamiltonian | ArrayLike:
-    """Non-interacting Pauli-:math:`Y` Hamiltonian.
-
-    .. math::
-        H = - \\sum _{k=0}^{N} \\, Y_{k} \\, .
-
-    Args:
-        nqubits (int): number of qubits.
-        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-    """
-    return _one_body_pauli(nqubits, symbols.Y, dense, backend=backend)
-
-
-def Z(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
-) -> Hamiltonian | ArrayLike:
-    """Non-interacting Pauli-:math:`Z` Hamiltonian.
-
-    .. math::
-        H = - \\sum _{k=0}^{N} \\, Z_{k} \\, .
-
-    Args:
-        nqubits (int): number of qubits.
-        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-    """
-    return _one_body_pauli(nqubits, symbols.Z, dense, backend=backend)
-
-
-def TFIM(
-    nqubits: int,
-    h: float = 0.0,
-    dense: bool = True,
-    closed_boundary: bool = True,
-    backend: Optional[Backend] = None,
-) -> Hamiltonian | ArrayLike:
-    """:math:`n`-qubit Transverse field Ising model.
-
-    .. math::
-        H = - \\sum _{k=0}^{n-1} \\, \\left(Z_{k} \\, Z_{k + 1} + h \\, X_{k}\\right) \\, ,
-
-    with :math:`Z_{n-1} Z_{n} \\equiv Z_{n-1} Z_{0}` if ``closed_boundary=True``.
-
-    Args:
-        nqubits (int): number of qubits.
-        h (float, optional): value of the transverse field. Defaults to :math:`0.0`.
-        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-            Defaults to ``True``.
-        closed_boundary (bool, optional): If ``True``, returns TFIM with periodic boundary
-            condition. If ``False``, returns Hamiltonian with open boundaries.
-            Defaults to ``True``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-    """
-    if nqubits < 2:
-        raise_error(ValueError, "Number of qubits must be larger than one.")
-
-    backend = _check_backend(backend)
-
-    if dense:
-        matrix = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
-        base_string = [backend.matrices.I()] * nqubits
-        for qubit in range(nqubits - 1):
-            base_string[qubit] = backend.matrices.Z
-            base_string[qubit + 1] = backend.matrices.Z
-            matrix += reduce(backend.kron, base_string)
-            base_string[qubit] = backend.matrices.I()
-            base_string[qubit + 1] = backend.matrices.I()
-
-        if closed_boundary:
-            base_string = (
-                [backend.matrices.Z]
-                + [backend.matrices.I()] * (nqubits - 2)
-                + [backend.matrices.Z]
-            )
-            matrix += reduce(backend.kron, base_string)
-
-        if h != 0:
-            base_string = [backend.matrices.I()] * nqubits
-            for qubit in range(nqubits):
-                base_string[qubit] = backend.matrices.X
-                matrix += h * reduce(backend.kron, base_string)
-                base_string[qubit] = backend.matrices.I()
-
-        matrix *= -1
-
-        return Hamiltonian(nqubits, matrix, backend=backend)
-
-    term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
-        q2, backend=backend
-    ) + h * symbols.X(q1, backend=backend)
-
-    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1))
-
-    if closed_boundary:
-        form -= term(nqubits - 1, 0)
-    else:
-        form -= h * symbols.X(nqubits - 1, backend=backend)
-
-    ham = SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
-
-    return ham
-
-
-def MaxCut(
-    nqubits: int,
-    dense: bool = True,
-    adj_matrix: Optional[Union[list[list[float]], ArrayLike]] = None,
-    backend: Optional[Backend] = None,
-) -> Hamiltonian | ArrayLike:
-    """Max Cut Hamiltonian.
-
-    .. math::
-        H = -\\frac{1}{2} \\, \\sum _{j, k = 0}^{N}  \\, \\left(1 - Z_{j} \\, Z_{k}\\right) \\, .
-
-    Args:
-        nqubits (int): number of qubits.
-        dense (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-        adj_matrix (list[list[float]] | np.ndarray): Adjecency matrix of the graph. Defaults to a
-            homogeneous fully connected graph with all edges having an equal 1.0 weight.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-    """
-    if adj_matrix is None:
-        adj_matrix = np.ones((nqubits, nqubits))
-    elif len(adj_matrix) != nqubits:
-        raise_error(
-            RuntimeError,
-            f"Expected an adjacency matrix of shape ({nqubits},{nqubits}) for a {nqubits}-qubits system.",
-        )
-
-    form = -sum(
-        adj_matrix[qubit_i][qubit_j]
-        * (
-            1
-            - symbols.Z(qubit_i, backend=backend) * symbols.Z(qubit_j, backend=backend)
-        )
-        for qubit_i in range(nqubits)
-        for qubit_j in range(nqubits)
-    )
-    form /= 2
-
-    ham = SymbolicHamiltonian(form, nqubits=nqubits, backend=backend)
-
-    if dense:
-        return ham.dense
-
-    return ham
-
-
-def LABS(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
-) -> Hamiltonian | ArrayLike:
-    """Create Hamiltonian of the Low Autocorrelation Binary Sequences (LABS) problem.
-
-    Given an integer :math:`n > 2`, the LABS problem consists of finding a binary sequence
-    :math:`b \\in \\{0, \\, 1\\}^{n}` the minimizes the *sidelobe energy* :math:`E(b)`
-    defined as
-
-    .. math::
-        E(b) = \\sum_{j=1}^{n-1} \\, C_{j}^{2}(b) \\, ;
-        \\quad C_{j}(b) = \\sum_{k=0}^{n-j} \\, b_{k} \\, b_{k + j} \\, ,
-
-    where :math:`C_{j}(b)` is the :math:`j`-th *autocorrelation* of :math:`b`.
-
-    Args:
-        nqubits (int): Total number of qubits.
-        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    References:
-        1. T. Packebusch and S. Mertens, *Low autocorrelation binary sequences*,
-        `J. Phys. A: Math. Theor. 49 (2016) 165001
-        <https://doi.org/10.1088/1751-8113/49/16/165001>`_.
-    """
-    if nqubits < 2:
-        raise_error(
-            ValueError,
-            f"LABS problem only defined for ``nqubits > 2``, but ``nqubits = {nqubits}``.",
-        )
-
-    hamiltonian = 0
-    for ind in range(1, nqubits):
-        term = sum(
-            symbols.Z(qubit, backend=backend) * symbols.Z(qubit + ind, backend=backend)
-            for qubit in range(nqubits - ind)
-        )
-        hamiltonian += term**2
-
-    hamiltonian = SymbolicHamiltonian(hamiltonian, nqubits=nqubits, backend=backend)
-
-    if dense:
-        return hamiltonian.dense
-
-    return hamiltonian
-
-
-def Heisenberg(
-    nqubits: int,
-    coupling_constants: Union[float, int, list, tuple],
-    external_field_strengths: Union[float, int],
-    dense: bool = True,
-    backend: Optional[Backend] = None,
-) -> Hamiltonian | ArrayLike:
-    """Heisenberg model on a :math:`1`-dimensional periodic lattice.
-
-    The general :math:`n`-qubit Hamiltonian is given by
-
-    .. math::
-        \\begin{align}
-        H &= -\\sum_{k = 1}^{n} \\, \\left(
-            J_{x} \\, X_{k} \\, X_{k + 1}
-            + J_{y} \\, Y_{k} \\, Y_{k + 1}
-            + J_{z} \\, Z_{k} \\, Z_{k + 1} \\right) \\\\
-        &\\quad\\,\\, - \\sum_{k = 1}^{n} \\left(
-            h_{x} \\, X_{k} + h_{y} \\, Y_{k} + h_{z} \\, Z_{k}
-            \\right) \\, ,
-        \\end{align}
-
-    where :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}` are called the ``coupling constants``,
-    :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}` are called the ``external field strengths``,
-    and :math:`\\{X, \\, Y, \\, Z\\}` are the usual Pauli operators.
-
-    Args:
-        nqubits (int): number of qubits.
-        coupling_constants (list or tuple or float or int): list or tuple with the
-            three coupling constants :math:`\\{J_{x}, J_{y}, J{z}\\}`.
-            If ``int`` or ``float``, then :math:`J_{x} = J_{y} = J_{z}`.
-        external_field_strength (list or tuple or float or int): list or tuple with the
-            external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
-            If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
-        dense (bool, optional): If ``True``, creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-            Defaults to ``True``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
-        Heisenberg Hamiltonian.
-    """
-    if isinstance(coupling_constants, (list, tuple)) and len(coupling_constants) != 3:
-        raise_error(
-            ValueError,
-            f"When `coupling_constants` is type `int` or `list`, it must have length == 3.",
-        )
-
-    if isinstance(coupling_constants, (float, int)):
-        coupling_constants = [coupling_constants] * 3
-
-    if (
-        isinstance(external_field_strengths, (list, tuple))
-        and len(external_field_strengths) != 3
-    ):
-        raise_error(
-            ValueError,
-            f"When `external_field_strengths` is type `int` or `list`, it must have length == 3.",
-        )
-
-    if isinstance(external_field_strengths, (float, int)):
-        external_field_strengths = [external_field_strengths] * 3
-
-    backend = _check_backend(backend)
-
-    paulis = (symbols.X, symbols.Y, symbols.Z)
-
-    if dense:
-        condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
-        matrix = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
-        for ind, pauli in enumerate(paulis):
-            double_term = _build_spin_model(
-                nqubits, pauli(0, backend=backend).matrix, condition, backend
-            )
-            double_term = backend.cast(double_term, dtype=double_term.dtype)
-            matrix = matrix - coupling_constants[ind] * double_term
-            matrix = (
-                matrix
-                + external_field_strengths[ind]
-                * _one_body_pauli(nqubits, pauli, dense, backend).matrix
-            )
-
-        return Hamiltonian(nqubits, matrix, backend=backend)
-
-    def h(symbol):
-        return lambda q1, q2: symbol(q1, backend=backend) * symbol(q2, backend=backend)
-
-    def term(q1, q2):
-        return sum(
-            coeff * h(operator)(q1, q2)
-            for coeff, operator in zip(coupling_constants, paulis)
-        )
-
-    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(
-        nqubits - 1, 0
-    )
-    form -= sum(
-        field_strength * pauli(qubit)
-        for qubit in range(nqubits)
-        for field_strength, pauli in zip(external_field_strengths, paulis)
-        if field_strength != 0.0
-    )
-
-    ham = SymbolicHamiltonian(form=form, backend=backend)
-    return ham
-
-
-def XXX(
-    nqubits: int,
-    coupling_constant: Union[float, int] = 1,
-    external_field_strengths: Union[float, int, list, tuple] = [0.5, 0, 0],
-    dense: bool = True,
-    backend: Optional[Backend] = None,
-) -> Hamiltonian | ArrayLike:
-    """Heisenberg :math:`\\mathrm{XXX}` model with periodic boundary conditions.
-
-    The :math:`n`-qubit :math:`\\mathrm{XXX}` Hamiltonian is given by
-
-    .. math::
-        H = -J \\, \\sum_{k = 1}^{n} \\, \\left(
-            X_{k} \\, X_{k + 1} + Y_{k} \\, Y_{k + 1} + Z_{k} \\, Z_{k + 1}
-            \\right)
-            - \\sum_{k = 1}^{n} \\left(h_{x} \\, X_{k} + h_{y} \\, Y_{k}
-            + h_{z} \\, Z_{k} \\right) \\, ,
-
-    where :math:`J` is the ``coupling_constant``, :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`
-    are called the ``external field strengths``, and :math:`\\{X, \\, Y, \\, Z\\}` are the usual
-    Pauli operators.
-
-    Args:
-        nqubits (int): number of qubits.
-        coupling_constant (float or int, optional): coupling constant :math:`J`.
-            Defaults to :math:`1`.
-        external_field_strengths (float or int or list or tuple, optional): list or tuple with the
-            external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
-            If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
-            Defaults to :math:`[1/2, \\, 0, \\, 0]`.
-        dense (bool, optional): If ``True``, creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-            Defaults to ``True``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
-        Heisenberg :math:`\\mathrm{XXX}` Hamiltonian.
-    """
-    if not isinstance(coupling_constant, (float, int)):
-        raise_error(
-            TypeError,
-            "`coupling_constant` must be type float or int, "
-            + f"but it is type {type(coupling_constant)}.",
-        )
-
-    return Heisenberg(
-        nqubits,
-        coupling_constants=coupling_constant,
-        external_field_strengths=external_field_strengths,
-        dense=dense,
-        backend=backend,
-    )
-
-
-def XXZ(
-    nqubits: int,
-    delta: Union[float, int] = 0.5,
-    dense: bool = True,
-    backend: Optional[Backend] = None,
-) -> Hamiltonian | ArrayLike:
-    """Heisenberg :math:`\\mathrm{XXZ}` model with periodic boundary conditions.
-
-    .. math::
-        H = \\sum _{k=0}^N \\, \\left( X_{k} \\, X_{k + 1} + Y_{k} \\, Y_{k + 1}
-            + \\delta Z_{k} \\, Z_{k + 1} \\right) \\, .
-
-    Example:
-        .. testcode::
-
-            from qibo.hamiltonians import XXZ
-            h = XXZ(3) # initialized XXZ model with 3 qubits
-
-    Args:
-        nqubits (int): number of qubits.
-        delta (float or int, optional): coefficient for the :math:`Z` component.
-            Defaults to :math:`0.5`.
-        dense (bool, optional): If ``True``, creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-            Defaults to ``True``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
-        Heisenberg :math:`\\mathrm{XXZ}` Hamiltonian.
-    """
-    if nqubits < 2:
-        raise_error(ValueError, "Number of qubits must be larger than one.")
-
-    return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
-
-
-def GPP(
-    adjacency_matrix: ArrayLike,
-    penalty_coeff: Union[float, int] = 0.0,
-    node_weights: Optional[ArrayLike] = None,
-    dense: bool = True,
-    backend: Optional[Backend] = None,
-) -> Hamiltonian | ArrayLike:
-    """The Graph Partitioning Problem (GPP) as a quadratic function.
-
-    For a (possibly weighted) graph :math:`G = (V, E)` defined by its set :math:`V` of vertices
-    and set :math:`E` of edges, the GPP is the task of dividing a graph's vertices into :math:`m`
-    subsets of approximately equal size, such that :math:`\\bigcup_{k=1}^{m} \\, V_{k} = V`,
-    while minimizing the number of edges that connect vertices in different subsets.
-
-    The formulation of the GPP as a quadratic unconstrained binary optimization (QUBO) reduces to
-    minimizing the following objective function :math:`C(x)`:
-
-    .. math::
-        C(x) = \\sum_{(j,k) \\in E} \\, A_{jk} \\, (x_{j} + x_{k} - 2 \\, x_{j} \\, x_{k})
-        \\, + \\lambda \\, P(x),
-
-    where :math:`x_{j} \\in \\{0, \\, 1\\}` is a binary variable,
-
-    .. math::
-        P(x) = \\left(\\sum_{k} \\, v_{k} \\, x_{k} - \\sum_{k} \\, \\frac{v_{k}}{2}\\right)^{2}
-
-    is a term designed to penalize deviations in the total node weight on each partition,
-    and :math:`\\lambda > 0` is a hyperparameter.
-
-    Args:
-        adjacency_matrix (ndarray): Square symmetric matrix with weigths :math:`A_{jk}`
-            representing the edges of the graph. For an unweighted graph,
-            :math:`\\A_{jk} = 1, \\,\\, \\forall \\, j,k`.
-        penalty_coeff (float or int, optional): hyperparameter :math:`\\lambda` defining the
-            strength of the penalty term. Defaults to :math:`0.0`.
-        node_weights (ArrayLike, optional): Weight of the nodes of the graph.
-            Used when :math:`\\lambda \\neq 0`. If ``None``, all node weights
-            default to :math:`1`. Defaults to ``None``.
-        dense (bool, optional): If ``True``, creates the Hamiltonian as a
-            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
-            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-            Defaults to ``True``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
-        GPP Hamiltonian :math:`H_{C}`.
-
-
-    References:
-        1. W. Aboumrad, D. Zhu, C. Girotto, F.-H. Rouet, J. Jojo, R. Lucas, J. Pathak,
-        A. Kaushik, and M. Roetteler, *Accelerating large-scale linear algebra using
-        variational quantum imaginary time evolution*, `arXiv:2503.13128 (2025)
-        <https://doi.org/10.48550/arXiv.2406.16142>`_.
-
-    """
-    if len(adjacency_matrix) != len(adjacency_matrix[0]):
-        raise_error(
-            ValueError,
-            "``adjacency_matrix`` must be a square matrix, "
-            + f"but it has shape ({len(adjacency_matrix)}, {len(adjacency_matrix[0])}).",
-        )
-
-    if node_weights is not None and len(node_weights) != len(adjacency_matrix):
-        raise_error(
-            ValueError,
-            "``node_weights`` and ``adjacency_matrix`` must have the same dimensions.",
-        )
-
-    backend = _check_backend(backend)
-
-    if isinstance(adjacency_matrix, list):
-        adjacency_matrix = backend.cast(
-            adjacency_matrix, dtype=type(adjacency_matrix[0][0])
-        )
-
-    if node_weights is not None and isinstance(node_weights, list):
-        node_weights = backend.cast(node_weights, dtype=type(node_weights[0]))
-
-    if penalty_coeff != 0.0 and node_weights is None:
-        node_weights = backend.ones(len(adjacency_matrix), dtype=backend.int8)
-
-    if not dense:
-        return _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend)
-
-    return _gpp_dense(adjacency_matrix, penalty_coeff, node_weights, backend)
-
-
-def _build_spin_model(
-    nqubits: int, matrix: ArrayLike, condition: Callable, backend: Backend
-) -> ArrayLike:
-    """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(
-        reduce(
-            backend.kron,
-            (
-                matrix if condition(qubit_i, qubit_j) else backend.matrices.I()
-                for qubit_j in range(nqubits)
-            ),
-        )
-        for qubit_i in range(nqubits)
-    )
-    return h
-
-
-def _gpp_symbolic(
-    adjacency_matrix: ArrayLike,
-    penalty_coeff: float | int,
-    node_weights: ArrayLike,
-    backend: Backend,
-) -> SymbolicHamiltonian:
-    def term(index: int):
-        return (
-            symbols.I(index, backend=backend) - symbols.Z(index, backend=backend)
-        ) / 2
-
-    hamiltonian = 0
-    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
-    for ind_j, ind_k in zip(columns, rows):
-        ind_j, ind_k = int(ind_j), int(ind_k)
-        x_j = term(ind_j)
-        x_k = term(ind_k)
-        hamiltonian += float(adjacency_matrix[ind_j, ind_k]) * (
-            x_j + x_k - 2 * x_j * x_k
-        )
-
-    if penalty_coeff != 0.0:
-        penalty = 0
-        for elem, weight in enumerate(node_weights):
-            penalty += float(weight) * (
-                term(elem) - symbols.I(elem, backend=backend) / 2
-            )
-
-        hamiltonian += penalty_coeff * (penalty**2)
-
-    return SymbolicHamiltonian(hamiltonian, backend=backend)
-
-
-def _gpp_dense(
-    adjacency_matrix: ArrayLike,
-    penalty_coeff: ArrayLike,
-    node_weights: ArrayLike,
-    backend: Backend,
-) -> Hamiltonian:
-    def term(nqubits, ind_1, ind_2=None):
-        diag = [id_diag] * nqubits
-        diag[ind_1] = term_diag
-        if ind_2 is not None:
-            diag[ind_2] = term_diag
-        diag = _multikron(diag, backend)
-
-        return diag
-
-    nqubits = len(adjacency_matrix)
-
-    id_diag = backend.cast([1, 1])
-    term_diag = backend.cast([0, 1])
-
-    hamiltonian = 0
-    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
-    for ind_j, ind_k in zip(columns, rows):
-        ind_j, ind_k = int(ind_j), int(ind_k)
-
-        diag = term(nqubits, ind_j)
-        diag += term(nqubits, ind_k)
-        diag -= 2 * term(nqubits, ind_j, ind_k)
-
-        hamiltonian += diag
-
-    if penalty_coeff != 0.0:
-        penalty = 0
-        for elem, weight in enumerate(node_weights):
-            penalty += weight * (term(nqubits, elem) - 1 / 2)
-
-        hamiltonian += penalty_coeff * (penalty**2)
-
-    return Hamiltonian(nqubits, backend.diag(hamiltonian), backend=backend)
-
-
-def _multikron(matrix_list: List[ArrayLike], backend: Backend = None) -> ArrayLike:
-    """Calculates Kronecker product of a list of matrices.
-
-    Args:
-        matrix_list (list): List of matrices as ``ndarray``.
-
-    Returns:
-        ndarray: Kronecker product of all matrices in ``matrix_list``.
-    """
-    backend = _check_backend(backend)
-
-    return reduce(backend.kron, matrix_list)
-
-
-def _one_body_pauli(
-    nqubits: int,
-    operator: Callable,
-    dense: bool = True,
-    backend: Optional[Backend] = None,
-) -> Hamiltonian | SymbolicHamiltonian:
-    """Helper method for constructing non-interacting
-    :math:`X`, :math:`Y`, and :math:`Z` Hamiltonians."""
-    backend = _check_backend(backend)
-    if dense:
-        condition = lambda i, j: i == j % nqubits
-        ham = -_build_spin_model(
-            nqubits, operator(0, backend=backend).matrix, condition, backend
-        )
-        return Hamiltonian(nqubits, ham, backend=backend)
-
-    form = sum([-1 * operator(qubit, backend=backend) for qubit in range(nqubits)])
-    ham = SymbolicHamiltonian(form=form, backend=backend)
-    return ham
-
-
 def FermiHubbard(
     nsites: int,
     hopping_strength: Union[float, int] = -1.0,
@@ -807,3 +143,803 @@ def FermiHubbard(
     )
 
     return hamiltonian
+
+
+def GPP(
+    adjacency_matrix: ArrayLike,
+    penalty_coeff: Union[float, int] = 0.0,
+    node_weights: Optional[ArrayLike] = None,
+    dense: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """The Graph Partitioning Problem (GPP) as a quadratic function.
+
+    For a (possibly weighted) graph :math:`G = (V, E)` defined by its set :math:`V` of vertices
+    and set :math:`E` of edges, the GPP is the task of dividing a graph's vertices into :math:`m`
+    subsets of approximately equal size, such that :math:`\\bigcup_{k=1}^{m} \\, V_{k} = V`,
+    while minimizing the number of edges that connect vertices in different subsets.
+
+    The formulation of the GPP as a quadratic unconstrained binary optimization (QUBO) reduces to
+    minimizing the following objective function :math:`C(x)`:
+
+    .. math::
+        C(x) = \\sum_{(j,k) \\in E} \\, A_{jk} \\, (x_{j} + x_{k} - 2 \\, x_{j} \\, x_{k})
+        \\, + \\lambda \\, P(x),
+
+    where :math:`x_{j} \\in \\{0, \\, 1\\}` is a binary variable,
+
+    .. math::
+        P(x) = \\left(\\sum_{k} \\, v_{k} \\, x_{k} - \\sum_{k} \\, \\frac{v_{k}}{2}\\right)^{2}
+
+    is a term designed to penalize deviations in the total node weight on each partition,
+    and :math:`\\lambda > 0` is a hyperparameter.
+
+    Args:
+        adjacency_matrix (ndarray): Square symmetric matrix with weigths :math:`A_{jk}`
+            representing the edges of the graph. For an unweighted graph,
+            :math:`A_{jk} = 1, \\,\\, \\forall \\, j,k`.
+        penalty_coeff (float or int, optional): hyperparameter :math:`\\lambda` defining the
+            strength of the penalty term. Defaults to :math:`0.0`.
+        node_weights (ArrayLike, optional): Weight of the nodes of the graph.
+            Used when :math:`\\lambda \\neq 0`. If ``None``, all node weights
+            default to :math:`1`. Defaults to ``None``.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        GPP Hamiltonian :math:`H_{C}`.
+
+
+    References:
+        1. W. Aboumrad, D. Zhu, C. Girotto, F.-H. Rouet, J. Jojo, R. Lucas, J. Pathak,
+        A. Kaushik, and M. Roetteler, *Accelerating large-scale linear algebra using
+        variational quantum imaginary time evolution*, `arXiv:2503.13128 (2025)
+        <https://doi.org/10.48550/arXiv.2406.16142>`_.
+
+    """
+    if len(adjacency_matrix) != len(adjacency_matrix[0]):
+        raise_error(
+            ValueError,
+            "``adjacency_matrix`` must be a square matrix, "
+            + f"but it has shape ({len(adjacency_matrix)}, {len(adjacency_matrix[0])}).",
+        )
+
+    if node_weights is not None and len(node_weights) != len(adjacency_matrix):
+        raise_error(
+            ValueError,
+            "``node_weights`` and ``adjacency_matrix`` must have the same dimensions.",
+        )
+
+    backend = _check_backend(backend)
+
+    if isinstance(adjacency_matrix, list):
+        adjacency_matrix = backend.cast(
+            adjacency_matrix, dtype=type(adjacency_matrix[0][0])
+        )
+
+    if node_weights is not None and isinstance(node_weights, list):
+        node_weights = backend.cast(node_weights, dtype=type(node_weights[0]))
+
+    if penalty_coeff != 0.0 and node_weights is None:
+        node_weights = backend.ones(len(adjacency_matrix), dtype=backend.int8)
+
+    if not dense:
+        return _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend)
+
+    return _gpp_dense(adjacency_matrix, penalty_coeff, node_weights, backend)
+
+
+def Heisenberg(
+    nqubits: int,
+    coupling_constants: Union[float, int, list, tuple],
+    external_field_strengths: Union[float, int],
+    dense: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Heisenberg model on a :math:`1`-dimensional periodic lattice.
+
+    The general :math:`n`-qubit Hamiltonian is given by
+
+    .. math::
+        \\begin{align}
+        H &= -\\sum_{k = 1}^{n} \\, \\left(
+            J_{x} \\, X_{k} \\, X_{k + 1}
+            + J_{y} \\, Y_{k} \\, Y_{k + 1}
+            + J_{z} \\, Z_{k} \\, Z_{k + 1} \\right) \\\\
+        &\\quad\\,\\, - \\sum_{k = 1}^{n} \\left(
+            h_{x} \\, X_{k} + h_{y} \\, Y_{k} + h_{z} \\, Z_{k}
+            \\right) \\, ,
+        \\end{align}
+
+    where :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}` are called the ``coupling constants``,
+    :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}` are called the ``external field strengths``,
+    and :math:`\\{X, \\, Y, \\, Z\\}` are the usual Pauli operators.
+
+    Args:
+        nqubits (int): number of qubits.
+        coupling_constants (list or tuple or float or int): list or tuple with the
+            three coupling constants :math:`\\{J_{x}, J_{y}, J{z}\\}`.
+            If ``int`` or ``float``, then :math:`J_{x} = J_{y} = J_{z}`.
+        external_field_strength (list or tuple or float or int): list or tuple with the
+            external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
+            If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Heisenberg Hamiltonian.
+    """
+    if isinstance(coupling_constants, (list, tuple)) and len(coupling_constants) != 3:
+        raise_error(
+            ValueError,
+            f"When `coupling_constants` is type `int` or `list`, it must have length == 3.",
+        )
+
+    if isinstance(coupling_constants, (float, int)):
+        coupling_constants = [coupling_constants] * 3
+
+    if (
+        isinstance(external_field_strengths, (list, tuple))
+        and len(external_field_strengths) != 3
+    ):
+        raise_error(
+            ValueError,
+            f"When `external_field_strengths` is type `int` or `list`, it must have length == 3.",
+        )
+
+    if isinstance(external_field_strengths, (float, int)):
+        external_field_strengths = [external_field_strengths] * 3
+
+    backend = _check_backend(backend)
+
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+
+    if dense:
+        condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
+        matrix = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
+        for ind, pauli in enumerate(paulis):
+            double_term = _build_spin_model(
+                nqubits, pauli(0, backend=backend).matrix, condition, backend
+            )
+            double_term = backend.cast(double_term, dtype=double_term.dtype)
+            matrix = matrix - coupling_constants[ind] * double_term
+            matrix = (
+                matrix
+                + external_field_strengths[ind]
+                * _OneBodyPauli(nqubits, pauli, dense, backend).matrix
+            )
+
+        return Hamiltonian(nqubits, matrix, backend=backend)
+
+    def h(symbol):
+        return lambda q1, q2: symbol(q1, backend=backend) * symbol(q2, backend=backend)
+
+    def term(q1, q2):
+        return sum(
+            coeff * h(operator)(q1, q2)
+            for coeff, operator in zip(coupling_constants, paulis)
+        )
+
+    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(
+        nqubits - 1, 0
+    )
+    form -= sum(
+        field_strength * pauli(qubit)
+        for qubit in range(nqubits)
+        for field_strength, pauli in zip(external_field_strengths, paulis)
+        if field_strength != 0.0
+    )
+
+    ham = SymbolicHamiltonian(form=form, backend=backend)
+    return ham
+
+
+def Ising(
+    nqubits: int,
+    coupling_constants: Union[float, int, ArrayLike],
+    local_field_strengths: Union[float, int, tuple, ArrayLike],
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """One-dimensional :math:`n`-qubit Ising model.
+
+    .. math::
+        H = \\sum_{k} \\, J_{k} \\, Z_{k} \\, Z_{k + 1} + \\sum_{k} h_{k}^{(z)} \\, Z_{k}
+            + \\sum_{k} h_{k}^{(x)} \\, X_{k} \\, ,
+
+    where :math:`\\{J_{k}\\}_{k}` are called the ``coupling constants``,
+    :math:`\\{h_{k}^{(z)}, h_{k}^{(x)}\\}_{k}` are called the ``local field strengths``,
+    and :math:`\\{X, \\, Y, \\, Z\\}` are the usual Pauli operators.
+
+
+    Args:
+        nqubits (int): number of qubits.
+        coupling_constants (float or int or ArrayLike): ``list`` or ``ndarray`` containing all
+            coupling constants :math:`\\{J_{k}\\}_{k}`. If ``int`` or ``float``,
+            then :math:`J_{k}` is equal to ``coupling_constants`` for all $k$.
+        local_field_strengths (list or tuple or float or int): array containing all local
+            field strengths :math:`\\left\\{\\left(h_{k}^{(z)}, \\,
+            h_{k}^{(x)}\\right)\\right\\}_{k}`, *e.g.*, :math:`\\left\\{h_{k}^{(z)}\\right\\}_{k}`
+            in the first column and :math:`\\left\\{h_{k}^{(x)}\\right\\}_{k}` in the second column.
+            If ``int`` or ``float``, the coefficients :math:`h_{k}^{(z)}` and :math:`h_{k}^{(x)}`
+            are equal to ``local_field_strengths``, :math:`\\forall \\, k`. If ``Tuple[int, int]``,
+            :math:`h_{k}^{(z)}` :math:`\\left(h_{k}^{(x)}\\right)` is set to the first (second)
+            element of the tuple, :math:`\\forall \\, k`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns Ising Hamiltonian
+            with periodic boundary condition. If ``False``, returns Hamiltonian
+            with open boundaries. Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Ising Hamiltonian.
+    """
+
+    if isinstance(coupling_constants, (list, tuple)):
+        if (closed_boundary and len(coupling_constants) != nqubits) or (
+            not closed_boundary and len(coupling_constants) != (nqubits - 1)
+        ):
+            raise_error(
+                ValueError,
+                f"``coupling_constants`` does not have the correct len ({len(coupling_constants)}) "
+                + f" for the given ``closed_boundary`` condition ({closed_boundary}).",
+            )
+
+    backend = _check_backend(backend)
+
+    if isinstance(coupling_constants, (int, float)):
+        coupling_constants = [coupling_constants] * (nqubits - 1)
+        if closed_boundary:
+            coupling_constants.append(coupling_constants[-1])
+
+    if isinstance(local_field_strengths, (int, float)):
+        coeffs_z = [local_field_strengths] * nqubits
+        coeffs_x = [local_field_strengths] * nqubits
+    elif isinstance(local_field_strengths, (tuple, list)):
+        coeffs_z = [local_field_strengths[0]] * nqubits
+        coeffs_x = [local_field_strengths[1]] * nqubits
+    else:
+        coeffs_z = local_field_strengths[:, 0]
+        coeffs_x = local_field_strengths[:, 1]
+
+    qubits = list(range(nqubits))
+
+    if dense:
+        matrix = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
+        base_string = [backend.matrices.I()] * nqubits
+        for qubit, coeff in zip(qubits[:-1], coupling_constants):
+            base_string[qubit] = backend.matrices.Z
+            base_string[qubit + 1] = backend.matrices.Z
+            matrix += float(coeff) * reduce(backend.kron, base_string)
+            base_string[qubit] = backend.matrices.I()
+            base_string[qubit + 1] = backend.matrices.I()
+
+        if closed_boundary and nqubits > 2:
+            base_string = (
+                [backend.matrices.Z]
+                + [backend.matrices.I()] * (nqubits - 2)
+                + [backend.matrices.Z]
+            )
+            matrix += coupling_constants[-1] * reduce(backend.kron, base_string)
+
+        if any(coeff != 0 for coeff in coeffs_z):
+            base_string = [backend.matrices.I()] * nqubits
+            for qubit, coeff in zip(qubits, coeffs_z):
+                base_string[qubit] = backend.matrices.Z
+                matrix += float(coeff) * reduce(backend.kron, base_string)
+                base_string[qubit] = backend.matrices.I()
+
+        if any(coeff != 0 for coeff in coeffs_x):
+            base_string = [backend.matrices.I()] * nqubits
+            for qubit, coeff in zip(qubits, coeffs_x):
+                base_string[qubit] = backend.matrices.X
+                matrix += float(coeff) * reduce(backend.kron, base_string)
+                base_string[qubit] = backend.matrices.I()
+
+        return Hamiltonian(nqubits, matrix, backend=backend)
+
+    interaction = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
+        q2, backend=backend
+    )
+
+    form = sum(
+        float(coeff) * interaction(qubit, qubit + 1)
+        for qubit, coeff in zip(qubits[:-1], coupling_constants)
+    )
+
+    if closed_boundary and nqubits > 2:
+        form += float(coupling_constants[-1]) * interaction(nqubits - 1, 0)
+
+    if any(coeff != 0 for coeff in coeffs_z):
+        form += sum(
+            float(coeff) * symbols.Z(qubit, backend=backend)
+            for qubit, coeff in zip(qubits, coeffs_z)
+        )
+
+    if any(coeff != 0 for coeff in coeffs_x):
+        form += sum(
+            float(coeff) * symbols.X(qubit, backend=backend)
+            for qubit, coeff in zip(qubits, coeffs_x)
+        )
+
+    return SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
+
+
+def LABS(
+    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Create Hamiltonian of the Low Autocorrelation Binary Sequences (LABS) problem.
+
+    Given an integer :math:`n > 2`, the LABS problem consists of finding a binary sequence
+    :math:`b \\in \\{0, \\, 1\\}^{n}` the minimizes the *sidelobe energy* :math:`E(b)`
+    defined as
+
+    .. math::
+        E(b) = \\sum_{j=1}^{n-1} \\, C_{j}^{2}(b) \\, ;
+        \\quad C_{j}(b) = \\sum_{k=0}^{n-j} \\, b_{k} \\, b_{k + j} \\, ,
+
+    where :math:`C_{j}(b)` is the :math:`j`-th *autocorrelation* of :math:`b`.
+
+    Args:
+        nqubits (int): Total number of qubits.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    References:
+        1. T. Packebusch and S. Mertens, *Low autocorrelation binary sequences*,
+        `J. Phys. A: Math. Theor. 49 (2016) 165001
+        <https://doi.org/10.1088/1751-8113/49/16/165001>`_.
+    """
+    if nqubits < 2:
+        raise_error(
+            ValueError,
+            f"LABS problem only defined for ``nqubits > 2``, but ``nqubits = {nqubits}``.",
+        )
+
+    hamiltonian = 0
+    for ind in range(1, nqubits):
+        term = sum(
+            symbols.Z(qubit, backend=backend) * symbols.Z(qubit + ind, backend=backend)
+            for qubit in range(nqubits - ind)
+        )
+        hamiltonian += term**2
+
+    hamiltonian = SymbolicHamiltonian(hamiltonian, nqubits=nqubits, backend=backend)
+
+    if dense:
+        return hamiltonian.dense
+
+    return hamiltonian
+
+
+def MaxCut(
+    nqubits: int,
+    dense: bool = True,
+    adj_matrix: Optional[Union[list[list[float]], ArrayLike]] = None,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Max Cut Hamiltonian.
+
+    .. math::
+        H = -\\frac{1}{2} \\, \\sum _{j, k = 0}^{N}  \\, \\left(1 - Z_{j} \\, Z_{k}\\right) \\, .
+
+    Args:
+        nqubits (int): number of qubits.
+        dense (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        adj_matrix (list[list[float]] | np.ndarray): Adjecency matrix of the graph. Defaults to a
+            homogeneous fully connected graph with all edges having an equal 1.0 weight.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+    """
+    if adj_matrix is None:
+        adj_matrix = np.ones((nqubits, nqubits))
+    elif len(adj_matrix) != nqubits:
+        raise_error(
+            RuntimeError,
+            f"Expected an adjacency matrix of shape ({nqubits},{nqubits}) for a {nqubits}-qubits system.",
+        )
+
+    form = -sum(
+        adj_matrix[qubit_i][qubit_j]
+        * (
+            1
+            - symbols.Z(qubit_i, backend=backend) * symbols.Z(qubit_j, backend=backend)
+        )
+        for qubit_i in range(nqubits)
+        for qubit_j in range(nqubits)
+    )
+    form /= 2
+
+    ham = SymbolicHamiltonian(form, nqubits=nqubits, backend=backend)
+
+    if dense:
+        return ham.dense
+
+    return ham
+
+
+def TFIM(
+    nqubits: int,
+    h: float = 0.0,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """One-dimensional, :math:`n`-qubit Transverse field Ising model.
+
+    .. math::
+        H = - \\sum _{k=0}^{n-1} \\, \\left(Z_{k} \\, Z_{k + 1} + h \\, X_{k}\\right) \\, ,
+
+    with :math:`Z_{n-1} Z_{n} \\equiv Z_{n-1} Z_{0}` if ``closed_boundary=True``.
+
+    Args:
+        nqubits (int): number of qubits.
+        h (float, optional): value of the transverse field. Defaults to :math:`0.0`.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns TFIM with periodic boundary
+            condition. If ``False``, returns Hamiltonian with open boundaries.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+    """
+    if nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
+
+    backend = _check_backend(backend)
+
+    if dense:
+        matrix = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
+        base_string = [backend.matrices.I()] * nqubits
+        for qubit in range(nqubits - 1):
+            base_string[qubit] = backend.matrices.Z
+            base_string[qubit + 1] = backend.matrices.Z
+            matrix += reduce(backend.kron, base_string)
+            base_string[qubit] = backend.matrices.I()
+            base_string[qubit + 1] = backend.matrices.I()
+
+        if closed_boundary and nqubits > 2:
+            base_string = (
+                [backend.matrices.Z]
+                + [backend.matrices.I()] * (nqubits - 2)
+                + [backend.matrices.Z]
+            )
+            matrix += reduce(backend.kron, base_string)
+
+        if h != 0:
+            base_string = [backend.matrices.I()] * nqubits
+            for qubit in range(nqubits):
+                base_string[qubit] = backend.matrices.X
+                matrix += h * reduce(backend.kron, base_string)
+                base_string[qubit] = backend.matrices.I()
+
+        matrix *= -1
+
+        return Hamiltonian(nqubits, matrix, backend=backend)
+
+    term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
+        q2, backend=backend
+    ) + h * symbols.X(q1, backend=backend)
+
+    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1))
+
+    if closed_boundary and nqubits > 2:
+        form -= term(nqubits - 1, 0)
+    else:
+        form -= h * symbols.X(nqubits - 1, backend=backend)
+
+    ham = SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
+
+    return ham
+
+
+def XXX(
+    nqubits: int,
+    coupling_constant: Union[float, int] = 1,
+    external_field_strengths: Union[float, int, list, tuple] = [0.5, 0, 0],
+    dense: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Heisenberg :math:`\\mathrm{XXX}` model with periodic boundary conditions.
+
+    The :math:`n`-qubit :math:`\\mathrm{XXX}` Hamiltonian is given by
+
+    .. math::
+        H = -J \\, \\sum_{k = 1}^{n} \\, \\left(
+            X_{k} \\, X_{k + 1} + Y_{k} \\, Y_{k + 1} + Z_{k} \\, Z_{k + 1}
+            \\right)
+            - \\sum_{k = 1}^{n} \\left(h_{x} \\, X_{k} + h_{y} \\, Y_{k}
+            + h_{z} \\, Z_{k} \\right) \\, ,
+
+    where :math:`J` is the ``coupling_constant``, :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`
+    are called the ``external field strengths``, and :math:`\\{X, \\, Y, \\, Z\\}` are the usual
+    Pauli operators.
+
+    Args:
+        nqubits (int): number of qubits.
+        coupling_constant (float or int, optional): coupling constant :math:`J`.
+            Defaults to :math:`1`.
+        external_field_strengths (float or int or list or tuple, optional): list or tuple with the
+            external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
+            If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
+            Defaults to :math:`[1/2, \\, 0, \\, 0]`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Heisenberg :math:`\\mathrm{XXX}` Hamiltonian.
+    """
+    if not isinstance(coupling_constant, (float, int)):
+        raise_error(
+            TypeError,
+            "`coupling_constant` must be type float or int, "
+            + f"but it is type {type(coupling_constant)}.",
+        )
+
+    return Heisenberg(
+        nqubits,
+        coupling_constants=coupling_constant,
+        external_field_strengths=external_field_strengths,
+        dense=dense,
+        backend=backend,
+    )
+
+
+def XXZ(
+    nqubits: int,
+    delta: Union[float, int] = 0.5,
+    dense: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Heisenberg :math:`\\mathrm{XXZ}` model with periodic boundary conditions.
+
+    .. math::
+        H = \\sum _{k=0}^N \\, \\left( X_{k} \\, X_{k + 1} + Y_{k} \\, Y_{k + 1}
+            + \\delta Z_{k} \\, Z_{k + 1} \\right) \\, .
+
+    Example:
+        .. testcode::
+
+            from qibo.hamiltonians import XXZ
+            h = XXZ(3) # initialized XXZ model with 3 qubits
+
+    Args:
+        nqubits (int): number of qubits.
+        delta (float or int, optional): coefficient for the :math:`Z` component.
+            Defaults to :math:`0.5`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Heisenberg :math:`\\mathrm{XXZ}` Hamiltonian.
+    """
+    if nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
+
+    return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
+
+
+def X(
+    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Non-interacting Pauli-:math:`X` Hamiltonian.
+
+    .. math::
+        H = - \\sum _{k=0}^N \\, X_{k} \\, .
+
+    Args:
+        nqubits (int): number of qubits.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+    """
+    return _OneBodyPauli(nqubits, symbols.X, dense, backend=backend)
+
+
+def Y(
+    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Non-interacting Pauli-:math:`Y` Hamiltonian.
+
+    .. math::
+        H = - \\sum _{k=0}^{N} \\, Y_{k} \\, .
+
+    Args:
+        nqubits (int): number of qubits.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+    """
+    return _OneBodyPauli(nqubits, symbols.Y, dense, backend=backend)
+
+
+def Z(
+    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Non-interacting Pauli-:math:`Z` Hamiltonian.
+
+    .. math::
+        H = - \\sum _{k=0}^{N} \\, Z_{k} \\, .
+
+    Args:
+        nqubits (int): number of qubits.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+    """
+    return _OneBodyPauli(nqubits, symbols.Z, dense, backend=backend)
+
+
+def _build_spin_model(
+    nqubits: int, matrix: ArrayLike, condition: Callable, backend: Backend
+) -> ArrayLike:
+    """Helper method for building nearest-neighbor spin model Hamiltonians."""
+    h = sum(
+        reduce(
+            backend.kron,
+            (
+                matrix if condition(qubit_i, qubit_j) else backend.matrices.I()
+                for qubit_j in range(nqubits)
+            ),
+        )
+        for qubit_i in range(nqubits)
+    )
+    return h
+
+
+def _gpp_dense(
+    adjacency_matrix: ArrayLike,
+    penalty_coeff: ArrayLike,
+    node_weights: ArrayLike,
+    backend: Backend,
+) -> Hamiltonian:
+    def term(nqubits, ind_1, ind_2=None):
+        diag = [id_diag] * nqubits
+        diag[ind_1] = term_diag
+        if ind_2 is not None:
+            diag[ind_2] = term_diag
+        diag = _multikron(diag, backend)
+
+        return diag
+
+    nqubits = len(adjacency_matrix)
+
+    id_diag = backend.cast([1, 1])
+    term_diag = backend.cast([0, 1])
+
+    hamiltonian = 0
+    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
+    for ind_j, ind_k in zip(columns, rows):
+        ind_j, ind_k = int(ind_j), int(ind_k)
+
+        diag = term(nqubits, ind_j)
+        diag += term(nqubits, ind_k)
+        diag -= 2 * term(nqubits, ind_j, ind_k)
+
+        hamiltonian += diag
+
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem, weight in enumerate(node_weights):
+            penalty += weight * (term(nqubits, elem) - 1 / 2)
+
+        hamiltonian += penalty_coeff * (penalty**2)
+
+    return Hamiltonian(nqubits, backend.diag(hamiltonian), backend=backend)
+
+
+def _gpp_symbolic(
+    adjacency_matrix: ArrayLike,
+    penalty_coeff: float | int,
+    node_weights: ArrayLike,
+    backend: Backend,
+) -> SymbolicHamiltonian:
+    def term(index: int):
+        return (
+            symbols.I(index, backend=backend) - symbols.Z(index, backend=backend)
+        ) / 2
+
+    hamiltonian = 0
+    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
+    for ind_j, ind_k in zip(columns, rows):
+        ind_j, ind_k = int(ind_j), int(ind_k)
+        x_j = term(ind_j)
+        x_k = term(ind_k)
+        hamiltonian += float(adjacency_matrix[ind_j, ind_k]) * (
+            x_j + x_k - 2 * x_j * x_k
+        )
+
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem, weight in enumerate(node_weights):
+            penalty += float(weight) * (
+                term(elem) - symbols.I(elem, backend=backend) / 2
+            )
+
+        hamiltonian += penalty_coeff * (penalty**2)
+
+    return SymbolicHamiltonian(hamiltonian, backend=backend)
+
+
+def _multikron(matrix_list: List[ArrayLike], backend: Backend) -> ArrayLike:
+    """Calculates Kronecker product of a list of matrices.
+
+    Args:
+        matrix_list (list): List of matrices as ``ndarray``.
+
+    Returns:
+        ndarray: Kronecker product of all matrices in ``matrix_list``.
+    """
+    return reduce(backend.kron, matrix_list)
+
+
+def _OneBodyPauli(
+    nqubits: int,
+    operator: Callable,
+    dense: bool = True,
+    backend: Optional[Backend] = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Helper method for constructing non-interacting
+    :math:`X`, :math:`Y`, and :math:`Z` Hamiltonians."""
+    backend = _check_backend(backend)
+    if dense:
+        condition = lambda i, j: i == j % nqubits
+        ham = -_build_spin_model(
+            nqubits, operator(0, backend=backend).matrix, condition, backend
+        )
+        return Hamiltonian(nqubits, ham, backend=backend)
+
+    form = sum([-1 * operator(qubit, backend=backend) for qubit in range(nqubits)])
+    ham = SymbolicHamiltonian(form=form, backend=backend)
+    return ham
