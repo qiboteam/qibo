@@ -17,6 +17,7 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _angle_mod_two_pi,
     _binary_encoder_hopf,
     _binary_encoder_hyperspherical,
+    _binary_encoder_mottonen,
     _ehrlich_algorithm,
     _generate_rbs_angles,
     _generate_rbs_pairs,
@@ -57,17 +58,18 @@ def binary_encoder(
     where :math:`b_{j} \\in \\{0, \\, 1\\}^{\\otimes \\, n}` is the :math:`n`-bit representation
     of the integer :math:`j`, :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
 
-    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``hopf`` coordinates
-    in the :math:`(2^{n} - 1)`-unit sphere.
+    Resulting circuit parametrizes ``data`` in ``hyperspherical``, ``hopf``, or ``mottonen``
+    coordinates.
 
     Args:
         nqubits (int, optional): total number of qubits in the system.
         parametrization (str): choice of state parametrization in the :math:`(2^{n} - 1)`-unit
-            sphere. Either ``hyperspherical`` or ``hopf``. If ``data is None``, then circuit
-            returned parametrizes real-valued quantum states. To return circuits that parametrize
-            complex-valued states, options are ``hyperspherical-complex`` and ``hopf-complex``.
-            If ``data is not None``, then data type is inferred from ``data`` and the suffix
-            ``-complex`` does not need to be added. Defaults to ``hyperspherical``.
+            sphere. Either ``hyperspherical``, ``hopf``, or ``mottonen``. If ``data is None``,
+            then circuit returned parametrizes real-valued quantum states. To return circuits
+            that parametrize complex-valued states, options are ``hyperspherical-complex``,
+            ``hopf-complex``, and ``mottonen-complex``. If ``data is not None``, then data type
+            is inferred from ``data`` and the suffix ``-complex`` does not need to be added.
+            Defaults to ``hyperspherical``.
         data (ArrayLike, optional): :math:`1`-dimensional array of length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state. If ``None``,
             circuit is returned with all phases set to :math:`0.0`. Defaults to ``None``.
@@ -95,6 +97,10 @@ def binary_encoder(
         solution of the polyharmonic equation and polyspherical addition theorems*, `Symmetry,
         Integrability and Geometry: Methods and Applications 10.3842/sigma.2013.042 (2013)
         <https://arxiv.org/abs/1209.6047>`_.
+
+        4. M. Möttönen, J. J. Vartiainen, V. Bergholm, and M. M. Salomaa,
+        *Transformation of quantum states using uniformly controlled rotations*,
+        `arXiv:quant-ph/0407010 (2004) <https://arxiv.org/abs/quant-ph/0407010>`_.
     """
 
     backend = _check_backend(backend)
@@ -122,6 +128,11 @@ def binary_encoder(
             )
 
         return _binary_encoder_hopf(
+            data, nqubits, complex_data=complex_data, backend=backend, **kwargs
+        )
+
+    if parametrization in ("mottonen", "mottonen-complex"):
+        return _binary_encoder_mottonen(
             data, nqubits, complex_data=complex_data, backend=backend, **kwargs
         )
 
