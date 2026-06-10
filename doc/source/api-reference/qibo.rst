@@ -778,7 +778,7 @@ Controlled-NOT (CNOT)
     :member-order: bysource
 
 Controlled-Y (CY)
-"""""""""""""""""""""
+"""""""""""""""""
 
 .. autoclass:: qibo.gates.CY
     :members:
@@ -788,6 +788,13 @@ Controlled-phase (CZ)
 """""""""""""""""""""
 
 .. autoclass:: qibo.gates.CZ
+    :members:
+    :member-order: bysource
+
+Controlled-Hadamard (CH)
+""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CH
     :members:
     :member-order: bysource
 
@@ -1316,7 +1323,14 @@ Non-interacting Pauli-Z
     :members:
     :member-order: bysource
 
-Transverse field Ising model
+Ising model
+^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.Ising
+    :members:
+    :member-order: bysource
+
+Transverse-field Ising model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.TFIM

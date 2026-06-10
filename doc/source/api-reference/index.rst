@@ -1,6 +1,6 @@
 .. _Components:
 
-API reference
+API Reference
 =============
 
 In this section we present the main Qibo components and primitives included in

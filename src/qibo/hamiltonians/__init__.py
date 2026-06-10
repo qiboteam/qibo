@@ -11,6 +11,7 @@ from qibo.hamiltonians.models import (
     XXZ,
     FermiHubbard,
     Heisenberg,
+    Ising,
     MaxCut,
     X,
     Y,

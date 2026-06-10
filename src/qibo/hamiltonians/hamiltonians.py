@@ -302,26 +302,6 @@ class Hamiltonian(AbstractHamiltonian):
         return self.matrix @ other
 
 
-def _calculate_nqubits_from_form(form):
-    """Calculate number of qubits in the system described by the given
-    Hamiltonian formula
-    """
-    nqubits = 0
-    for symbol in form.free_symbols:
-        if isinstance(symbol, Symbol):
-            q = symbol.target_qubit
-        else:
-            raise_error(
-                RuntimeError,
-                f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, "
-                + f"you can define a custom symbol for {symbol} by subclassing "
-                + " ``qibo.symbols.Symbol``.",
-            )
-        if q > nqubits:  # pylint: disable=E0606
-            nqubits = q
-    return nqubits + 1
-
-
 class SymbolicHamiltonian(AbstractHamiltonian):
     """Hamiltonian based on a symbolic representation.
 
@@ -799,3 +779,23 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
         return circuit
+
+
+def _calculate_nqubits_from_form(form):
+    """Calculate number of qubits in the system described by the given
+    Hamiltonian formula
+    """
+    nqubits = 0
+    for symbol in form.free_symbols:
+        if isinstance(symbol, Symbol):
+            q = symbol.target_qubit
+        else:
+            raise_error(
+                RuntimeError,
+                f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, "
+                + f"you can define a custom symbol for {symbol} by subclassing "
+                + " ``qibo.symbols.Symbol``.",
+            )
+        if q > nqubits:  # pylint: disable=E0606
+            nqubits = q
+    return nqubits + 1
