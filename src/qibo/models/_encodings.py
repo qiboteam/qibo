@@ -236,94 +236,6 @@ def _binary_codewords_ehrlich(dims: int, backend: Optional[Backend] = None):
     # no final singleton: we've generated exactly d bitstrings (0..d-1)
 
 
-def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLike:
-    """Return Gray code of given rank as integer array."""
-    backend = _check_backend(backend)
-
-    code = backend.cast([0, 1], dtype=backend.int8)
-    for elem in range(1, rank):
-        code = backend.concatenate([code, code[::-1] + 2**elem])
-
-    return code
-
-
-def _mottonen_compute_theta(
-    alpha: ArrayLike, backend: Optional[Backend] = None
-) -> ArrayLike:
-    """Map uniformly controlled rotation angles to Gray-code decomposition angles.
-
-    See Eq. (3) in Möttönen et al. (2004).
-    """
-    backend = _check_backend(backend)
-
-    alpha = backend.cast(alpha, dtype=backend.float64)
-    orig_shape = alpha.shape
-    nqubits = int(math.log2(orig_shape[-1]))
-    if nqubits == 0:
-        return alpha
-
-    broadcasted = len(orig_shape) > 1
-    new_shape = (orig_shape[0],) + (2,) * nqubits if broadcasted else (2,) * nqubits
-    theta = backend.reshape(alpha, new_shape)
-
-    hadamard = np.array([[1, 1], [1, -1]]) / 2
-    for i in range(broadcasted, nqubits + broadcasted):
-        theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
-
-    if nqubits > 1:
-        cnot = backend.reshape(backend.matrices.CNOT, (2, 2, 2, 2))
-        theta = backend.tensordot(
-            cnot, theta, axes=[[2, 3], [nqubits - 1, nqubits - 2]]
-        )
-        for i in range(broadcasted + 1, nqubits + broadcasted - 1):
-            theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, nqubits - 1]])
-        theta = backend.moveaxis(theta, 0, 1)
-
-    return backend.reshape(backend.transpose(theta), orig_shape)
-
-
-def _mottonen_alpha_y(
-    amplitudes: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
-) -> ArrayLike:
-    """Rotation angles for uniformly controlled Y rotation on qubit k.
-
-    See Eq. (8) in Möttönen et al. (2004).
-    ``amplitudes`` must be non-negative (absolute values of state amplitudes).
-    """
-    backend = _check_backend(backend)
-
-    indices_numerator = (backend.arange(1, 2 ** (n - k + 1) + 1, 2) * 2 ** (k - 1))[
-        :, None
-    ] + backend.arange(2 ** (k - 1))[None]
-
-    numerator = backend.sum(amplitudes[indices_numerator] ** 2, axis=-1)
-
-    indices_denominator = (backend.arange(2 ** (n - k)) * 2**k)[
-        :, None
-    ] + backend.arange(2**k)[None]
-
-    denominator = backend.sum(amplitudes[indices_denominator] ** 2, axis=-1)
-
-    division = backend.where(denominator != 0.0, numerator / denominator, 0.0)
-
-    return 2 * backend.arcsin(backend.sqrt(division))
-
-
-def _mottonen_alpha_z(
-    phases: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
-) -> ArrayLike:
-    """Rotation angles for uniformly controlled Z rotation on qubit k."""
-    backend = _check_backend(backend)
-
-    indices_1 = backend.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (k - 1)
-    indices_1 = indices_1 + backend.arange(2 ** (k - 1))[None]
-
-    indices_2 = backend.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (k - 1)
-    indices_2 = indices_2 + backend.arange(2 ** (k - 1))[None]
-
-    return backend.sum((phases[indices_1] - phases[indices_2]) / 2 ** (k - 1), axis=-1)
-
-
 def _binary_encoder_mottonen(
     data: ArrayLike,
     nqubits: int,
@@ -1258,6 +1170,94 @@ def _monotonic_hw_encoder_real(
         circuit.add([gates.X(ac) for ac in actrls])
 
     return circuit
+
+
+def _mottonen_alpha_y(
+    amplitudes: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+) -> ArrayLike:
+    """Rotation angles for uniformly controlled Y rotation on qubit k.
+
+    See Eq. (8) in Möttönen et al. (2004).
+    ``amplitudes`` must be non-negative (absolute values of state amplitudes).
+    """
+    backend = _check_backend(backend)
+
+    indices_numerator = (backend.arange(1, 2 ** (n - k + 1) + 1, 2) * 2 ** (k - 1))[
+        :, None
+    ] + backend.arange(2 ** (k - 1))[None]
+
+    numerator = backend.sum(amplitudes[indices_numerator] ** 2, axis=-1)
+
+    indices_denominator = (backend.arange(2 ** (n - k)) * 2**k)[
+        :, None
+    ] + backend.arange(2**k)[None]
+
+    denominator = backend.sum(amplitudes[indices_denominator] ** 2, axis=-1)
+
+    division = backend.where(denominator != 0.0, numerator / denominator, 0.0)
+
+    return 2 * backend.arcsin(backend.sqrt(division))
+
+
+def _mottonen_alpha_z(
+    phases: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+) -> ArrayLike:
+    """Rotation angles for uniformly controlled Z rotation on qubit k."""
+    backend = _check_backend(backend)
+
+    indices_1 = backend.arange(1, 2 ** (n - k + 1) + 1, 2)[:, None] * 2 ** (k - 1)
+    indices_1 = indices_1 + backend.arange(2 ** (k - 1))[None]
+
+    indices_2 = backend.arange(0, 2 ** (n - k + 1), 2)[:, None] * 2 ** (k - 1)
+    indices_2 = indices_2 + backend.arange(2 ** (k - 1))[None]
+
+    return backend.sum((phases[indices_1] - phases[indices_2]) / 2 ** (k - 1), axis=-1)
+
+
+def _mottonen_compute_theta(
+    alpha: ArrayLike, backend: Optional[Backend] = None
+) -> ArrayLike:
+    """Map uniformly controlled rotation angles to Gray-code decomposition angles.
+
+    See Eq. (3) in Möttönen et al. (2004).
+    """
+    backend = _check_backend(backend)
+
+    alpha = backend.cast(alpha, dtype=backend.float64)
+    orig_shape = alpha.shape
+    nqubits = int(math.log2(orig_shape[-1]))
+    if nqubits == 0:
+        return alpha
+
+    broadcasted = len(orig_shape) > 1
+    new_shape = (orig_shape[0],) + (2,) * nqubits if broadcasted else (2,) * nqubits
+    theta = backend.reshape(alpha, new_shape)
+
+    hadamard = np.array([[1, 1], [1, -1]]) / 2
+    for i in range(broadcasted, nqubits + broadcasted):
+        theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
+
+    if nqubits > 1:
+        cnot = backend.reshape(backend.matrices.CNOT, (2, 2, 2, 2))
+        theta = backend.tensordot(
+            cnot, theta, axes=[[2, 3], [nqubits - 1, nqubits - 2]]
+        )
+        for i in range(broadcasted + 1, nqubits + broadcasted - 1):
+            theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, nqubits - 1]])
+        theta = backend.moveaxis(theta, 0, 1)
+
+    return backend.reshape(backend.transpose(theta), orig_shape)
+
+
+def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLike:
+    """Return Gray code of given rank as integer array."""
+    backend = _check_backend(backend)
+
+    code = backend.cast([0, 1], dtype=backend.int8)
+    for elem in range(1, rank):
+        code = backend.concatenate([code, code[::-1] + 2**elem])
+
+    return code
 
 
 def _next_nearest_layer(
