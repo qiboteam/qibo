@@ -2,6 +2,15 @@ import numpy as np
 
 from qibo.config import log, raise_error
 
+__all__ = [
+    "ParallelBFGS",
+    "QuantumNaturalGradient",
+    "cmaes",
+    "newtonian",
+    "optimize",
+    "sgd",
+]
+
 
 def optimize(
     loss,
@@ -443,3 +452,263 @@ class ParallelBFGS:  # pragma: no cover
     def jac(self, x):
         self.evaluate(x)
         return self.jacobian_value
+
+
+class QuantumNaturalGradient:
+    r"""Quantum Natural Gradient optimizer for parametrized circuits.
+
+    Implements the Quantum Natural Gradient update rule
+
+    .. math::
+
+        \theta_{t + 1} = \theta_t - \eta (F(\theta_t) + \lambda I)^+ \nabla L,
+
+    where :math:`F(\theta)` is the quantum Fisher information matrix (QFIM).
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Parametrized circuit to optimize.
+        loss_fn (Callable): Loss function. The first two arguments must be the circuit
+            and backend used for execution.
+        loss_kwargs (dict, optional): Additional keyword arguments for ``loss_fn``.
+        initial_parameters (ArrayLike, optional): Initial circuit parameters. If ``None``,
+            the parameters already stored in ``circuit`` are used.
+        gradient_fn (Callable, optional): Function returning the Euclidean gradient with
+            respect to the circuit parameters. The first two arguments must be the circuit
+            and backend. If ``None``, a central finite-difference gradient is used.
+        gradient_kwargs (dict, optional): Additional keyword arguments for
+            ``gradient_fn``.
+        learning_rate (float, optional): QNG step size. Defaults to ``0.01``.
+        regularization (float, optional): Non-negative diagonal regularization added to
+            the QFIM before solving the natural-gradient system. Defaults to ``1e-8``.
+        finite_difference_epsilon (float, optional): Shift used when ``gradient_fn`` is
+            not provided. Defaults to ``1e-6``.
+        qfim_kwargs (dict, optional): Additional keyword arguments passed to
+            :func:`qibo.quantum_info.quantum_fisher_information_matrix`, such as
+            ``initial_state`` or ``return_complex``.
+        callback (Callable, optional): Function called after every optimization step with
+            keyword arguments ``iter_num``, ``loss``, ``parameters``, and
+            ``natural_gradient``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Execution backend.
+            If ``None``, the current qibo backend is used.
+
+    References:
+        J. Stokes, J. Izaac, N. Killoran, and G. Carleo, *Quantum Natural Gradient*,
+        `Quantum 4, 269 (2020) <https://doi.org/10.22331/q-2020-05-25-269>`_.
+    """
+
+    def __init__(
+        self,
+        circuit,
+        loss_fn,
+        loss_kwargs=None,
+        initial_parameters=None,
+        gradient_fn=None,
+        gradient_kwargs=None,
+        learning_rate=0.01,
+        regularization=1e-8,
+        finite_difference_epsilon=1e-6,
+        qfim_kwargs=None,
+        callback=None,
+        backend=None,
+    ):
+        from qibo.backends import _check_backend
+        from qibo.models.circuit import Circuit
+
+        if not isinstance(circuit, Circuit):
+            raise_error(
+                TypeError,
+                "``circuit`` must be an instance of ``qibo.models.circuit.Circuit``.",
+            )
+        if not callable(loss_fn):
+            raise_error(TypeError, "``loss_fn`` must be callable.")
+        if gradient_fn is not None and not callable(gradient_fn):
+            raise_error(TypeError, "``gradient_fn`` must be callable or ``None``.")
+        if learning_rate <= 0:
+            raise_error(ValueError, "``learning_rate`` must be positive.")
+        if regularization < 0:
+            raise_error(ValueError, "``regularization`` must be non-negative.")
+        if finite_difference_epsilon <= 0:
+            raise_error(ValueError, "``finite_difference_epsilon`` must be positive.")
+
+        self.circuit = circuit
+        self.loss_fn = loss_fn
+        self.loss_kwargs = {} if loss_kwargs is None else loss_kwargs
+        self.gradient_fn = gradient_fn
+        self.gradient_kwargs = {} if gradient_kwargs is None else gradient_kwargs
+        self.learning_rate = learning_rate
+        self.regularization = regularization
+        self.finite_difference_epsilon = finite_difference_epsilon
+        self.qfim_kwargs = {} if qfim_kwargs is None else qfim_kwargs
+        self.callback = callback
+        self.backend = _check_backend(backend)
+
+        self.n_calls_loss = 0
+        self.n_calls_gradient = 0
+        self.n_calls_qfim = 0
+
+        if initial_parameters is not None:
+            self.circuit.set_parameters(self._as_flat_array(initial_parameters))
+
+        self.parameters = self.current_parameters()
+        if len(self.parameters) == 0:
+            raise_error(
+                ValueError,
+                "``QuantumNaturalGradient`` requires a parametrized circuit.",
+            )
+
+    def _as_flat_array(self, values):
+        if hasattr(self.backend, "to_numpy"):
+            values = self.backend.to_numpy(values)
+        return np.asarray(values, dtype=float).reshape(-1)
+
+    def _as_scalar(self, value):
+        if hasattr(self.backend, "to_numpy"):
+            value = self.backend.to_numpy(value)
+        return float(np.asarray(value).reshape(()))
+
+    def current_parameters(self):
+        """Return current circuit parameters as a flat NumPy array."""
+        return self._as_flat_array(
+            self.circuit.get_parameters(output_format="flatlist")
+        )
+
+    def loss(self, circuit=None, backend=None):
+        """Evaluate the loss and increment the loss-call counter."""
+        self.n_calls_loss += 1
+        if circuit is None:
+            circuit = self.circuit
+        if backend is None:
+            backend = self.backend
+        return self._as_scalar(self.loss_fn(circuit, backend, **self.loss_kwargs))
+
+    def metric_tensor(self):
+        """Calculate the QFIM for the current circuit parameters."""
+        from qibo.quantum_info import quantum_fisher_information_matrix
+
+        parameters = self.current_parameters()
+        qfim_parameters = self.backend.cast(parameters, dtype=self.backend.float64)
+        kwargs = dict(self.qfim_kwargs)
+        self.n_calls_qfim += 1
+        try:
+            metric = quantum_fisher_information_matrix(
+                self.circuit,
+                parameters=qfim_parameters,
+                backend=self.backend,
+                **kwargs,
+            )
+        except NotImplementedError as exc:
+            raise NotImplementedError(
+                "``QuantumNaturalGradient`` requires a qibo backend whose "
+                + "``quantum_fisher_information_matrix`` supports automatic "
+                + "differentiation, or a custom compatible backend. "
+                + f"Current backend platform is {self.backend.platform!r}."
+            ) from exc
+
+        metric = self._as_flat_matrix(metric)
+        if metric.shape != (len(parameters), len(parameters)):
+            raise_error(
+                ValueError,
+                "The QFIM shape must match the number of trainable parameters. "
+                + f"Expected {(len(parameters), len(parameters))}, got {metric.shape}.",
+            )
+        return metric
+
+    def _as_flat_matrix(self, values):
+        if hasattr(self.backend, "to_numpy"):
+            values = self.backend.to_numpy(values)
+        values = np.asarray(values, dtype=float)
+        if values.ndim != 2:
+            raise_error(ValueError, "The QFIM must be a two-dimensional matrix.")
+        return values
+
+    def gradient(self):
+        """Return the Euclidean gradient of the loss."""
+        self.n_calls_gradient += 1
+        if self.gradient_fn is not None:
+            gradient = self.gradient_fn(
+                self.circuit, self.backend, **self.gradient_kwargs
+            )
+            gradient = self._as_flat_array(gradient)
+        else:
+            gradient = self._finite_difference_gradient()
+
+        if len(gradient) != len(self.current_parameters()):
+            raise_error(
+                ValueError,
+                "The gradient length must match the number of trainable parameters. "
+                + f"Expected {len(self.current_parameters())}, got {len(gradient)}.",
+            )
+        return gradient
+
+    def _finite_difference_gradient(self):
+        params = self.current_parameters()
+        gradient = np.zeros_like(params, dtype=float)
+        epsilon = self.finite_difference_epsilon
+
+        for index in range(len(params)):
+            shifted = params.copy()
+            shifted[index] += epsilon
+            self.circuit.set_parameters(shifted)
+            loss_plus = self.loss()
+
+            shifted[index] -= 2 * epsilon
+            self.circuit.set_parameters(shifted)
+            loss_minus = self.loss()
+
+            gradient[index] = (loss_plus - loss_minus) / (2 * epsilon)
+
+        self.circuit.set_parameters(params)
+        return gradient
+
+    def natural_gradient(self):
+        """Solve the regularized QNG linear system."""
+        metric = self.metric_tensor()
+        gradient = self.gradient()
+        if self.regularization:
+            metric = metric + self.regularization * np.eye(len(gradient))
+
+        try:
+            return np.linalg.solve(metric, gradient)
+        except np.linalg.LinAlgError:
+            return np.linalg.pinv(metric) @ gradient
+
+    def run(self, steps=100):
+        """Run QNG optimization for ``steps`` iterations.
+
+        Args:
+            steps (int, optional): Number of optimization iterations. Defaults to ``100``.
+
+        Returns:
+            Tuple with final loss, loss history, and final parameters.
+        """
+        if steps < 0:
+            raise_error(ValueError, "``steps`` must be non-negative.")
+
+        losses = [self.loss()]
+        for iter_num in range(steps):
+            params = self.current_parameters()
+            natural_gradient = self.natural_gradient()
+            updated_parameters = params - self.learning_rate * natural_gradient
+            self.circuit.set_parameters(updated_parameters)
+
+            loss_value = self.loss()
+            losses.append(loss_value)
+
+            if self.callback is not None:
+                self.callback(
+                    iter_num=iter_num + 1,
+                    loss=loss_value,
+                    parameters=updated_parameters,
+                    natural_gradient=natural_gradient,
+                )
+
+        self.parameters = self.current_parameters()
+        return (
+            losses[-1],
+            self.backend.cast(losses, dtype=self.backend.float64),
+            self.backend.cast(self.parameters, dtype=self.backend.float64),
+        )
+
+    def __call__(self, steps=100):
+        """Run QNG optimization for ``steps`` iterations."""
+        return self.run(steps=steps)
