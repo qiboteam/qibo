@@ -691,6 +691,49 @@ Here is a simple example using a custom loss function:
     circuit.set_parameters(params)
 
 
+Quantum Natural Gradient optimization
+-------------------------------------
+
+For parametrized circuits, :class:`qibo.optimizers.QuantumNaturalGradient` implements
+the update rule from Stokes et al. using
+:func:`qibo.quantum_info.quantum_fisher_information_matrix` as the metric tensor.
+
+The optimizer expects a loss function whose first two arguments are the circuit and
+backend. A Euclidean gradient function can be supplied explicitly; otherwise a
+central finite-difference gradient is used. The QFIM calculation requires a backend
+that supports automatic differentiation (for example ``qiboml`` with PyTorch, TensorFlow,
+or JAX).
+
+.. code-block:: python
+
+    import numpy as np
+
+    from qibo import Circuit, gates
+    from qibo.optimizers import QuantumNaturalGradient
+
+    circuit = Circuit(2)
+    circuit.add(gates.RY(0, theta=1.0))
+    circuit.add(gates.RY(1, theta=1.0))
+
+    def loss_fn(circuit, backend):
+        params = np.asarray(circuit.get_parameters(output_format="flatlist"))
+        target = np.asarray([0.0, -1.0])
+        return float(np.sum((params - target) ** 2))
+
+    def gradient_fn(circuit, backend):
+        params = np.asarray(circuit.get_parameters(output_format="flatlist"))
+        target = np.asarray([0.0, -1.0])
+        return 2 * (params - target)
+
+    optimizer = QuantumNaturalGradient(
+        circuit,
+        loss_fn=loss_fn,
+        gradient_fn=gradient_fn,
+        learning_rate=0.1,
+    )
+    final_loss, losses, final_params = optimizer(steps=20)
+
+
 .. _qaoa-example:
 
 How to use the QAOA?
