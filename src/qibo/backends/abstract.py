@@ -211,38 +211,83 @@ class Backend:  # pylint: disable=R0904
 
     @property
     def complex64(self) -> DTypeLike:
+        """Complex number type composed of two single-precision floating-point numbers.
+
+        Returns:
+            DTypeLike: Single-precision complex data type.
+        """
         return self.engine.complex64
 
     @property
     def complex128(self) -> DTypeLike:
+        """Complex number type composed of two double-precision floating-point numbers.
+
+        Returns:
+            DTypeLike: Double-precision complex data type.
+        """
         return self.engine.complex128
 
     @property
     def float32(self) -> DTypeLike:
+        """Single-precision floating-point number type.
+
+        Returns:
+            DTypeLike: Single-precision data type.
+        """
         return self.engine.float32
 
     @property
     def float64(self) -> DTypeLike:
+        """Double-precision floating-point number type.
+
+        Returns:
+            DTypeLike: Double-precision data type.
+        """
         return self.engine.float64
 
     @property
     def int8(self) -> DTypeLike:
+        """:math:`8`-bit signed integer type.
+
+        Returns:
+            DTypeLike: Signed integer data type.
+        """
         return self.engine.int8
 
     @property
     def int16(self) -> DTypeLike:
+        """:math:`16`-bit signed integer type.
+
+        Returns:
+            DTypeLike: Signed integer data type.
+        """
         return self.engine.int16
 
     @property
     def int32(self) -> DTypeLike:
+        """:math:`32`-bit signed integer type.
+
+        Returns:
+            DTypeLike: Signed integer data type.
+        """
         return self.engine.int32
 
     @property
     def int64(self) -> DTypeLike:
+        """:math:`64`-bit signed integer type.
+
+        Returns:
+            DTypeLike: Signed integer data type.
+        """
         return self.engine.int64
 
     @property
     def uint8(self) -> DTypeLike:
+        """:math:`8`-bit unsigned integer type.
+
+        Returns:
+            DTypeLike: Unsigned integer data type.
+        """
         return self.engine.uint8
 
     ########################################################################################
