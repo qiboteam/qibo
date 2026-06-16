@@ -322,7 +322,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): array to be evaluated.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -338,7 +338,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             array_1 (ArrayLike): first array.
             array_2 (ArrayLike): second array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -363,7 +363,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): array to be evaluated.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -393,9 +393,9 @@ class Backend:  # pylint: disable=R0904
     def arange(self, *args: int, **kwargs) -> ArrayLike:
         """Return evenly spaced values within a given interval.
 
-        args (int): positional arguments for this fuction.
+        args (int): positional arguments for this function.
             For more details, see the corresponding engine's documentation.
-        kwargs (optional): additional options for this fuction.
+        kwargs (optional): additional options for this function.
             For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -408,7 +408,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): array to calculate ``arccos`` of.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -421,7 +421,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): array to calculate ``arcsin`` of.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -444,7 +444,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             array_1 (ArrayLike): array of :math:`y` elements.
             array_2 (ArrayLike): array of :math:`x` elements.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -461,7 +461,7 @@ class Backend:  # pylint: disable=R0904
             array (ArrayLike): _description_
             axis (Optional[int], optional): axis along which to sort. If ``None``,
                 the flattened ``array`` is used. Defaults to ``None``.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -475,7 +475,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             array_1 (ArrayLike): first array.
             array_2 (ArrayLike): second array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -488,7 +488,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -512,7 +512,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             arrays (ArrayLike): input arrays.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -525,7 +525,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -538,7 +538,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             arrays (Tuple[ArrayLike, ...]): tuple of arrays to be concatenated.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -575,7 +575,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -588,7 +588,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): array to calculate ``cos`` of.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -601,7 +601,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -614,7 +614,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -627,7 +627,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -651,9 +651,9 @@ class Backend:  # pylint: disable=R0904
         """Return a new array with sub-arrays along an axis deleted.
 
         Args:
-            args (int): positional arguments for this fuction.
+            args (int): positional arguments for this function.
                 For more details, see the corresponding engine's documentation.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -680,7 +680,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -694,7 +694,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             array_1 (ArrayLike): first array.
             array_2 (ArrayLike): second array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -707,7 +707,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -722,7 +722,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -739,7 +739,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input sparse array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -754,7 +754,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input sparse array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -767,7 +767,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input sparse array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -783,7 +783,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             subscripts (str): subscripts for summation.
             operands (ArrayLike): arrays for the operation.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -796,7 +796,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             shape (int or Tuple[int, ...]): shape of the new array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -809,7 +809,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -878,7 +878,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -897,7 +897,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             shape (int or Tuple[int, ...]): shape of the new array.
             fill_value (complex or float or int): fill value.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -910,7 +910,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             arrays (Tuple[ArrayLike, ...]): arrays to be stacked.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -930,7 +930,7 @@ class Backend:  # pylint: disable=R0904
             sparse (bool, optional): If ``False``, returns a dense matrix. If ``True``,
                 returns sparse matrix in the specified format (see engine's documentation).
                 Defaults to ``False``.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -973,7 +973,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -998,7 +998,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1023,7 +1023,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1037,7 +1037,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1052,7 +1052,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             array_1 (ArrayLike): first array.
             array_2 (ArrayLike): second array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1069,7 +1069,7 @@ class Backend:  # pylint: disable=R0904
             array (ArrayLike): input array.
             order (int or float or str, optional): Order of the norm. For the specific options,
                 we refer to the engine's official documentation. Defaults to ``"nuc"``.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1089,7 +1089,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1106,7 +1106,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             array_1 (ArrayLike): first array.
             array_2 (ArrayLike): second array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1119,7 +1119,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1134,7 +1134,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1151,7 +1151,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             array_1 (ArrayLike): first array.
             array_2 (ArrayLike): second array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1167,7 +1167,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             dividend (ArrayLike): dividend array.
             divisor (float or int or ArrayLike): divisir array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1182,9 +1182,9 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            args (int or Tuple[int, ...]): positional arguments for this fuction.
+            args (int or Tuple[int, ...]): positional arguments for this function.
                 For more details, see the corresponding engine's documentation.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1212,7 +1212,7 @@ class Backend:  # pylint: disable=R0904
             shape (int or Tuple[int, ...]): shape of the new array.
             dtype (DTypeLike, optional): data type of the resulting array. If ``None``,
                 defaults to the global data type of the ``Backend``. Defaults to ``None``.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1240,7 +1240,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1253,7 +1253,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
@@ -1298,6 +1298,8 @@ class Backend:  # pylint: disable=R0904
                 If ``None``, defaults to the uniform distribution. Defaults to ``None``.
             seed (int, optional): a seed to initialize the random number generator. If ``None``,
                 a random integer is chosen. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
 
         Returns:
             ArrayLike: The generated random sample(s).
@@ -1325,6 +1327,24 @@ class Backend:  # pylint: disable=R0904
         seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
+        """Generate random integers in the interval ``[low, high)`` over the uniform distribution.
+
+        Args:
+            low (int): lower integer in the interval (inclusive). If ``high`` is ``None``,
+                then ``high`` :math:`\\leftarrow` ``low``, and ``low`` defaults to :math:`0`.
+            high (Optional[int], optional): if not ``None``, then highest integer in the interval
+                (exclusive). If ``None``, then ``high`` :math:`\\leftarrow` ``low``, and ``low``
+                defaults to :math:`0`. Defaults to ``None``.
+            size (int or Tuple[int, ...], optional): output shape. If ``None``,
+                a single sample is returned. Defaults to ``None``.
+            seed (int, optional): a seed to initialize the random number generator. If ``None``,
+                a random integer is chosen. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The generated random sample(s).
+        """
         dtype = kwargs.get("dtype", self.int64)
 
         if high is None:
@@ -1349,6 +1369,21 @@ class Backend:  # pylint: disable=R0904
         seed: Optional[int] = None,
         dtype: Optional[DTypeLike] = None,
     ) -> ArrayLike:
+        """Generate random numbers from a normal (Gaussian) distribution.
+
+        Args:
+            mean (float or int): mean value of the Gaussian distribution.
+            stddev (float or int): standard deviation of the Gaussian distribution.
+            size (int or List[int] or Tuple[int, ...], optional): output shape. If ``None``,
+                a single sample is returned. Defaults to ``None``.
+            seed (int, optional): a seed to initialize the random number generator. If ``None``,
+                a random integer is chosen. Defaults to ``None``.
+            dtype (DTypeLike, optional): data type of the resulting array. If ``None``,
+                defaults to the global data type of the ``Backend``. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: The generated random sample(s).
+        """
         if dtype is None:
             dtype = self.float64
 
@@ -1365,8 +1400,24 @@ class Backend:  # pylint: disable=R0904
         return self.cast(self.engine.random.normal(mean, stddev, size), dtype=dtype)
 
     def random_sample(
-        self, size: int, seed: Optional[int] = None, **kwargs
+        self,
+        size: Union[int, List[int], Tuple[int, ...]],
+        seed: Optional[int] = None,
+        **kwargs,
     ) -> ArrayLike:
+        """Generate random numbers in the interval :math:`[0.0, \\, 1.0)``
+        over the uniform distribution.
+
+        Args:
+            size (int or List[int] or Tuple[int, ...], optional): output shape.
+            seed (int, optional): a seed to initialize the random number generator. If ``None``,
+                a random integer is chosen. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The generated random sample(s).
+        """
         dtype = kwargs.get("dtype", self.float64)
 
         if seed is not None:  # pragma: no cover
@@ -1384,6 +1435,23 @@ class Backend:  # pylint: disable=R0904
         seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
+        """Generate random numbers in the interval ``[low, high)`` over the uniform distribution.
+
+        Args:
+            low (float or int, optional):  lower integer in the interval (inclusive).
+                Defaults to :math:`0.0`.
+            high (float or int, optional): highest integer in the interval (exclusive).
+                Defaults to :math:`1.0`.
+            size (int or Tuple[int, ...], optional): output shape. If ``None``,
+                a single sample is returned. Defaults to ``None``.
+            seed (int, optional): a seed to initialize the random number generator. If ``None``,
+                a random integer is chosen. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The generated random sample(s).
+        """
         dtype = kwargs.get("dtype", self.float64)
 
         if size is None:  # pragma: no cover
@@ -1397,6 +1465,16 @@ class Backend:  # pylint: disable=R0904
         return self.cast(self.engine.random.uniform(low, high, size), dtype=dtype)
 
     def ravel(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return a contiguous flattened ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Contiguous, one-dimensional array with the flattened elements of ``array``.
+        """
         return self.engine.ravel(array, **kwargs)
 
     def repeat(
@@ -1405,19 +1483,67 @@ class Backend:  # pylint: disable=R0904
         repeats: Union[int, List[int], Tuple[int, ...]],
         axis: Optional[int] = None,
     ) -> ArrayLike:
+        """Return an array with the elements of ``array`` repeated ``repeats`` times.
+
+        Args:
+            array (ArrayLike): input array.
+            repeats (Union[int, List[int], Tuple[int, ...]]): the number of repetitions for each
+                element. ``repeats`` is broadcasted to fit the shape of the given axis.
+            axis (int, optional): axis along which to repeat values. If ``None``, use the flattened
+                input ``array``, and return a flat output array. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: Array with repeated elements of ``array``.
+        """
         return self.engine.repeat(array, repeats, axis)
 
     def reshape(
-        self, array: ArrayLike, shape: Union[Tuple[int, ...], List[int]], **kwargs
+        self, array: ArrayLike, shape: Union[int, Tuple[int, ...], List[int]], **kwargs
     ) -> ArrayLike:
+        """Return an ``array`` with new ``shape``.
+
+        Args:
+            array (ArrayLike): input array.
+            shape (int or Tuple[int, ...] or List[int]): the new shape. It should be compatible
+                with the original shape. If ``int``, the result will be an one-dimensional array
+                of that length.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The reshaped array.
+        """
         return self.engine.reshape(array, shape, **kwargs)
 
     def right_shift(self, *args, **kwargs) -> ArrayLike:
+        """Shift the bits of an integer to the right
+
+        Args:
+            args (int): positional arguments for this function.
+                For more details, see the corresponding engine's documentation.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The right-shifted array.
+        """
         return self.engine.right_shift(*args, **kwargs)
 
     def roll(
         self, array: ArrayLike, shift: Union[int, List[int], Tuple[int, ...]], **kwargs
-    ):  # pragma: no cover
+    ) -> ArrayLike:
+        """Roll ``array`` elements along a given axis by ``shift`` positions.
+
+        Args:
+            array (ArrayLike): input array.
+            shift (int or List[int] or Tuple[int, ...]): the number of places by which elements
+                are shifted.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The resulting array with rolled elements.
+        """
         return self.engine.roll(array, shift, **kwargs)
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
@@ -1439,7 +1565,7 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): array to calculate ``sine`` of.
-            kwargs (optional): additional options for this fuction.
+            kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
