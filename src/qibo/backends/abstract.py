@@ -906,11 +906,37 @@ class Backend:  # pylint: disable=R0904
         return self.engine.full(shape, fill_value, **kwargs)
 
     def hstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
+        """Stack ``arrays`` in sequence horizontally (column wise).
+
+        Args:
+            arrays (Tuple[ArrayLike, ...]): arrays to be stacked.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The array formed by stacking the given ``arrays``.
+        """
         return self.engine.hstack(arrays, **kwargs)
 
     def identity(
         self, dims: int, dtype: DTypeLike = None, sparse: bool = False, **kwargs
     ) -> ArrayLike:
+        """Return identity matrix of ``dims`` size and ``dtype`` data type.
+
+        Args:
+            dims (int): size of the identity matrix.
+            dtype (DTypeLike, optional): data type of the identity matrix. If ``None``,
+                defaults to the global data type of the ``Backend``. Defaults to ``None``.
+            sparse (bool, optional): If ``False``, returns a dense matrix. If ``True``,
+                returns sparse matrix in the specified format (see engine's documentation).
+                Defaults to ``False``.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: An array where all elements are equal to zero, except for the k-th diagonal,
+            whose values are equal to one.
+        """
         if dtype is None:
             dtype = self.dtype
 
@@ -921,107 +947,330 @@ class Backend:  # pylint: disable=R0904
         )
 
     def imag(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
+        """Return the element-wise imaginary part of a complex-valued ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            int or float or ArrayLike: The element-wise imaginary part of the complex ``array``.
+        """
         return self.engine.imag(array)
 
     def inv(self, array: ArrayLike) -> ArrayLike:
+        """Calculate the inverse of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: Array containing the inverse of ``array``.
+        """
         return self.engine.linalg.inv(array)
 
     def isnan(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Test element-wise for NaN and return result as a boolean array.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: ``True`` elements where ``array`` is ``nan``, ``False`` otherwise.
+        """
         return self.engine.isnan(array, **kwargs)
 
     def kron(self, array_1: ArrayLike, array_2: ArrayLike) -> ArrayLike:
+        """Kronecker product of two arrays.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+
+        Returns:
+            ArrayLike: The resulting array.
+        """
         return self.engine.kron(array_1, array_2)
 
     def log(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the element-wise natural logarithm of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or complex or ArrayLike: Array with the element-wise natural logarithm
+            of the elements in `array``.
+        """
         return self.engine.log(array, **kwargs)
 
     def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Compute the matrix logarithm of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The resulting matrix logarithm.
+        """
         raise_error(NotImplementedError)
 
     def log2(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the element-wise base-:math:`2` logarithm of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or complex or ArrayLike: Array with the element-wise base-:math:`2` logarithm
+            of the elements in `array``.
+        """
         return self.engine.log2(array, **kwargs)
 
     def log10(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Calculate the element-wise base-:math:`10` logarithm of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or complex or ArrayLike: Array with the element-wise base-:math:`10` logarithm
+            of the elements in `array``.
+        """
         return self.engine.log10(array, **kwargs)
 
     def matmul(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the matrix product of two arrays.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The matrix product of the inputs.
+        """
         return self.engine.matmul(array_1, array_2, **kwargs)
 
     def matrix_norm(
-        self, state: ArrayLike, order: Union[int, float, str] = "nuc", **kwargs
+        self, array: ArrayLike, order: Union[int, float, str] = "nuc", **kwargs
     ) -> Union[float, ArrayLike]:
-        """Calculate norm of a :math:`2`-dimensional array.
+        """Calculate norm of a two-dimensional array.
 
-        Default is the ``nuclear`` norm.
-        If ``order="nuc"``, it returns the nuclear norm of ``state``,
-        assuming ``state`` is Hermitian (also known as trace norm).
-        For specifications on the other  possible values of the
-        parameter ``order`` for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm
-        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        Args:
+            array (ArrayLike): input array.
+            order (int or float or str, optional): Order of the norm. For the specific options,
+                we refer to the engine's official documentation. Defaults to ``"nuc"``.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or ArrayLike: Norm of the matrix.
         """
         dtype = kwargs.get("dtype", None)
 
         if dtype is None:
             dtype = self.dtype
 
-        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
+        array = self.cast(array, dtype=dtype)  # pylint: disable=E1111
 
-        return self.engine.linalg.norm(state, order, **kwargs)
+        return self.engine.linalg.norm(array, order, **kwargs)
 
-    def max(
-        self, array: ArrayLike, **kwargs
-    ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
+    def max(self, array: ArrayLike, **kwargs) -> Union[float, int, complex, ArrayLike]:
+        """Return the maximum value of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or int or complex or ArrayLike: Maximum of ``array``, possibly along
+            an axis or axes.
+        """
         return self.engine.max(array, **kwargs)
 
     def maximum(
         self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
     ) -> ArrayLike:  # pragma: no cover
+        """Return the element-wise maximum between two arrays.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The maximum between ``array_1`` and ``array_2``, element-wise.
+        """
         return self.engine.maximum(array_1, array_2, **kwargs)
 
     def mean(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
+        """Compute the arithmetic mean of ``array`` along the specified axis.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or complex or ArrayLike: A new array containing the mean values.
+        """
         return self.engine.mean(array, **kwargs)
 
     def min(
         self, array: ArrayLike, **kwargs
     ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
+        """Return the minimum value of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or int or complex or ArrayLike: Minimum of ``array``, possibly along
+            an axis or axes.
+        """
         return self.engine.min(array, **kwargs)
 
     def minimum(
         self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
     ) -> ArrayLike:  # pragma: no cover
+        """Return the element-wise minimum between two arrays.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The minimum between ``array_1`` and ``array_2``, element-wise.
+        """
         return self.engine.minimum(array_1, array_2, **kwargs)
 
     def mod(
         self, dividend: ArrayLike, divisor: Union[float, int, ArrayLike], **kwargs
     ) -> ArrayLike:  # pragma: no cover
+        """Return the element-wise remainder of division.
+
+        Args:
+            dividend (ArrayLike): dividend array.
+            divisor (float or int or ArrayLike): divisir array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The element-wise remainder of the quotient ``dividend / divisor``.
+        """
         return self.engine.mod(dividend, divisor, **kwargs)
 
-    def moveaxis(self, array: ArrayLike, *args, **kwargs):  # pragma: no cover
+    def moveaxis(
+        self, array: ArrayLike, *args: Union[int, Tuple[int, ...]], **kwargs
+    ) -> ArrayLike:
+        """Move axes of an ``array`` to new positions.
+
+        Args:
+            array (ArrayLike): input array.
+            args (int or Tuple[int, ...]): positional arguments for this fuction.
+                For more details, see the corresponding engine's documentation.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with moved axes.
+        """
         return self.engine.moveaxis(array, *args, **kwargs)
 
     def nonzero(self, array: ArrayLike) -> ArrayLike:
+        """Return the indices of the elements of ``array`` that are non-zero.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: Array with the indices of the non-zero elements of ``array``.
+        """
         return self.engine.nonzero(array)
 
     def ones(
         self, shape: Union[int, Tuple[int, ...]], dtype: Optional[DTypeLike] = None
     ) -> ArrayLike:
+        """Return a new array with a given ``shape`` filled with ones.
+
+        Args:
+            shape (int or Tuple[int, ...]): shape of the new array.
+            dtype (DTypeLike, optional): data type of the resulting array. If ``None``,
+                defaults to the global data type of the ``Backend``. Defaults to ``None``.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of ones with the given ``shape``.
+        """
         if dtype is None:
             dtype = self.dtype
+
         return self.engine.ones(shape, dtype=dtype)
 
     def outer(self, array_1: ArrayLike, array_2: ArrayLike) -> ArrayLike:
+        """Calculate the outer product of two arrays.
+
+        Args:
+            array_1 (ArrayLike): first array,
+            array_2 (ArrayLike): second array.
+
+        Returns:
+            ArrayLike: The resulting array.
+        """
         return self.engine.outer(array_1, array_2)
 
     def prod(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the product of array elements.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: New array with the product of elements of ``array``.
+        """
         return self.engine.prod(array, **kwargs)
 
     def qr(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ...]:
+        """Calculate the :math:`\\textrm{QR}` factorization of a two-dimensional ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            Tuple[ArrayLike, ...]: Tuple with, respectively, the orthogonal matrix
+            :math:`\\textrm{Q}` and the upper-triangular matrix :math:`\\textrm{R}`.
+        """
         return self.engine.linalg.qr(array, **kwargs)
 
     def real(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
+        """Return the element-wise real part of a complex-valued ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            int or float or ArrayLike: The element-wise real part of the complex ``array``.
+        """
         return self.engine.real(array)
 
     def random_choice(
@@ -1033,6 +1282,26 @@ class Backend:  # pylint: disable=R0904
         seed: Optional[int] = None,
         **kwargs,
     ) -> ArrayLike:
+        """Generate random sample(s) from a given one-dimensional ``array``
+        over the probability distribution ``p``.
+
+        Args:
+            array (ArrayLike): If a tensor, a random sample is generated from its elements.
+                If an ``int``, the random sample is generated as if it were
+                ``Backend.arange(array)``.
+            size (int or Tuple[int, ...], optional): output shape. If ``None``,
+                a single sample is returned. Defaults to ``None``.
+            replace (bool, optional): If ``True``, the values in ``array`` can be
+                sampled multiple times. If ``False``, values are only sampled once.
+                Defaults to ``True``.
+            p (ArrayLike, optional): probabilities associated with each entry in ``array``.
+                If ``None``, defaults to the uniform distribution. Defaults to ``None``.
+            seed (int, optional): a seed to initialize the random number generator. If ``None``,
+                a random integer is chosen. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: The generated random sample(s).
+        """
         dtype = kwargs.get("dtype", self.float64)
 
         if size is None:  # pragma: no cover
