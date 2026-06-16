@@ -97,18 +97,28 @@ class Backend:  # pylint: disable=R0904
         """Cast an object as the array type of the current backend.
 
         Args:
-            x: Object to cast to array.
-            dtype (str or type, optional): data type of ``x`` after casting.
+            array (ArrayLike): Object to cast to array.
+            dtype (str or type, optional): data type of ``array`` after casting.
                 Options are ``"complex128"``, ``"complex64"``, ``"float64"``,
                 or ``"float32"``. If ``None``, defaults to ``Backend.dtype``.
                 Defaults to ``None``.
             copy (bool, optional): If ``True`` a copy of the object is created in memory.
                 Defaults to ``False``.
+
+        Returns:
+            ArrayLike: ``array`` casted to ``dtype``, possibly copied in memory.
         """
         raise_error(NotImplementedError)
 
     def is_sparse(self, array: ArrayLike) -> bool:  # pragma: no cover
-        """Determine if a given array is a sparse tensor."""
+        """Determine if a given array is a sparse tensor.
+
+        Args:
+            array (ArrayLike): array to determine the sparsity of.
+
+        Returns:
+            bool: ``True`` if ``array`` is sparse, ``False`` otherwise.
+        """
         raise_error(NotImplementedError)
 
     def set_device(self, device: str) -> None:  # pragma: no cover
@@ -133,10 +143,10 @@ class Backend:  # pylint: disable=R0904
             List of gates that always admit a real-valued matrix representation:
             :class:`qibo.gates.I`, :class:`qibo.gates.X`, :class:`qibo.gates.Z`,
             :class:`qibo.gates.H`, :class:`qibo.gates.Align`, :class:`qibo.gates.RY`,
-            :class:`qibo.gates.CNOT`, :class:`qibo.gates.CZ`, :class:`qibo.gates.CRY`,
-            :class:`qibo.gates.SWAP`, :class:`qibo.gates.FSWAP`, :class:`qibo.gates.GIVENS`,
-            :class:`qibo.gates.RBS`, :class:`qibo.gates.TOFFOLI`, :class:`qibo.gates.CCZ`,
-            and :class:`qibo.gates.FanOut`.
+            :class:`qibo.gates.CNOT`, :class:`qibo.gates.CZ`, :class:`qibo.gates.CH`,
+            :class:`qibo.gates.CRY`, :class:`qibo.gates.SWAP`, :class:`qibo.gates.FSWAP`,
+            :class:`qibo.gates.GIVENS`, :class:`qibo.gates.RBS`, :class:`qibo.gates.TOFFOLI`,
+            :class:`qibo.gates.CCZ`, and :class:`qibo.gates.FanOut`.
 
         .. note::
             The following parametrized gates can have real-valued matrix representations
@@ -169,7 +179,11 @@ class Backend:  # pylint: disable=R0904
                 self.matrices = self.matrices.__class__(self.dtype)
 
     def set_seed(self, seed: Union[int, None]) -> None:
-        """Set the seed of the random number generator. Works in-place."""
+        """Set the seed of the random number generator. Works in-place.
+
+        Args:
+            seed (int or None): seed to be set. If ``None``, seed is random.
+        """
         self.engine.random.seed(seed)
 
     def set_threads(self, nthreads: int) -> None:  # pragma: no cover
@@ -181,7 +195,14 @@ class Backend:  # pylint: disable=R0904
         raise_error(NotImplementedError)
 
     def to_numpy(self, array: ArrayLike) -> ArrayLike:  # pragma: no cover
-        """Cast a given array to numpy."""
+        """Convert ``array`` to a ``numpy.ndarray``.
+
+        Args:
+            array (ArrayLike): array to be converted to ``numpy.ndarray``.
+
+        Returns:
+            ArrayLike: Original array converted to ``numpy.ndarray``.
+        """
         raise_error(NotImplementedError)
 
     ########################################################################################
