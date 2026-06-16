@@ -250,12 +250,20 @@ class Backend:  # pylint: disable=R0904
     ########################################################################################
 
     def abs(self, array: ArrayLike, **kwargs) -> Union[int, float, complex, ArrayLike]:
+        """Calculate the absolute value of ``array`` element-wise.
+
+        Args:
+            array (ArrayLike): array to calculate the absolute value of.
+
+        Returns:
+            int or float or complex or ArrayLike: Element-wise absolute value of ``array``.
+        """
         return self.engine.abs(array, **kwargs)
 
     def add_at(
         self, array_1: ArrayLike, indices: ArrayLike, array_2: ArrayLike
     ) -> None:
-        """Add ``array_2`` to ``array_1`` at specified ``indices`` in-place.
+        """Add ``array_2`` to ``array_1`` at specified ``indices``. Works in-place.
 
         Args:
             array_1 (ArrayLike): Output array to be modified.
@@ -265,43 +273,182 @@ class Backend:  # pylint: disable=R0904
         return self.engine.add.at(array_1, indices, array_2)
 
     def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
+        """Test whether all ``array`` elements evaluate to ``True``.
+
+        Args:
+            array (ArrayLike): array to be evaluated.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            bool or ArrayLike: If no axis is specified, returns ``True`` if all elements evaluate
+            to ``True``, ``False`` otherwise. If an axis is specified, returns element-wise ``True``
+            or ``False`` along the specified axis.
+        """
         return self.engine.all(array, **kwargs)
 
     def allclose(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> bool:
+        """Return ``True`` if two arrays are element-wise equal within a tolerance.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            bool: ``True`` if both arrays are close within the set tolerance in all elements,
+            ``False`` otherwise.
+        """
         return self.engine.allclose(array_1, array_2, **kwargs)
 
     def angle(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the element-wise angle(s) of the complex ``array``.
+
+        Args:
+            array (ArrayLike): array of complex numbers.
+
+        Returns:
+            ArrayLike: Array with the element-wise angles of the complex numbers in ``array``.
+        """
         return self.engine.angle(array, **kwargs)
 
     def any(self, array: ArrayLike, **kwargs) -> Union[ArrayLike, bool]:
+        """Test whether any of the ``array`` elements evaluate to ``True``.
+
+        Args:
+            array (ArrayLike): array to be evaluated.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            bool or ArrayLike: If no axis is specified, returns ``True`` if any element in ``array``
+            evaluate to ``True``, ``False`` otherwise. If an axis is specified, return
+            element-wise ``True`` or ``False`` along the specified axis.
+        """
         return self.engine.any(array, **kwargs)
 
     def append(
         self, array: ArrayLike, values: ArrayLike, axis: Optional[int] = None
     ) -> ArrayLike:
+        """Append ``values`` to the end of ``array`` along ``axis``.
+
+        Args:
+            array (ArrayLike): array to append values to.
+            values (ArrayLike): values to be appended to ``array``.
+            axis (int, optional): axis along which ``values`` are appended. If ``axis`` is ``None``,
+                both ``array`` and ``values`` are flattened before use. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: A copy of ``array`` with ``values`` appended to ``axis``.
+            Note that ``append`` does not occur in-place.
+        """
         return self.engine.append(array, values, axis)
 
-    def arange(self, *args, **kwargs) -> ArrayLike:
+    def arange(self, *args: int, **kwargs) -> ArrayLike:
+        """Return evenly spaced values within a given interval.
+
+        args (int): positional arguments for this fuction.
+            For more details, see the corresponding engine's documentation.
+        kwargs (optional): additional options for this fuction.
+            For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of evenly spaced values.
+        """
         return self.engine.arange(*args, **kwargs)
 
     def arccos(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the element-wise inverse cosine of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``arccos`` of.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise inverse cosine of elements in `array``.
+        """
         return self.engine.arccos(array, **kwargs)
 
     def arcsin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Calculate the element-wise inverse sine of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``arcsin`` of.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise inverse sine of elements in `array``.
+        """
         return self.engine.arcsin(array, **kwargs)
 
     def arctan2(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the element-wise principal argument of a complex number.
+
+        For a complex number :math:`x + i \\, y`, the :math:`\\textrm{arctan2}` function is defined
+        as
+
+        .. math::
+            \\textrm{arctan2}(y, \\, x) = \\textrm{arg}(x + i \\, y) =
+                \\textrm{Im}(\\log(x + i\\,y)) \\, ,
+
+        where :math:`\\textrm{Im}` indicates the imaginary part.
+
+        Args:
+            array_1 (ArrayLike): array of :math:`y` elements.
+            array_2 (ArrayLike): array of :math:`x` elements.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of angles in radians, in the range :math:`[-\\pi, \\, \\pi]`.
+        """
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
     def argsort(
         self, array: ArrayLike, axis: Optional[int] = None, **kwargs
     ) -> ArrayLike:
+        """Return the indices that would sort ``array``.
+
+        Args:
+            array (ArrayLike): _description_
+            axis (Optional[int], optional): axis along which to sort. If ``None``,
+                the flattened ``array`` is used. Defaults to ``None``.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: _description_
+        """
         return self.engine.argsort(array, axis, **kwargs)
 
     def array_equal(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> bool:
+        """Return ``True`` if two arrays have the same shape and elements, ``False`` otherwise.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            bool: ``True`` if the arrays are equal, ``False`` otherwise.
+        """
         return self.engine.array_equal(array_1, array_2, **kwargs)
 
     def ascontiguousarray(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return a contiguous array in memory.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Contiguous array of same shape and content as ``array``.
+        """
         return self.engine.ascontiguousarray(array, **kwargs)
 
     def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
