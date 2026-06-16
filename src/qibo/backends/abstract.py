@@ -636,67 +636,254 @@ class Backend:  # pylint: disable=R0904
         return self.engine.cumsum(array, **kwargs)
 
     def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
+        """Create a new random number Generator using the engine's default setting.
+
+        Args:
+            seed (int, optional): a seed to initialize the generator. If ``None``,
+            a random integer is chosen. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: The initialized random number generator.
+        """
         return self.engine.random.default_rng(seed)
 
     def delete(self, *args, **kwargs) -> ArrayLike:
+        """Return a new array with sub-arrays along an axis deleted.
+
+        Args:
+            args (int): positional arguments for this fuction.
+                For more details, see the corresponding engine's documentation.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: New array without the deleted elements.
+        """
         return self.engine.delete(*args, **kwargs)
 
     def det(self, array: ArrayLike) -> ArrayLike:
+        """Return the determinant of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike or float: Determinant of ``array``.
+        """
         return self.engine.linalg.det(array)
 
     def diag(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Extract or construct a diagonal array.
+
+        If ``array`` is one-dimensional, construct a two-dimensional array with ``array`` as its
+        diagonal. Otherwise, extract the diagonal elements of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The extracted or constructed diagonal array.
+        """
         return self.engine.diag(array, **kwargs)
 
     def dot(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
+        """Dot product of two arrays.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Dot product of ``array_1`` and ``array_2``.
+        """
         return self.engine.dot(array_1, array_2, **kwargs)
 
-    def eig(
-        self, array: ArrayLike, **kwargs
-    ) -> Tuple[ArrayLike, ArrayLike]:  # pragma: no cover
+    def eig(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+        """Compute the eigenvalues and right eigenvectors of a two-dimensional ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike]: Tuple with, respectively, array of eigenvalues and
+            array of column-stacked eigenvectors.
+        """
         return self.engine.linalg.eig(array, **kwargs)
 
     def eigh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+        """Compute the eigenvalues and right eigenvectors of a two-dimensional ``array``
+        that is assumed to be Hermitian.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike]: Tuple with, respectively, array of eigenvalues and
+            array of column-stacked eigenvectors.
+        """
         return self.engine.linalg.eigh(array, **kwargs)
 
     def eigsh(
         self, array: ArrayLike, **kwargs
     ) -> Tuple[ArrayLike, ArrayLike]:  # pragma: no cover
+        """Compute the eigenvalues and right eigenvectors of a two-dimensional sparse ``array``
+        that is assumed to be Hermitian.
+
+        Args:
+            array (ArrayLike): input sparse array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike]: Tuple with, respectively, array of eigenvalues and
+            array of column-stacked eigenvectors.
+        """
         raise_error(NotImplementedError)
 
     def eigvalsh(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Compute the eigenvalues of a two-dimensional sparse ``array`` that is assumed to be
+        Hermitian.
+
+        Args:
+            array (ArrayLike): input sparse array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of eigenvalues.
+        """
         return self.engine.linalg.eigvalsh(array, **kwargs)
 
     def eigvals(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Compute the eigenvalues of a two-dimensional ``array``.
+
+        Args:
+            array (ArrayLike): input sparse array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of eigenvalues.
+        """
         return self.engine.linalg.eigvals(array, **kwargs)
 
     def einsum(
         self, subscripts: str, *operands: List[ArrayLike], **kwargs
     ) -> ArrayLike:
+        """Evaluate the Einstein summation convention on the ``operands``.
+
+        Args:
+            subscripts (str): subscripts for summation.
+            operands (ArrayLike): arrays for the operation.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the result of the Einstein summation.
+        """
         return self.engine.einsum(subscripts, *operands, **kwargs)
 
     def empty(self, shape: Union[int, Tuple[int, ...]], **kwargs) -> ArrayLike:
+        """Return a new array with a given ``shape`` without initializing entries.
+
+        Args:
+            shape (int or Tuple[int, ...]): shape of the new array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: New empty array.
+        """
         return self.engine.empty(shape, **kwargs)
 
     def exp(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
+        """Calculate the element-wise exponential of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or complex or ArrayLike: Array with the element-wise exponential
+            of the elements in `array``.
+        """
         return self.engine.exp(array, **kwargs)
 
     def expand_dims(
         self, array: ArrayLike, axis: Union[int, Tuple[int, ...]]
     ) -> ArrayLike:
+        """Expand the shape of an ``array`` along an ``axis``.
+
+        Insert a new ``axis`` that will appear at the ``axis`` position in the expanded
+        ``array`` shape.
+
+        Args:
+            array (ArrayLike): input array.
+            axis (int or Tuple[int, ...]): Position in the expanded axes where the new axis
+                (or axes) is placed.
+
+        Returns:
+            ArrayLike: Copy of ``array`` with expanded dimensions along ``axis``.
+        """
         return self.engine.expand_dims(array, axis)
 
     def expm(self, array: ArrayLike) -> ArrayLike:  # pragma: no cover
+        """Compute the matrix exponential of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The resulting matrix exponential.
+        """
         raise_error(NotImplementedError)
 
     def flatnonzero(self, array: ArrayLike) -> ArrayLike:
+        """Return indices that are non-zero in the flattened version of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: Indices of the nonzero elements of flattened ``array``.
+        """
         return self.engine.flatnonzero(array)
 
     def flip(
         self, array: ArrayLike, axis: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> ArrayLike:
+        """Reverse the order of elements in an ``array`` along the given ``axis``.
+
+        Args:
+            array (ArrayLike): input array.
+            axis (int or Tuple[int, ...], optional): axis or axes along which to flip over.
+                If ``None``, flip over all axes. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: The flipped array.
+        """
         return self.engine.flip(array, axis=axis)
 
-    def floor(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+    def floor(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the element-wise floor of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The floor of each element in ``array``.
+        """
         return self.engine.floor(array, **kwargs)
 
     def full(
@@ -705,6 +892,17 @@ class Backend:  # pylint: disable=R0904
         fill_value: Union[complex, float, int],
         **kwargs,
     ) -> ArrayLike:  # pragma: no cover
+        """Return a new array with a given ``shape`` filled with ``fill_value``.
+
+        Args:
+            shape (int or Tuple[int, ...]): shape of the new array.
+            fill_value (complex or float or int): fill value.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of ``fill_value`` with the given ``shape``.
+        """
         return self.engine.full(shape, fill_value, **kwargs)
 
     def hstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
