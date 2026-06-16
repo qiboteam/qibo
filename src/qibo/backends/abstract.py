@@ -452,36 +452,142 @@ class Backend:  # pylint: disable=R0904
         return self.engine.ascontiguousarray(array, **kwargs)
 
     def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
+        """Assemble an array from a nested list of blocks of ``arrays``.
+
+        Args:
+            arrays (ArrayLike): nested list of array-like containing blocks to the merged.
+
+        Returns:
+            ArrayLike: Array assembled from the given blocks.
+        """
         return self.engine.block(arrays)
 
     def block_diag(self, *arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
+        """Create a block diagonal array from provided ``arrays``.
+
+        Args:
+            arrays (ArrayLike): input arrays.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with ``arrays`` on the diagonal of the last two dimensions.
+        """
         raise_error(NotImplementedError)
 
     def ceil(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the element-wise ceiling of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The ceiling of each element in ``array``.
+        """
         return self.engine.ceil(array, **kwargs)
 
-    def concatenate(self, tup: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
-        return self.engine.concatenate(tup, **kwargs)
+    def concatenate(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
+        """Join a sequence of arrays along an existing axis.
+
+        Args:
+            arrays (Tuple[ArrayLike, ...]): tuple of arrays to be concatenated.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The concatenated array.
+        """
+        return self.engine.concatenate(arrays, **kwargs)
 
     def conj(self, array: ArrayLike) -> ArrayLike:
+        """Return the element-wise complex conjugate of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The complex conjugate of ``array``.
+        """
         return self.engine.conj(array)
 
     def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Return the sparse version of ``array`` in coordinate format.
+
+        Also known as the ``ijv`` or ``triplet`` format.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The coordinate-format version of ``array``.
+        """
         raise_error(NotImplementedError)
 
     def copy(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return a copy of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The copied array.
+        """
         return self.engine.copy(array, **kwargs)
 
     def cos(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Calculate the element-wise cosine of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``cos`` of.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise cosine of elements in `array``.
+        """
         return self.engine.cos(array, **kwargs)
 
     def count_nonzero(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Count the number of non-zero elements in ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Number of non-zero elements in ``array``.
+        """
         return self.engine.count_nonzero(array, **kwargs)
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Return the sparse version of ``array`` in compressed sparse row format.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The compressed-sparse-row version of ``array``.
+        """
         raise_error(NotImplementedError)
 
     def cumsum(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Return the cumulative sum of the elements in ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: New array with the cumulative sum of ``array``.
+        """
         return self.engine.cumsum(array, **kwargs)
 
     def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
@@ -817,6 +923,16 @@ class Backend:  # pylint: disable=R0904
         return self.engine.sign(array, **kwargs)
 
     def sin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Calculate the element-wise sine of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``sine`` of.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise sine of elements in `array``.
+        """
         return self.engine.sin(array, **kwargs)
 
     def sort(self, array: ArrayLike, **kwargs) -> ArrayLike:
