@@ -122,6 +122,18 @@ class NumpyBackend(Backend):
         return block_diag(*arrays)
 
     def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Return the sparse version of ``array`` in coordinate format.
+
+        Also known as the ``ijv`` or ``triplet`` format.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The coordinate-format version of ``array``.
+        """
         return coo_matrix(array, **kwargs)
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:

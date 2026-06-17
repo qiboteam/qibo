@@ -315,7 +315,7 @@ class Backend:  # pylint: disable=R0904
             indices (ArrayLike): Indices at which to add elements.
             array_2 (ArrayLike): Input array with elements to add.
         """
-        return self.engine.add.at(array_1, indices, array_2)
+        self.engine.add.at(array_1, indices, array_2)
 
     def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
         """Test whether all ``array`` elements evaluate to ``True``.
@@ -1012,6 +1012,8 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
 
         Returns:
             ArrayLike: The resulting matrix logarithm.
