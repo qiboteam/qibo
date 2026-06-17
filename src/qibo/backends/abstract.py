@@ -512,8 +512,6 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             arrays (ArrayLike): input arrays.
-            kwargs (optional): additional options for this function.
-                For more details, see the corresponding engine's documentation.
 
         Returns:
             ArrayLike: Array with ``arrays`` on the diagonal of the last two dimensions.
@@ -564,6 +562,8 @@ class Backend:  # pylint: disable=R0904
 
         Args:
             array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
 
         Returns:
             ArrayLike: The coordinate-format version of ``array``.
@@ -1260,17 +1260,6 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.linalg.qr(array, **kwargs)
 
-    def real(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
-        """Return the element-wise real part of a complex-valued ``array``.
-
-        Args:
-            array (ArrayLike): input array.
-
-        Returns:
-            int or float or ArrayLike: The element-wise real part of the complex ``array``.
-        """
-        return self.engine.real(array)
-
     def random_choice(
         self,
         array: ArrayLike,
@@ -1474,6 +1463,17 @@ class Backend:  # pylint: disable=R0904
             ArrayLike: Contiguous, one-dimensional array with the flattened elements of ``array``.
         """
         return self.engine.ravel(array, **kwargs)
+
+    def real(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
+        """Return the element-wise real part of a complex-valued ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            int or float or ArrayLike: The element-wise real part of the complex ``array``.
+        """
+        return self.engine.real(array)
 
     def repeat(
         self,
@@ -1843,6 +1843,8 @@ class Backend:  # pylint: disable=R0904
             array (ArrayLike): input array.
             order (int or float or str, optional): Order of the norm. For the specific options,
                 we refer to the engine's official documentation. Defaults to :math:`2`.
+            dtype (DTypeLike, optional): data type of the resulting array. If ``None``,
+                defaults to the global data type of the ``Backend``. Defaults to ``None``.\
             kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
