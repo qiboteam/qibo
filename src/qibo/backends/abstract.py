@@ -1212,8 +1212,6 @@ class Backend:  # pylint: disable=R0904
             shape (int or Tuple[int, ...]): shape of the new array.
             dtype (DTypeLike, optional): data type of the resulting array. If ``None``,
                 defaults to the global data type of the ``Backend``. Defaults to ``None``.
-            kwargs (optional): additional options for this function.
-                For more details, see the corresponding engine's documentation.
 
         Returns:
             ArrayLike: Array of ones with the given ``shape``.
@@ -1547,17 +1545,60 @@ class Backend:  # pylint: disable=R0904
         return self.engine.roll(array, shift, **kwargs)
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
+        """Return element-wise evenly round ``array`` to the given number of ``decimals``.
+
+        Args:
+            array (ArrayLike): input array.
+            decimals (int, optional): number of decimal places to round to. Defaults to :math:`0`.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The rounded array.
+        """
         return self.engine.round(array, decimals, **kwargs)
 
     def searchsorted(
         self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
     ) -> ArrayLike:
+        """Find indices where elements should be inserted to maintain order.
+
+        Find the indices into a sorted ``array_1`` such that, if the corresponding elements in
+        ``array_2`` were inserted before the indices, the order of a would be preserved.
+
+        Args:
+            array_1 (ArrayLike): sorted array.
+            array_2 (ArrayLike): second array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of insertion points with the same shape as ``array_2``,
+            or an integer if ``array_2`` is a scalar.
+        """
         return self.engine.searchsorted(array_1, array_2, **kwargs)
 
     def shuffle(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Modify an ``array`` or sequence by shuffling its contents. Works in-place.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+        """
         self.engine.random.shuffle(array, **kwargs)
 
     def sign(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Return an element-wise indication of the sign of a number.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The resulting array with signs of the elements in ``array``.
+        """
         return self.engine.sign(array, **kwargs)
 
     def sin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
@@ -1574,28 +1615,100 @@ class Backend:  # pylint: disable=R0904
         return self.engine.sin(array, **kwargs)
 
     def sort(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return a sorted copy of an array.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Sorted array of the same shape and data type as ``array``.
+        """
         return self.engine.sort(array, **kwargs)
 
     def sqrt(self, array: ArrayLike) -> ArrayLike:
+        """Return the element-wise non-negative square-root of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: Array containing the positive square-root of each element in ``array``.
+        """
         return self.engine.sqrt(array)
 
     def squeeze(
         self, array: ArrayLike, axis: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> ArrayLike:
+        """Remove axes of length one from ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            axis (int or Tuple[int, ...], optional): specific axis or axes to be squeezed.
+                Defaults to ``None``.
+
+        Returns:
+            ArrayLike: The input ``array``, but with all or a subset of the dimensions
+            of length :math:`1` removed.
+        """
         return self.engine.squeeze(array, axis)
 
     def std(self, array: ArrayLike, **kwargs) -> Union[float, ArrayLike]:
+        """Calculate the standard deviation of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or ArrayLike: A new array containing the standard deviation.
+        """
         return self.engine.std(array, **kwargs)
 
     def sum(
         self, array: ArrayLike, axis: Optional[int] = None, **kwargs
     ) -> Union[int, float, complex, ArrayLike]:
+        """Sum of ``array`` elements over a given ``axis``.
+
+        Args:
+            array (ArrayLike): input array.
+            axis (int, optional): axis or axes along which a sum is performed. If ``None``,
+                will sum all of the elements of the input ``array``. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            int or float or complex or ArrayLike: An array with the resulting sum
+            of elements of ``array``.
+        """
         return self.engine.sum(array, axis=axis, **kwargs)
 
     def swapaxes(self, array: ArrayLike, axis_1: int, axis_2: int) -> ArrayLike:
+        """Interchange two axes of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            axis_1 (int): first axis.
+            axis_2 (int): second axis.
+
+        Returns:
+            ArrayLike: The resulting array with two swapped axes.
+        """
         return self.engine.swapaxes(array, axis_1, axis_2)
 
     def tanh(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Calculate the element-wise hyperbolic tangent of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``tanh`` of.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise hyperbolic tangent of elements in `array``.
+        """
         return self.engine.tanh(array, **kwargs)
 
     def tensordot(
@@ -1604,78 +1717,204 @@ class Backend:  # pylint: disable=R0904
         array_2: ArrayLike,
         axes: Union[int, Tuple[int, ...]] = 2,
     ) -> ArrayLike:
+        """Calculate the tensor dot product of two arrays along two specified ``axes``.
+
+        Args:
+            array_1 (ArrayLike): first array.
+            array_2 (ArrayLike): second array.
+            axes (int or Tuple[int, ...], optional): axis or axes to compute the tensor dot over.
+                Defaults to :math:`2`.
+
+        Returns:
+            ArrayLike: The tensor dot product of the input.
+        """
         return self.engine.tensordot(array_1, array_2, axes=axes)
 
     def trace(self, array: ArrayLike) -> Union[int, float]:
+        """Return the sum along diagonals of the array.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            int or float: The sum along the diagonal.
+        """
         return self.engine.trace(array)
 
     def transpose(
         self, array: ArrayLike, axes: Union[Tuple[int, ...], List[int]] = None
     ) -> ArrayLike:
+        """Return an ``array`` with ``axes`` transposed.
+
+        Args:
+            array (ArrayLike): input array.
+            axes (Tuple[int, ...] or List[int], optional): axes to be transposed.
+                Defaults to ``None``.
+
+        Returns:
+            ArrayLike: The resulting transposed array.
+        """
         return self.engine.transpose(array, axes)
 
     def tril(self, array: ArrayLike, offset: int = 0) -> ArrayLike:
+        """Return the lower triangle of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            offset (int, optional): diagonal above which to zero elements. Defaults to :math:`0`.
+
+        Returns:
+            ArrayLike: Lower triangle of ``array``.
+        """
         return self.engine.tril(array, offset)
 
     def tril_indices(
         self, row: int, offset: int = 0, col: Optional[int] = None, **kwargs
-    ):
+    ) -> Tuple[ArrayLike, ArrayLike]:
+        """Return the indices for the lower-triangle of an ``(row, col)``-dimensional ``array``.
+
+        Args:
+            row (int): the row dimension of the arrays for which the returned indices will be valid.
+            offset (int, optional): diagonal offset (see :meth:`qibo.backends.Backend.tril`
+                for details). Defaults to :math:`0`.
+            col (int, optional): the column dimension of the arrays for which the returned arrays
+                will be valid. If ``None``, defaults to the same value as ``row``.
+                Defaults to ``None``.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike]: The row and column indices, respectively.
+        """
         if col is None:
             col = row
         return self.engine.tril_indices(row, offset, col, **kwargs)
 
     def triu(self, array: ArrayLike, offset: int = 0) -> ArrayLike:
+        """Return the upper triangle of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            offset (int, optional): diagonal below which to zero elements. Defaults to :math:`0`.
+
+        Returns:
+            ArrayLike: Upper triangle of ``array``.
+        """
         return self.engine.triu(array, offset)
 
     def unique(
         self, array: ArrayLike, **kwargs
     ) -> Union[ArrayLike, Tuple[ArrayLike, ArrayLike]]:
+        """Find the unique elements of an array.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike or Tuple[ArrayLike, ArrayLike]: The sorted unique values.
+        """
         return self.engine.unique(array, **kwargs)
 
     def var(
         self, array: ArrayLike, **kwargs
     ) -> Union[float, ArrayLike]:  # pragma: no cover
+        """Calculate the variance of ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or ArrayLike: A new array containing the variance.
+        """
         return self.engine.var(array, **kwargs)
 
     def vector_norm(
         self,
-        state: ArrayLike,
+        array: ArrayLike,
         order: Union[int, float, str] = 2,
         dtype: Optional[DTypeLike] = None,
         **kwargs,
     ) -> float:
-        """Calculate norm of an :math:`1`-dimensional array.
+        """Calculate norm of an one-dimensional ``array``.
 
-        For specifications on possible values of the parameter ``order``
-        for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm
-        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        Args:
+            array (ArrayLike): input array.
+            order (int or float or str, optional): Order of the norm. For the specific options,
+                we refer to the engine's official documentation. Defaults to :math:`2`.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            float or ArrayLike: Norm of the ``array``.
         """
         if dtype is None:
             dtype = self.dtype
 
-        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
+        array = self.cast(array, dtype=dtype)  # pylint: disable=E1111
 
-        return self.engine.linalg.norm(state, order, **kwargs)
+        return self.engine.linalg.norm(array, order, **kwargs)
 
     def vstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
+        """Stack ``arrays`` in sequence vertically (row wise).
+
+        Args:
+            arrays (Tuple[ArrayLike, ...]): arrays to be stacked.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The array formed by stacking the given ``arrays``.
+        """
         return self.engine.vstack(arrays, **kwargs)
 
     def where(self, *args, **kwargs) -> ArrayLike:
+        """Return elements chosen from two options depending on a condition.
+
+        Args:
+            args (int): positional arguments for this function.
+                For more details, see the corresponding engine's documentation.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: An array with elements from the first option where condition is ``True``,
+            and elements from the second option elsewhere.
+        """
         return self.engine.where(*args, **kwargs)
 
     def zeros(
         self, shape: Union[int, Tuple[int, ...]], dtype: Optional[DTypeLike] = None
     ) -> ArrayLike:
+        """Return a new array with a given ``shape`` filled with zeros.
+
+        Args:
+            shape (int or Tuple[int, ...]): shape of the new array.
+            dtype (DTypeLike, optional): data type of the resulting array. If ``None``,
+                defaults to the global data type of the ``Backend``. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: Array of zeros with the given ``shape``.
+        """
         if dtype is None:
             dtype = self.dtype
+
         return self.engine.zeros(shape, dtype=dtype)
 
     def zeros_like(
         self, array: ArrayLike, dtype: Optional[DTypeLike] = None, **kwargs
     ) -> ArrayLike:
+        """Return an array of zeros with the same shape and data type as a given ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+            dtype (DTypeLike, optional): overrides the data type of the result. If ``None``,
+                the data type of ``array`` is used. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: Array of zeros with the same shape as ``array``.
+        """
         return self.engine.zeros_like(array, dtype=dtype, **kwargs)
 
     ########################################################################################

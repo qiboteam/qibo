@@ -163,6 +163,14 @@ class NumpyBackend(Backend):
         return func(array)
 
     def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Compute the matrix logarithm of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The resulting matrix logarithm.
+        """
         return logm(array, **kwargs)
 
     ########################################################################################
