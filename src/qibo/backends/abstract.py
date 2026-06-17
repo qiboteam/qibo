@@ -2140,6 +2140,8 @@ class Backend:  # pylint: disable=R0904
         Args:
             nqubits (int): Number of qubits :math:`n`.
 
+        Returns:
+            ArrayLike: The maximally mixed quantum state.
         """
         if dtype is None:
             dtype = self.dtype
@@ -2243,13 +2245,13 @@ class Backend:  # pylint: disable=R0904
         """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
 
         Args:
-            nqubits (int): Number of qubits :math:`n`.
+            nqubits (int): number of qubits :math:`n`.
             density_matrix (bool, optional): If ``True``, returns the density matrix
                 :math:`\\ket{0}\\!\\bra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
                 :math:`\\ket{0}^{\\otimes \\, n}`. Defaults to ``False``.
 
         Returns:
-            ndarray: Array representation of the :math:`n`-qubit zero state.
+            ArrayLike: Array representation of the :math:`n`-qubit zero state.
         """
         if dtype is None:
             dtype = self.dtype
