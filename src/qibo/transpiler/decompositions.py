@@ -1085,7 +1085,9 @@ def _get_abc_matrices(u, backend: Optional[Backend] = None):
     beta, gamma, delta = _extract_euler_angles(u)
 
     A = gates.RZ(0, beta).matrix(backend) @ gates.RY(gamma / 2).matrix(backend)
-    B = gates.RY(0, -gamma / 2).matrix(backend) @ gates.RZ(0, -(delta + beta) / 2).matrix(backend)
+    B = gates.RY(0, -gamma / 2).matrix(backend) @ gates.RZ(
+        0, -(delta + beta) / 2
+    ).matrix(backend)
     C = gates.RZ(0, (delta - beta) / 2).matrix(backend)
     return A, B, C
 
