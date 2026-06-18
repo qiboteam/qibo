@@ -1157,7 +1157,7 @@ def _decompose_multi_controlled_su2(gate, backend: Optional[Backend] = None):
         return _real_controlled_su2_decomposition(
             target_qubit, controls, A, B, C, alpha
         )
-    else:
-        return _complex_controlled_su2_decomposition(
-            target_qubit, controls, A, B, C, alpha
-        )
+
+    return _complex_controlled_su2_decomposition(
+        target_qubit, controls, A, B, C, alpha
+    )
