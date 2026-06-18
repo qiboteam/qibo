@@ -1140,13 +1140,13 @@ def _decompose_multi_controlled_su2(gate, backend: Optional[Backend] = None):
     if hasattr(base_gate, "_matrix"):
         base_gate._matrix = None  # Force cache clear
 
-    u = np.array(base_gate.matrix(), dtype=complex)
+    u = base_gate.matrix(backend)
 
-    det = np.linalg.det(u)
-    alpha = np.angle(complex(det)) / 2.0
-    u_su2 = u / np.sqrt(complex(det))
+    det = backend.det(u)
+    alpha = backend.angle(det) / 2.0
+    u_su2 = u / backend.sqrt(det)
 
-    A, B, C = _get_abc_matrices(u_su2)
+    A, B, C = _get_abc_matrices(u_su2, backend=backend)
 
     # Lemma 2: Check if the SU(2) matrix has a real diagonal
     is_real_diagonal = np.isclose(np.imag(u_su2[0, 0]), 0.0) and np.isclose(
