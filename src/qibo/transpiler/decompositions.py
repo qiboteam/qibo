@@ -1149,8 +1149,8 @@ def _decompose_multi_controlled_su2(gate, backend: Optional[Backend] = None):
     A, B, C = _get_abc_matrices(u_su2, backend=backend)
 
     # Lemma 2: Check if the SU(2) matrix has a real diagonal
-    is_real_diagonal = np.isclose(np.imag(u_su2[0, 0]), 0.0) and np.isclose(
-        np.imag(u_su2[1, 1]), 0.0
+    is_real_diagonal = bool(
+        backend.allclose(backend.imag(u_su2[0, 0]), 0.0) and backend.allclose(backend.imag(u_su2[1, 1]), 0.0)
     )
 
     if is_real_diagonal:
