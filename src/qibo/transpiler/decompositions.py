@@ -1078,27 +1078,15 @@ def _extract_euler_angles(u):
     return beta, gamma, delta
 
 
-def _get_abc_matrices(u):
+def _get_abc_matrices(u, backend: Optional[Backend] = None):
     """Computes A, B, C unitary matrices for the exact SU(2) decomposition."""
+    backend = _check_backend(backend)
+
     beta, gamma, delta = _extract_euler_angles(u)
 
-    def Rz(theta):
-        return np.array(
-            [[np.exp(-1j * theta / 2), 0], [0, np.exp(1j * theta / 2)]], dtype=complex
-        )
-
-    def Ry(theta):
-        return np.array(
-            [
-                [np.cos(theta / 2), -np.sin(theta / 2)],
-                [np.sin(theta / 2), np.cos(theta / 2)],
-            ],
-            dtype=complex,
-        )
-
-    A = Rz(beta) @ Ry(gamma / 2)
-    B = Ry(-gamma / 2) @ Rz(-(delta + beta) / 2)
-    C = Rz((delta - beta) / 2)
+    A = gates.RZ(0, beta).matrix(backend) @ gates.RY(gamma / 2).matrix(backend)
+    B = gates.RY(0, -gamma / 2).matrix(backend) @ gates.RZ(0, -(delta + beta) / 2).matrix(backend)
+    C = gates.RZ(0, (delta - beta) / 2).matrix(backend)
     return A, B, C
 
 
