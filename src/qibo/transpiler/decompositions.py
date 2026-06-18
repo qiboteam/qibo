@@ -1124,7 +1124,7 @@ def _complex_controlled_su2_decomposition(target_qubit, controls, A, B, C, alpha
     return _build_abc_sequence(target_qubit, controls, A, B, C, alpha)
 
 
-def _decompose_multi_controlled_su2(gate):
+def _decompose_multi_controlled_su2(gate, backend: Optional[Backend] = None):
     """
     Decomposes an arbitrary multi-controlled 1-qubit gate into a sequence
     of single-qubit gates and MCX gates using the ABC strategy from Vale et al. 2023.
