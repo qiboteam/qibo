@@ -1049,8 +1049,11 @@ if pygridsynth:
         lambda gate: [gates.CNOT(0, qub) for qub in range(1, len(gate.qubits))],
     )
 import copy
+
 import numpy as np
+
 from qibo import gates
+
 
 def _extract_euler_angles(u):
     """Extracts Z-Y-Z Euler angles beta, gamma, delta from an SU(2) matrix."""
@@ -1058,7 +1061,7 @@ def _extract_euler_angles(u):
     # Ensure complex type for safe sqrt of negative determinants
     u = u / np.sqrt(complex(det))
     u00, u10 = u[0, 0], u[1, 0]
-    
+
     gamma = 2 * np.arccos(np.clip(np.abs(u00), 0.0, 1.0))
     if np.isclose(np.abs(u00), 1.0):
         beta = -2 * np.angle(u00)
@@ -1071,25 +1074,33 @@ def _extract_euler_angles(u):
         beta_minus_delta = 2 * np.angle(u10)
         beta = (beta_plus_delta + beta_minus_delta) / 2
         delta = (beta_plus_delta - beta_minus_delta) / 2
-        
+
     return beta, gamma, delta
+
 
 def _get_abc_matrices(u):
     """Computes A, B, C unitary matrices for the exact SU(2) decomposition."""
     beta, gamma, delta = _extract_euler_angles(u)
-    
+
     def Rz(theta):
-        return np.array([[np.exp(-1j * theta / 2), 0],
-                         [0, np.exp(1j * theta / 2)]], dtype=complex)
-    
+        return np.array(
+            [[np.exp(-1j * theta / 2), 0], [0, np.exp(1j * theta / 2)]], dtype=complex
+        )
+
     def Ry(theta):
-        return np.array([[np.cos(theta / 2), -np.sin(theta / 2)],
-                         [np.sin(theta / 2), np.cos(theta / 2)]], dtype=complex)
-    
+        return np.array(
+            [
+                [np.cos(theta / 2), -np.sin(theta / 2)],
+                [np.sin(theta / 2), np.cos(theta / 2)],
+            ],
+            dtype=complex,
+        )
+
     A = Rz(beta) @ Ry(gamma / 2)
     B = Ry(-gamma / 2) @ Rz(-(delta + beta) / 2)
     C = Rz((delta - beta) / 2)
     return A, B, C
+
 
 def _build_abc_sequence(target_qubit, controls, A, B, C, alpha):
     """Builds the linear unrolled multi-controlled sequence."""
@@ -1104,52 +1115,61 @@ def _build_abc_sequence(target_qubit, controls, A, B, C, alpha):
     seq.append(gates.X(target_qubit).controlled_by(*controls))
     # A on target
     seq.append(gates.Unitary(A, target_qubit))
-    
+
     # Apply phase correction if the original matrix was in U(2) instead of SU(2)
     if not np.isclose(alpha, 0.0):
         if len(controls) == 1:
             seq.append(gates.U1(controls[0], 2 * alpha))
         else:
             seq.append(gates.U1(controls[-1], 2 * alpha).controlled_by(*controls[:-1]))
-            
+
     return seq
+
 
 def _real_controlled_su2_decomposition(target_qubit, controls, A, B, C, alpha):
     """Implements Theorem 2 of Vale et al. (2023) for real-diagonal SU(2) gates."""
     return _build_abc_sequence(target_qubit, controls, A, B, C, alpha)
 
+
 def _complex_controlled_su2_decomposition(target_qubit, controls, A, B, C, alpha):
     """Implements Theorem 1 of Vale et al. (2023) for general complex SU(2) gates."""
     return _build_abc_sequence(target_qubit, controls, A, B, C, alpha)
 
+
 def _decompose_multi_controlled_su2(gate):
     """
-    Decomposes an arbitrary multi-controlled 1-qubit gate into a sequence 
+    Decomposes an arbitrary multi-controlled 1-qubit gate into a sequence
     of single-qubit gates and MCX gates using the ABC strategy from Vale et al. 2023.
     """
     backend = _check_backend(backend)
 
     target_qubit = gate.target_qubits[0]
     controls = gate.control_qubits
-    
+
     # Safely isolate the 2x2 base unitary matrix without modifying the user's AST
     base_gate = copy.copy(gate)
     base_gate.control_qubits = ()
     if hasattr(base_gate, "_matrix"):
         base_gate._matrix = None  # Force cache clear
-        
+
     u = np.array(base_gate.matrix(), dtype=complex)
-    
+
     det = np.linalg.det(u)
     alpha = np.angle(complex(det)) / 2.0
     u_su2 = u / np.sqrt(complex(det))
-    
+
     A, B, C = _get_abc_matrices(u_su2)
-    
+
     # Lemma 2: Check if the SU(2) matrix has a real diagonal
-    is_real_diagonal = np.isclose(np.imag(u_su2[0, 0]), 0.0) and np.isclose(np.imag(u_su2[1, 1]), 0.0)
-    
+    is_real_diagonal = np.isclose(np.imag(u_su2[0, 0]), 0.0) and np.isclose(
+        np.imag(u_su2[1, 1]), 0.0
+    )
+
     if is_real_diagonal:
-        return _real_controlled_su2_decomposition(target_qubit, controls, A, B, C, alpha)
+        return _real_controlled_su2_decomposition(
+            target_qubit, controls, A, B, C, alpha
+        )
     else:
-        return _complex_controlled_su2_decomposition(target_qubit, controls, A, B, C, alpha)
+        return _complex_controlled_su2_decomposition(
+            target_qubit, controls, A, B, C, alpha
+        )
