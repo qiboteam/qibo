@@ -288,3 +288,50 @@ def test_multi_controlled_su2_decomposition(backend, seed):
     assert (
         match
     ), "The decomposed multi-controlled SU(2) gate does not match the original unitary."
+
+@pytest.mark.parametrize("seed", [None, 42])
+def test_multi_controlled_su2_decomposition(backend, seed):
+    #Test that the decomposed multi-controlled SU(2) circuit matches the original unitary.
+    nqubits = 4
+    
+    # Create a random 1-qubit gate
+    u_matrix = random_unitary(2, seed=seed, backend=backend)
+    
+    # Ensure it's in SU(2) by removing global phase
+    det = backend.det(u_matrix)
+    u_su2 = u_matrix / backend.sqrt(det)
+    
+    # Original Circuit: 3-controlled SU(2 gate
+    c_orig = Circuit(nqubits)
+    c_orig.add(gates.Unitary(u_su2, 3).controlled_by(0, 1, 2))
+    
+    # Decomposed Circuit
+    c_decomp = c_orig.decompose() 
+    
+    # Assert unitaries match up to global phase
+    matrix_orig = c_orig.unitary(backend)
+    matrix_decomp = c_decomp.unitary(backend)
+    
+    # Remove global phase from both to compare them cleanly
+    norm_orig = np.power(
+        np.linalg.det(backend.to_numpy(matrix_orig)),
+        1 / float(matrix_orig.shape[0]),
+        dtype=complex,
+    )
+    norm_decomp = np.power(
+        np.linalg.det(backend.to_numpy(matrix_decomp)),
+        1 / float(matrix_decomp.shape[0]),
+        dtype=complex,
+    )
+    
+    u_orig_clean = matrix_orig / norm_orig
+    u_decomp_clean = matrix_decomp / norm_decomp
+    
+    # Check for phase equivalencies
+    match = False
+    for phase in [1, -1, 1j, -1j]:
+        if backend.allclose(phase * u_decomp_clean, u_orig_clean, atol=1e-6):
+            match = True
+            break
+            
+    assert match, "The decomposed multi-controlled SU(2) gate does not match the original unitary."
