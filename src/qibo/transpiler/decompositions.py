@@ -8,7 +8,8 @@ from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
 )
-
+from typing import Optional
+import copy
 
 class GateDecompositions:
     # Abstract data structure that holds decompositions of gates.
@@ -1055,55 +1056,10 @@ import numpy as np
 from qibo import gates
 
 
-def _extract_euler_angles(u):
-    """Extracts Z-Y-Z Euler angles beta, gamma, delta from an SU(2) matrix."""
-    det = np.linalg.det(u)
-    # Ensure complex type for safe sqrt of negative determinants
-    u = u / np.sqrt(complex(det))
-    u00, u10 = u[0, 0], u[1, 0]
-
-    gamma = 2 * np.arccos(np.clip(np.abs(u00), 0.0, 1.0))
-    if np.isclose(np.abs(u00), 1.0):
-        beta = -2 * np.angle(u00)
-        delta = 0.0
-    elif np.isclose(np.abs(u00), 0.0):
-        beta = 2 * np.angle(u10)
-        delta = 0.0
-    else:
-        beta_plus_delta = -2 * np.angle(u00)
-        beta_minus_delta = 2 * np.angle(u10)
-        beta = (beta_plus_delta + beta_minus_delta) / 2
-        delta = (beta_plus_delta - beta_minus_delta) / 2
-
-    return beta, gamma, delta
-
-
-def _get_abc_matrices(u):
-    """Computes A, B, C unitary matrices for the exact SU(2) decomposition."""
-    beta, gamma, delta = _extract_euler_angles(u)
-
-    def Rz(theta):
-        return np.array(
-            [[np.exp(-1j * theta / 2), 0], [0, np.exp(1j * theta / 2)]], dtype=complex
-        )
-
-    def Ry(theta):
-        return np.array(
-            [
-                [np.cos(theta / 2), -np.sin(theta / 2)],
-                [np.sin(theta / 2), np.cos(theta / 2)],
-            ],
-            dtype=complex,
-        )
-
-    A = Rz(beta) @ Ry(gamma / 2)
-    B = Ry(-gamma / 2) @ Rz(-(delta + beta) / 2)
-    C = Rz((delta - beta) / 2)
-    return A, B, C
 
 
 def _build_abc_sequence(target_qubit, controls, A, B, C, alpha):
-    """Builds the linear unrolled multi-controlled sequence."""
+    #Builds the linear unrolled multi-controlled sequence.
     seq = []
     # C on target
     seq.append(gates.Unitary(C, target_qubit))
@@ -1125,51 +1081,44 @@ def _build_abc_sequence(target_qubit, controls, A, B, C, alpha):
 
     return seq
 
-
-def _real_controlled_su2_decomposition(target_qubit, controls, A, B, C, alpha):
-    """Implements Theorem 2 of Vale et al. (2023) for real-diagonal SU(2) gates."""
-    return _build_abc_sequence(target_qubit, controls, A, B, C, alpha)
-
-
-def _complex_controlled_su2_decomposition(target_qubit, controls, A, B, C, alpha):
-    """Implements Theorem 1 of Vale et al. (2023) for general complex SU(2) gates."""
-    return _build_abc_sequence(target_qubit, controls, A, B, C, alpha)
-
-
-def _decompose_multi_controlled_su2(gate):
-    """
-    Decomposes an arbitrary multi-controlled 1-qubit gate into a sequence
-    of single-qubit gates and MCX gates using the ABC strategy from Vale et al. 2023.
-    """
+def _get_abc_matrices(u, backend: Optional[Backend] = None):
+    #Computes A, B, C unitary matrices for the exact SU(2) decomposition.
     backend = _check_backend(backend)
+    
+    # Use Qibo's native u3_decomposition
+    theta, phi, lam = u3_decomposition(u)
+    beta, gamma, delta = phi, theta, lam
+    
+    A = gates.RZ(0, beta).matrix(backend) @ gates.RY(0, gamma / 2).matrix(backend)
+    B = gates.RY(0, -gamma / 2).matrix(backend) @ gates.RZ(0, -(delta + beta) / 2).matrix(backend)
+    C = gates.RZ(0, (delta - beta) / 2).matrix(backend)
+    
+    return A, B, C
 
+def _decompose_multi_controlled_su2(gate, backend: Optional[Backend] = None):
+    
+    #Decomposes an arbitrary multi-controlled 1-qubit gate into a sequence of single-qubit gates and MCX gates using the ABC strategy from Vale et al. 2023.
+    backend = _check_backend(backend)
     target_qubit = gate.target_qubits[0]
     controls = gate.control_qubits
-
+    
     # Safely isolate the 2x2 base unitary matrix without modifying the user's AST
     base_gate = copy.copy(gate)
     base_gate.control_qubits = ()
     if hasattr(base_gate, "_matrix"):
         base_gate._matrix = None  # Force cache clear
-
-    u = np.array(base_gate.matrix(), dtype=complex)
-
-    det = np.linalg.det(u)
-    alpha = np.angle(complex(det)) / 2.0
-    u_su2 = u / np.sqrt(complex(det))
-
-    A, B, C = _get_abc_matrices(u_su2)
-
+        
+    u = base_gate.matrix(backend)
+    det = backend.det(u)
+    alpha = backend.angle(det) / 2.0
+    u_su2 = u / backend.sqrt(det)
+    
+    A, B, C = _get_abc_matrices(u_su2, backend=backend)
+    
     # Lemma 2: Check if the SU(2) matrix has a real diagonal
-    is_real_diagonal = np.isclose(np.imag(u_su2[0, 0]), 0.0) and np.isclose(
-        np.imag(u_su2[1, 1]), 0.0
+    is_real_diagonal = bool(
+        backend.allclose(backend.imag(u_su2[0, 0]), 0.0) and
+        backend.allclose(backend.imag(u_su2[1, 1]), 0.0)
     )
-
-    if is_real_diagonal:
-        return _real_controlled_su2_decomposition(
-            target_qubit, controls, A, B, C, alpha
-        )
-    else:
-        return _complex_controlled_su2_decomposition(
-            target_qubit, controls, A, B, C, alpha
-        )
+    
+    return _build_abc_sequence(target_qubit, controls, A, B, C, alpha)
