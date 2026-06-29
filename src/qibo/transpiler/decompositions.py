@@ -1,5 +1,7 @@
 import cmath
+import copy
 import math
+from typing import Optional
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
@@ -8,8 +10,7 @@ from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
 )
-from typing import Optional
-import copy
+
 
 class GateDecompositions:
     # Abstract data structure that holds decompositions of gates.
@@ -1056,10 +1057,8 @@ import numpy as np
 from qibo import gates
 
 
-
-
 def _build_abc_sequence(target_qubit, controls, A, B, C, alpha):
-    #Builds the linear unrolled multi-controlled sequence.
+    # Builds the linear unrolled multi-controlled sequence.
     seq = []
     # C on target
     seq.append(gates.Unitary(C, target_qubit))
@@ -1081,44 +1080,48 @@ def _build_abc_sequence(target_qubit, controls, A, B, C, alpha):
 
     return seq
 
+
 def _get_abc_matrices(u, backend: Optional[Backend] = None):
-    #Computes A, B, C unitary matrices for the exact SU(2) decomposition.
+    # Computes A, B, C unitary matrices for the exact SU(2) decomposition.
     backend = _check_backend(backend)
-    
+
     # Use Qibo's native u3_decomposition
     theta, phi, lam = u3_decomposition(u)
     beta, gamma, delta = phi, theta, lam
-    
+
     A = gates.RZ(0, beta).matrix(backend) @ gates.RY(0, gamma / 2).matrix(backend)
-    B = gates.RY(0, -gamma / 2).matrix(backend) @ gates.RZ(0, -(delta + beta) / 2).matrix(backend)
+    B = gates.RY(0, -gamma / 2).matrix(backend) @ gates.RZ(
+        0, -(delta + beta) / 2
+    ).matrix(backend)
     C = gates.RZ(0, (delta - beta) / 2).matrix(backend)
-    
+
     return A, B, C
 
+
 def _decompose_multi_controlled_su2(gate, backend: Optional[Backend] = None):
-    
-    #Decomposes an arbitrary multi-controlled 1-qubit gate into a sequence of single-qubit gates and MCX gates using the ABC strategy from Vale et al. 2023.
+
+    # Decomposes an arbitrary multi-controlled 1-qubit gate into a sequence of single-qubit gates and MCX gates using the ABC strategy from Vale et al. 2023.
     backend = _check_backend(backend)
     target_qubit = gate.target_qubits[0]
     controls = gate.control_qubits
-    
+
     # Safely isolate the 2x2 base unitary matrix without modifying the user's AST
     base_gate = copy.copy(gate)
     base_gate.control_qubits = ()
     if hasattr(base_gate, "_matrix"):
         base_gate._matrix = None  # Force cache clear
-        
+
     u = base_gate.matrix(backend)
     det = backend.det(u)
     alpha = backend.angle(det) / 2.0
     u_su2 = u / backend.sqrt(det)
-    
+
     A, B, C = _get_abc_matrices(u_su2, backend=backend)
-    
+
     # Lemma 2: Check if the SU(2) matrix has a real diagonal
     is_real_diagonal = bool(
-        backend.allclose(backend.imag(u_su2[0, 0]), 0.0) and
-        backend.allclose(backend.imag(u_su2[1, 1]), 0.0)
+        backend.allclose(backend.imag(u_su2[0, 0]), 0.0)
+        and backend.allclose(backend.imag(u_su2[1, 1]), 0.0)
     )
-    
+
     return _build_abc_sequence(target_qubit, controls, A, B, C, alpha)
