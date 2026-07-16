@@ -35,19 +35,23 @@ class NumpyBackend(Backend):
         self.tensor_types = (self.engine.ndarray,)
         self.versions[self.name] = self.engine.__version__
 
-    def set_device(self, device: str) -> None:
-        if device != "/CPU:0":
-            raise_error(
-                ValueError, f"Device {device} is not available for {self} backend."
-            )
-
-    def set_threads(self, nthreads: int) -> None:
-        if nthreads > 1:
-            raise_error(ValueError, "``numpy`` does not support more than one thread.")
-
     def cast(
         self, array: ArrayLike, dtype: Optional[DTypeLike] = None, copy: bool = False
     ) -> ArrayLike:
+        """Cast an object as the array type of the current backend.
+
+        Args:
+            array (ArrayLike): Object to cast to array.
+            dtype (str or type, optional): data type of ``array`` after casting.
+                Options are ``"complex128"``, ``"complex64"``, ``"float64"``,
+                or ``"float32"``. If ``None``, defaults to ``Backend.dtype``.
+                Defaults to ``None``.
+            copy (bool, optional): If ``True`` a copy of the object is created in memory.
+                Defaults to ``False``.
+
+        Returns:
+            ArrayLike: ``array`` casted to ``dtype``, possibly copied in memory.
+        """
         if dtype is None:
             dtype = self.dtype
 
@@ -60,10 +64,46 @@ class NumpyBackend(Backend):
         return self.engine.asarray(array, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, array: ArrayLike) -> bool:
-        """Determine if a given array is a sparse tensor."""
+        """Determine if a given array is a sparse tensor.
+
+        Args:
+            array (ArrayLike): array to determine the sparsity of.
+
+        Returns:
+            bool: ``True`` if ``array`` is sparse, ``False`` otherwise.
+        """
         return issparse(array)
 
+    def set_device(self, device: str) -> None:
+        """Set simulation device. Works in-place.
+
+        Args:
+            device (str): Device index, *e.g.* ``/CPU:0`` for CPU, or ``/GPU:1`` for
+                the second GPU in a multi-GPU environment.
+        """
+        if device != "/CPU:0":
+            raise_error(
+                ValueError, f"Device {device} is not available for {self} backend."
+            )
+
+    def set_threads(self, nthreads: int) -> None:
+        """Set number of threads for CPU backend simulations that accept it. Works in-place.
+
+        Args:
+            nthreads (int): Number of threads.
+        """
+        if nthreads > 1:
+            raise_error(ValueError, "``numpy`` does not support more than one thread.")
+
     def to_numpy(self, array: ArrayLike) -> ArrayLike:
+        """Convert ``array`` to a ``numpy.ndarray``.
+
+        Args:
+            array (ArrayLike): array to be converted to ``numpy.ndarray``.
+
+        Returns:
+            ArrayLike: Original array converted to ``numpy.ndarray``.
+        """
         return array.toarray() if self.is_sparse(array) else array
 
     ########################################################################################
@@ -71,22 +111,78 @@ class NumpyBackend(Backend):
     ########################################################################################
 
     def block_diag(self, *arrays: ArrayLike) -> ArrayLike:
+        """Create a block diagonal array from provided ``arrays``.
+
+        Args:
+            arrays (ArrayLike): input arrays.
+
+        Returns:
+            ArrayLike: Array with ``arrays`` on the diagonal of the last two dimensions.
+        """
         return block_diag(*arrays)
 
     def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        """Return the sparse version of ``array`` in coordinate format.
+
+        Also known as the ``ijv`` or ``triplet`` format.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The coordinate-format version of ``array``.
+        """
         return coo_matrix(array, **kwargs)
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the sparse version of ``array`` in compressed sparse row format.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The compressed-sparse-row version of ``array``.
+        """
         return csr_matrix(array, **kwargs)
 
     def eigsh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+        """Compute the eigenvalues and right eigenvectors of a two-dimensional sparse ``array``
+        that is assumed to be Hermitian.
+
+        Args:
+            array (ArrayLike): input sparse array.
+            kwargs (optional): additional options for this fuction.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike]: Tuple with, respectively, array of eigenvalues and
+            array of column-stacked eigenvectors.
+        """
         return eigsh(array, **kwargs)
 
     def expm(self, array: ArrayLike) -> ArrayLike:
+        """Compute the matrix exponential of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The resulting matrix exponential.
+        """
         func = expm_sparse if self.is_sparse(array) else expm
         return func(array)
 
     def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Compute the matrix logarithm of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: The resulting matrix logarithm.
+        """
         return logm(array, **kwargs)
 
     ########################################################################################

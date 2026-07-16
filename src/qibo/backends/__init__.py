@@ -181,6 +181,7 @@ class QiboMatrices:
         self.H = self.matrices.H
         self.CNOT = self.matrices.CNOT
         self.CZ = self.matrices.CZ
+        self.CH = self.matrices.CH
         self.SWAP = self.matrices.SWAP
         self.FSWAP = self.matrices.FSWAP
         self.TOFFOLI = self.matrices.TOFFOLI
