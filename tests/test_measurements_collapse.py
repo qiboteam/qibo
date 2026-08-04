@@ -26,6 +26,31 @@ def test_measurement_collapse(backend, nqubits, targets):
 
 
 @pytest.mark.parametrize(
+    "nqubits,targets",
+    [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])],
+)
+def test_measurement_collapse_density_matrix_state(backend, nqubits, targets):
+    """``Backend._collapse_density_matrix`` execution, as opposed to the
+    ``target_rho`` bookkeeping covered by ``test_measurement_collapse_density_matrix``
+    below (skipped). Regression test for the ``int(shot)`` call on the
+    1-element array returned by ``sample_shots``, which numpy >= 2.4 no
+    longer converts implicitly.
+    """
+    initial_state = random_density_matrix(2**nqubits, backend=backend)
+    circuit = Circuit(nqubits, density_matrix=True)
+    r = circuit.add(gates.M(*targets, collapse=True))
+    circuit.add(gates.M(*targets))
+    outcome = backend.execute_circuit(
+        circuit,
+        backend.cast(initial_state, dtype=initial_state.dtype, copy=True),
+        nshots=1,
+    )
+    samples = r.samples()[0]
+    backend.assert_allclose(samples, outcome.samples()[0])
+    backend.assert_allclose(backend.trace(outcome.state()), 1, atol=1e-6)
+
+
+@pytest.mark.parametrize(
     "nqubits,targets", [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])]
 )
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):

@@ -3263,7 +3263,8 @@ class Backend:  # pylint: disable=R0904
         state = self.reshape(state, 2 * nqubits * (2,))
         state = self.transpose(state, order)
         subshape = 2 * (2 ** len(qubits),) + 2 * (nqubits - len(qubits)) * (2,)
-        state = self.reshape(state, subshape)[int(shot), int(shot)]
+        shot = int(shot[0])
+        state = self.reshape(state, subshape)[shot, shot]
         dims = 2 ** (len(state.shape) // 2)
 
         if normalize:
@@ -3292,7 +3293,7 @@ class Backend:  # pylint: disable=R0904
         ]
         state = self.transpose(state, order)
         subshape = (2 ** len(qubits),) + (nqubits - len(qubits)) * (2,)
-        state = self.reshape(state, subshape)[int(shot)]
+        state = self.reshape(state, subshape)[int(shot[0])]
 
         if normalize:
             norm = self.sqrt(self.sum(self.abs(state) ** 2))
