@@ -261,7 +261,13 @@ class Gate:
                 if bool_value:
                     gate.is_controlled_by = True
                     gate.control_qubits += self.control_qubits
-            return decomposed
+            from qibo.transpiler.multi_controlled_su2 import (  # pylint: disable=C0415
+                expand_controlled_single_qubit_gates,
+            )
+
+            return expand_controlled_single_qubit_gates(
+                decomposed, *free, use_toffolis=use_toffolis, method=method, **kwargs
+            )
 
         return self._base_decompose(*free, use_toffolis=use_toffolis, method=method)
 
@@ -511,6 +517,19 @@ class Gate:
             gate in another gate set.
         """
         try:
+            if (
+                self.is_controlled_by
+                and len(self.target_qubits) == 1
+                and len(self.control_qubits) >= 2
+            ):
+                from qibo.transpiler.multi_controlled_su2 import (  # pylint: disable=C0415
+                    decompose_multi_controlled_single_qubit,
+                )
+
+                return decompose_multi_controlled_single_qubit(
+                    self, *free, use_toffolis=use_toffolis, method=method, **kwargs
+                )
+
             if method == "clifford_plus_t":
                 from qibo.transpiler.decompositions import (  # pylint: disable=C0415
                     clifford_plus_t,
