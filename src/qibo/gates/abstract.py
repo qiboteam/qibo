@@ -510,6 +510,15 @@ class Gate:
             List[:class:`qibo.gates.abstract.Gate`]: Synthesis of the original
             gate in another gate set.
         """
+        # Intercept multi-controlled 1-qubit gates (ignoring native MCX to prevent infinite recursion)
+        if (
+            self.is_controlled_by
+            and len(self.target_qubits) == 1
+            and self.__class__.__name__ != "X"
+        ):
+            from qibo.transpiler.decompositions import _decompose_multi_controlled_su2
+
+            return _decompose_multi_controlled_su2(self)
         try:
             if method == "clifford_plus_t":
                 from qibo.transpiler.decompositions import (  # pylint: disable=C0415
