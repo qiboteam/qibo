@@ -1,7 +1,7 @@
 """Submodule with entropy measures."""
 
 import math
-from typing import Union
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -12,24 +12,31 @@ from qibo.quantum_info.metrics import purity
 
 
 def shannon_entropy(prob_dist, base: float = 2, backend=None):
-    """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
+    """Calculate the Shannon entropy of a discrete random variable.
+
+
+    For a discrete random variable :math:`\\chi` that has values :math:`x` in the set
+    :math:`\\mathcal{X}` with probability distribution :math:`\\operatorname{p}(x)`,
+    the base-:math:`b` Shannon entropy is defined as
 
     .. math::
-        H(\\mathbf{p}) = - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
+        \\operatorname{H}_{b}(\\chi) = - \\sum_{x \\in \\mathcal{X}}
+            \\, \\operatorname{p}(x) \\, \\log_{b}(\\operatorname{p}(x)) \\, ,
 
     where :math:`d = \\text{dim}(\\mathcal{H})` is the dimension of the
-    Hilbert space :math:`\\mathcal{H}`, :math:`b` is the log base (default 2),
-    and :math:`0 \\log_{b}(0) \\equiv 0`.
+    Hilbert space :math:`\\mathcal{H}`, :math:`b` is the log base,
+    and :math:`0 \\log_{b}(0) \\equiv 0, \\,\\, \\forall \\, b`.
 
     Args:
-        prob_dist (ndarray or list): a probability array :math:`\\mathbf{p}`.
-        base (float): the base of the log. Defaults to  :math:`2`.
+        prob_dist (ndarray or list): probability array
+            :math:`\\{\\operatorname{p(x)}\\}_{x \\in \\mathcal{X}}`.
+        base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        float: Shannon entropy :math:`H(\\mathcal{p})`.
+        float: Shannon entropy :math:`\\operatorname{H}_{b}`.
     """
     backend = _check_backend(backend)
 
@@ -71,27 +78,34 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
 
 
 def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backend=None):
-    """Calculates the relative entropy between two discrete probability distributions.
+    """Calculate the (classical) relative entropy between two discrete random variables.
 
-    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
+    Given two random variables, :math:`\\chi` and :math:`\\upsilon`,
+    that admit values :math:`x` in the set :math:`\\mathcal{X}` with respective probabilities
+    :math:`\\operatorname{p}(x)` and :math:`\\operatorname{q}(x)`, then their base-:math:`b`
+    relative entropy is given by
 
     .. math::
-        D(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\sum_{x} \\, \\mathbf{p}(x) \\,
-            \\log\\left( \\frac{\\mathbf{p}(x)}{\\mathbf{q}(x)} \\right) \\, .
+        \\operatorname{D}_{b}(\\chi \\, \\| \\, \\upsilon) =
+            \\sum_{x \\in \\mathcal{X}} \\, \\operatorname{p}(x) \\,
+            \\log_{b}\\left( \\frac{\\operatorname{p}(x)}{\\operatorname{q}(x)} \\right) \\, .
 
     The classical relative entropy is also known as the
-    `Kullback-Leibler (KL) divergence <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
+    `Kullback-Leibler (KL) divergence
+    <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
-        base (float): the base of the log. Defaults to  :math:`2`.
+        prob_dist_p (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
+        prob_dist_q (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{q}(x)\\}_{x\\in\\mathcal{X}}`.
+        base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical relative entropy between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
+        float: Classical relative entropy :math:`\\operatorname{D}_{b}`.
     """
     backend = _check_backend(backend)
     prob_dist_p = backend.cast(prob_dist_p, dtype=backend.float64)
@@ -143,29 +157,35 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 def classical_mutual_information(
     prob_dist_joint, prob_dist_p, prob_dist_q, base: float = 2, backend=None
 ):
-    """Calculates the classical mutual information of two random variables.
+    """Calculate the (classical) mutual information between two random variables.
 
-    Given two random variables :math:`(X, \\, Y)`, their mutual information is given by
+    Let :math:`\\chi` and :math:`\\upsilon` be two discrete random variables that
+    have values :math:`x \\in \\mathcal{X}` and :math:`y \\in \\mathcal{Y}`, respectively.
+    Then, their base-:math:`b` mutual information is given by
 
     .. math::
-        I(X, \\, Y) \\equiv H(p(x)) + H(q(y)) - H(p(x, \\, y)) \\, ,
+        \\operatorname{I}_{b}(\\chi, \\, \\upsilon) = \\operatorname{H}_{b}(\\chi)
+            + \\operatorname{H}_{b}(\\upsilon)
+            - \\operatorname{H}_{b}(\\chi, \\, \\upsilon) \\, ,
 
-    where :math:`p(x, \\, y)` is the joint probability distribution of :math:`(X, Y)`,
-    :math:`p(x)` is the marginal probability distribution of :math:`X`,
-    :math:`q(y)` is the marginal probability distribution of :math:`Y`,
-    and :math:`H(\\cdot)` is the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+    where :math:`\\operatorname{H}_{b}(\\cdot)` is the :func:`qibo.quantum_info.shannon_entropy`,
+    and :math:`\\operatorname{H}_{b}(\\chi, \\, \\upsilon)` represents the joint Shannon entropy
+    of the two random variables.
 
     Args:
-        prob_dist_joint (ndarray): joint probability distribution :math:`p(x, \\, y)`.
-        prob_dist_p (ndarray): marginal probability distribution :math:`p(x)`.
-        prob_dist_q (ndarray): marginal probability distribution :math:`q(y)`.
-        base (float): the base of the log. Defaults to  :math:`2`.
+        prob_dist_joint (ndarray): joint discrete probability
+            :math:`\\{\\operatorname{p}(x, \\, y)\\}_{x\\in\\mathcal{X},y\\in\\mathcal{Y}}`.
+        prob_dist_p (ndarray): marginal discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
+        prob_dist_q (ndarray): marginal discrete probability
+            :math:`\\{\\operatorname{q}(y)\\}_{y\\in\\mathcal{Y}}`.
+        base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        float: Mutual information :math:`I(X, \\, Y)`.
+        float: Mutual information :math:`\\operatorname{I}_{b}`.
     """
     return (
         shannon_entropy(prob_dist_p, base, backend)
@@ -177,38 +197,43 @@ def classical_mutual_information(
 def classical_renyi_entropy(
     prob_dist, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculates the classical Rényi entropy :math:`H_{\\alpha}` of a discrete probability distribution.
+    """Calculate the (classical) Rényi entropy of a discrete random variable.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distribution
-    :math:`\\mathbf{p}`, the classical Rényi entropy is defined as
+    Let :math:`\\chi` be a discrete random variable that has values :math:`x`
+    in the set :math:`\\mathcal{X}` with probability :math:`\\operatorname{p}(x)`.
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`,
+    the (classical) base-:math:`b` Rényi entropy of :math:`\\chi` is defined as
 
     .. math::
-        H_{\\alpha}(\\mathbf{p}) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\sum_{x}
-            \\, \\mathbf{p}^{\\alpha}(x) \\right) \\, .
+        \\operatorname{H}_{\\alpha}^{\\text{re}}(\\chi) = \\frac{1}{1 - \\alpha} \\,
+            \\log_{b}\\left( \\sum_{x} \\, \\operatorname{p}^{\\alpha}(x) \\right) \\, ,
+
+    where :math:`\\|\\cdot\\|_{\\alpha}` is the vector :math:`\\alpha`-norm.
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the classical Rényi entropy
-    coincides with the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+    coincides with the :func:`qibo.quantum_info.shannon_entropy`.
 
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
-    reduced to :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
-    being the support of :math:`\\mathbf{p}`.
+    reduced to :math:`\\log_{b}\\left(|\\operatorname{p}|\\right)`, with :math:`|\\operatorname{p}|`
+    being the support of :math:`\\operatorname{p}`.
     This is known as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
     (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`-\\log(\\max_{x}(\\mathbf{p}(x)))`, which is called the
+    :math:`-\\log_{b}(\\max_{x}(\\operatorname{p}(x)))`, which is called the
     `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
 
     Args:
-        prob_dist (ndarray): discrete probability distribution.
+        prob_dist (ndarray): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
         alpha (float or int): order of the Rényi entropy.
-        base (float): the base of the log. Defaults to  :math:`2`.
+        base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical Rényi entropy :math:`H_{\\alpha}`.
+        float: Classical Rényi entropy :math:`\\operatorname{H}_{\\alpha}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
     prob_dist = backend.cast(prob_dist, dtype=backend.float64)
@@ -263,41 +288,48 @@ def classical_renyi_entropy(
 def classical_relative_renyi_entropy(
     prob_dist_p, prob_dist_q, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculates the classical relative Rényi entropy between two discrete probability distributions.
+    """Calculate the (classical) relative Rényi entropy between two discrete random variables.
 
     This function is also known as
     `Rényi divergence <https://en.wikipedia.org/wiki/R%C3%A9nyi_entropy#R%C3%A9nyi_divergence>`_.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distributions
-    :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, the classical relative Rényi entropy is defined as
+    Let :math:`\\chi` and :math:`\\upsilon` be two discrete random variables
+    that admit values :math:`x` in the set :math:`\\mathcal{X}` with respective probabilities
+    :math:`\\operatorname{p}(x)` and :math:`\\operatorname{q}(x)`.
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the (classical) relative
+    Rényi entropy is defined as
 
     .. math::
-        H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\frac{1}{\\alpha - 1} \\,
-            \\log\\left( \\sum_{x} \\, \\frac{\\mathbf{p}^{\\alpha}(x)}
-            {\\mathbf{q}^{\\alpha - 1}(x)} \\right) \\, .
+        \\operatorname{D}_{\\alpha,b}^{\\text{re}}(\\chi \\, \\| \\, \\upsilon) =
+            \\frac{1}{\\alpha - 1} \\, \\log_{b}\\left( \\sum_{x} \\,
+            \\frac{\\operatorname{p}^{\\alpha}(x)}{\\operatorname{q}^{\\alpha - 1}(x)} \\right)
+            \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the classical Rényi divergence
-    coincides with the :func:`qibo.quantum_info.entropies.classical_relative_entropy`.
+    coincides with the :func:`qibo.quantum_info.classical_relative_entropy`.
 
     Another special case is the limit :math:`\\alpha \\to 1/2`, where the function is
-    reduced to :math:`-2 \\log\\left(\\sum_{x} \\, \\sqrt{\\mathbf{p}(x) \\, \\mathbf{q}(x)} \\right)`.
-    The sum inside the :math:`\\log` is known as the
+    reduced to :math:`-2 \\log_{b}\\left(\\sum_{x\\in\\mathcal{X}} \\,
+    \\sqrt{\\operatorname{p}(x) \\, \\operatorname{q}(x)} \\right)`.
+    The sum inside the :math:`\\log_{b}` is known as the
     `Bhattacharyya coefficient <https://en.wikipedia.org/wiki/Bhattacharyya_distance>`_.
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`\\log(\\max_{x}(\\mathbf{p}(x) \\, \\mathbf{q}(x))`.
+    :math:`\\log_{b}\\,\\max_{x\\in\\mathcal{X}}\\,(\\operatorname{p}(x) \\, \\operatorname{q}(x))`.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
+        prob_dist_q (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{q}(x)\\}_{x\\in\\mathcal{X}}`.
         alpha (float or int): order of the Rényi entropy.
-        base (float): the base of the log. Defaults to  :math:`2`.
+        base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical relative Rényi entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
+        float: Classical relative Rényi entropy :math:`D_{\\alpha,b}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
     prob_dist_p = backend.cast(prob_dist_p, dtype=backend.float64)
@@ -364,25 +396,34 @@ def classical_relative_renyi_entropy(
 
 
 def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=None):
-    """Calculates the classical Tsallis entropy for a discrete probability distribution.
+    """Calculate the (classical) Tsallis entropy for a discrete random variable.
 
     This is defined as
 
     .. math::
-        S_{\\alpha}(\\mathbf{p}) = \\frac{1}{\\alpha - 1} \\,
-            \\left(1 - \\sum_{x} \\, \\mathbf{p}^{\\alpha}(x) \\right)
+        \\begin{align}
+        \\operatorname{H}_{\\alpha}^{\\text{ts}}(\\chi) &= -\\sum_{x\\in\\mathcal{X}} \\,
+            \\operatorname{p}^{\\alpha}(x) \\, \\ln_{\\alpha}\\left(\\operatorname{p}(x)\\right)
+            \\\\
+        &= \\frac{1}{\\alpha - 1} \\,\\left(1 - \\sum_{x} \\, \\operatorname{p}^{\\alpha}(x)
+            \\right) \\, ,
+        \\end{align}
+
+    where :math:`\\ln_{\\alpha}(x) \\equiv (x^{1-\\alpha} - 1) / (1 - \\alpha)`
+    is the so-called :math:`\\alpha`-logarithm.
 
     Args:
-        prob_dist (ndarray): discrete probability distribution.
+        prob_dist (ndarray): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
         alpha (float or int): entropic index.
-        base (float): the base of the log. Used when ``alpha=1.0``.
+        base (float): the base of the :math:`\\log`. Used when :math:`\\alpha = 1`.
             Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical Tsallis entropy :math:`S_{\\alpha}(\\mathbf{p})`.
+        float: Classical Tsallis entropy :math:`\\operatorname{H}_{\\alpha}^{\\text{ts}}`.
     """
     backend = _check_backend(backend)
 
@@ -432,7 +473,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
 def classical_relative_tsallis_entropy(
     prob_dist_p, prob_dist_q, alpha: float, base: float = 2, backend=None
 ):
-    """Calculate the classical relative Tsallis entropy between two discrete probability distributions.
+    """Calculate the (classical) relative Tsallis entropy between two discrete random variables.
 
     Given a discrete random variable :math:`\\chi` that has values :math:`x` in the set
     :math:`\\mathcal{X}` with probability :math:`\\mathrm{p}(x)` and a discrete random variable
@@ -444,21 +485,26 @@ def classical_relative_tsallis_entropy(
             \\mathrm{p}^{\\alpha}(x) \\, \\ln_{\\alpha}
             \\left( \\frac{\\mathrm{p}(x)}{\\mathrm{q}(x)} \\right) \\, ,
 
-    where :math:`\\ln_{\\alpha}(x) \\equiv \\frac{x^{1 - \\alpha} - 1}{1 - \\alpha}`
-    is the so-called :math:`\\alpha`-logarithm. When :math:`\\alpha = 1`, it reduces to
-    :class:`qibo.quantum_info.entropies.classical_relative_entropy`.
+    where :math:`\\ln_{\\alpha}(x) \\equiv (x^{1 - \\alpha} - 1) / (1 - \\alpha)`
+    is the so-called :math:`\\alpha`-logarithm.
+
+    When :math:`\\alpha = 1`, this funciton reduces to reduces to
+    :class:`qibo.quantum_info.classical_relative_entropy`.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}`.
+        prob_dist_q (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{q}(x)\\}`.
         alpha (float): entropic index.
-        base (float): the base of the log used when :math:`\\alpha = 1`. Defaults to :math:`2`.
+        base (float): the base of the :math:`\\log`. Used when :math:`\\alpha = 1`.
+            Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Tsallis relative entropy :math:`D_{\\alpha}^{\\text{ts}}`.
+        float: Classical Tsallis relative entropy :math:`D_{\\alpha}^{\\text{ts}}`.
     """
     if alpha == 1.0:
         return classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
@@ -485,23 +531,24 @@ def von_neumann_entropy(
 ):
     """Calculate the von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`.
 
-    It is given by
+    Given a quantum ``state`` :math:`\\rho`, the base-:math:`b` von Neumann entropy is
 
     .. math::
-        S(\\rho) = - \\text{tr}\\left(\\rho \\, \\log(\\rho)\\right)
+        S_{b}(\\rho) = -\\text{Tr}\\left(\\rho \\, \\log_{b}(\\rho)\\right) \\, .
 
     Args:
-        state (ndarray): statevector or density matrix.
-        base (float, optional): the base of the log. Defaults to :math:`2`.
-        return_spectrum: if ``True``, returns ``entropy`` and
-            :math:`-\\log_{\\textup{b}}(\\textup{eigenvalues})`, where :math:`b` is ``base``.
-            If ``False``, returns only ``entropy``. Default is ``False``.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
+        return_spectrum: if ``True``, returns :math:`S_{b}(\\rho)` and
+            :math:`-\\log_{b}(\\text{eigenvalues}(\\rho))`.
+            If ``False``, returns only :math:`S_{b}(\\rho)`.
+            Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
+        float: von Neumann entropy :math:`\\operatorname{S}_{b}`.
     """
     backend = _check_backend(backend)
 
@@ -547,26 +594,27 @@ def relative_von_neumann_entropy(
     base: float = 2,
     backend=None,
 ):
-    """Calculates the relative von Neumann entropy  between two quantum states.
+    """Calculate the relative von Neumann entropy  between two quantum states.
 
-    Also known as *quantum relative entropy*, :math:`S(\\rho \\, \\| \\, \\sigma)` is given by
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`, it is defined as
 
     .. math::
-        S(\\rho \\, \\| \\, \\sigma) = \\text{tr}\\left(\\rho \\, \\log(\\rho)\\right)
-            - \\text{tr}\\left(\\rho \\, \\log(\\sigma)\\right)
+        \\Delta_{b}(\\rho \\, \\| \\, \\sigma) = \\text{Tr}\\left(\\rho \\,
+            \\log_{b}(\\rho)\\right) - \\text{Tr}\\left(\\rho \\,
+            \\log_{b}(\\sigma)\\right)
 
-    where ``state`` :math:`\\rho` and ``target`` :math:`\\sigma` are two quantum states.
+    It is also known as the *quantum relative entropy*.
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
         target (ndarray): statevector or density matrix :math:`\\sigma`.
-        base (float, optional): the base of the log. Defaults to :math:`2`.
+        base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Relative von-Neumann entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
+        float: Relative von Neumann entropy :math:`\\Delta_{b}(\\rho \\, \\| \\, \\sigma)`.
     """
     backend = _check_backend(backend)
     state = backend.cast(state)
@@ -633,28 +681,37 @@ def relative_von_neumann_entropy(
     return backend.real(relative)
 
 
-def mutual_information(state, partition, base: float = 2, backend=None):
-    """Calculates the mutual information of a bipartite state.
+def mutual_information(
+    state,
+    partition: Union[List[int], Tuple[int, ...]],
+    base: float = 2,
+    backend=None,
+):
+    """Calculate the mutual information over two partitions of a quantum state.
 
-    Given a qubit ``partition`` :math:`A`, the mutual information
-    of state :math:`\\rho` is given by
+    Given a bipartite quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    its base-:math:`b` mutual information over those two partitions is given by
 
     .. math::
-        I(\\rho) \\equiv S(\\rho_{A}) + S(\\rho_{B}) - S(\\rho) \\, ,
+        \\mathcal{I}_{b}(\\rho) = \\operatorname{S}_{b}(\\rho_{A})
+            + \\operatorname{S}_{b}(\\rho_{B}) - \\operatorname{S}_{b}(\\rho) \\, ,
 
-    where :math:`B` is the remaining qubits that are not in partition :math:`A`,
-    and :math:`S(\\cdot)` is the :func:`qibo.quantum_info.von_neumann_entropy`.
+    where :math:`\\rho_{A} = \\text{Tr}_{B}(\\rho)` is the reduced density matrix of qubits
+    in partition :math:`A`, :math:`\\rho_{B} = \\text{Tr}_{A}(\\rho)` is the reduced density
+    matrix of qubits in partition :math:`B`, and :math:`\\operatorname{S}_{b}(\\cdot)`
+    is the base-:math:`b` :func:`qibo.quantum_info.von_neumann_entropy`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        partition (Union[List[int], Tuple[int]]): indices of qubits in partition :math:`A`.
-        base (float, optional): the base of the log. Defaults to :math:`2`.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        partition (list or tuple): indices of qubits in partition :math:`A`.
+            Partition :math:`B` is assumed to contain the remaining qubits.
+        base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Mutual information :math:`I(\\rho)` of ``state`` :math:`\\rho`.
+        float: Mutual information :math:`\\mathcal{I}_{b}`.
     """
     nqubits = math.log2(len(state))
 
@@ -674,37 +731,41 @@ def mutual_information(state, partition, base: float = 2, backend=None):
 
 
 def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
-    """Calculates the Rényi entropy :math:`H_{\\alpha}` of a quantum state :math:`\\rho`.
+    """Calculate the Rényi entropy of a quantum state.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy is defined as
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy
+    :math:`\\operatorname{H}_{\\alpha,b}`
+    is defined as
 
     .. math::
-        H_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\rho^{\\alpha} \\right) \\, .
+        \\operatorname{S}_{\\alpha,b}^{\\text{re}}(\\rho) = \\frac{1}{1 - \\alpha} \\,
+            \\log_{b}\\left(\\rho^{\\alpha} \\right) \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
-    coincides with the :func:`qibo.quantum_info.entropies.entropy`.
+    coincides with the :func:`qibo.quantum_info.von_neumann_entropy`.
 
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
-    reduced to :math:`\\log\\left(d\\right)`, with :math:`d = 2^{n}`
+    reduced to :math:`\\log_{b}\\left(d\\right)`, with :math:`d = 2^{n}`
     being the dimension of the Hilbert space in which ``state`` :math:`\\rho` lives in.
     This is known as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
     (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`-\\log(\\|\\rho\\|_{\\infty})`, with :math:`\\|\\cdot\\|_{\\infty}`
-    being the `spectral norm <https://en.wikipedia.org/wiki/Matrix_norm#Matrix_norms_induced_by_vector_p-norms>`_.
+    :math:`-\\log_{b}(\\|\\rho\\|_{\\infty})`, with :math:`\\|\\cdot\\|_{\\infty}`
+    being the `spectral norm
+    <https://en.wikipedia.org/wiki/Matrix_norm#Matrix_norms_induced_by_vector_p-norms>`_.
     This is known as the `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
         alpha (float or int): order of the Rényi entropy.
-        base (float): the base of the log. Defaults to  :math:`2`.
+        base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Rényi entropy :math:`H_{\\alpha}`.
+        float: Rényi entropy :math:`\\operatorname{S}_{\\alpha,b}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
 
@@ -749,21 +810,22 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
 def relative_renyi_entropy(
     state, target, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculates the relative Rényi entropy between two quantum states.
+    """Calculate the relative Rényi entropy between two quantum states.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and quantum states
-    :math:`\\rho` and :math:`\\sigma`, the relative Rényi entropy is defined as
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and two quantum states
+    :math:`\\rho` and :math:`\\sigma`, the base-:math:`b` relative Rényi entropy
+    is defined as
 
     .. math::
-        H_{\\alpha}(\\rho \\, \\| \\, \\sigma) = \\frac{1}{\\alpha - 1} \\,
-            \\log\\left( \\textup{tr}\\left( \\rho^{\\alpha} \\,
+        \\Delta_{\\alpha,b}^{\\text{re}}(\\rho \\, \\| \\, \\sigma) = \\frac{1}{\\alpha - 1}
+            \\, \\log_{b}\\left( \\text{Tr}\\left( \\rho^{\\alpha} \\,
             \\sigma^{1 - \\alpha} \\right) \\right) \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
-    coincides with the :func:`qibo.quantum_info.entropies.relative_von_neumann_entropy`.
+    coincides with the :func:`qibo.quantum_info.relative_von_neumann_entropy`.
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`-2 \\, \\log(\\|\\sqrt{\\rho} \\, \\sqrt{\\sigma}\\|_{1})`,
+    :math:`-2 \\, \\log_{b}(\\|\\sqrt{\\rho} \\, \\sqrt{\\sigma}\\|_{1})`,
     with :math:`\\|\\cdot\\|_{1}` being the
     `Schatten 1-norm <https://en.wikipedia.org/wiki/Matrix_norm#Schatten_norms>`_.
     This is known as the `min-relative entropy <https://arxiv.org/abs/1310.7178>`_.
@@ -778,13 +840,13 @@ def relative_renyi_entropy(
         state (ndarray): statevector or density matrix :math:`\\rho`.
         target (ndarray): statevector or density matrix :math:`\\sigma`.
         alpha (float or int): order of the Rényi entropy.
-        base (float): the base of the log. Defaults to  :math:`2`.
+        base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Relative Rényi entropy :math:`H_{\\alpha}(\\rho \\, \\| \\, \\sigma)`.
+        float: Relative Rényi entropy :math:`\\Delta_{\\alpha,,b}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
     state = backend.cast(state)
@@ -858,26 +920,26 @@ def relative_renyi_entropy(
 
 
 def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
-    """Calculates the Tsallis entropy of a quantum state.
+    """Calculate the Tsallis entropy of a quantum state.
 
     .. math::
-        S_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\,
-            \\left( \\text{tr}(\\rho^{\\alpha}) - 1 \\right)
+        \\operatorname{S}_{\\alpha}^{\\text{ts}}(\\rho) =
+            \\frac{\\text{Tr}(\\rho^{\\alpha}) - 1}{1 - \\alpha}
 
     When :math:`\\alpha = 1`, the functions defaults to
-    :func:`qibo.quantum_info.entropies.entropy`.
+    :func:`qibo.quantum_info.von_neumann_entropy`.
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
         alpha (float or int): entropic index.
-        base (float, optional): the base of the log. Used when ``alpha=1.0``.
+        base (float, optional): the base of the :math:`\\log`. Used when :math:`\\alpha = 1`.
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Tsallis entropy :math:`S_{\\alpha}(\\rho)`.
+        float: Tsallis entropy :math:`\\operatorname{S}_{\\alpha}^{\\text{ts}}`.
     """
     backend = _check_backend(backend)
 
@@ -927,16 +989,17 @@ def relative_tsallis_entropy(
 
     .. math::
         \\Delta_{\\alpha}^{\\text{ts}}(\\rho, \\, \\sigma) = \\frac{1 -
-            \\text{tr}\\left(\\rho^{\\alpha} \\, \\sigma^{1 - \\alpha}\\right)}{1 - \\alpha} \\, .
+            \\text{Tr}\\left(\\rho^{\\alpha} \\, \\sigma^{1 - \\alpha}\\right)}{1 - \\alpha}
+            \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the Tsallis entropy
-    coincides with the :func:`qibo.quantum_info.entropies.relative_von_neumann_entropy`.
+    coincides with the :func:`qibo.quantum_info.relative_von_neumann_entropy`.
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
         target (ndarray): statevector or density matrix :math:`\\sigma`.
         alpha (float or int): entropic index :math:`\\alpha \\in [0, \\, 2]`.
-        base (float, optional): the base of the log used when :math:`\\alpha = 1`.
+        base (float, optional): the base of the :math:`\\log`. Used when :math:`\\alpha = 1`.
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
@@ -989,24 +1052,28 @@ def relative_tsallis_entropy(
 
 def entanglement_entropy(
     state,
-    bipartition,
+    partition: Union[List[int], Tuple[int, ...]],
     base: float = 2,
     return_spectrum: bool = False,
     backend=None,
 ):
-    """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
-    of ``state`` :math:`\\rho`. This is given by
+    """Calculate the entanglement entropy of a bipartite quantum state.
+
+
+    Given a bipartite quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    its base-:math:`b` entanglement entropy is given by
 
     .. math::
-        S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
+        \\operatorname{S}_{b}^{\\text{ent}}(\\rho) \\equiv \\operatorname{S}_{b}(\\rho_{A}) =
+            -\\text{Tr}\\left(\\rho_{A} \\, \\log_{b}(\\rho_{A})\\right) \\, ,
 
-    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density matrix calculated
-    by tracing out the ``bipartition`` :math:`B`.
+    where :math:`\\rho_{A} = \\text{Tr}_{B}(\\rho)` is the reduced density matrix calculated
+    by tracing out the ``partition`` :math:`B`.
 
     Args:
         state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        base (float, optional): the base of the log. Defaults to :math: `2`.
+        partition (list or tuple): qubits in the partition :math:`B` to be traced out.
+        base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
         return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
             If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -1014,7 +1081,7 @@ def entanglement_entropy(
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
+        float: Entanglement entropy :math:`\\operatorname{S}_{b}^{\\text{ent}}`.
     """
     backend = _check_backend(backend)
 
@@ -1031,7 +1098,7 @@ def entanglement_entropy(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    reduced_density_matrix = partial_trace(state, bipartition, backend=backend)
+    reduced_density_matrix = partial_trace(state, partition, backend=backend)
 
     entropy_entanglement = von_neumann_entropy(
         reduced_density_matrix,
