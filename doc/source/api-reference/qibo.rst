@@ -297,10 +297,22 @@ Graph state
 .. autofunction:: qibo.models.encodings.graph_state
 
 
+Fanout gate synthesis in log depth
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.fanout_synthesis
+
+
 Fixed Hamming-weight Encoder
 """"""""""""""""""""""""""""
 
 .. autofunction:: qibo.models.encodings.hamming_weight_encoder
+
+
+CNOT ladder synthesis in log depth
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.ladder_synthesis
 
 
 Permutation synthesis
