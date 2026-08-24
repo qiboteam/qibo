@@ -23,6 +23,7 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _generate_rbs_pairs,
     _get_gate,
     _get_phase_gate_correction,
+    _ladder_synthesis,
     _non_trivial_layers,
     _parametrized_two_qubit_gate,
     _perm_column_ops,
@@ -657,6 +658,57 @@ def hamming_weight_encoder(
 
     if complex_data and phase_correction:
         circuit.add(_get_phase_gate_correction(bitstrings[-1], phis[-1]))
+
+    return circuit
+
+
+def ladder_synthesis(
+    qubits: list[int] | tuple[int],
+    nqubits: Optional[int] = None,
+    return_circuit: bool = False,
+    **kwargs,
+):
+    """Synthesis of the CNOT ladder operator in logarithmic depth.
+
+    Implementation based on Ref. [1, Algorithm 1].
+
+    Args:
+        qubits (list[int] | tuple[int]): qubits in which the CNOT ladder acts on.
+        nqubits (int, optional): total number of qubits in the circuit. To be used when
+            `return_circuit=True` and the total number of qubits differ from `len(qubits)`.
+            Defaults to ``None``.
+        return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.circuit.Circuit`
+            class. If ``False``, returns a list with the sequence of :class:`qibo.gates.CNOT` gates
+            in parallel. Defaults to ``False``.
+
+    Returns:
+        list or :class:`qibo.models.circuit.Circuit`: List of gates or circuit containing the
+        sequence of gates.
+
+    References:
+        1. M. Remaud and V. Vanndaele, *Ancilla-free quantum adder with sublinear depth*,
+        `In: Glück, R., Kaarsgaard, R. (eds) Reversible Computation. RC 2025.
+        Lecture Notes in Computer Science, vol 15716.
+        Springer, Cham. (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+    """
+    queue = _ladder_synthesis(qubits)
+
+    if not return_circuit:
+        return queue
+
+    if nqubits is None:
+        if set(qubits) != set(range(len(qubits))):
+            raise_error(
+                ValueError,
+                "`nqubits` must be specified when `return_circuit=True`"
+                + "and `set(qubits) != set(range(len(qubits)))`.",
+            )
+
+        nqubits = len(qubits)
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(queue)
 
     return circuit
 
