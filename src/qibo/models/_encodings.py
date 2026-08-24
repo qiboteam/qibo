@@ -933,7 +933,7 @@ def _get_phase_gate_correction_sparse(
     return gate
 
 
-def _ladder_synthesis(qubits: int):
+def _ladder_synthesis(qubits: int) -> list[Gate]:
     nqubits = len(qubits)
 
     if nqubits == 1:
@@ -953,7 +953,7 @@ def _ladder_synthesis(qubits: int):
     if nqubits % 2 == 0:
         qubits_prime.append(qubits[-2])
 
-    return left + _ladder_synth(qubits_prime) + right
+    return left + _ladder_synthesis(qubits_prime) + right
 
 
 def _monotonic_hw_encoder_complex(

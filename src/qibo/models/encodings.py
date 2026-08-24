@@ -11,6 +11,7 @@ from scipy.special import binom
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
+from qibo.gates.abstract import Gate
 from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
     _add_wbd_gate,
