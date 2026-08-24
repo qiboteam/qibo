@@ -22,6 +22,7 @@ from qibo.models.encodings import (
     comp_basis_encoder,
     dicke_state,
     entangling_layer,
+    fanout_synthesis,
     ghz_state,
     graph_state,
     hamming_weight_encoder,
@@ -781,3 +782,14 @@ def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
 
         circuit = graph_state(matrix)
         backend.assert_circuitclose(circuit, target)
+
+
+@pytest.mark.parametrize(nqubits, [6, 8, 10])
+def test_fanout_synthesis(backend, nqubits):
+    qubits = list(range(nqubits))
+
+    fanout = fanout_synthesis(qubits)
+
+    target = gates.FanOut(*qubits).matrix(backend)
+
+    backend.assert_allclose(fanout.unitary(backend), target)
