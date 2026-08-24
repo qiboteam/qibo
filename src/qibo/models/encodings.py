@@ -492,7 +492,7 @@ def fanout_synthesis(
     fanout = Circuit(nqubits, **kwargs)
     queue = ladder_synthesis(qubits, return_circuit=False)
     fanout.add(queue)
-    qeue = ladder_synthesis(qubits[1:], return_circuit=False)
+    queue = ladder_synthesis(qubits[1:], return_circuit=False)
     fanout.add(queue[::-1])
 
     return fanout

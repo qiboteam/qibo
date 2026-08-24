@@ -26,6 +26,7 @@ from qibo.models.encodings import (
     ghz_state,
     graph_state,
     hamming_weight_encoder,
+    ladder_synthesis,
     permutation_synthesis,
     phase_encoder,
     sparse_encoder,
@@ -786,6 +787,14 @@ def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
 
 @pytest.mark.parametrize("nqubits", [6, 8, 10])
 def test_fanout_synthesis(backend, nqubits):
+    with pytest.raises(ValueError):
+        qubits = [0, 1, 3]
+        test = ladder_synthesis(qubits, return_circuit=True)
+
+    with pytest.raises(ValueError):
+        qubits = [0, 1, 3]
+        test = fanout_synthesis(qubits)
+
     qubits = list(range(nqubits))
 
     fanout = fanout_synthesis(qubits)
