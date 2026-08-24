@@ -784,7 +784,7 @@ def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
         backend.assert_circuitclose(circuit, target)
 
 
-@pytest.mark.parametrize(nqubits, [6, 8, 10])
+@pytest.mark.parametrize("nqubits", [6, 8, 10])
 def test_fanout_synthesis(backend, nqubits):
     qubits = list(range(nqubits))
 
