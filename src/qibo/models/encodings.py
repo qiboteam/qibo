@@ -454,6 +454,49 @@ def entangling_layer(
     return circuit
 
 
+def fanout_synthesis(
+    qubits: list[int] | tuple[int],
+    nqubits: Optional[int] = None,
+    **kwargs,
+) -> Circuit:
+    """Synthesis of the Fanout gate in logarithmic depth.
+
+    Implementation based on applying Ref. [1, Algorithm 1] twice.
+
+    Args:
+        qubits (list[int] | tuple[int]): qubits in which the CNOT ladder acts on.
+        nqubits (int, optional): total number of qubits in the circuit. To be used when
+            the total number of qubits differ from `len(qubits)`. Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit containing the sequence of gates in parallel.
+
+    References:
+        1. M. Remaud and V. Vanndaele, *Ancilla-free quantum adder with sublinear depth*,
+        `In: Glück, R., Kaarsgaard, R. (eds) Reversible Computation. RC 2025.
+        Lecture Notes in Computer Science, vol 15716.
+        Springer, Cham. (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+    """
+
+    if nqubits is None:
+        if set(qubits) != set(range(len(qubits))):
+            raise_error(
+                ValueError,
+                "`nqubits` must be specified when `set(qubits) != set(range(len(qubits)))`.",
+            )
+
+        nqubits = len(qubits)
+
+    fanout = Circuit(nqubits, **kwargs)
+    queue = ladder_synthesis(qubits, return_circuit=False)
+    fanout.add(queue)
+    qeue = ladder_synthesis(qubits[1:], return_circuit=False)
+    fanout.add(queue[::-1])
+
+    return fanout
+
+
 def ghz_state(nqubits: int, **kwargs) -> Circuit:
     """Generate an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
 
@@ -667,7 +710,7 @@ def ladder_synthesis(
     nqubits: Optional[int] = None,
     return_circuit: bool = False,
     **kwargs,
-):
+) -> list[Gate] | Circuit:
     """Synthesis of the CNOT ladder operator in logarithmic depth.
 
     Implementation based on Ref. [1, Algorithm 1].
