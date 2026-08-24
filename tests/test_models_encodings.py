@@ -22,9 +22,11 @@ from qibo.models.encodings import (
     comp_basis_encoder,
     dicke_state,
     entangling_layer,
+    fanout_synthesis,
     ghz_state,
     graph_state,
     hamming_weight_encoder,
+    ladder_synthesis,
     permutation_synthesis,
     phase_encoder,
     sparse_encoder,
@@ -781,3 +783,25 @@ def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
 
         circuit = graph_state(matrix)
         backend.assert_circuitclose(circuit, target)
+
+
+@pytest.mark.parametrize("nqubits", [6, 8, 10])
+def test_fanout_and_ladder_synthesis(backend, nqubits):
+    with pytest.raises(ValueError):
+        qubits = [0, 1, 3]
+        test = ladder_synthesis(qubits, return_circuit=True)
+
+    with pytest.raises(ValueError):
+        qubits = [0, 1, 3]
+        test = fanout_synthesis(qubits)
+
+    qubits = list(range(nqubits))
+    fanout = fanout_synthesis(qubits)
+    target = gates.FanOut(*qubits).matrix(backend)
+    backend.assert_allclose(fanout.unitary(backend), target)
+
+    ladder = ladder_synthesis(qubits, return_circuit=True)
+    target = Circuit(nqubits)
+    target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
+    target = target.invert()
+    backend.assert_allclose(ladder.unitary(backend), target.unitary(backend))
