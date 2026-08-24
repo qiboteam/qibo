@@ -5,6 +5,7 @@ from qibo.models.encodings import (
     comp_basis_encoder,
     dicke_state,
     entangling_layer,
+    fanout_synthesis,
     ghz_state,
     graph_state,
     hamming_weight_encoder,
