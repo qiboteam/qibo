@@ -139,7 +139,6 @@ def test_custom_passes(backend, router, placer, ngates, nqubits, star_connectivi
         transpiled_circuit=transpiled_circ,
         connectivity=connectivity,
         final_layout=final_layout,
-        native_gates=NativeGates.default(),
     )
 
 
