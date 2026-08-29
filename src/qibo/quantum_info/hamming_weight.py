@@ -1,9 +1,6 @@
 "Module with the object that stores results from circuit execution using the HammingWeightBackend."
 
-from typing import Optional, Union
-
 import numpy as np
-from scipy.special import binom
 
 from qibo.backends import HammingWeightBackend
 from qibo.config import raise_error
@@ -89,7 +86,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         return state
 
-    def probabilities(self, qubits: Optional[Union[list, set]] = None):
+    def probabilities(self, qubits: list | set | None = None):
         """Calculate the probabilities of the measured qubits.
 
         If the number of shots is :math:`0` or no measurements were performed,
@@ -109,7 +106,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         return self._probabilities_from_samples(qubits)
 
-    def _exact_probabilities(self, qubits: Optional[Union[list, set]] = None):
+    def _exact_probabilities(self, qubits: list | set | None = None):
         """Calculate measurement probabilities by tracing out qubits.
 
         Args:
@@ -128,7 +125,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self._state, qubits, self.weight, self.nqubits
         )
 
-    def _probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
+    def _probabilities_from_samples(self, qubits: list | set | None = None):
         """Calculate the probabilities as ``frequencies / nshots``.
 
         Args:

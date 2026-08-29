@@ -230,7 +230,7 @@ class AAVQE:
 
         self._schedule = None
         nparams = s.__code__.co_argcount
-        if not nparams == 1:  # pragma: no cover
+        if nparams != 1:  # pragma: no cover
             raise_error(
                 ValueError,
                 "Scheduling function must take only one argument,"
@@ -368,11 +368,13 @@ class QAOA:
     from qibo import hamiltonians, optimizers  # pylint: disable=import-outside-toplevel
 
     def __init__(
-        self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
+        self, hamiltonian, mixer=None, solver="exp", callbacks=None, accelerators=None
     ):
         from qibo.hamiltonians.abstract import AbstractHamiltonian
 
         # list of QAOA variational parameters (angles)
+        if callbacks is None:
+            callbacks = []
         self.params = None
         # problem hamiltonian
         if not isinstance(hamiltonian, AbstractHamiltonian):
@@ -482,7 +484,7 @@ class QAOA:
         initial_state=None,
         method="Powell",
         loss_func=None,
-        loss_func_param=dict(),
+        loss_func_param=None,
         jac=None,
         hess=None,
         hessp=None,
@@ -549,6 +551,8 @@ class QAOA:
                 )
 
         """
+        if loss_func_param is None:
+            loss_func_param = {}
         if len(initial_p) % 2 != 0:
             raise_error(
                 ValueError,
@@ -653,8 +657,10 @@ class FALQON(QAOA):
     """
 
     def __init__(
-        self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
+        self, hamiltonian, mixer=None, solver="exp", callbacks=None, accelerators=None
     ):
+        if callbacks is None:
+            callbacks = []
         super().__init__(hamiltonian, mixer, solver, callbacks, accelerators)
         self.evol_hamiltonian = 1j * (
             self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian

@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
-from qibo.config import PRECISION_TOL
 from qibo.noise import NoiseModel, PauliError
 
 
@@ -314,7 +313,7 @@ def test_repeated_execute_pauli_noise_channel(backend):
         for i in range(4)
     )
     with pytest.raises(RuntimeError) as excinfo:
-        final_state = backend.execute_circuit(circuit, nshots=20)
+        backend.execute_circuit(circuit, nshots=20)
     assert (
         str(excinfo.value)
         == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
@@ -328,7 +327,7 @@ def test_repeated_execute_with_pauli_noise(backend):
     noisy_circuit = circuit.with_pauli_noise(list(zip(["X", "Z"], [0.2, 0.1])))
     backend.set_seed(1234)
     with pytest.raises(RuntimeError) as excinfo:
-        final_state = backend.execute_circuit(noisy_circuit, nshots=20)
+        backend.execute_circuit(noisy_circuit, nshots=20)
     assert (
         str(excinfo.value)
         == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
@@ -375,5 +374,5 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
             if nqubits == 1
             else Counter({"11": 618, "10": 169, "01": 185, "00": 52})
         )
-    for key in dict(test_frequencies).keys():
+    for key in dict(test_frequencies):
         backend.assert_allclose(result.frequencies()[key], test_frequencies[key])

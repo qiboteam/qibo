@@ -22,3 +22,35 @@ from qibo.models.evolution import AdiabaticEvolution, StateEvolution
 from qibo.models.grover import Grover
 from qibo.models.qft import QFT
 from qibo.models.variational import AAVQE, FALQON, QAOA, VQE
+
+__all__ = [
+    "AAVQE",
+    "CDR",
+    "FALQON",
+    "ICS",
+    "QAOA",
+    "QFT",
+    "VQE",
+    "ZNE",
+    "AdiabaticEvolution",
+    "Circuit",
+    "Grover",
+    "StateEvolution",
+    "binary_encoder",
+    "comp_basis_encoder",
+    "dicke_state",
+    "entangling_layer",
+    "fanout_synthesis",
+    "ghz_state",
+    "graph_state",
+    "hamming_weight_encoder",
+    "hep",
+    "ladder_synthesis",
+    "permutation_synthesis",
+    "phase_encoder",
+    "sparse_encoder",
+    "unary_encoder",
+    "unary_encoder_random_gaussian",
+    "up_to_k_hamming_weight_encoder",
+    "vnCDR",
+]

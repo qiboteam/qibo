@@ -1,7 +1,6 @@
 """Bloch sphere module."""
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -67,7 +66,7 @@ class BlochSphere:
 
     _shown: bool = False
 
-    _numpy_backend: Optional[Backend] = field(default=None, repr=False)
+    _numpy_backend: Backend | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         # No toolbar
@@ -87,7 +86,7 @@ class BlochSphere:
         self.fig.canvas.manager.set_window_title("Bloch sphere")
 
     # -----Sphere-----
-    def _sphere_surface(self) -> Tuple[float, ...]:
+    def _sphere_surface(self) -> tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's surface"""
         phi, theta = np.mgrid[0.0 : np.pi : 100j, 0.0 : 2.0 * np.pi : 100j]
         x = np.sin(phi) * np.cos(theta)
@@ -95,7 +94,7 @@ class BlochSphere:
         z = np.cos(phi)
         return x, y, z
 
-    def _axis(self) -> Tuple[float, ...]:
+    def _axis(self) -> tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's axis."""
         theta = np.linspace(0, 2 * np.pi, 100)
         z = np.zeros(100)
@@ -103,7 +102,7 @@ class BlochSphere:
         y = np.cos(theta)
         return x, y, z
 
-    def _parallel(self, z: float) -> Tuple[float, ...]:
+    def _parallel(self, z: float) -> tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's parallels."""
         theta = np.linspace(0, 2 * np.pi, 100)
         z = np.full(100, z)
@@ -112,7 +111,7 @@ class BlochSphere:
         y = r * np.sin(theta)
         return x, y, z
 
-    def _meridian(self, phi: float) -> Tuple[float, ...]:
+    def _meridian(self, phi: float) -> tuple[float, ...]:
         """Helper method to `_create_sphere` to construct the sphere's meridians."""
         theta = np.linspace(0, 2 * np.pi, 100)
         x = np.sin(theta) * np.cos(phi)
@@ -164,7 +163,7 @@ class BlochSphere:
             self.ax.text(0, 0, -1.3, r"$|1\rangle$", ha="center")
 
     # -----States and Vectors-----
-    def _paulis_expectation(self, state: ArrayLike) -> Tuple[float, ...]:
+    def _paulis_expectation(self, state: ArrayLike) -> tuple[float, ...]:
         """This function computes the expectation value of Pauli matrices
         on the considered state and yields its cartesian coordinates on the Bloch sphere.
         """
@@ -194,8 +193,8 @@ class BlochSphere:
         return np.allclose(rho, rho.conj().T) and np.isclose(np.trace(rho), 1)
 
     def _broadcasting_semantics(
-        self, vector: ArrayLike, mode: Union[list, str], color: Union[list, str]
-    ) -> Tuple[ArrayLike, ...]:
+        self, vector: ArrayLike, mode: list | str, color: list | str
+    ) -> tuple[ArrayLike, ...]:
         """This function makes sure that `vector`, `mode`, `color` have the same sizes."""
         if isinstance(vector, list):
             vector = np.array(vector)
@@ -205,9 +204,12 @@ class BlochSphere:
             color = np.array(color)
 
         # Check to distinguish if (2,2) is one density matrix or two state vectors.
-        if vector.ndim == 2 and vector.shape == (2, 2):
-            if self._is_density_matrix(vector):
-                vector = np.expand_dims(vector, axis=0)
+        if (
+            vector.ndim == 2
+            and vector.shape == (2, 2)
+            and self._is_density_matrix(vector)
+        ):
+            vector = np.expand_dims(vector, axis=0)
 
         vector = np.atleast_2d(vector)
         vector, mode, color = np.broadcast_arrays(vector, mode, color)
@@ -216,8 +218,8 @@ class BlochSphere:
     def add_vector(
         self,
         vector: ArrayLike,
-        mode: Union[str, List[str]] = "vector",
-        color: Union[str, List[str]] = "black",
+        mode: str | list[str] = "vector",
+        color: str | list[str] = "black",
     ) -> None:
         """This function adds a vector to the sphere."""
 
@@ -235,8 +237,8 @@ class BlochSphere:
     def add_state(
         self,
         state: ArrayLike,
-        mode: Union[str, list[str]] = "vector",
-        color: Union[str, list[str]] = "black",
+        mode: str | list[str] = "vector",
+        color: str | list[str] = "black",
     ) -> None:
         """This function adds a state to the sphere."""
 

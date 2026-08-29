@@ -1,7 +1,6 @@
 """Module defining the Qulacs backend."""
 
 import re
-from typing import Optional
 
 import qulacs  # pylint: disable=import-error
 from numpy.typing import ArrayLike
@@ -36,7 +35,6 @@ def circuit_to_qulacs(
 
 
 class QulacsBackend(NumpyBackend):
-
     def __init__(self):
         super().__init__()
 
@@ -47,7 +45,7 @@ class QulacsBackend(NumpyBackend):
     def execute_circuit(
         self,
         circuit: Circuit,
-        initial_state: Optional[ArrayLike] = None,
+        initial_state: ArrayLike | None = None,
         nshots: int = 1000,
     ):
         """Execute a circuit with qulacs.

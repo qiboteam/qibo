@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates, matrices
+from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.models import QFT
 from qibo.quantum_info import random_statevector, random_unitary
@@ -31,9 +31,7 @@ def execute_cirq(cirq_gates, nqubits, initial_state=None):
     c.append([cirq.I(qi) for qi in q])
     for gate, targets in cirq_gates:
         c.append(gate(*[q[i] for i in targets]))
-    result = cirq.Simulator().simulate(
-        c, initial_state=initial_state
-    )  # pylint: disable=no-member
+    result = cirq.Simulator().simulate(c, initial_state=initial_state)  # pylint: disable=no-member
     depth = len(cirq.Circuit(c.all_operations()))
     return result.final_state_vector, depth - 1
 
@@ -107,7 +105,7 @@ def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
         # case not tested because it fails
         raise RuntimeError(f"Cirq gate parsing failed with {pieces}.")
 
-    qubits = list(int(x) for x in targets.replace(" ", "").split(","))
+    qubits = [int(x) for x in targets.replace(" ", "").split(",")]
     targets = (qubits.pop(),)
     controls = set(qubits)
 

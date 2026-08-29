@@ -22,14 +22,18 @@ def VariationalCircuit(nqubits, nlayers=1, theta_values=None):
         yield gates.CZ(0, nqubits - 1)
 
 
-def OneQubitGate(nqubits, gate_type="H", params={}, nlayers=1):
+def OneQubitGate(nqubits, gate_type="H", params=None, nlayers=1):
+    if params is None:
+        params = {}
     gate = lambda q: getattr(gates, gate_type)(q, **params)
     for _ in range(nlayers):
         for i in range(nqubits):
             yield gate(i)
 
 
-def TwoQubitGate(nqubits, gate_type="H", params={}, nlayers=1):
+def TwoQubitGate(nqubits, gate_type="H", params=None, nlayers=1):
+    if params is None:
+        params = {}
     gate = lambda q: getattr(gates, gate_type)(q, q + 1, **params)
     for _ in range(nlayers):
         for i in range(0, nqubits - 1, 2):

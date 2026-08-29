@@ -96,7 +96,7 @@ def test_labs(backend, nqubits, dense):
 @pytest.mark.parametrize("model", ["XXZ", "TFIM"])
 def test_missing_neighbour_qubit(backend, model):
     with pytest.raises(ValueError):
-        H = getattr(hamiltonians, model)(nqubits=1, backend=backend)
+        getattr(hamiltonians, model)(nqubits=1, backend=backend)
 
 
 @pytest.mark.parametrize("dense", [True, False])
@@ -104,7 +104,7 @@ def test_xxx(backend, dense):
     nqubits = 2
 
     with pytest.raises(ValueError):
-        test = XXX(
+        XXX(
             nqubits,
             coupling_constant=1,
             external_field_strengths=[0, 1],
@@ -113,10 +113,10 @@ def test_xxx(backend, dense):
         )
 
     with pytest.raises(TypeError):
-        test = XXX(nqubits, coupling_constant=[1], dense=dense, backend=backend)
+        XXX(nqubits, coupling_constant=[1], dense=dense, backend=backend)
 
     with pytest.raises(ValueError):
-        test = Heisenberg(
+        Heisenberg(
             nqubits,
             coupling_constants=[0, 1],
             external_field_strengths=1,
@@ -182,7 +182,7 @@ def test_gpp(backend, nqubits, penalty_coeff, dense, is_list, node_weights):
 def test_tfim_boundary(backend, h, closed_boundary, dense):
     nqubits = 3
 
-    I = lambda x: symbols.I(x, backend=backend)
+    lambda x: symbols.I(x, backend=backend)
     X = lambda x: symbols.X(x, backend=backend)
     Z = lambda x: symbols.Z(x, backend=backend)
 
@@ -281,7 +281,7 @@ def test_ising(
     backend, coupling_constants, local_field_strengths, closed_boundary, dense
 ):
     with pytest.raises(ValueError):
-        test = Ising(
+        Ising(
             3,
             (0.1, 0.2),
             local_field_strengths=1.0,
@@ -289,7 +289,7 @@ def test_ising(
             backend=backend,
         )
 
-    I = lambda x: symbols.I(x, backend=backend)
+    lambda x: symbols.I(x, backend=backend)
     X = lambda x: symbols.X(x, backend=backend)
     Z = lambda x: symbols.Z(x, backend=backend)
 

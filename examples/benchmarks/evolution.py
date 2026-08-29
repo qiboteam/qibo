@@ -6,7 +6,7 @@ import time
 from utils import BenchmarkLogger, parse_accelerators
 
 import qibo
-from qibo import callbacks, hamiltonians, models
+from qibo import hamiltonians, models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)
@@ -59,7 +59,7 @@ def main(nqubits, dt, solver, backend, dense=False, accelerators=None, filename=
     print("Evolution model created in:", logs[-1]["creation_time"])
 
     start_time = time.time()
-    final_psi = evolution(final_time=1.0)
+    evolution(final_time=1.0)
     logs[-1]["simulation_time"] = time.time() - start_time
     print("Simulation time:", logs[-1]["simulation_time"])
     logs.dump()

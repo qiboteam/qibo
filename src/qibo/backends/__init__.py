@@ -2,7 +2,7 @@ import os
 from importlib import import_module
 
 import networkx as nx
-import numpy as np
+import numpy as np  # noqa: F401
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
@@ -72,7 +72,7 @@ class MetaBackend:
             try:
                 MetaBackend.load(backend)
                 available = True
-            except:  # pragma: no cover
+            except Exception:  # pragma: no cover
                 available = False
             available_backends[backend] = available
         return available_backends
@@ -83,13 +83,13 @@ class _Global:
     _transpiler = None
     # TODO: resolve circular import with qibo.transpiler.pipeline.Passes
 
-    _default_order = [
+    _default_order = (
         {"backend": "qibojit", "platform": "cupy"},
         {"backend": "qibojit", "platform": "numba"},
         {"backend": "numpy"},
         {"backend": "qiboml", "platform": "tensorflow"},
         {"backend": "qiboml", "platform": "pytorch"},
-    ]
+    )
 
     @classmethod
     def backend(cls):
@@ -315,8 +315,8 @@ def list_available_backends(*providers: str) -> dict:
     for backend in providers:
         try:
             module = import_module(backend.replace("-", "_"))
-            available = getattr(module, "MetaBackend")().list_available()
-        except:
+            available = module.MetaBackend().list_available()
+        except Exception:
             available = False
         available_backends.update({backend: available})
     return available_backends
@@ -338,11 +338,11 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
         provider = backend.replace("-", "_")
         try:
             module = import_module(provider)
-            return getattr(module, "MetaBackend").load(**kwargs)
+            return module.MetaBackend.load(**kwargs)
         except ImportError as e:
             # pylint: disable=unsupported-membership-test
             if provider not in e.msg:
-                raise e
+                raise
             raise MissingBackend(
                 f"The '{backend}' backends' provider is not available. Check that a Python "
                 + f"package named '{provider}' is installed, and it is exposing valid Qibo "

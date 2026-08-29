@@ -36,7 +36,7 @@ def main(N, p, shots, post_selection, no_plot):
         Results are stored into variables to paint the results
         """
         if qubit % 10 == 0:
-            print("Initialized state with seed %s" % qubit + "/ %s" % N)
+            print(f"Initialized state with seed {qubit}" + f"/ {N}")
         state = create_random_state(qubit, p > 0)
         tangles[qubit] = compute_random_tangle(qubit)
         _, params = canonize(state, circuit, shots=np.int32(shots))
@@ -46,7 +46,7 @@ def main(N, p, shots, post_selection, no_plot):
 
     if not no_plot:
         print("Painting results")
-        fig, ax = plt.subplots()  # Plotting
+        _fig, ax = plt.subplots()  # Plotting
         if post_selection:
             color = "red"
         else:

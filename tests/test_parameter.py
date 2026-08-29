@@ -90,7 +90,7 @@ def test_parameter_errors():
     try:
         param()
         assert False
-    except Exception as e:
+    except Exception:
         assert True
 
     param.trainable = [1, 1]
@@ -98,7 +98,7 @@ def test_parameter_errors():
     try:
         param()
         assert False
-    except Exception as e:
+    except Exception:
         assert True
 
     param.trainable = [1, 1, 1]
@@ -106,7 +106,7 @@ def test_parameter_errors():
     try:
         param()
         assert False
-    except Exception as e:
+    except Exception:
         assert True
 
     # test type error due to wrong initialization

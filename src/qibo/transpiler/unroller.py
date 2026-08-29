@@ -1,7 +1,6 @@
 from enum import EnumMeta, Flag, auto
 from functools import reduce
 from operator import or_
-from typing import List, Optional, Union
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
@@ -23,7 +22,7 @@ class FlagMeta(EnumMeta):
     """Metaclass for :class:`qibo.transpiler.unroller.NativeGates`
     that allows initialization with a list of gate name strings."""
 
-    def __getitem__(cls, keys: Union[str, List[str]]):
+    def __getitem__(cls, keys: str | list[str]):
         if isinstance(keys, str):
             try:
                 return super().__getitem__(keys)
@@ -69,7 +68,7 @@ class NativeGates(Flag, metaclass=FlagMeta):
         return cls.CZ | cls.GPI2 | cls.I | cls.Z | cls.RZ | cls.M
 
     @classmethod
-    def from_gatelist(cls, gatelist: List[Gate]):
+    def from_gatelist(cls, gatelist: list[Gate]):
         """Create a NativeGates object containing all gates from a ``gatelist``."""
         natives = cls(0)
         for gate in gatelist:
@@ -96,7 +95,7 @@ class Unroller:
     def __init__(
         self,
         native_gates: NativeGates,
-        backend: Optional[Backend] = None,
+        backend: Backend | None = None,
     ):
         self.native_gates = native_gates
         self.backend = backend
@@ -132,8 +131,8 @@ class Unroller:
 def translate_gate(
     gate,
     native_gates: NativeGates,
-    backend: Optional[Backend] = None,
-) -> List[Gate]:
+    backend: Backend | None = None,
+) -> list[Gate]:
     """Maps gates to a hardware-native implementation.
 
     Args:
@@ -174,7 +173,7 @@ def translate_gate(
 
 def _translate_single_qubit_gates(
     gate: Gate, single_qubit_natives: NativeGates, backend: Backend
-) -> List[Gate]:
+) -> list[Gate]:
     """Helper method for :meth:`translate_gate`.
 
     Maps single-qubit gates to a hardware-native implementation.
@@ -202,7 +201,7 @@ def _translate_single_qubit_gates(
 
 def _translate_two_qubit_gates(  # pylint: disable=R1710
     gate: Gate, native_gates: NativeGates, backend: Backend
-) -> List[Gate]:
+) -> list[Gate]:
     """Helper method for :meth:`translate_gate`.
 
     Maps two-qubit gates to a hardware-native implementation.
@@ -261,7 +260,7 @@ def _translate_two_qubit_gates(  # pylint: disable=R1710
             for g_translated in translate_gate(
                 g, native_gates=native_gates, backend=backend
             ):
-                iswap_decomposed.append(g_translated)
+                iswap_decomposed.append(g_translated)  # noqa: PERF402
         return iswap_decomposed
 
     # For testing purposes

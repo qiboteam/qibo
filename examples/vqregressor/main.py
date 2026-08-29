@@ -32,7 +32,7 @@ def main(layers, learning_rate, epochs, batches, ndata, J_treshold):
     # We initialize the quantum regressor
     vqr = VQRegressor(layers=layers, ndata=ndata)
     # and the initial parameters
-    initial_params = np.random.randn(3 * layers)
+    np.random.randn(3 * layers)
     # Let's go with the training
     vqr.train_with_psr(
         epochs=epochs,

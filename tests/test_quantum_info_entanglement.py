@@ -21,19 +21,19 @@ def test_concurrence_and_formation(backend, bipartition, base, check_purity):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = concurrence(
+        concurrence(
             state, bipartition=bipartition, check_purity=check_purity, backend=backend
         )
     with pytest.raises(TypeError):
         state = random_statevector(4, backend=backend)
-        test = concurrence(
+        concurrence(
             state, bipartition=bipartition, check_purity="True", backend=backend
         )
 
     if check_purity is True:
         with pytest.raises(NotImplementedError):
             state = backend.identity(4)
-            test = concurrence(state, bipartition=bipartition, backend=backend)
+            concurrence(state, bipartition=bipartition, backend=backend)
 
     nqubits = 2
     dim = 2**nqubits
@@ -93,12 +93,12 @@ def test_entanglement_fidelity(backend, nqubits):
     channel = gates.DepolarizingChannel([0, 1], 0.5)
 
     with pytest.raises(TypeError):
-        test = entanglement_fidelity(channel, nqubits=[0], backend=backend)
+        entanglement_fidelity(channel, nqubits=[0], backend=backend)
     with pytest.raises(ValueError):
-        test = entanglement_fidelity(channel, nqubits=0, backend=backend)
+        entanglement_fidelity(channel, nqubits=0, backend=backend)
     with pytest.raises(TypeError):
         state = backend.random_sample((2, 3, 2))
-        test = entanglement_fidelity(
+        entanglement_fidelity(
             channel,
             nqubits,
             state=state,
@@ -134,7 +134,7 @@ def test_meyer_wallach_entanglement(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3, 2).astype(complex)
         state = backend.cast(state, dtype=state.dtype)
-        test = meyer_wallach_entanglement(state, backend=backend)
+        meyer_wallach_entanglement(state, backend=backend)
 
     nqubits = 2
 

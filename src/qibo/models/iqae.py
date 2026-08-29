@@ -294,11 +294,11 @@ class IQAE:
 
         if self.method == "chernoff":
             # Chernoff method
-            max_L, min_L = self.calc_L_range_CH(n_total_shots, upper_bound_t)
+            max_L, _min_L = self.calc_L_range_CH(n_total_shots, upper_bound_t)
 
         else:
             # Clopper-Pearson (beta) method
-            max_L, min_L = self.calc_L_range_CP(n_total_shots, upper_bound_t)
+            max_L, _min_L = self.calc_L_range_CP(n_total_shots, upper_bound_t)
 
         i = 0
         while theta_dif > 2 * eps:

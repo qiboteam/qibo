@@ -724,7 +724,7 @@ def test_ibmq_noise(
             conditions=_Conditions().condition_two,
         )
     else:
-        for qubit in t1.keys():
+        for qubit in t1:
             noise_model_target.add(
                 ThermalRelaxationError(
                     t1[qubit], t2[qubit], gate_times[0], excited_population

@@ -42,9 +42,7 @@ def HammingWeightBackend(platform=None):
         if method_name in methods:
             methods[method_name] = cache(methods[method_name])
 
-    HWBackend = type(
-        "HammingWeightBackend", (backend.__class__,), methods
-    )  # pylint: disable=E0606
+    HWBackend = type("HammingWeightBackend", (backend.__class__,), methods)  # pylint: disable=E0606
 
     hw_backend = HWBackend()
     hw_backend.name = "hamming_weight"

@@ -17,3 +17,22 @@ from qibo.hamiltonians.models import (
     Y,
     Z,
 )
+
+__all__ = [
+    "GPP",
+    "LABS",
+    "TFIM",
+    "XXX",
+    "XXZ",
+    "AdiabaticHamiltonian",
+    "FermiHubbard",
+    "Hamiltonian",
+    "Heisenberg",
+    "Ising",
+    "MaxCut",
+    "SymbolicAdiabaticHamiltonian",
+    "SymbolicHamiltonian",
+    "X",
+    "Y",
+    "Z",
+]

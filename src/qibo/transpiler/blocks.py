@@ -1,5 +1,3 @@
-from typing import List, Optional, Union
-
 from qibo import Circuit, gates
 from qibo.config import raise_error
 from qibo.gates import Gate
@@ -15,9 +13,7 @@ class Block:
         name (str or int, optional): name of the block. Defaults to ``None``.
     """
 
-    def __init__(
-        self, qubits: tuple, gates: list, name: Optional[Union[str, int]] = None
-    ):
+    def __init__(self, qubits: tuple, gates: list, name: str | int | None = None):
         self.qubits = qubits
         self.gates = gates
         self.name = name
@@ -54,7 +50,7 @@ class Block:
     def qubits(self, qubits):
         self._qubits = qubits
 
-    def fuse(self, block, name: Optional[str] = None):
+    def fuse(self, block, name: str | None = None):
         """Fuses the current block with a new one, the qubits they are acting on must coincide.
 
         Args:
@@ -64,7 +60,7 @@ class Block:
         Return:
             (:class:`qibo.transpiler.blocks.Block`): fusion of the two input blocks.
         """
-        if not self.qubits == block.qubits:
+        if self.qubits != block.qubits:
             raise_error(
                 BlockingError, "In order to fuse two blocks their qubits must coincide."
             )
@@ -91,9 +87,7 @@ class Block:
             True if the two blocks don't share any qubit.
             False otherwise.
         """
-        if len(set(self.qubits).intersection(block.qubits)) > 0:
-            return False
-        return True
+        return not len(set(self.qubits).intersection(block.qubits)) > 0
 
     # TODO
     def kak_decompose(self):  # pragma: no cover
@@ -179,7 +173,7 @@ class CircuitBlocks:
         return self.block_list[-1]
 
 
-def block_decomposition(circuit: Circuit, fuse: bool = True) -> List[Block]:
+def block_decomposition(circuit: Circuit, fuse: bool = True) -> list[Block]:
     """Decompose a circuit into blocks of gates acting on two qubits.
     Break measurements on multiple qubits into measurements of single qubit.
 

@@ -399,14 +399,14 @@ qreg q[2];
 x q[2];
 """
     with pytest.raises(IndexError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Invalid qubit index
     target = """OPENQASM 2.0;
 qreg q[a];
 """
     with pytest.raises(AttributeError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Undefined qubit
     target = """OPENQASM 2.0;
@@ -414,14 +414,14 @@ qreg q[2];
 x a[0];
 """
     with pytest.raises(KeyError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
     # Invalid command `test`
     target = """OPENQASM 2.0;
 qreg q[2];
 test q[0];
 """
     with pytest.raises(ValueError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
 
 def test_from_qasm_measurements():
@@ -486,7 +486,7 @@ qreg q[2];
 creg a[2];
 measure q[2] -> a[0];"""
     with pytest.raises(IndexError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Undefined register
     target = """OPENQASM 2.0;
@@ -494,7 +494,7 @@ qreg q[2];
 creg a[2];
 measure q[0] -> b[0];"""
     with pytest.raises(ValueError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Register index out of range
     target = """OPENQASM 2.0;
@@ -502,7 +502,7 @@ qreg q[2];
 creg a[2];
 measure q[0] -> a[2];"""
     with pytest.raises(IndexError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Invalid measurement command
     target = """OPENQASM 2.0;
@@ -510,7 +510,7 @@ qreg q[2];
 creg a[2];
 measure q[0] -> a[1] -> a[0];"""
     with pytest.raises(parser.QASM3ParsingError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
 
 def test_from_qasm_invalid_parametrized_gates():
@@ -520,7 +520,7 @@ qreg q[2];
 x(0.1234) q[0];
 """
     with pytest.raises(ValueError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Failure to give theta value for parametrized gate
     target = """OPENQASM 2.0;
@@ -528,7 +528,7 @@ qreg q[2];
 rx q[0];
 """
     with pytest.raises(ValueError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Invalid parameter value
     target = """OPENQASM 2.0;
@@ -536,7 +536,7 @@ qreg q[2];
 rx(0.123a) q[0];
 """
     with pytest.raises(parser.QASM3ParsingError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     # Invalid parenthesis use
     target = """OPENQASM 2.0;
@@ -544,7 +544,7 @@ qreg q[2];
 rx(0.123)(0.25)(0) q[0];
 """
     with pytest.raises(parser.QASM3ParsingError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
     target = """OPENQASM 2.0;
 include "qelib1.inc";
@@ -553,10 +553,10 @@ gate bob(theta,alpha) q0,q1 { h q1; cx q0,q1; rz(theta) q1; rx(alpha) q0; h q1; 
 """
 
     with pytest.raises(ValueError):
-        circuit = Circuit.from_qasm(f"{target}bob(0.1, 0.2, 0.3) q[1],q[0];")
+        Circuit.from_qasm(f"{target}bob(0.1, 0.2, 0.3) q[1],q[0];")
 
     with pytest.raises(ValueError):
-        circuit = Circuit.from_qasm(f"{target}bob(0.1, 0.2) q[1],q[0],q[2];")
+        Circuit.from_qasm(f"{target}bob(0.1, 0.2) q[1],q[0],q[2];")
 
 
 def test_from_qasm_gate_command(backend):
@@ -604,7 +604,7 @@ def logical_meas(qubit[3] d) -> bit {
 }
 """
     with pytest.raises(RuntimeError):
-        circuit = Circuit.from_qasm(target)
+        Circuit.from_qasm(target)
 
 
 def test_qasm_file(backend):

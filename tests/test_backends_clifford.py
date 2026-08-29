@@ -20,7 +20,7 @@ def construct_clifford_backend(backend):
         "CuQuantumBackend",
     ):
         with pytest.raises(NotImplementedError):
-            clifford_backend = CliffordBackend(backend.name)
+            CliffordBackend(backend.name)
         pytest.skip("Clifford backend not defined for this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
@@ -187,7 +187,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
 
     assert set(numpy_freq.keys()) == set(clifford_freq.keys())
 
-    clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
+    clifford_freq = {state: clifford_freq[state] for state in numpy_freq}
 
     for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
         backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)

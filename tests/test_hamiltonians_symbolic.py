@@ -12,7 +12,7 @@ from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_statevector,
 )
-from qibo.symbols import I, Symbol, X, Y, Z
+from qibo.symbols import Symbol, X, Y, Z
 
 
 def symbolic_tfim(nqubits, backend, h=1.0):
@@ -30,20 +30,19 @@ def symbolic_tfim(nqubits, backend, h=1.0):
 def test_symbolic_hamiltonian_errors(backend):
     # Wrong type of Symbol matrix
     with pytest.raises(TypeError):
-        s = Symbol(0, "test", backend=backend)
+        Symbol(0, "test", backend=backend)
     # Wrong type of symbolic expression
     with pytest.raises(TypeError):
-        ham = SymbolicHamiltonian("test", backend=backend)
+        SymbolicHamiltonian("test", backend=backend)
     # Passing form with symbol that is not a ``qibo.symbols.Symbol``
-    from qibo import matrices
 
     z, x = sympy.Symbol("z"), sympy.Symbol("x")
     with pytest.raises(RuntimeError):
-        ham = SymbolicHamiltonian(z * x, backend=backend)
+        SymbolicHamiltonian(z * x, backend=backend)
     # Invalid operation in Hamiltonian expresion
-    ham = SymbolicHamiltonian(sympy.cos(Z(0, backend=backend)), backend=backend)
+    SymbolicHamiltonian(sympy.cos(Z(0, backend=backend)), backend=backend)
     with pytest.raises(TypeError):
-        dense = ham.dense
+        pass
 
 
 def test_symbolic_hamiltonian_form_setter(backend):
@@ -329,23 +328,23 @@ def test_trotter_hamiltonian_operation_errors(backend):
     h1 = SymbolicHamiltonian(symbolic_tfim(3, backend, h=1.0), backend=backend)
     h2 = SymbolicHamiltonian(symbolic_tfim(4, backend, h=1.0), backend=backend)
     with pytest.raises(RuntimeError):
-        h = h1 + h2
+        h1 + h2
     with pytest.raises(RuntimeError):
-        h = h1 - h2
+        h1 - h2
     with pytest.raises(NotImplementedError):
-        h = h1 + "test"
+        h1 + "test"
     with pytest.raises(NotImplementedError):
-        h = "test" + h1
+        "test" + h1
     with pytest.raises(NotImplementedError):
-        h = h1 - "test"
+        h1 - "test"
     with pytest.raises(NotImplementedError):
-        h = "test" - h1
+        "test" - h1
     with pytest.raises(NotImplementedError):
-        h = h1 * "test"
+        h1 * "test"
     with pytest.raises(NotImplementedError):
-        h = h1 @ "test"
+        h1 @ "test"
     with pytest.raises(NotImplementedError):
-        h = h1 @ np.ones((2, 2, 2, 2))
+        h1 @ np.ones((2, 2, 2, 2))
     h2 = XXZ(3, dense=False, backend=backend)
 
 

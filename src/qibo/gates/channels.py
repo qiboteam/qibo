@@ -2,7 +2,6 @@
 
 from itertools import product
 from math import exp, sqrt
-from typing import Optional, Tuple
 
 import numpy as np
 
@@ -18,8 +17,8 @@ class Channel(Gate):
 
     def __init__(self):
         super().__init__()
-        self.coefficients = tuple()
-        self.gates = tuple()
+        self.coefficients = ()
+        self.gates = ()
 
     def controlled_by(self, *q):
         raise_error(ValueError, f"Noise channel cannot be controlled on qubits {q}.")
@@ -43,7 +42,7 @@ class Channel(Gate):
     def apply_clifford(self, backend, state, nqubits):
         return backend.apply_channel(self, state, nqubits)
 
-    def to_choi(self, nqubits: Optional[int] = None, order: str = "row", backend=None):
+    def to_choi(self, nqubits: int | None = None, order: str = "row", backend=None):
         """Returns the Choi representation :math:`\\mathcal{E}`
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
@@ -109,9 +108,9 @@ class Channel(Gate):
 
     def to_liouville(
         self,
-        nqubits: Optional[int] = None,
+        nqubits: int | None = None,
         order: str = "row",
-        backend: Optional[Backend] = None,
+        backend: Backend | None = None,
     ):
         """Returns the Liouville representation of the channel.
 
@@ -146,10 +145,10 @@ class Channel(Gate):
 
     def to_pauli_liouville(
         self,
-        nqubits: Optional[int] = None,
+        nqubits: int | None = None,
         normalize: bool = False,
         pauli_order: str = "IXYZ",
-        backend: Optional[Backend] = None,
+        backend: Backend | None = None,
     ):
         """Returns the Liouville representation of the channel
         in the Pauli basis.
@@ -191,7 +190,6 @@ class Channel(Gate):
         return super_op
 
     def matrix(self, backend=None):
-        """"""
         raise_error(
             NotImplementedError,
             "`matrix` method not defined for Channels. "
@@ -318,7 +316,7 @@ class KrausChannel(Channel):
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
-        self._all_unitary_operators = True if all(unitary_check) else False
+        self._all_unitary_operators = bool(all(unitary_check))
         self._qubits = qubits
 
     def on_qubits(self, qubit_map: dict):
@@ -437,7 +435,7 @@ class PauliNoiseChannel(UnitaryChannel):
         operators (list): list of operators as pairs :math:`(P_{k}, p_{k})`.
     """
 
-    def __init__(self, qubits: Tuple[int, list, tuple], operators: list):
+    def __init__(self, qubits: tuple[int, list, tuple], operators: list):
         if isinstance(qubits, int):
             qubits = (qubits,)
 
@@ -805,7 +803,7 @@ class ReadoutErrorChannel(KrausChannel):
             \\end{pmatrix} \\, .
     """
 
-    def __init__(self, qubits: Tuple[int, list, tuple], probabilities):
+    def __init__(self, qubits: tuple[int, list, tuple], probabilities):
         if any(sum(row) < 1 - PRECISION_TOL for row in probabilities) or any(
             sum(row) > 1 + PRECISION_TOL for row in probabilities
         ):

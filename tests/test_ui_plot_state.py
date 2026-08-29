@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 from matplotlib.testing.compare import compare_images
 
-import qibo
 from qibo import Circuit, gates
 from qibo.ui.result_visualization import plot_density_hist
 

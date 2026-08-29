@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, List, Sequence, Tuple
+from collections.abc import Sequence
 
 from qibo import gates
 from qibo.config import raise_error
@@ -99,7 +99,7 @@ class DistributedQueues:
     def ndevices(self):
         return self.circuit.ndevices
 
-    def set(self, queue: List[Gate]):
+    def set(self, queue: list[Gate]):
         """Prepares gates for device-specific gate execution.
 
         Each gate has to be recreated in the device that will be executed to
@@ -126,7 +126,7 @@ class DistributedQueues:
             transformed_queue = self.transform(queue, counter)
             self.create(transformed_queue)
 
-    def _ids(self, accelerators: Dict[str, int]) -> Tuple[str, List[int]]:  # type: ignore
+    def _ids(self, accelerators: dict[str, int]) -> tuple[str, list[int]]:  # type: ignore
         """Generator of device piece indices."""
         start = 0
         for device, n in accelerators.items():
@@ -163,7 +163,7 @@ class DistributedQueues:
         return devgate
 
     @staticmethod
-    def count(queue: List[Gate], nqubits: int):
+    def count(queue: list[Gate], nqubits: int):
         """Counts how many gates target each qubit.
 
         Args:
@@ -183,8 +183,8 @@ class DistributedQueues:
         return counter
 
     def _transform(
-        self, queue: List[Gate], remaining_queue: List[Gate], counter
-    ) -> List[Gate]:
+        self, queue: list[Gate], remaining_queue: list[Gate], counter
+    ) -> list[Gate]:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
@@ -235,12 +235,8 @@ class DistributedQueues:
 
         # Modify gates to take into account the swaps
         for gate in new_remaining_queue:
-            new_target_qubits = tuple(
-                qubit_map[q] if q in qubit_map else q for q in gate.target_qubits
-            )
-            new_control_qubits = tuple(
-                qubit_map[q] if q in qubit_map else q for q in gate.control_qubits
-            )
+            new_target_qubits = tuple(qubit_map.get(q, q) for q in gate.target_qubits)
+            new_control_qubits = tuple(qubit_map.get(q, q) for q in gate.control_qubits)
             gate._set_targets_and_controls(new_target_qubits, new_control_qubits)
 
         return self._transform(queue, new_remaining_queue, counter)
@@ -267,7 +263,7 @@ class DistributedQueues:
         new_queue.extend(gates.SWAP(*p) for p in reversed(self.swaps_list))
         return new_queue
 
-    def create(self, queue: List[Gate]):
+    def create(self, queue: list[Gate]):
         """Creates the queues for each accelerator device.
 
         Args:
@@ -288,7 +284,7 @@ class DistributedQueues:
                 if not isinstance(gate, gates.SWAP):
                     raise_error(
                         ValueError,
-                        "Only SWAP gates are supported for " "global qubits.",
+                        "Only SWAP gates are supported for global qubits.",
                     )
                 if len(global_qubits) > 1:
                     raise_error(

@@ -1,7 +1,6 @@
 """Submodule with entropy measures."""
 
 import math
-from typing import Union
 
 import numpy as np
 
@@ -174,9 +173,7 @@ def classical_mutual_information(
     )
 
 
-def classical_renyi_entropy(
-    prob_dist, alpha: Union[float, int], base: float = 2, backend=None
-):
+def classical_renyi_entropy(prob_dist, alpha: float, base: float = 2, backend=None):
     """Calculates the classical Rényi entropy :math:`H_{\\alpha}` of a discrete probability distribution.
 
     For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distribution
@@ -261,7 +258,7 @@ def classical_renyi_entropy(
 
 
 def classical_relative_renyi_entropy(
-    prob_dist_p, prob_dist_q, alpha: Union[float, int], base: float = 2, backend=None
+    prob_dist_p, prob_dist_q, alpha: float, base: float = 2, backend=None
 ):
     """Calculates the classical relative Rényi entropy between two discrete probability distributions.
 
@@ -659,9 +656,9 @@ def mutual_information(state, partition, base: float = 2, backend=None):
     nqubits = math.log2(len(state))
 
     if not nqubits.is_integer():
-        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+        raise_error(ValueError, "dimensions of ``state`` must be a power of 2.")
 
-    partition_b = set(list(range(int(nqubits)))) ^ set(list(partition))
+    partition_b = set(range(int(nqubits))) ^ set(partition)
 
     state_a = partial_trace(state, partition_b, backend)
     state_b = partial_trace(state, partition, backend)
@@ -673,7 +670,7 @@ def mutual_information(state, partition, base: float = 2, backend=None):
     )
 
 
-def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
+def renyi_entropy(state, alpha: float, base: float = 2, backend=None):
     """Calculates the Rényi entropy :math:`H_{\\alpha}` of a quantum state :math:`\\rho`.
 
     For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy is defined as
@@ -746,9 +743,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     return (1 / (1 - alpha)) * log / math.log2(base)
 
 
-def relative_renyi_entropy(
-    state, target, alpha: Union[float, int], base: float = 2, backend=None
-):
+def relative_renyi_entropy(state, target, alpha: float, base: float = 2, backend=None):
     """Calculates the relative Rényi entropy between two quantum states.
 
     For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and quantum states
@@ -916,7 +911,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
 def relative_tsallis_entropy(
     state,
     target,
-    alpha: Union[float, int],
+    alpha: float,
     base: float = 2,
     backend=None,
 ):

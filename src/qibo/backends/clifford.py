@@ -4,11 +4,9 @@ from collections import Counter
 from functools import cache, reduce
 from importlib.util import find_spec, module_from_spec
 from itertools import product
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
-from numpy.typing import ArrayLike, DTypeLike
-from scipy.sparse import eye as eye_sparse
+from numpy.typing import ArrayLike
 
 from qibo import gates
 from qibo.backends.abstract import Backend
@@ -30,7 +28,7 @@ class CliffordBackend(Backend):
         `Phys. Rev. A 70, 052328 (2004) <https://doi.org/10.1103/PhysRevA.70.052328>`_.
     """
 
-    def __init__(self, platform: Optional[str] = None):
+    def __init__(self, platform: str | None = None):
         super().__init__()
 
         self.name = "clifford"
@@ -194,7 +192,7 @@ class CliffordBackend(Backend):
     def execute_circuit(  # pylint: disable=R1710
         self,
         circuit,
-        initial_state: Optional[ArrayLike] = None,
+        initial_state: ArrayLike | None = None,
         nshots: int = 1000,
     ):
         """Execute a Clifford circuits.
@@ -217,7 +215,7 @@ class CliffordBackend(Backend):
         for gate in circuit.queue:
             if (
                 not gate.clifford
-                and not gate.__class__.__name__ == "M"
+                and gate.__class__.__name__ != "M"
                 and not isinstance(gate, gates.PauliNoiseChannel)
             ):
                 raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
@@ -275,7 +273,7 @@ class CliffordBackend(Backend):
             )
 
     def execute_circuit_repeated(
-        self, circuit, nshots: int = 1000, initial_state: Optional[ArrayLike] = None
+        self, circuit, nshots: int = 1000, initial_state: ArrayLike | None = None
     ):
         """Execute a Clifford circuits ``nshots`` times.
 
@@ -332,7 +330,7 @@ class CliffordBackend(Backend):
     def sample_shots(
         self,
         state: ArrayLike,
-        qubits: Union[List[int], Tuple[int, ...]],
+        qubits: list[int] | tuple[int, ...],
         nqubits: int,
         nshots: int,
         collapse: bool = False,
@@ -365,7 +363,7 @@ class CliffordBackend(Backend):
 
     def symplectic_matrix_to_generators(
         self, symplectic_matrix: ArrayLike, return_array: bool = False
-    ) -> Union[Tuple[List[str], List[int]], Tuple[List[ArrayLike], List[int]]]:
+    ) -> tuple[list[str], list[int]] | tuple[list[ArrayLike], list[int]]:
         """Extract the stabilizers and destabilizers generators from symplectic matrix.
 
         Args:
@@ -434,7 +432,7 @@ class CliffordBackend(Backend):
 
     def _compute_symplectic_matrix(
         self, unitary: ArrayLike, m: int
-    ) -> Tuple[ArrayLike, ArrayLike]:
+    ) -> tuple[ArrayLike, ArrayLike]:
         """Compute the symplectic matrix for Clifford unitary on :math`m` qubits
         and the phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
         :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0`
@@ -535,7 +533,7 @@ class CliffordBackend(Backend):
         self,
         symplectic_m: ArrayLike,
         n: int,
-        qubit_indices: Union[List[int], Tuple[int, ...]],
+        qubit_indices: list[int] | tuple[int, ...],
     ) -> ArrayLike:
         """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
         symplectic_n = self.identity(2 * n, dtype=self.uint8)
@@ -552,7 +550,7 @@ class CliffordBackend(Backend):
         self,
         phase_m: ArrayLike,
         n: int,
-        qubit_indices: Union[List[int], Tuple[int, ...]],
+        qubit_indices: list[int] | tuple[int, ...],
     ):
         """Embed m-qubit phase vector into n-qubit system."""
         phase_n = self.zeros(2 * n, dtype=self.uint8)
@@ -565,7 +563,7 @@ class CliffordBackend(Backend):
         return phase_n
 
     def _execute_circuit_stim(
-        self, circuit, initial_state: Optional[ArrayLike] = None, nshots: int = 1000
+        self, circuit, initial_state: ArrayLike | None = None, nshots: int = 1000
     ):
         from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
 
@@ -602,7 +600,7 @@ class CliffordBackend(Backend):
 
     @staticmethod
     @cache
-    def _pauli_generators(m: int) -> List[str]:
+    def _pauli_generators(m: int) -> list[str]:
         pauli_gens_x, pauli_gens_z = [], []
         for ind in range(m):
             p = ["I"] * m

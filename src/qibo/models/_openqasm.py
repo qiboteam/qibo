@@ -1,8 +1,5 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
-from typing import Union
-
-import numpy as np  # cannot be removed
 import openqasm3
 
 import qibo
@@ -23,15 +20,15 @@ class CustomQASMGate:
         self,
         name: str,
         gates: list,
-        qubits: Union[list, tuple],
-        args: Union[list, tuple],
+        qubits: list | tuple,
+        args: list | tuple,
     ):
         self.name = name
         self.gates = gates
         self.qubits = qubits
         self.args = args
 
-    def get_gate(self, qubits: Union[list, tuple], args: Union[list, tuple]):
+    def get_gate(self, qubits: list | tuple, args: list | tuple):
         """Returns the gates composing the defined gate applied on the
         specified qubits with the specified ``args`` as a unique
         :class:`qibo.gates.special.FusedGate`.
@@ -214,7 +211,7 @@ class QASMParser:
                     + "and classical registers should match.",
                 )
             qubits = self.q_registers[qubit]
-        return getattr(qibo.gates, "M")(*qubits, register_name=register)
+        return qibo.gates.M(*qubits, register_name=register)
 
     def _get_qubit(self, qubit):
         """Extracts the qubit from a :class:`openqasm3.ast.QubitDeclaration` statement."""
@@ -235,7 +232,7 @@ class QASMParser:
             arg = self._unroll_expression(arg)
             try:
                 arg = eval(arg.replace("pi", "np.pi"))
-            except:
+            except Exception:  # noqa: S110
                 pass
             init_args.append(arg)
         # check whether the gate exists in qibo.gates already
@@ -264,23 +261,24 @@ class QASMParser:
         else:
             stripped_gate_name = gate.name.name.lstrip("c")
             ncontrols = len(gate.name.name) - len(stripped_gate_name)
-            if ncontrols > 0:
-                if hasattr(qibo.gates, _qibo_gate_name(stripped_gate_name)):
-                    control_qubits = qubits[:ncontrols]
-                    remaining_qubits = qubits[ncontrols:]
-                    try:
-                        base_gate_cls = getattr(
-                            qibo.gates, _qibo_gate_name(stripped_gate_name)
-                        )
-                        gate_instance = base_gate_cls(
-                            *remaining_qubits, *init_args
-                        ).controlled_by(*control_qubits)
-                    # the gate exists in qibo.gates but invalid construction
-                    except TypeError:
-                        raise_error(
-                            ValueError, f"Invalid gate declaration at span: {gate.span}"
-                        )
-                    return gate_instance
+            if ncontrols > 0 and hasattr(
+                qibo.gates, _qibo_gate_name(stripped_gate_name)
+            ):
+                control_qubits = qubits[:ncontrols]
+                remaining_qubits = qubits[ncontrols:]
+                try:
+                    base_gate_cls = getattr(
+                        qibo.gates, _qibo_gate_name(stripped_gate_name)
+                    )
+                    gate_instance = base_gate_cls(
+                        *remaining_qubits, *init_args
+                    ).controlled_by(*control_qubits)
+                # the gate exists in qibo.gates but invalid construction
+                except TypeError:
+                    raise_error(
+                        ValueError, f"Invalid gate declaration at span: {gate.span}"
+                    )
+                return gate_instance
             # undefined gate
             raise_error(ValueError, f"Undefined gate at span: {gate.span}")
         return gate

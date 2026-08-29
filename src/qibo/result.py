@@ -2,7 +2,7 @@
 
 import collections
 import warnings
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -10,6 +10,9 @@ from numpy.typing import ArrayLike
 from qibo import __version__, gates
 from qibo.config import raise_error
 from qibo.measurements import apply_bitflips, frequencies_to_binary
+
+if TYPE_CHECKING:
+    from qibo.backends import Backend
 
 
 def load_result(filename: str):
@@ -87,7 +90,7 @@ class QuantumState:
 
         return self._state
 
-    def probabilities(self, qubits: Optional[Union[list, set]] = None):
+    def probabilities(self, qubits: list | set | None = None):
         """Calculates measurement probabilities by tracing out qubits.
 
         When noisy model is applied to a circuit and `circuit.density_matrix=False`,
@@ -184,9 +187,9 @@ class MeasurementOutcomes:
         measurements,
         backend=None,
         probabilities=None,
-        samples: Optional[int] = None,
+        samples: int | None = None,
         nshots: int = 1000,
-        nqubits: Optional[int] = None,
+        nqubits: int | None = None,
     ):
         self.backend = backend
         self.measurements = measurements
@@ -281,7 +284,7 @@ class MeasurementOutcomes:
 
         return self._frequencies
 
-    def probabilities(self, qubits: Optional[Union[list, set]] = None) -> ArrayLike:
+    def probabilities(self, qubits: list | set | None = None) -> ArrayLike:
         """Calculate the probabilities as frequencies / nshots
 
         Args:
@@ -457,7 +460,7 @@ class MeasurementOutcomes:
 
         return self._measurement_gate
 
-    def apply_bitflips(self, p0: float, p1: Optional[float] = None):
+    def apply_bitflips(self, p0: float, p1: float | None = None):
         """Apply bitflips to the measurements with probabilities `p0` and `p1`
 
         Args:
@@ -551,7 +554,7 @@ class MeasurementOutcomes:
     def from_samples(
         cls,
         samples,
-        qubits: Optional[Union[list[int], tuple[int, ...]]] = None,
+        qubits: list[int] | tuple[int, ...] | None = None,
         backend: Optional["Backend"] = None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` directly from
@@ -625,9 +628,9 @@ class MeasurementOutcomes:
     def from_frequencies(
         cls,
         frequencies,
-        nqubits: Optional[int] = None,
-        qubits: Optional[Union[list[int], tuple[int, ...]]] = None,
-        seed: Optional[int] = None,
+        nqubits: int | None = None,
+        qubits: list[int] | tuple[int, ...] | None = None,
+        seed: int | None = None,
         backend: Optional["Backend"] = None,
     ):
         """Constructs a :class:`qibo.result.MeasurementOutcomes` from a
@@ -728,13 +731,16 @@ class MeasurementOutcomes:
             )
 
         # Validate consistency between inferred measured count and qubits
-        if inferred_n_measured is not None and qubits is not None:
-            if inferred_n_measured != len(qubits):
-                raise_error(
-                    ValueError,
-                    f"Binary-string key length ({inferred_n_measured}) does not "
-                    f"match the number of qubits provided ({len(qubits)}).",
-                )
+        if (
+            inferred_n_measured is not None
+            and qubits is not None
+            and inferred_n_measured != len(qubits)
+        ):
+            raise_error(
+                ValueError,
+                f"Binary-string key length ({inferred_n_measured}) does not "
+                f"match the number of qubits provided ({len(qubits)}).",
+            )
 
         if qubits is None:
             qubits = tuple(range(n_measured))
@@ -836,7 +842,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             nqubits=self.nqubits,
         )
 
-    def probabilities(self, qubits: Optional[Union[list, set]] = None):
+    def probabilities(self, qubits: list | set | None = None):
         if self.measurement_gate.has_bitflip_noise():
             return MeasurementOutcomes.probabilities(self, qubits)
         return QuantumState.probabilities(self, qubits)

@@ -1,5 +1,4 @@
 import json
-from typing import Dict, Optional, Tuple, Union
 
 from qibo import gates
 from qibo.config import raise_error
@@ -45,11 +44,11 @@ class M(Gate):
     def __init__(
         self,
         *q,
-        register_name: Optional[str] = None,
+        register_name: str | None = None,
         collapse: bool = False,
-        basis: Union[Gate, str] = Z,
-        p0: Optional["ProbsType"] = None,  # type: ignore
-        p1: Optional["ProbsType"] = None,  # type: ignore
+        basis: Gate | str = Z,
+        p0: float | tuple | list | dict | None = None,
+        p1: float | tuple | list | dict | None = None,
     ):
         super().__init__()
         self.name = "measure"
@@ -83,12 +82,11 @@ class M(Gate):
             "p0": p0,
             "p1": p1,
         }
-        if collapse:
-            if p0 is not None or p1 is not None:
-                raise_error(
-                    NotImplementedError,
-                    "Bitflip measurement noise is not available when collapsing.",
-                )
+        if collapse and (p0 is not None or p1 is not None):
+            raise_error(
+                NotImplementedError,
+                "Bitflip measurement noise is not available when collapsing.",
+            )
 
         if p1 is None:
             p1 = p0
@@ -119,8 +117,8 @@ class M(Gate):
 
     @staticmethod
     def _get_bitflip_tuple(
-        qubits: Tuple[int, ...], probs: "ProbsType"  # type: ignore
-    ) -> Tuple[float, ...]:
+        qubits: tuple[int, ...], probs: float | tuple | list | dict
+    ) -> tuple[float, ...]:
         if isinstance(probs, float):
             if probs < 0 or probs > 1:  # pragma: no cover
                 raise_error(ValueError, f"Invalid bitflip probability {probs}.")
@@ -142,11 +140,13 @@ class M(Gate):
                     KeyError,
                     f"Bitflip map contains {diff} qubits that are not measured.",
                 )
-            return tuple(probs[q] if q in probs else 0.0 for q in qubits)
+            return tuple(probs.get(q, 0.0) for q in qubits)
 
         raise_error(TypeError, f"Invalid type {probs} of bitflip map.")
 
-    def _get_bitflip_map(self, p: Optional["ProbsType"] = None) -> Dict[int, float]:  # type: ignore
+    def _get_bitflip_map(
+        self, p: float | tuple | list | dict | None = None
+    ) -> dict[int, float]:
         """Creates dictionary with bitflip probabilities."""
         if p is None:
             return {q: 0 for q in self.qubits}
@@ -176,11 +176,9 @@ class M(Gate):
         self.bitflip_map[1].update(gate.bitflip_map[1])
 
     def controlled_by(self, *q):
-        """"""
         raise_error(NotImplementedError, "Measurement gates cannot be controlled.")
 
     def matrix(self, backend=None):
-        """"""
         raise_error(
             NotImplementedError,
             "Measurement gates do not have a matrix representation.",

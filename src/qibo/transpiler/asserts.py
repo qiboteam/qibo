@@ -1,5 +1,3 @@
-from typing import Optional
-
 import networkx as nx
 import numpy as np
 
@@ -23,7 +21,7 @@ def assert_transpiling(
     transpiled_circuit: Circuit,
     connectivity: nx.Graph,
     final_layout: dict,
-    native_gates: NativeGates = NativeGates.default(),
+    native_gates: NativeGates | None = None,
     check_circuit_equivalence=True,
 ):
     """Check that all transpiler passes have been executed correctly.
@@ -38,6 +36,8 @@ def assert_transpiling(
         check_circuit_equivalence (bool, optional): Check if the transpiled circuit is equivalent to the original one.
             Defaults to ``True``.
     """
+    if native_gates is None:
+        native_gates = NativeGates.default()
     assert_connectivity(circuit=transpiled_circuit, connectivity=connectivity)
     assert_decomposition(
         circuit=transpiled_circuit,
@@ -60,7 +60,7 @@ def assert_circuit_equivalence(
     original_circuit: Circuit,
     transpiled_circuit: Circuit,
     final_layout: dict,
-    test_states: Optional[list] = None,
+    test_states: list | None = None,
     ntests: int = 3,
 ):
     """Checks that the transpiled circuit is equivalent to the original one.

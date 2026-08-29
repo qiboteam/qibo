@@ -1,9 +1,8 @@
 """Module with common linear algebra operations for quantum information."""
 
 import math
-from typing import List, Optional, Tuple, Union
 
-from qibo.backends import Backend, _check_backend, _check_backend_and_local_state
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 
 
@@ -97,9 +96,7 @@ def anticommutator(operator_1, operator_2):
     return operator_1 @ operator_2 + operator_2 @ operator_1
 
 
-def partial_trace(
-    state, traced_qubits: Union[List[int], Tuple[int, ...]], backend=None
-):
+def partial_trace(state, traced_qubits: list[int] | tuple[int, ...], backend=None):
     """Returns the density matrix resulting from tracing out ``traced_qubits`` from ``state``.
 
     Total number of qubits is inferred by the shape of ``state``.
@@ -129,9 +126,7 @@ def partial_trace(
     return backend.partial_trace(state, traced_qubits)
 
 
-def partial_transpose(
-    operator, partition: Union[List[int], Tuple[int, ...]], backend=None
-):
+def partial_transpose(operator, partition: list[int] | tuple[int, ...], backend=None):
     """Return matrix after the partial transposition of ``partition`` qubits in ``operator``.
 
     Given a :math:`n`-qubit operator :math:`O \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
@@ -208,7 +203,7 @@ def partial_transpose(
 
 def matrix_exponentiation(
     matrix,
-    phase: Optional[Union[float, int, complex]] = None,
+    phase: complex | None = None,
     eigenvectors=None,
     eigenvalues=None,
     backend=None,
@@ -248,7 +243,7 @@ def matrix_exponentiation(
 
 def matrix_logarithm(
     matrix,
-    base: Union[float, int] = 2,
+    base: float = 2,
     eigenvectors=None,
     eigenvalues=None,
     backend=None,
@@ -284,7 +279,7 @@ def matrix_logarithm(
 
 
 def matrix_power(
-    matrix, power: Union[float, int], precision_singularity: float = 1e-14, backend=None
+    matrix, power: float, precision_singularity: float = 1e-14, backend=None
 ):
     """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculate :math:`A^{\\alpha}`.
 
@@ -348,9 +343,7 @@ def singular_value_decomposition(matrix, backend=None):
     return backend.singular_value_decomposition(matrix)
 
 
-def schmidt_decomposition(
-    state, partition: Union[List[int], Tuple[int, ...]], backend=None
-):
+def schmidt_decomposition(state, partition: list[int] | tuple[int, ...], backend=None):
     """Return the Schmidt decomposition of a :math:`n`-qubit bipartite pure quantum ``state``.
 
     Given a bipartite pure state :math:`\\ket{\\psi}\\in\\mathcal{H}_{A}\\otimes\\mathcal{H}_{B}`,
@@ -396,7 +389,7 @@ def schmidt_decomposition(
         raise_error(ValueError, "dimensions of ``state`` must be a power of 2.")
 
     nqubits = int(nqubits)
-    partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
+    partition_2 = partition.__class__(set(range(nqubits)) ^ set(partition))
 
     tensor = backend.reshape(state, [2] * nqubits)
     tensor = backend.transpose(tensor, partition + partition_2)
@@ -407,11 +400,11 @@ def schmidt_decomposition(
 
 def lanczos(
     matrix,
-    steps: Optional[int] = None,
+    steps: int | None = None,
     initial_vector=None,
     precision_tol: float = 1e-8,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Lanczos iterative method to tridiagonalize a Hermitian matrix.
 

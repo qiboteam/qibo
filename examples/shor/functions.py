@@ -34,7 +34,7 @@ def phi_adder(b, angles):
     Returns:
         generator with the required quantum gates applied on the quantum circuit.
     """
-    for i in range(0, len(b)):
+    for i in range(len(b)):
         yield gates.U1(b[i], angles[i])
 
 
@@ -47,7 +47,7 @@ def i_phi_adder(b, angles):
     Returns:
         generator with the required quantum gates applied on the quantum circuit.
     """
-    for i in reversed(range(0, len(b))):
+    for i in reversed(range(len(b))):
         yield gates.U1(b[i], -angles[i])
 
 
@@ -61,7 +61,7 @@ def c_phi_adder(c, b, angles):
     Returns:
         generator with the required quantum gates applied on the quantum circuit.
     """
-    for i in range(0, len(b)):
+    for i in range(len(b)):
         yield gates.U1(b[i], angles[i]).controlled_by(c)
 
 
@@ -75,7 +75,7 @@ def i_c_phi_adder(c, b, angles):
     Returns:
         generator with the required quantum gates applied on the quantum circuit.
     """
-    for i in reversed(range(0, len(b))):
+    for i in reversed(range(len(b))):
         yield gates.U1(b[i], -angles[i]).controlled_by(c)
 
 
@@ -90,7 +90,7 @@ def cc_phi_adder(c1, c2, b, angles):
     Returns:
         generator with the required quantum gates applied on the quantum circuit.
     """
-    for i in range(0, len(b)):
+    for i in range(len(b)):
         yield gates.U1(b[i], angles[i]).controlled_by(c1, c2)
 
 
@@ -105,7 +105,7 @@ def i_cc_phi_adder(c1, c2, b, angles):
     Returns:
         generator with the required quantum gates applied on the quantum circuit.
     """
-    for i in reversed(range(0, len(b))):
+    for i in reversed(range(len(b))):
         yield gates.U1(b[i], -angles[i]).controlled_by(c1, c2)
 
 
@@ -299,7 +299,7 @@ def mod_inv(a, N):
     Returns:
         x%N (int): inverse of a modulo N.
     """
-    g, x, y = egcd(a, N)
+    g, x, _y = egcd(a, N)
     if g != 1:
         raise ValueError("modular inverse does not exist")
     else:
@@ -323,7 +323,7 @@ def quantum_order_finding_full(N, a):
     ancilla = 2 * n + 1
     q_reg = [2 * n + 2 + i for i in range(2 * n)]
     circuit = Circuit(4 * n + 2)
-    print(f"  - Total number of qubits used: {4*n+2}.\n")
+    print(f"  - Total number of qubits used: {4 * n + 2}.\n")
 
     # Building the quantum circuit
     for i in range(len(q_reg)):
@@ -364,7 +364,7 @@ def quantum_order_finding_semiclassical(N, a):
     x = [n + 1 + i for i in range(n)]
     ancilla = 2 * n + 1
     q_reg = 2 * n + 2
-    print(f"  - Total number of qubits used: {2*n+3}.\n")
+    print(f"  - Total number of qubits used: {2 * n + 3}.\n")
     results = []
     exponents = []
     exp = a % N

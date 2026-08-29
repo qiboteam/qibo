@@ -80,12 +80,13 @@ def pytest_configure(config):
 
 @pytest.fixture
 def backend(backend_name, request):
-    if request.config.getoption("--gpu-only"):  # pragma: no cover
+    if request.config.getoption(
+        "--gpu-only"
+    ) and not backend_name in (  # pragma: no cover
+        f"qibojit-{platform}" for platform in ("cupy", "cuquantum")
+    ):
         # is_gpu = "cupy" in backend_name or "cuquantum" in backend_name
-        if not backend_name in (
-            f"qibojit-{platform}" for platform in ("cupy", "cuquantum")
-        ):
-            pytest.skip("Skipping non-gpu backend.")
+        pytest.skip("Skipping non-gpu backend.")
     yield get_backend(backend_name)
 
 
@@ -98,7 +99,9 @@ def clear():
 
 @pytest.fixture
 def star_connectivity():
-    def _star_connectivity(names=list(range(5)), middle_qubit_idx=2):
+    def _star_connectivity(names=None, middle_qubit_idx=2):
+        if names is None:
+            names = list(range(5))
         chip = nx.Graph()
         chip.add_nodes_from(names)
         graph_list = [
@@ -114,7 +117,9 @@ def star_connectivity():
 
 @pytest.fixture
 def grid_connectivity():
-    def _grid_connectivity(names=list(range(5))):
+    def _grid_connectivity(names=None):
+        if names is None:
+            names = list(range(5))
         chip = nx.Graph()
         chip.add_nodes_from(names)
         graph_list = [

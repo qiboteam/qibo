@@ -35,7 +35,7 @@ class single_qubit_classifier:
         self.params = np.random.randn(layers * 4)
         self._circuit = self._initialize_circuit()
         try:
-            os.makedirs("results/" + self.name + "/%s_layers" % self.layers)
+            os.makedirs("results/" + self.name + f"/{self.layers}_layers")
         except:
             pass
 
@@ -121,7 +121,7 @@ class single_qubit_classifier:
             qibo.set_backend(backend="qiboml", platform="tensorflow")
             tf = qibo.get_backend().tf
 
-            circuit = self.circuit(self.training_set[0])
+            self.circuit(self.training_set[0])
 
             sgd_options = {
                 "nepochs": 5001,
@@ -160,7 +160,6 @@ class single_qubit_classifier:
             parameters = np.array(params_optimal)
 
         else:
-            import numpy as np
             from scipy.optimize import minimize
 
             m = minimize(lambda p: loss(p), self.params, method=method, options=options)
@@ -214,7 +213,7 @@ class single_qubit_classifier:
             "%",
         )
 
-        fig.savefig("results/" + self.name + "/%s_layers/test_set.pdf" % self.layers)
+        fig.savefig("results/" + self.name + f"/{self.layers}_layers/test_set.pdf")
 
     def paint_world_map(self):
         """Method for plotting the proper labels on the Bloch sphere.
@@ -286,7 +285,7 @@ class single_qubit_classifier:
 
         ax.axis("off")
 
-        fig.savefig("results/" + self.name + "/%s_layers/world_map.pdf" % self.layers)
+        fig.savefig("results/" + self.name + f"/{self.layers}_layers/world_map.pdf")
 
 
 def fidelity(state1, state2):

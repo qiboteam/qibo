@@ -1,8 +1,6 @@
-import networkx as nx
 import numpy as np
 import pytest
-import qiskit.transpiler.passes as passes
-from qiskit.transpiler import PassManager
+from qiskit.transpiler import PassManager, passes
 
 from qibo import gates
 from qibo.models import Circuit

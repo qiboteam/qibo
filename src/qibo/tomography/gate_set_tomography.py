@@ -1,7 +1,6 @@
 from functools import cache
 from inspect import signature
 from itertools import product
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -37,7 +36,7 @@ def _check_nqubits(nqubits):
 
 
 @cache
-def _gates(nqubits: int) -> List[Tuple[Gate, ...]]:
+def _gates(nqubits: int) -> list[tuple[Gate, ...]]:
     """Gates implementing all the GST state preparations.
 
     Args:
@@ -54,7 +53,7 @@ def _gates(nqubits: int) -> List[Tuple[Gate, ...]]:
 
 
 @cache
-def _measurements(nqubits: int) -> List[Tuple[Gate, ...]]:
+def _measurements(nqubits: int) -> list[tuple[Gate, ...]]:
     """Measurement gates implementing all the GST measurement bases.
 
     Args:
@@ -67,7 +66,7 @@ def _measurements(nqubits: int) -> List[Tuple[Gate, ...]]:
 
 
 @cache
-def _observables(nqubits: int) -> List[Tuple[Symbol, ...]]:
+def _observables(nqubits: int) -> list[tuple[Symbol, ...]]:
     """All the observables measured in the GST protocol.
 
     Args:
@@ -185,7 +184,7 @@ def _extract_nqubits(gate, params=None):
 
 
 def _get_nqubits_and_angles(
-    gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
+    gate: gates.abstract.Gate | tuple[gates.abstract.Gate, list[float]],
 ):
     """A function to extract information about a `qibo.gates.Gate`.
 
@@ -208,7 +207,7 @@ def _get_nqubits_and_angles(
     if isinstance(gate, tuple):
         angles = ANGLES
         gate, params = gate
-        if not (isinstance(params, list) or isinstance(params, tuple)):
+        if not (isinstance(params, (list, tuple))):
             params = [params]
     else:
         angles = None
@@ -227,8 +226,8 @@ def _get_nqubits_and_angles(
 
 
 def _extract_gate(
-    gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
-    qubits: Optional[Union[int, Tuple[int, ...]]] = None,
+    gate: gates.abstract.Gate | tuple[gates.abstract.Gate, list[float]],
+    qubits: int | tuple[int, ...] | None = None,
 ):
     """Receives a gate class / tuple of gate class and parameters and extracts an instance of a
         `qibo.gates.Gate` that can be applied directly to the circuit while also returning the number of
@@ -247,7 +246,7 @@ def _extract_gate(
         gate (:class:`qibo.gates.Gate`): An instance of the gate that can be applied directly to the circuit.
         nqubits (int): The number of qubits that the gate acts on.
     """
-    gate, nqubits, angle_names, angle_values, params = _get_nqubits_and_angles(gate)
+    gate, nqubits, _angle_names, angle_values, _params = _get_nqubits_and_angles(gate)
     # Construct gate instance
     qubits = (
         range(nqubits)
@@ -292,8 +291,8 @@ def _gate_tomography(
     nqubits: int,
     gate: Gate = None,
     nshots: int = int(1e4),
-    noise_model: Optional[NoiseModel] = None,
-    backend: Optional[Backend] = None,
+    noise_model: NoiseModel | None = None,
+    backend: Backend | None = None,
     transpiler=None,
     ancilla=None,
 ):
@@ -337,16 +336,15 @@ def _gate_tomography(
 
     backend = _check_backend(backend)
 
-    if ancilla is not None:
-        if ancilla >= 3:
-            raise_error(
-                ValueError,
-                f"Unexpected ancilla value (ancilla={ancilla}).\n"
-                f"    Permitted inputs ancilla=None;\n"
-                f"                     ancilla=0 to apply SWAP to qubit0 (simulating reset of qubit0);\n"
-                f"                     ancilla=1 to apply SWAP to qubit1 (simulating reset of qubit1);\n"
-                f"                     ancilla=2 to apply SWAP to qubit0 and qubit1 (simulating reset of qubit0 and qubit1).",
-            )
+    if ancilla is not None and ancilla >= 3:
+        raise_error(
+            ValueError,
+            f"Unexpected ancilla value (ancilla={ancilla}).\n"
+            f"    Permitted inputs ancilla=None;\n"
+            f"                     ancilla=0 to apply SWAP to qubit0 (simulating reset of qubit0);\n"
+            f"                     ancilla=1 to apply SWAP to qubit1 (simulating reset of qubit1);\n"
+            f"                     ancilla=2 to apply SWAP to qubit0 and qubit1 (simulating reset of qubit0 and qubit1).",
+        )
     if gate is not None:
         if isinstance(gate, gates.Gate):
             gate = [gate]
@@ -366,7 +364,6 @@ def _gate_tomography(
     # GST for empty circuit or with gates
     matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
-
         additional_qubits = 0 if ancilla is None else (1 if ancilla in (0, 1) else 2)
         circ = Circuit(nqubits + additional_qubits, density_matrix=True)
 
@@ -400,13 +397,13 @@ def _gate_tomography(
 
 
 def GST(
-    gate_set: Union[tuple, set, list],
+    gate_set: tuple | set | list,
     nshots: int = int(1e4),
-    noise_model: Optional[NoiseModel] = None,
+    noise_model: NoiseModel | None = None,
     include_empty: bool = False,
     pauli_liouville: bool = False,
-    gauge_matrix: Optional[ArrayLike] = None,
-    backend: Optional[Backend] = None,
+    gauge_matrix: ArrayLike | None = None,
+    backend: Backend | None = None,
     transpiler=None,
     two_qubit_basis_op_diff_registers=False,
     ancilla=None,
@@ -506,7 +503,7 @@ def GST(
     # append to gate for _gate_tomography.
     if two_qubit_basis_op_diff_registers:
         if len(gate_set) != 2:
-            raise_error(RuntimeError, f"Requires two single-qubit gates")
+            raise_error(RuntimeError, "Requires two single-qubit gates")
         gate = []
         for idx, _gate in enumerate(gate_set):
             params = None
@@ -516,7 +513,7 @@ def GST(
                 _g = _gate
             nqubits = _extract_nqubits(_g, params)
             if nqubits != 1:
-                raise_error(RuntimeError, f"Requires two single-qubit gates")
+                raise_error(RuntimeError, "Requires two single-qubit gates")
             _gate, nqubits = _extract_gate(_gate, idx)
             gate.append(_gate)
 

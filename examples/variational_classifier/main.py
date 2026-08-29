@@ -126,7 +126,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
             for bias in range(measured_qubits):
                 initial_parameters[bias] = 0.0
             print("Training classifier...")
-            cost_function, optimal_angles = qc.minimize(
+            _cost_function, optimal_angles = qc.minimize(
                 initial_parameters,
                 data_train,
                 labels_train,

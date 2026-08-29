@@ -257,14 +257,11 @@ class Grover:
                 if logs:
                     log.info(elem[0])
                 self.solution.append(elem[0])
-                if logs:
-                    if self.check:
-                        if self.check(elem[0], *self.check_args):
-                            log.info("Solution checked and successful.")
-                        else:
-                            log.info(
-                                "Not a solution of the problem. Something went wrong."
-                            )
+                if logs and self.check:
+                    if self.check(elem[0], *self.check_args):
+                        log.info("Solution checked and successful.")
+                    else:
+                        log.info("Not a solution of the problem. Something went wrong.")
         else:
             if not self.check:
                 raise_error(ValueError, "Check function needed for iterative approach.")

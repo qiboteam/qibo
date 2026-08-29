@@ -3,7 +3,6 @@
 import collections
 from itertools import combinations
 from math import log2
-from typing import Optional, Union
 
 from qibo import gates
 from qibo.config import raise_error
@@ -218,8 +217,8 @@ class NoiseModel:
     def add(
         self,
         error,
-        gate: Optional[gates.Gate] = None,
-        qubits: Optional[Union[int, tuple]] = None,
+        gate: gates.Gate | None = None,
+        qubits: int | tuple | None = None,
         conditions=None,
     ):
         """Add a quantum error for a specific gate and qubit to the noise model.
@@ -365,8 +364,7 @@ class NoiseModel:
                 ]
                 if (
                     gate.qubits not in readout_error_qubits
-                    and gate.register_name
-                    not in noisy_circuit.measurement_tuples.keys()
+                    and gate.register_name not in noisy_circuit.measurement_tuples
                 ):
                     noisy_circuit.add(gate)
 
@@ -531,7 +529,7 @@ class IBMQNoiseModel(NoiseModel):
             )
 
         if isinstance(t_1, dict) and isinstance(t_2, dict):
-            for qubit_key in t_1.keys():
+            for qubit_key in t_1:
                 self.add(
                     ThermalRelaxationError(
                         t_1[qubit_key], t_2[qubit_key], gate_time_1, excited_population

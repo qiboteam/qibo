@@ -2,7 +2,7 @@
 
 import pytest
 
-from qibo.hamiltonians import TFIM, XXZ, SymbolicHamiltonian
+from qibo.hamiltonians import TFIM, SymbolicHamiltonian
 from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.symbols import Z
 

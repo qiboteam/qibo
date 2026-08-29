@@ -1,5 +1,4 @@
 import math
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -21,7 +20,7 @@ bell_basis = np.array(
 
 def u3_decomposition(
     unitary: ArrayLike, backend: Backend
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """Decomposes arbitrary one-qubit gates to U3.
 
     Args:
@@ -44,7 +43,7 @@ def u3_decomposition(
 
 def calculate_psi(
     unitary: ArrayLike, backend: Backend, magic_basis: ArrayLike = magic_basis
-) -> Tuple[ArrayLike, ArrayLike]:
+) -> tuple[ArrayLike, ArrayLike]:
     """Solves the eigenvalue problem of :math:`U^{T} U`.
 
     See step (1) of Appendix A in arXiv:quant-ph/0011050.
@@ -70,7 +69,7 @@ def calculate_psi(
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
         ut_u_real = backend.round(ut_u_real, decimals=15)
 
-    eigvals_real, psi_magic = backend.eigenvectors(ut_u_real, hermitian=True)
+    _eigvals_real, psi_magic = backend.eigenvectors(ut_u_real, hermitian=True)
     # compute full eigvals as <psi|ut_u|psi>, as eigvals_real is only real
     eigvals = backend.sum(backend.conj(psi_magic) * (ut_u @ psi_magic), 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
@@ -81,8 +80,8 @@ def calculate_psi(
 
 
 def calculate_single_qubit_unitaries(
-    psi: ArrayLike, backend: Optional[Backend] = None
-) -> Tuple[ArrayLike, ArrayLike]:
+    psi: ArrayLike, backend: Backend | None = None
+) -> tuple[ArrayLike, ArrayLike]:
     """Calculates local unitaries that maps a maximally entangled basis to the magic basis.
 
     See Lemma 1 of Appendix A in Ref. [1].
@@ -135,7 +134,7 @@ def calculate_diagonal(
     va: ArrayLike,
     vb: ArrayLike,
     backend: Backend,
-) -> Tuple[ArrayLike, ...]:
+) -> tuple[ArrayLike, ...]:
     """Calculates Ud matrix that can be written as exp(-iH).
 
     See Eq. (A1) in arXiv:quant-ph/0011050.
@@ -254,8 +253,8 @@ def calculate_diagonal(
 
 
 def magic_decomposition(
-    unitary: ArrayLike, backend: Optional[Backend] = None
-) -> Tuple[ArrayLike, ...]:
+    unitary: ArrayLike, backend: Backend | None = None
+) -> tuple[ArrayLike, ...]:
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
     backend = _check_backend(backend)
     unitary = backend.cast(unitary, dtype=unitary.dtype)
@@ -269,8 +268,8 @@ def magic_decomposition(
 
 
 def to_bell_diagonal(
-    ud: ArrayLike, bell_basis: ArrayLike = bell_basis, backend: Optional[Backend] = None
-) -> Union[ArrayLike, None]:
+    ud: ArrayLike, bell_basis: ArrayLike = bell_basis, backend: Backend | None = None
+) -> ArrayLike | None:
     """Transforms a matrix to the Bell basis and checks if it is diagonal."""
     backend = _check_backend(backend)
 
@@ -295,7 +294,7 @@ def to_bell_diagonal(
 
 def calculate_h_vector(
     ud_diag: ArrayLike, backend: Backend
-) -> Tuple[ArrayLike, ArrayLike, ArrayLike]:
+) -> tuple[ArrayLike, ArrayLike, ArrayLike]:
     """Finds h parameters corresponding to exp(-iH).
 
     See Eq. (4)-(5) in arXiv:quant-ph/0307177.
@@ -309,7 +308,7 @@ def calculate_h_vector(
 
 def cnot_decomposition(
     q0: int, q1: int, hx: float, hy: float, hz: float, backend: Backend
-) -> List[Gate]:
+) -> list[Gate]:
     """Performs decomposition (6) from arXiv:quant-ph/0307177."""
     h = backend.matrices.H
     u3 = -1j * h
@@ -336,7 +335,7 @@ def cnot_decomposition(
 
 def cnot_decomposition_light(
     q0: int, q1: int, hx: float, hy: float, backend: Backend
-) -> List[Gate]:
+) -> list[Gate]:
     """Performs decomposition (24) from arXiv:quant-ph/0307177."""
     h = backend.matrices.H
     w = (backend.matrices.I(2) - 1j * backend.matrices.X) / math.sqrt(2)
@@ -357,7 +356,7 @@ def cnot_decomposition_light(
 
 def two_qubit_decomposition(
     q0: int, q1: int, unitary: ArrayLike, backend: Backend, threshold: float = 1e-6
-) -> List[Gate]:
+) -> list[Gate]:
     """Performs two qubit unitary gate decomposition.
 
     Args:
@@ -390,7 +389,7 @@ def _get_z_component(unitary: ArrayLike, backend: Backend) -> float:
 
 def _two_qubit_decomposition_without_z(
     q0: int, q1: int, unitary: ArrayLike, backend: Backend
-) -> List[Gate]:
+) -> list[Gate]:
     """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 case."""
     # Get magic decomposition
     u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
@@ -414,7 +413,7 @@ def _two_qubit_decomposition_without_z(
 
 def _two_qubit_decomposition_with_z(
     q0: int, q1: int, unitary: ArrayLike, backend: Backend
-) -> List[Gate]:
+) -> list[Gate]:
     """Implements Theorem 1 decomposition (3 CNOTs) for hz≠0 case."""
     # Get magic decomposition
     u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)

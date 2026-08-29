@@ -79,7 +79,9 @@ in the iterative approach.
 
 In the non-iterative standard case we must write
 ```python
-grover = Grover(oracle, superposition_qubits=qubits, number_solutions=int(binom(qubits, num_1)))
+grover = Grover(
+    oracle, superposition_qubits=qubits, number_solutions=int(binom(qubits, num_1))
+)
 solution, iterations = grover()
 ```
 
@@ -111,7 +113,15 @@ This circuit has `qubits` superposition qubits and some ancillas.
 ```python
 oracle = oracle(qubits, num_1)
 or_circuit = Circuit(oracle.nqubits)
-or_circuit.add(oracle.on_qubits(*(list(range(qubits)) + [oracle.nqubits - 1] + list(range(qubits, oracle.nqubits - 1)))))
+or_circuit.add(
+    oracle.on_qubits(
+        *(
+            list(range(qubits))
+            + [oracle.nqubits - 1]
+            + list(range(qubits, oracle.nqubits - 1))
+        )
+    )
+)
 ```
 The `oracle` object has `qubits` qubits for the superposition, an ancilla qubit detecting whether the conditions are
 fulfilled or not, and some other auxiliary ancillas. In order to relabel the qubits so that the important ancilla is
@@ -120,6 +130,11 @@ at the bottom of the circuit, we must add two more lines and use a feature provi
 Again, calling the Grover model is enough to execute the circuit. The binomial function allows to obtain the exact size
 of the search space.
 ```python
-grover = Grover(or_circuit, superposition_circuit=superposition, superposition_qubits=qubits, number_solutions=1,
-                superposition_size=int(binomial(qubits, num_1)))
+grover = Grover(
+    or_circuit,
+    superposition_circuit=superposition,
+    superposition_qubits=qubits,
+    number_solutions=1,
+    superposition_size=int(binomial(qubits, num_1)),
+)
 ```

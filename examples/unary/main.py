@@ -8,7 +8,7 @@ def main(data, bins, M, shots):
     S0, sig, r, T, K = data
 
     # Create circuit to load the probability distribution
-    circuit, (values, pdf) = fun.load_quantum_sim(bins, S0, sig, r, T)
+    circuit, (_values, _pdf) = fun.load_quantum_sim(bins, S0, sig, r, T)
 
     # Measure the probability distribution
     prob_sim = fun.run_quantum_sim(bins, circuit, shots)

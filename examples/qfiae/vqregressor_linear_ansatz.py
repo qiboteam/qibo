@@ -358,5 +358,3 @@ class VQRegressor_linear_ansatz:
                 )
                 # in case one wants to plot J in function of the iterations
                 losses.append(this_loss)
-
-        return

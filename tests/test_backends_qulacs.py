@@ -5,7 +5,7 @@ import pytest
 
 from qibo import Circuit, gates, get_backend
 from qibo.backends import MetaBackend, NumpyBackend, set_backend
-from qibo.quantum_info import random_clifford, random_density_matrix, random_statevector
+from qibo.quantum_info import random_clifford
 
 numpy_bkd = NumpyBackend()
 

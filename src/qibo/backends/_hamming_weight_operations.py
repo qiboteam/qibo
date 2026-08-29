@@ -2,12 +2,10 @@
 
 # pylint: disable=W0212
 
-from functools import lru_cache
+from functools import cache
 from itertools import combinations
 from math import comb
-from typing import Dict, List, Optional, Set, Tuple, Union
 
-import numpy as np
 from numpy.typing import ArrayLike
 from scipy.special import binom
 
@@ -17,7 +15,7 @@ from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_dims(nqubits: int, weight: int) -> int:
     """Return the dimension of the fixed-weight subspace."""
     if weight < 0 or weight > nqubits:
@@ -25,9 +23,9 @@ def _global_dims(nqubits: int, weight: int) -> int:
     return comb(nqubits, weight)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_binom_table(
-    nqubits: int, weight: int, backend: Optional[Backend] = None
+    nqubits: int, weight: int, backend: Backend | None = None
 ) -> ArrayLike:
     """Return binomial coefficients C(n, k) for 0 <= n <= nqubits and 0 <= k <= weight."""
     table = backend.zeros((nqubits + 1, weight + 1), dtype=backend.int64)
@@ -46,7 +44,7 @@ def _rank_fixed_weight_bitstrings(
     bitstrings: ArrayLike,
     nqubits: int,
     weight: int,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> ArrayLike:
     """Return lexicographic ranks of fixed-weight bitstrings."""
     bits = backend.cast(bitstrings, dtype=bool)
@@ -91,9 +89,9 @@ def _lex_rank_from_zero_positions(
     return rank
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_fixed_weight_bits(
-    nqubits: int, weight: int, backend: Optional[Backend] = None
+    nqubits: int, weight: int, backend: Backend | None = None
 ) -> ArrayLike:
     """Return lexicographically sorted fixed-weight bitstrings."""
     nstates = _global_dims(nqubits, weight)
@@ -120,10 +118,10 @@ def _global_fixed_weight_bits(
     return basis
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_fixed_weight_strings(
-    nqubits: int, weight: int, backend: Optional[Backend] = None
-) -> Tuple[str, ...]:
+    nqubits: int, weight: int, backend: Backend | None = None
+) -> tuple[str, ...]:
     """Return lexicographically sorted fixed-weight bitstrings as strings."""
     return tuple(
         "".join("1" if int(b) else "0" for b in row)
@@ -131,10 +129,10 @@ def _global_fixed_weight_strings(
     )
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_dict_indexes(
-    nqubits: int, weight: int, backend: Optional[Backend] = None
-) -> Dict[str, Tuple[int, int]]:
+    nqubits: int, weight: int, backend: Backend | None = None
+) -> dict[str, tuple[int, int]]:
     """Return the legacy string-to-condensed-index map."""
     strings = _global_fixed_weight_strings(nqubits, weight, backend)
     return {
@@ -142,15 +140,15 @@ def _global_dict_indexes(
     }
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_projected_indices(
     nqubits: int,
     weight: int,
-    other_qubits: Tuple[int, ...],
-    controls: Tuple[int, ...],
-    qubits: Tuple[int, ...],
-    qubit_values: Tuple[int, ...],
-    backend: Optional[Backend] = None,
+    other_qubits: tuple[int, ...],
+    controls: tuple[int, ...],
+    qubits: tuple[int, ...],
+    qubit_values: tuple[int, ...],
+    backend: Backend | None = None,
 ) -> ArrayLike:
     """Return condensed-state indices for fixed values on selected qubits."""
     other_weight = weight - len(controls) - sum(qubit_values)
@@ -168,12 +166,12 @@ def _global_projected_indices(
     return _rank_fixed_weight_bitstrings(bits, nqubits, weight, backend)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_measurement_indices(
     nqubits: int,
     weight: int,
-    measured_qubits: Tuple[int, ...],
-    backend: Optional[Backend] = None,
+    measured_qubits: tuple[int, ...],
+    backend: Backend | None = None,
 ) -> ArrayLike:
     """Return measured-bit decimal indices for every basis state."""
     basis = backend.cast(
@@ -188,13 +186,13 @@ def _global_measurement_indices(
     return measured @ measured_powers
 
 
-@lru_cache(maxsize=None)
+@cache
 def _global_n_qubit_flat_cache(
     nqubits: int,
     weight: int,
-    active_qubits: Tuple[int, ...],
-    backend: Optional[Backend] = None,
-) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+    active_qubits: tuple[int, ...],
+    backend: Backend | None = None,
+) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
     """Return host-side flattened transition data for the n-qubit fallback path."""
     basis = _global_fixed_weight_bits(nqubits, weight, backend)
     k = len(active_qubits)
@@ -236,7 +234,7 @@ def _global_n_qubit_flat_cache(
     )
 
 
-def _get_basis_strings(self, nqubits: int, weight: int) -> List[str]:
+def _get_basis_strings(self, nqubits: int, weight: int) -> list[str]:
     """Return cached lexicographically sorted basis strings."""
     self._ensure_basis_cache(nqubits, weight)
     key = (nqubits, weight)
@@ -264,10 +262,10 @@ def _get_projected_indices(
     self,
     nqubits: int,
     weight: int,
-    other_qubits: List[int],
-    controls: List[int],
-    qubits: List[int],
-    qubit_values: List[int],
+    other_qubits: list[int],
+    controls: list[int],
+    qubits: list[int],
+    qubit_values: list[int],
 ) -> ArrayLike:
     """Return cached condensed-state indices for fixed active-qubit values."""
     key = (
@@ -313,7 +311,7 @@ def _ensure_basis_cache(self, nqubits: int, weight: int):
         self._basis_bits_cache[key] = _global_fixed_weight_bits(nqubits, weight, self)
 
 
-def _build_dict_indexes(self, nqubits: int, weight: int) -> Dict[str, Tuple[int, ...]]:
+def _build_dict_indexes(self, nqubits: int, weight: int) -> dict[str, tuple[int, ...]]:
     """Construct the legacy string-based basis map from cached basis metadata."""
     self._ensure_basis_cache(nqubits, weight)
     key = (nqubits, weight)
@@ -326,7 +324,7 @@ def _build_dict_indexes(self, nqubits: int, weight: int) -> Dict[str, Tuple[int,
 
 
 def _get_measurement_indices(
-    self, nqubits: int, weight: int, qubits: Union[List[int], Tuple[int, ...], Set[int]]
+    self, nqubits: int, weight: int, qubits: list[int] | tuple[int, ...] | set[int]
 ):
     """Return cached decimal indices for the measured bits of every basis state."""
     self._ensure_basis_cache(nqubits, weight)
@@ -372,7 +370,7 @@ def execute_circuit(
     self,
     circuit,
     weight: int,
-    initial_state: Optional[ArrayLike] = None,
+    initial_state: ArrayLike | None = None,
     nshots: int = 1000,
 ):
     """Execute ``circuit`` by applying the queue of gates to the ``initial_state``.
@@ -445,7 +443,7 @@ def execute_circuit(
 
 def _get_lexicographical_order(
     self, nqubits: int, weight: int
-) -> Dict[str, Tuple[int, ...]]:
+) -> dict[str, tuple[int, ...]]:
     """Sort bistrings generated from ``self._get_cached_strings`` in lexicographical order.
 
     Bitstrings are sorted in lexicographical (ascending) order.
@@ -463,7 +461,7 @@ def _get_lexicographical_order(
     return self._build_dict_indexes(nqubits, weight)
 
 
-def _get_single_qubit_matrix(self, gate: Gate) -> Tuple[complex, ...]:
+def _get_single_qubit_matrix(self, gate: Gate) -> tuple[complex, ...]:
     """Return non-zero elements of the matrix representation of
     Hamming-weight-preserving single-qubit gates.
 
@@ -532,12 +530,12 @@ def _apply_gate_single_qubit(
 def _update_amplitudes(
     self,
     state: ArrayLike,
-    qubits: List[int],
-    controls: List[int],
-    other_qubits: List[int],
+    qubits: list[int],
+    controls: list[int],
+    other_qubits: list[int],
     weight: int,
-    matrix_element: Union[complex, float],
-    bitlist: List[str],
+    matrix_element: complex,
+    bitlist: list[str],
     shift: int,
 ) -> ArrayLike:
     """Update in-place the amplitudes changed by a two-qubit Hamming-weight-preserving gate.
@@ -827,7 +825,7 @@ def calculate_symbolic(
 def calculate_probabilities(
     self,
     state: ArrayLike,
-    qubits: Union[List[int], Tuple[int, ...], Set[int]],
+    qubits: list[int] | tuple[int, ...] | set[int],
     weight: int,
     nqubits: int,
 ) -> ArrayLike:
@@ -854,8 +852,8 @@ def calculate_probabilities(
 def collapse_state(
     self,
     state: ArrayLike,
-    qubits: Union[List[int], Tuple[int, ...], Set[int]],
-    shot: List[int],
+    qubits: list[int] | tuple[int, ...] | set[int],
+    shot: list[int],
     weight: int,
     nqubits: int,
     normalize: bool = True,

@@ -100,7 +100,6 @@ def test_measurements_non_comp_basis(backend):
 
 
 def test_temp_cnot_decomposition(backend):
-    from qibo.transpiler.pipeline import Passes
 
     circ = Circuit(2)
     circ.add(gates.H(0))

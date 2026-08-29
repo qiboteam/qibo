@@ -1,5 +1,3 @@
-import numpy as np
-
 from qibo import Circuit, gates
 
 

@@ -1,6 +1,5 @@
 import math
 from functools import cache, reduce
-from typing import Optional, Tuple
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
@@ -9,7 +8,7 @@ from scipy import sparse
 name = "numpy"
 
 
-def _get_rxz(symplectic_matrix: ArrayLike, nqubits: int) -> Tuple[ArrayLike, ...]:
+def _get_rxz(symplectic_matrix: ArrayLike, nqubits: int) -> tuple[ArrayLike, ...]:
     return (
         symplectic_matrix[:, -1],
         symplectic_matrix[:, :nqubits],
@@ -562,7 +561,7 @@ def _init_state_for_measurements(
 
 # valid for a standard basis measurement only
 def M(
-    state: ArrayLike, qubits: Tuple[int, ...], nqubits: int, collapse: bool = False
+    state: ArrayLike, qubits: tuple[int, ...], nqubits: int, collapse: bool = False
 ) -> ArrayLike:
     sample = []
     state = _init_state_for_measurements(state, nqubits, collapse)
@@ -584,7 +583,7 @@ def M(
 
 
 def cast(
-    array: ArrayLike, dtype: Optional[DTypeLike] = None, copy: bool = False
+    array: ArrayLike, dtype: DTypeLike | None = None, copy: bool = False
 ) -> ArrayLike:
     if dtype is None:
         dtype = "complex128"
@@ -630,9 +629,7 @@ def csr_matrix(array: ArrayLike, **kwargs) -> ArrayLike:
     return sparse.csr_matrix(array, **kwargs)
 
 
-def _identity_sparse(
-    dims: int, dtype: Optional[DTypeLike] = None, **kwargs
-) -> ArrayLike:
+def _identity_sparse(dims: int, dtype: DTypeLike | None = None, **kwargs) -> ArrayLike:
     if dtype is None:  # pragma: no cover
         dtype = "complex128"
 

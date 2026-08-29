@@ -16,7 +16,9 @@ from qibo.transpiler.placer import (
 from qibo.transpiler.router import ShortestPaths
 
 
-def star_circuit(names=[0, 1, 2, 3, 4]):
+def star_circuit(names=None):
+    if names is None:
+        names = [0, 1, 2, 3, 4]
     circuit = Circuit(5, wire_names=names)
     for i in range(1, 5):
         circuit.add(gates.CNOT(i, 0))
@@ -36,7 +38,7 @@ def test_gates_qubits_pairs_error():
     circuit = Circuit(5)
     circuit.add(gates.TOFFOLI(0, 1, 2))
     with pytest.raises(ValueError):
-        gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
+        _find_gates_qubits_pairs(circuit)
 
 
 def test_subgraph_perfect(star_connectivity):

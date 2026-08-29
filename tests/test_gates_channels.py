@@ -14,7 +14,6 @@ from qibo.quantum_info import (
 
 
 def test_general_channel(backend):
-    """"""
     a_1 = backend.cast(np.sqrt(0.4) * matrices.X)
     a_2 = backend.cast(
         np.sqrt(0.6)
@@ -53,7 +52,6 @@ def test_general_channel(backend):
 
 
 def test_controlled_by_channel_error():
-    """"""
     with pytest.raises(ValueError):
         gates.PauliNoiseChannel(0, [("X", 0.5)]).controlled_by(1)
 
@@ -68,7 +66,6 @@ def test_controlled_by_channel_error():
 
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
 def test_kraus_channel(backend, pauli_order):
-    """"""
     a_1 = np.sqrt(0.4) * matrices.X
     a_2 = np.sqrt(0.6) * matrices.Z
 
@@ -123,7 +120,6 @@ def test_kraus_channel(backend, pauli_order):
 
 
 def test_unitary_channel(backend):
-    """"""
     a_1 = backend.matrices.X
     a_2 = backend.matrices.CNOT
 
@@ -192,7 +188,6 @@ def test_unitary_channel_errors():
 
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
 def test_pauli_noise_channel(backend, pauli_order):
-    """"""
     initial_state = random_density_matrix(2**2, backend=backend)
     qubits = (1,)
     channel = gates.PauliNoiseChannel(qubits, [("X", 0.3)])
@@ -223,7 +218,6 @@ def test_pauli_noise_channel(backend, pauli_order):
 
 
 def test_depolarizing_channel_errors():
-    """"""
     with pytest.raises(ValueError):
         gates.DepolarizingChannel(0, 1.5)
     with pytest.raises(ValueError):
@@ -231,7 +225,6 @@ def test_depolarizing_channel_errors():
 
 
 def test_depolarizing_channel(backend):
-    """"""
     lam = 0.3
     initial_state = random_density_matrix(2**3, backend=backend)
     initial_state_r = partial_trace(initial_state, (2,), backend=backend)
@@ -245,7 +238,6 @@ def test_depolarizing_channel(backend):
 
 
 def test_amplitude_damping_channel(backend):
-    """"""
     with pytest.raises(TypeError):
         gates.AmplitudeDampingChannel(0, "0.1")
     with pytest.raises(ValueError):
@@ -269,7 +261,6 @@ def test_amplitude_damping_channel(backend):
 
 
 def test_phase_damping_channel(backend):
-    """"""
     with pytest.raises(TypeError):
         gates.PhaseDampingChannel(0, "0.1")
     with pytest.raises(ValueError):
@@ -358,13 +349,11 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
     ],
 )
 def test_thermal_relaxation_channel_errors(params):
-    """"""
     with pytest.raises(ValueError):
         gates.ThermalRelaxationChannel(0, params)
 
 
 def test_readout_error_channel(backend):
-    """"""
     with pytest.raises(ValueError):
         gates.ReadoutErrorChannel(0, np.array([[1.1, 0], [0.5, 0.5]]))
 
@@ -383,7 +372,6 @@ def test_readout_error_channel(backend):
 
 
 def test_reset_channel(backend):
-    """"""
     initial_state = random_density_matrix(2**3, backend=backend)
     gate = gates.ResetChannel(0, [0.2, 0.2])
     final_state = backend.reset_error_density_matrix(
@@ -409,7 +397,6 @@ def test_reset_channel(backend):
 
 @pytest.mark.parametrize("p_0,p_1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
 def test_reset_channel_errors(p_0, p_1):
-    """"""
     with pytest.raises(ValueError):
         gates.ResetChannel(0, [p_0])
     with pytest.raises(ValueError):

@@ -47,7 +47,7 @@ def test_iqae_init_raising_errors(backend):
         iqae = IQAE(A, Q, n_shots=0.5)
     # testing the line of code when n_shots_i==0
     iqae = IQAE(A, Q, method="beta", n_shots=10, alpha=0.05, epsilon=0.48)
-    results = iqae.execute(backend=backend)
+    iqae.execute(backend=backend)
 
 
 def test_iqae_execution(backend):

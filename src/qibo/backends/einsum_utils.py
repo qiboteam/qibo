@@ -5,7 +5,6 @@ used by :meth:`qibo.backends.numpy.NumpyEngine.apply_gate`.
 """
 
 from functools import cache
-from typing import List, Tuple
 
 from qibo.config import EINSUM_CHARS, raise_error
 
@@ -61,13 +60,13 @@ def control_order(gate, nqubits):
     targets = list(gate.target_qubits)
     for control in gate.control_qubits:
         for i in range(loop_start, control):
-            order.append(i)
+            order.append(i)  # noqa: PERF402
         loop_start = control + 1
         for i, t in enumerate(gate.target_qubits):
             if t > control:
                 targets[i] -= 1
     for i in range(loop_start, nqubits):
-        order.append(i)
+        order.append(i)  # noqa: PERF402
     return order, targets
 
 
@@ -92,7 +91,7 @@ def reverse_order(order):
 
 
 @cache
-def permutations(qubits: Tuple[int, ...], nqubits: int) -> Tuple[List[int], List[int]]:
+def permutations(qubits: tuple[int, ...], nqubits: int) -> tuple[list[int], list[int]]:
     """Compute the permutations of the indices needed for gate application
     through unfolding and matrix product. The first permutation moves the
     contracted axes, i.e. the interested qubits, to the front, the second

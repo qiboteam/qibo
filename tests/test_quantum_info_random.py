@@ -169,11 +169,11 @@ def test_random_unitary(backend, measure):
 )
 def test_random_quantum_channel(backend, representation, measure, rank, order):
     with pytest.raises(TypeError):
-        test = random_quantum_channel(4, representation=True, backend=backend)
+        random_quantum_channel(4, representation=True, backend=backend)
     with pytest.raises(ValueError):
-        test = random_quantum_channel(4, representation="Choi", backend=backend)
+        random_quantum_channel(4, representation="Choi", backend=backend)
     with pytest.raises(ValueError):
-        test = random_quantum_channel(4, measure="bcsz", order="system")
+        random_quantum_channel(4, measure="bcsz", order="system")
 
     # All subroutines are already tested elsewhere,
     # so here we only execute them once for coverage
@@ -211,15 +211,15 @@ def test_random_statevector(backend, dtype, seed):
 @pytest.mark.parametrize("dims", [2, 4])
 def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
     with pytest.raises(ValueError):
-        test = random_density_matrix(dims=2, rank=3, backend=backend)
+        random_density_matrix(dims=2, rank=3, backend=backend)
     with pytest.raises(ValueError):
-        test = random_density_matrix(dims=2, metric="gaussian", backend=backend)
+        random_density_matrix(dims=2, metric="gaussian", backend=backend)
     with pytest.raises(ValueError):
-        test = random_density_matrix(dims=2, metric=metric, basis="Pauli")
+        random_density_matrix(dims=2, metric=metric, basis="Pauli")
 
     if basis is None and normalize is True:
         with pytest.raises(ValueError):
-            test = random_density_matrix(dims=dims, normalize=True)
+            random_density_matrix(dims=dims, normalize=True)
     else:
         norm_function = backend.matrix_norm if basis is None else backend.vector_norm
         state = random_density_matrix(
@@ -264,13 +264,13 @@ def test_random_clifford(backend, nqubits, nsamples):
 
     # errors tests
     with pytest.raises(TypeError):
-        test = random_clifford(nqubits="1", backend=backend)
+        random_clifford(nqubits="1", backend=backend)
     with pytest.raises(ValueError):
-        test = random_clifford(nqubits=-1, backend=backend)
+        random_clifford(nqubits=-1, backend=backend)
     with pytest.raises(TypeError):
-        test = random_clifford(nqubits, return_circuit="True", backend=backend)
+        random_clifford(nqubits, return_circuit="True", backend=backend)
     with pytest.raises(TypeError):
-        test = random_clifford(nqubits, seed=0.1, backend=backend)
+        random_clifford(nqubits, seed=0.1, backend=backend)
 
     n_cliffords = 24 if nqubits == 1 else 11520
     expected_prob = 1 / n_cliffords

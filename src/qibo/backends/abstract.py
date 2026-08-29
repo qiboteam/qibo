@@ -5,7 +5,7 @@ from collections import Counter
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
 from string import ascii_letters
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 from numpy.typing import ArrayLike, DTypeLike
 
@@ -14,6 +14,10 @@ from qibo.backends import einsum_utils
 from qibo.config import SHOT_BATCH_SIZE, log, raise_error
 from qibo.gates.abstract import Gate
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
+
+if TYPE_CHECKING:
+    from qibo.gates.channels import Channel
+    from qibo.models.circuit import Circuit
 
 
 class Backend:  # pylint: disable=R0904
@@ -43,9 +47,9 @@ class Backend:  # pylint: disable=R0904
         spec.loader.exec_module(self.qinfo)
         self.qinfo.ENGINE = self
 
-    def __reduce__(self) -> Tuple["Backend", tuple]:
+    def __reduce__(self) -> tuple["Backend", tuple]:
         """Allow pickling backend objects that have references to modules."""
-        return self.__class__, tuple()
+        return self.__class__, ()
 
     def __repr__(self) -> str:
         if self.platform is None:
@@ -54,7 +58,7 @@ class Backend:  # pylint: disable=R0904
         return f"{self.name} ({self.platform})"
 
     @property
-    def qubits(self) -> Optional[List[Union[int, str]]]:  # pragma: no cover
+    def qubits(self) -> list[int | str] | None:  # pragma: no cover
         """Return the qubit names of the backend.
 
         Returns:
@@ -67,7 +71,7 @@ class Backend:  # pylint: disable=R0904
     @property
     def connectivity(
         self,
-    ) -> Optional[List[Tuple[Union[int, str], Union[int, str]]]]:  # pragma: no cover
+    ) -> list[tuple[int | str, int | str]] | None:  # pragma: no cover
         """Return available qubit pairs of the backend.
 
         Returns:
@@ -78,7 +82,7 @@ class Backend:  # pylint: disable=R0904
         return None
 
     @property
-    def natives(self) -> Optional[List[str]]:  # pragma: no cover
+    def natives(self) -> list[str] | None:  # pragma: no cover
         """Return the native gates of the backend.
 
         Returns:
@@ -178,7 +182,7 @@ class Backend:  # pylint: disable=R0904
             if self.matrices is not None:
                 self.matrices = self.matrices.__class__(self.dtype)
 
-    def set_seed(self, seed: Union[int, None]) -> None:
+    def set_seed(self, seed: int | None) -> None:
         """Set the seed of the random number generator. Works in-place.
 
         Args:
@@ -294,7 +298,7 @@ class Backend:  # pylint: disable=R0904
     ######## Methods related to array manipulation                                  ########
     ########################################################################################
 
-    def abs(self, array: ArrayLike, **kwargs) -> Union[int, float, complex, ArrayLike]:
+    def abs(self, array: ArrayLike, **kwargs) -> int | float | complex | ArrayLike:
         """Calculate the absolute value of ``array`` element-wise.
 
         Args:
@@ -317,7 +321,7 @@ class Backend:  # pylint: disable=R0904
         """
         self.engine.add.at(array_1, indices, array_2)
 
-    def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
+    def all(self, array: ArrayLike, **kwargs) -> bool | ArrayLike:
         """Test whether all ``array`` elements evaluate to ``True``.
 
         Args:
@@ -358,7 +362,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.angle(array, **kwargs)
 
-    def any(self, array: ArrayLike, **kwargs) -> Union[ArrayLike, bool]:
+    def any(self, array: ArrayLike, **kwargs) -> ArrayLike | bool:
         """Test whether any of the ``array`` elements evaluate to ``True``.
 
         Args:
@@ -374,7 +378,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.any(array, **kwargs)
 
     def append(
-        self, array: ArrayLike, values: ArrayLike, axis: Optional[int] = None
+        self, array: ArrayLike, values: ArrayLike, axis: int | None = None
     ) -> ArrayLike:
         """Append ``values`` to the end of ``array`` along ``axis``.
 
@@ -452,9 +456,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
-    def argsort(
-        self, array: ArrayLike, axis: Optional[int] = None, **kwargs
-    ) -> ArrayLike:
+    def argsort(self, array: ArrayLike, axis: int | None = None, **kwargs) -> ArrayLike:
         """Return the indices that would sort ``array``.
 
         Args:
@@ -531,7 +533,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.ceil(array, **kwargs)
 
-    def concatenate(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
+    def concatenate(self, arrays: tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         """Join a sequence of arrays along an existing axis.
 
         Args:
@@ -635,7 +637,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.cumsum(array, **kwargs)
 
-    def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
+    def default_rng(self, seed: int | None = None) -> ArrayLike:
         """Create a new random number Generator using the engine's default setting.
 
         Args:
@@ -702,7 +704,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.dot(array_1, array_2, **kwargs)
 
-    def eig(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+    def eig(self, array: ArrayLike, **kwargs) -> tuple[ArrayLike, ArrayLike]:
         """Compute the eigenvalues and right eigenvectors of a two-dimensional ``array``.
 
         Args:
@@ -716,7 +718,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.linalg.eig(array, **kwargs)
 
-    def eigh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+    def eigh(self, array: ArrayLike, **kwargs) -> tuple[ArrayLike, ArrayLike]:
         """Compute the eigenvalues and right eigenvectors of a two-dimensional ``array``
         that is assumed to be Hermitian.
 
@@ -733,7 +735,7 @@ class Backend:  # pylint: disable=R0904
 
     def eigsh(
         self, array: ArrayLike, **kwargs
-    ) -> Tuple[ArrayLike, ArrayLike]:  # pragma: no cover
+    ) -> tuple[ArrayLike, ArrayLike]:  # pragma: no cover
         """Compute the eigenvalues and right eigenvectors of a two-dimensional sparse ``array``
         that is assumed to be Hermitian.
 
@@ -776,7 +778,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.linalg.eigvals(array, **kwargs)
 
     def einsum(
-        self, subscripts: str, *operands: List[ArrayLike], **kwargs
+        self, subscripts: str, *operands: list[ArrayLike], **kwargs
     ) -> ArrayLike:
         """Evaluate the Einstein summation convention on the ``operands``.
 
@@ -791,7 +793,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.einsum(subscripts, *operands, **kwargs)
 
-    def empty(self, shape: Union[int, Tuple[int, ...]], **kwargs) -> ArrayLike:
+    def empty(self, shape: int | tuple[int, ...], **kwargs) -> ArrayLike:
         """Return a new array with a given ``shape`` without initializing entries.
 
         Args:
@@ -804,7 +806,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.empty(shape, **kwargs)
 
-    def exp(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
+    def exp(self, array: ArrayLike, **kwargs) -> float | complex | ArrayLike:
         """Calculate the element-wise exponential of ``array``.
 
         Args:
@@ -818,9 +820,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.exp(array, **kwargs)
 
-    def expand_dims(
-        self, array: ArrayLike, axis: Union[int, Tuple[int, ...]]
-    ) -> ArrayLike:
+    def expand_dims(self, array: ArrayLike, axis: int | tuple[int, ...]) -> ArrayLike:
         """Expand the shape of an ``array`` along an ``axis``.
 
         Insert a new ``axis`` that will appear at the ``axis`` position in the expanded
@@ -859,7 +859,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.flatnonzero(array)
 
     def flip(
-        self, array: ArrayLike, axis: Optional[Union[int, Tuple[int, ...]]] = None
+        self, array: ArrayLike, axis: int | tuple[int, ...] | None = None
     ) -> ArrayLike:
         """Reverse the order of elements in an ``array`` along the given ``axis``.
 
@@ -888,8 +888,8 @@ class Backend:  # pylint: disable=R0904
 
     def full(
         self,
-        shape: Union[int, Tuple[int, ...], List[int]],
-        fill_value: Union[complex, float, int],
+        shape: int | tuple[int, ...] | list[int],
+        fill_value: complex,
         **kwargs,
     ) -> ArrayLike:  # pragma: no cover
         """Return a new array with a given ``shape`` filled with ``fill_value``.
@@ -905,7 +905,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.full(shape, fill_value, **kwargs)
 
-    def hstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
+    def hstack(self, arrays: tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         """Stack ``arrays`` in sequence horizontally (column wise).
 
         Args:
@@ -946,7 +946,7 @@ class Backend:  # pylint: disable=R0904
             else self.engine.eye(dims, dtype=dtype, **kwargs)
         )
 
-    def imag(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
+    def imag(self, array: ArrayLike) -> int | float | ArrayLike:
         """Return the element-wise imaginary part of a complex-valued ``array``.
 
         Args:
@@ -1063,8 +1063,8 @@ class Backend:  # pylint: disable=R0904
         return self.engine.matmul(array_1, array_2, **kwargs)
 
     def matrix_norm(
-        self, array: ArrayLike, order: Union[int, float, str] = "nuc", **kwargs
-    ) -> Union[float, ArrayLike]:
+        self, array: ArrayLike, order: float | str = "nuc", **kwargs
+    ) -> float | ArrayLike:
         """Calculate norm of a two-dimensional array.
 
         Args:
@@ -1086,7 +1086,7 @@ class Backend:  # pylint: disable=R0904
 
         return self.engine.linalg.norm(array, order, **kwargs)
 
-    def max(self, array: ArrayLike, **kwargs) -> Union[float, int, complex, ArrayLike]:
+    def max(self, array: ArrayLike, **kwargs) -> float | int | complex | ArrayLike:
         """Return the maximum value of an ``array``.
 
         Args:
@@ -1116,7 +1116,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.maximum(array_1, array_2, **kwargs)
 
-    def mean(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
+    def mean(self, array: ArrayLike, **kwargs) -> float | complex | ArrayLike:
         """Compute the arithmetic mean of ``array`` along the specified axis.
 
         Args:
@@ -1131,7 +1131,7 @@ class Backend:  # pylint: disable=R0904
 
     def min(
         self, array: ArrayLike, **kwargs
-    ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
+    ) -> float | int | complex | ArrayLike:  # pragma: no cover
         """Return the minimum value of an ``array``.
 
         Args:
@@ -1162,7 +1162,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.minimum(array_1, array_2, **kwargs)
 
     def mod(
-        self, dividend: ArrayLike, divisor: Union[float, int, ArrayLike], **kwargs
+        self, dividend: ArrayLike, divisor: float | ArrayLike, **kwargs
     ) -> ArrayLike:  # pragma: no cover
         """Return the element-wise remainder of division.
 
@@ -1178,7 +1178,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.mod(dividend, divisor, **kwargs)
 
     def moveaxis(
-        self, array: ArrayLike, *args: Union[int, Tuple[int, ...]], **kwargs
+        self, array: ArrayLike, *args: int | tuple[int, ...], **kwargs
     ) -> ArrayLike:
         """Move axes of an ``array`` to new positions.
 
@@ -1206,7 +1206,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.nonzero(array)
 
     def ones(
-        self, shape: Union[int, Tuple[int, ...]], dtype: Optional[DTypeLike] = None
+        self, shape: int | tuple[int, ...], dtype: DTypeLike | None = None
     ) -> ArrayLike:
         """Return a new array with a given ``shape`` filled with ones.
 
@@ -1248,7 +1248,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.prod(array, **kwargs)
 
-    def qr(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ...]:
+    def qr(self, array: ArrayLike, **kwargs) -> tuple[ArrayLike, ...]:
         """Calculate the :math:`\\textrm{QR}` factorization of a two-dimensional ``array``.
 
         Args:
@@ -1265,10 +1265,10 @@ class Backend:  # pylint: disable=R0904
     def random_choice(
         self,
         array: ArrayLike,
-        size: Optional[Union[int, Tuple[int, ...]]] = None,
+        size: int | tuple[int, ...] | None = None,
         replace: bool = True,
-        p: Optional[ArrayLike] = None,
-        seed: Optional[int] = None,
+        p: ArrayLike | None = None,
+        seed: int | None = None,
         **kwargs,
     ) -> ArrayLike:
         """Generate random sample(s) from a given one-dimensional ``array``
@@ -1311,9 +1311,9 @@ class Backend:  # pylint: disable=R0904
     def random_integers(
         self,
         low: int,
-        high: Optional[int] = None,
-        size: Optional[Union[int, Tuple[int, ...]]] = None,
-        seed: Optional[int] = None,
+        high: int | None = None,
+        size: int | tuple[int, ...] | None = None,
+        seed: int | None = None,
         **kwargs,
     ) -> ArrayLike:
         """Generate random integers in the interval ``[low, high)`` over the uniform distribution.
@@ -1352,11 +1352,11 @@ class Backend:  # pylint: disable=R0904
 
     def random_normal(
         self,
-        mean: Union[float, int],
-        stddev: Union[float, int],
-        size: Optional[Union[int, List[int], Tuple[int, ...]]] = None,
-        seed: Optional[int] = None,
-        dtype: Optional[DTypeLike] = None,
+        mean: float,
+        stddev: float,
+        size: int | list[int] | tuple[int, ...] | None = None,
+        seed: int | None = None,
+        dtype: DTypeLike | None = None,
     ) -> ArrayLike:
         """Generate random numbers from a normal (Gaussian) distribution.
 
@@ -1390,8 +1390,8 @@ class Backend:  # pylint: disable=R0904
 
     def random_sample(
         self,
-        size: Union[int, List[int], Tuple[int, ...]],
-        seed: Optional[int] = None,
+        size: int | list[int] | tuple[int, ...],
+        seed: int | None = None,
         **kwargs,
     ) -> ArrayLike:
         """Generate random numbers in the interval :math:`[0.0, \\, 1.0)``
@@ -1418,10 +1418,10 @@ class Backend:  # pylint: disable=R0904
 
     def random_uniform(
         self,
-        low: Union[float, int] = 0.0,
-        high: Union[float, int] = 1.0,
-        size: Optional[Union[int, Tuple[int, ...]]] = None,
-        seed: Optional[int] = None,
+        low: float = 0.0,
+        high: float = 1.0,
+        size: int | tuple[int, ...] | None = None,
+        seed: int | None = None,
         **kwargs,
     ) -> ArrayLike:
         """Generate random numbers in the interval ``[low, high)`` over the uniform distribution.
@@ -1466,7 +1466,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.ravel(array, **kwargs)
 
-    def real(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
+    def real(self, array: ArrayLike) -> int | float | ArrayLike:
         """Return the element-wise real part of a complex-valued ``array``.
 
         Args:
@@ -1480,8 +1480,8 @@ class Backend:  # pylint: disable=R0904
     def repeat(
         self,
         array: ArrayLike,
-        repeats: Union[int, List[int], Tuple[int, ...]],
-        axis: Optional[int] = None,
+        repeats: int | list[int] | tuple[int, ...],
+        axis: int | None = None,
     ) -> ArrayLike:
         """Return an array with the elements of ``array`` repeated ``repeats`` times.
 
@@ -1498,7 +1498,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.repeat(array, repeats, axis)
 
     def reshape(
-        self, array: ArrayLike, shape: Union[int, Tuple[int, ...], List[int]], **kwargs
+        self, array: ArrayLike, shape: int | tuple[int, ...] | list[int], **kwargs
     ) -> ArrayLike:
         """Return an ``array`` with new ``shape``.
 
@@ -1530,7 +1530,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.right_shift(*args, **kwargs)
 
     def roll(
-        self, array: ArrayLike, shift: Union[int, List[int], Tuple[int, ...]], **kwargs
+        self, array: ArrayLike, shift: int | list[int] | tuple[int, ...], **kwargs
     ) -> ArrayLike:
         """Roll ``array`` elements along a given axis by ``shift`` positions.
 
@@ -1641,7 +1641,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.sqrt(array)
 
     def squeeze(
-        self, array: ArrayLike, axis: Optional[Union[int, Tuple[int, ...]]] = None
+        self, array: ArrayLike, axis: int | tuple[int, ...] | None = None
     ) -> ArrayLike:
         """Remove axes of length one from ``array``.
 
@@ -1656,7 +1656,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.squeeze(array, axis)
 
-    def std(self, array: ArrayLike, **kwargs) -> Union[float, ArrayLike]:
+    def std(self, array: ArrayLike, **kwargs) -> float | ArrayLike:
         """Calculate the standard deviation of ``array``.
 
         Args:
@@ -1670,8 +1670,8 @@ class Backend:  # pylint: disable=R0904
         return self.engine.std(array, **kwargs)
 
     def sum(
-        self, array: ArrayLike, axis: Optional[int] = None, **kwargs
-    ) -> Union[int, float, complex, ArrayLike]:
+        self, array: ArrayLike, axis: int | None = None, **kwargs
+    ) -> int | float | complex | ArrayLike:
         """Sum of ``array`` elements over a given ``axis``.
 
         Args:
@@ -1717,7 +1717,7 @@ class Backend:  # pylint: disable=R0904
         self,
         array_1: ArrayLike,
         array_2: ArrayLike,
-        axes: Union[int, Tuple[int, ...]] = 2,
+        axes: int | tuple[int, ...] = 2,
     ) -> ArrayLike:
         """Calculate the tensor dot product of two arrays along two specified ``axes``.
 
@@ -1732,7 +1732,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.tensordot(array_1, array_2, axes=axes)
 
-    def trace(self, array: ArrayLike) -> Union[int, float]:
+    def trace(self, array: ArrayLike) -> int | float:
         """Return the sum along diagonals of the array.
 
         Args:
@@ -1744,7 +1744,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.trace(array)
 
     def transpose(
-        self, array: ArrayLike, axes: Union[Tuple[int, ...], List[int]] = None
+        self, array: ArrayLike, axes: tuple[int, ...] | list[int] | None = None
     ) -> ArrayLike:
         """Return an ``array`` with ``axes`` transposed.
 
@@ -1771,8 +1771,8 @@ class Backend:  # pylint: disable=R0904
         return self.engine.tril(array, offset)
 
     def tril_indices(
-        self, row: int, offset: int = 0, col: Optional[int] = None, **kwargs
-    ) -> Tuple[ArrayLike, ArrayLike]:
+        self, row: int, offset: int = 0, col: int | None = None, **kwargs
+    ) -> tuple[ArrayLike, ArrayLike]:
         """Return the indices for the lower-triangle of an ``(row, col)``-dimensional ``array``.
 
         Args:
@@ -1804,7 +1804,7 @@ class Backend:  # pylint: disable=R0904
 
     def unique(
         self, array: ArrayLike, **kwargs
-    ) -> Union[ArrayLike, Tuple[ArrayLike, ArrayLike]]:
+    ) -> ArrayLike | tuple[ArrayLike, ArrayLike]:
         """Find the unique elements of an array.
 
         Args:
@@ -1817,9 +1817,7 @@ class Backend:  # pylint: disable=R0904
         """
         return self.engine.unique(array, **kwargs)
 
-    def var(
-        self, array: ArrayLike, **kwargs
-    ) -> Union[float, ArrayLike]:  # pragma: no cover
+    def var(self, array: ArrayLike, **kwargs) -> float | ArrayLike:  # pragma: no cover
         """Calculate the variance of ``array``.
 
         Args:
@@ -1835,8 +1833,8 @@ class Backend:  # pylint: disable=R0904
     def vector_norm(
         self,
         array: ArrayLike,
-        order: Union[int, float, str] = 2,
-        dtype: Optional[DTypeLike] = None,
+        order: float | str = 2,
+        dtype: DTypeLike | None = None,
         **kwargs,
     ) -> float:
         """Calculate norm of an one-dimensional ``array``.
@@ -1860,7 +1858,7 @@ class Backend:  # pylint: disable=R0904
 
         return self.engine.linalg.norm(array, order, **kwargs)
 
-    def vstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
+    def vstack(self, arrays: tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         """Stack ``arrays`` in sequence vertically (row wise).
 
         Args:
@@ -1889,7 +1887,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.where(*args, **kwargs)
 
     def zeros(
-        self, shape: Union[int, Tuple[int, ...]], dtype: Optional[DTypeLike] = None
+        self, shape: int | tuple[int, ...], dtype: DTypeLike | None = None
     ) -> ArrayLike:
         """Return a new array with a given ``shape`` filled with zeros.
 
@@ -1907,7 +1905,7 @@ class Backend:  # pylint: disable=R0904
         return self.engine.zeros(shape, dtype=dtype)
 
     def zeros_like(
-        self, array: ArrayLike, dtype: Optional[DTypeLike] = None, **kwargs
+        self, array: ArrayLike, dtype: DTypeLike | None = None, **kwargs
     ) -> ArrayLike:
         """Return an array of zeros with the same shape and data type as a given ``array``.
 
@@ -1968,7 +1966,7 @@ class Backend:  # pylint: disable=R0904
         self,
         circuit: "Circuit",  # type: ignore
         parameters: ArrayLike,
-        initial_state: Optional[ArrayLike] = None,
+        initial_state: ArrayLike | None = None,
         return_complex: bool = True,
     ) -> ArrayLike:  # pragma: no cover
         """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
@@ -1981,9 +1979,9 @@ class Backend:  # pylint: disable=R0904
     def matrix_exp(
         self,
         matrix: ArrayLike,
-        phase: Union[float, int, complex] = 1,
-        eigenvectors: Optional[ArrayLike] = None,
-        eigenvalues: Optional[ArrayLike] = None,
+        phase: complex = 1,
+        eigenvectors: ArrayLike | None = None,
+        eigenvalues: ArrayLike | None = None,
     ) -> ArrayLike:
         """Calculate the exponential :math:`e^{\\theta \\, A}` of a matrix :math:`A`
         and ``phase`` :math:`\\theta`.
@@ -2006,9 +2004,9 @@ class Backend:  # pylint: disable=R0904
     def matrix_log(
         self,
         matrix: ArrayLike,
-        base: Union[float, int] = 2,
-        eigenvectors: Optional[ArrayLike] = None,
-        eigenvalues: Optional[ArrayLike] = None,
+        base: float = 2,
+        eigenvectors: ArrayLike | None = None,
+        eigenvalues: ArrayLike | None = None,
     ) -> ArrayLike:
         """Calculate the logarithm :math:`\\log_{b}(A)` with a ``base`` :math:`b`
         of a matrix :math:`A`.
@@ -2030,9 +2028,9 @@ class Backend:  # pylint: disable=R0904
     def matrix_power(
         self,
         matrix: ArrayLike,
-        power: Union[float, int],
+        power: float,
         precision_singularity: float = 1e-14,
-        dtype: Optional[DTypeLike] = None,
+        dtype: DTypeLike | None = None,
     ) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -2047,7 +2045,7 @@ class Backend:  # pylint: disable=R0904
         return self.matrix_power(array, power=0.5)
 
     def partial_trace(
-        self, state: ArrayLike, traced_qubits: Union[Tuple[int, ...], List[int]]
+        self, state: ArrayLike, traced_qubits: tuple[int, ...] | list[int]
     ) -> ArrayLike:
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
 
@@ -2075,7 +2073,7 @@ class Backend:  # pylint: disable=R0904
             return self.reshape(rho, shape)
 
         order = tuple(sorted(traced_qubits))
-        order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
+        order += tuple(set(range(nqubits)) ^ set(traced_qubits))
         order += tuple(elem + nqubits for elem in order)
         shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
 
@@ -2084,7 +2082,7 @@ class Backend:  # pylint: disable=R0904
 
         return self.einsum("abac->bc", state)
 
-    def singular_value_decomposition(self, array: ArrayLike) -> Tuple[ArrayLike, ...]:
+    def singular_value_decomposition(self, array: ArrayLike) -> tuple[ArrayLike, ...]:
         """Calculate the Singular Value Decomposition of ``matrix``."""
         return self.engine.linalg.svd(array)
 
@@ -2132,7 +2130,7 @@ class Backend:  # pylint: disable=R0904
         return state
 
     def maximally_mixed_state(
-        self, nqubits: int, dtype: Optional[DTypeLike] = None
+        self, nqubits: int, dtype: DTypeLike | None = None
     ) -> ArrayLike:
         """Generate the :math:`n`-qubit density matrix for the maximally mixed state.
 
@@ -2161,7 +2159,7 @@ class Backend:  # pylint: disable=R0904
         self,
         nqubits: int,
         density_matrix: bool = False,
-        dtype: Optional[DTypeLike] = None,
+        dtype: DTypeLike | None = None,
     ):
         if dtype is None:
             dtype = self.dtype
@@ -2178,8 +2176,8 @@ class Backend:  # pylint: disable=R0904
         return state
 
     def overlap_statevector(
-        self, state_1: ArrayLike, state_2: ArrayLike, dtype: Optional[DTypeLike] = None
-    ) -> Union[float, complex]:
+        self, state_1: ArrayLike, state_2: ArrayLike, dtype: DTypeLike | None = None
+    ) -> float | complex:
         """Calculate overlap of two pure quantum states."""
         if dtype is None:
             dtype = self.dtype
@@ -2193,7 +2191,7 @@ class Backend:  # pylint: disable=R0904
         self,
         nqubits: int,
         density_matrix: bool = False,
-        dtype: Optional[DTypeLike] = None,
+        dtype: DTypeLike | None = None,
     ) -> ArrayLike:
         """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
         if dtype is None:
@@ -2210,7 +2208,10 @@ class Backend:  # pylint: disable=R0904
         return state
 
     def reset_error_density_matrix(
-        self, gate: Gate, state: ArrayLike, nqubits: int  # type: ignore
+        self,
+        gate: Gate,
+        state: ArrayLike,
+        nqubits: int,  # type: ignore
     ) -> ArrayLike:
         """Apply reset error to density matrix."""
         from qibo.gates.gates import X  # pylint: disable=import-outside-toplevel
@@ -2244,7 +2245,7 @@ class Backend:  # pylint: disable=R0904
         self,
         nqubits: int,
         density_matrix: bool = False,
-        dtype: Optional[DTypeLike] = None,
+        dtype: DTypeLike | None = None,
     ) -> ArrayLike:
         """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
 
@@ -2295,7 +2296,10 @@ class Backend:  # pylint: disable=R0904
         return noisy_samples
 
     def apply_channel(
-        self, channel: "Channel", state: ArrayLike, nqubits: int  # type: ignore
+        self,
+        channel: "Channel",
+        state: ArrayLike,
+        nqubits: int,  # type: ignore
     ) -> ArrayLike:
         """Apply a ``channel`` to quantum ``state``."""
 
@@ -2389,7 +2393,7 @@ class Backend:  # pylint: disable=R0904
         decimals: int = 5,
         cutoff: float = 1e-10,
         max_terms: int = 20,
-    ) -> List[str]:
+    ) -> list[str]:
         density_matrix = bool(len(state.shape) == 2)
         ind_j = self.nonzero(state)
         if density_matrix:
@@ -2424,7 +2428,7 @@ class Backend:  # pylint: disable=R0904
     def collapse_state(
         self,
         state: ArrayLike,
-        qubits: Union[Tuple[int, ...], List[int]],
+        qubits: tuple[int, ...] | list[int],
         shot: int,
         nqubits: int,
         normalize: bool = True,
@@ -2442,9 +2446,9 @@ class Backend:  # pylint: disable=R0904
     def execute_circuit(
         self,
         circuit: "Circuit",  # type: ignore
-        initial_state: Optional[ArrayLike] = None,
+        initial_state: ArrayLike | None = None,
         nshots: int = 1000,
-    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:
+    ) -> CircuitResult | MeasurementOutcomes | QuantumState:
         """Execute a :class:`qibo.models.circuit.Circuit`."""
         nqubits = circuit.nqubits
         density_matrix = circuit.density_matrix
@@ -2513,13 +2517,11 @@ class Backend:  # pylint: disable=R0904
 
     def execute_circuits(
         self,
-        circuits: List["Circuit"],  # type: ignore
-        initial_states: Optional[ArrayLike] = None,
-        nshots: Optional[int] = None,
-        processes: Optional[int] = None,
-    ) -> List[
-        Union[CircuitResult, MeasurementOutcomes, QuantumState]
-    ]:  # pragma: no cover
+        circuits: list["Circuit"],  # type: ignore
+        initial_states: ArrayLike | None = None,
+        nshots: int | None = None,
+        processes: int | None = None,
+    ) -> list[CircuitResult | MeasurementOutcomes | QuantumState]:  # pragma: no cover
         """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
         from qibo.parallel import (  # pylint: disable=import-outside-toplevel
             parallel_circuits_execution,
@@ -2533,8 +2535,8 @@ class Backend:  # pylint: disable=R0904
         self,
         circuit: "Circuit",  # type: ignore
         nshots: int,
-        initial_state: Optional[ArrayLike] = None,
-    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:  # pragma: no cover
+        initial_state: ArrayLike | None = None,
+    ) -> CircuitResult | MeasurementOutcomes | QuantumState:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 
         Useful for noise simulation using state vectors or for simulating gates
@@ -2563,7 +2565,7 @@ class Backend:  # pylint: disable=R0904
             target_qubits = [
                 measurement.target_qubits for measurement in circuit.measurements
             ]
-            target_qubits = sum(target_qubits, tuple())
+            target_qubits = sum(target_qubits, ())
 
         state_copy = (
             self.zero_state(nqubits, density_matrix=density_matrix)
@@ -2638,9 +2640,9 @@ class Backend:  # pylint: disable=R0904
     def execute_distributed_circuit(
         self,
         circuit: "Circuit",  # type: ignore
-        initial_state: Optional[ArrayLike] = None,
-        nshots: Optional[int] = None,
-    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:  # pragma: no cover
+        initial_state: ArrayLike | None = None,
+        nshots: int | None = None,
+    ) -> CircuitResult | MeasurementOutcomes | QuantumState:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
         raise_error(
             NotImplementedError, f"{self} does not support distributed execution."
@@ -2734,7 +2736,7 @@ class Backend:  # pylint: disable=R0904
     def calculate_probabilities(
         self,
         state: ArrayLike,
-        qubits: Union[List[int], Tuple[int, ...]],
+        qubits: list[int] | tuple[int, ...],
         nqubits: int,
         density_matrix: bool = False,
     ) -> ArrayLike:
@@ -2749,7 +2751,7 @@ class Backend:  # pylint: disable=R0904
             probs = self.reshape(probs, len(qubits) * (2,))
         else:
             rtype = self.real(state).dtype
-            unmeasured_qubits = tuple(set(list(range(nqubits))) ^ set(qubits))
+            unmeasured_qubits = tuple(set(range(nqubits)) ^ set(qubits))
             state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
             probs = self.cast(state, dtype=rtype)  # pylint: disable=E1111
             if len(unmeasured_qubits) != 0:
@@ -2808,9 +2810,7 @@ class Backend:  # pylint: disable=R0904
         density_matrix = bool(len(state.shape) == 2)
 
         if density_matrix:
-            ev = self.real(
-                self.trace(self.cast(hamiltonian @ state))
-            )  # pylint: disable=E1111
+            ev = self.real(self.trace(self.cast(hamiltonian @ state)))  # pylint: disable=E1111
             if normalize:  # pragma: no cover
                 norm = self.real(self.trace(state))
                 ev /= norm
@@ -2830,7 +2830,7 @@ class Backend:  # pylint: disable=R0904
         observable: ArrayLike,
         nqubits: int,
         nshots: int,
-        qubit_map: Optional[Tuple[int, ...]] = None,
+        qubit_map: tuple[int, ...] | None = None,
     ) -> float:
         """Compute the expectation value of a dense Hamiltonian diagonal in a defined basis
         starting from the samples (measured in the same basis).
@@ -2866,7 +2866,7 @@ class Backend:  # pylint: disable=R0904
             qubit_map = tuple(range(nqubits))
         diag = self.transpose(diag, qubit_map).ravel()
         # select only the elements with non-zero counts
-        diag = diag[[int(state, 2) for state in freq.keys()]]
+        diag = diag[[int(state, 2) for state in freq]]
         counts = self.cast(list(freq.values()), dtype=diag.dtype) / sum(freq.values())
         return self.real(self.sum(diag * counts))
 
@@ -2874,11 +2874,11 @@ class Backend:  # pylint: disable=R0904
         self,
         circuit: "Circuit",  # type: ignore
         nqubits: int,
-        terms_qubits: List[Tuple[int, ...]],
-        terms_coefficients: List[float],
+        terms_qubits: list[tuple[int, ...]],
+        terms_coefficients: list[float],
         nshots: int,
-        qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
-        constant: Union[float, int] = 0.0,
+        qubit_map: tuple[int, ...] | list[int] | None = None,
+        constant: float = 0.0,
     ) -> float:
         """Compute the expectation value of a symbolic observable diagonal in the
         computational basis, starting from the samples.
@@ -2946,9 +2946,9 @@ class Backend:  # pylint: disable=R0904
     def exp_value_observable_symbolic(
         self,
         circuit: "Circuit",  # type: ignore
-        terms: List[str],
-        term_qubits: List[Tuple[int, ...]],
-        term_coefficients: List[float],
+        terms: list[str],
+        term_qubits: list[tuple[int, ...]],
+        term_coefficients: list[float],
         nqubits: int,
     ):
         """Compute the expectation value of a general symbolic observable that is a sum of terms.
@@ -3056,9 +3056,9 @@ class Backend:  # pylint: disable=R0904
     def exp_value_observable_symbolic_from_samples(
         self,
         circuit,
-        diagonal_terms_coefficients: List[List[float]],
-        diagonal_terms_observables: List[List[str]],
-        diagonal_terms_qubits: List[List[Tuple[int, ...]]],
+        diagonal_terms_coefficients: list[list[float]],
+        diagonal_terms_observables: list[list[str]],
+        diagonal_terms_qubits: list[list[tuple[int, ...]]],
         nqubits: int,
         constant: float,
         nshots: int,
@@ -3145,8 +3145,8 @@ class Backend:  # pylint: disable=R0904
 
     def assert_allclose(
         self,
-        value: Union[ArrayLike, CircuitResult, QuantumState],
-        target: Union[ArrayLike, CircuitResult, QuantumState],
+        value: ArrayLike | CircuitResult | QuantumState,
+        target: ArrayLike | CircuitResult | QuantumState,
         rtol: float = 1e-7,
         atol: float = 0.0,
     ) -> None:
@@ -3234,7 +3234,7 @@ class Backend:  # pylint: disable=R0904
         return self.reshape(state, 2 * (2**nqubits,))
 
     def _append_zeros(
-        self, state: ArrayLike, qubits: Union[List[int], Tuple[int, ...]], results
+        self, state: ArrayLike, qubits: list[int] | tuple[int, ...], results
     ) -> ArrayLike:
         """Helper function for the ``collapse_state`` method."""
         for q, r in zip(qubits, results):
@@ -3249,7 +3249,7 @@ class Backend:  # pylint: disable=R0904
     def _collapse_density_matrix(
         self,
         state: ArrayLike,
-        qubits: Union[Tuple[int, ...], List[int]],
+        qubits: tuple[int, ...] | list[int],
         shot: ArrayLike,
         nqubits: int,
         normalize: bool = True,
@@ -3279,7 +3279,7 @@ class Backend:  # pylint: disable=R0904
     def _collapse_statevector(
         self,
         state: ArrayLike,
-        qubits: Union[Tuple[int, ...], List[int]],
+        qubits: tuple[int, ...] | list[int],
         shot: ArrayLike,
         nqubits: int,
         normalize: bool = True,
@@ -3306,9 +3306,9 @@ class Backend:  # pylint: disable=R0904
     def _execute_circuit(
         self,
         circuit: "Circuit",  # type: ignore
-        initial_state: Optional[ArrayLike] = None,
+        initial_state: ArrayLike | None = None,
         nshots: int = 1000,
-    ) -> Union[CircuitResult, QuantumState]:
+    ) -> CircuitResult | QuantumState:
         nqubits = circuit.nqubits
         density_matrix = circuit.density_matrix
 
@@ -3344,16 +3344,16 @@ class Backend:  # pylint: disable=R0904
         return circuit._final_state
 
     def _identity_sparse(
-        self, dims: int, dtype: Optional[DTypeLike] = None, **kwargs
+        self, dims: int, dtype: DTypeLike | None = None, **kwargs
     ) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
 
     def _negative_power_singular_matrix(
         self,
         matrix: ArrayLike,
-        power: Union[float, int],
+        power: float,
         precision_singularity: float,
-        dtype: Optional[DTypeLike] = None,
+        dtype: DTypeLike | None = None,
     ) -> ArrayLike:
         """Calculate negative power of singular matrix."""
         if dtype is None:  # pragma: no cover
@@ -3369,7 +3369,7 @@ class Backend:  # pylint: disable=R0904
         return self.inv(vh_matrix) @ self.diag(s_matrix_inv) @ self.inv(u_matrix)
 
     def _order_probabilities(
-        self, probs: ArrayLike, qubits: Union[List[int], Tuple[int, ...]], nqubits: int
+        self, probs: ArrayLike, qubits: list[int] | tuple[int, ...], nqubits: int
     ) -> ArrayLike:
         """Arrange probabilities according to the given ``qubits`` ordering."""
         unmeasured, reduced = [], {}

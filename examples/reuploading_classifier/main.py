@@ -35,7 +35,7 @@ def main(dataset, layers):
         print("-" * 60)
     except:
         print("Problem never solved, finding optimal parameters...")
-        result, parameters = ql.minimize(method="l-bfgs-b", options={"disp": True})
+        _result, parameters = ql.minimize(method="l-bfgs-b", options={"disp": True})
 
         data[dataset][layers] = parameters
         with open("saved_parameters.pkl", "wb") as f:
@@ -43,7 +43,7 @@ def main(dataset, layers):
 
     ql.set_parameters(parameters)
     value_loss = ql.cost_function_fidelity()
-    print("The value of the cost function achieved is %.6f" % value_loss)
+    print(f"The value of the cost function achieved is {value_loss:.6f}")
     ql.paint_results()
     ql.paint_world_map()
 

@@ -15,11 +15,10 @@ angles0 = [i * math.pi / num_angles for i in range(num_angles)]
 
 
 def test_classifier_circuit2():
-    """ """
     set_backend("numpy")
     nqubits = 2
     nlayers = int(nqubits / 2)
-    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
+    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
 
     qcnn = QuantumCNN(nqubits, nlayers, nclasses=2)  # , params=angles0)
 
@@ -42,7 +41,7 @@ def test_classifier_circuit2():
 def get_real_vector2():
     nqubits = 2
     bits = range(nqubits)
-    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
+    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
     angles = angles0
 
     # convolution
@@ -80,11 +79,10 @@ def get_real_vector2():
 
 
 def test_classifier_circuit4():
-    """ """
     set_backend("numpy")
     nqubits = 4
     nlayers = int(nqubits / 2)
-    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
+    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
 
     qcnn = QuantumCNN(nqubits, nlayers, nclasses=2)
     angles = [0] + angles0 + angles0
@@ -100,7 +98,7 @@ def test_classifier_circuit4():
 
 def get_real_vector4():
     nqubits = 4
-    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
+    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
     angles = angles0
     bits = range(nqubits)
     # convolution - layer 1
@@ -274,10 +272,8 @@ def CNOT_unitary(nqubits, bit0, bit1):
 
 
 def test_1_qubit_classifier_circuit_error():
-    try:
+    with pytest.raises(ValueError):
         QuantumCNN(nqubits=1, nlayers=1, nclasses=2)
-    except:
-        pass
 
 
 def test_qcnn_training():
@@ -297,8 +293,7 @@ def test_qcnn_training():
     testangles = [random.uniform(0, 2 * np.pi) for i in range(21 * 2)]
     init_theta = np.concatenate((testbias, testangles))
     test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
-    testcircuit = test_qcnn._circuit
-    result = test_qcnn.minimize(
+    test_qcnn.minimize(
         init_theta, data=data, labels=labels, nshots=10000, method="Powell"
     )
 
@@ -318,7 +313,7 @@ def test_two_qubit_ansatz():
     circuit.add(gates.H(0))
     circuit.add(gates.RX(0, 0))
     circuit.add(gates.CNOT(1, 0))
-    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=circuit)
+    QuantumCNN(4, 2, 2, twoqubitansatz=circuit)
 
 
 def test_two_qubit_ansatz_training():
@@ -342,7 +337,7 @@ def test_two_qubit_ansatz_training():
         0 for i in range(totalNParams + 1)
     ]  # totalNParams+1 to account for bias parameter.
 
-    result = test_qcnn.minimize(
+    test_qcnn.minimize(
         init_theta, data=data, labels=labels, nshots=10000, method="Powell"
     )
 

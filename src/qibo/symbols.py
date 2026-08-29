@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 import sympy
 
@@ -51,7 +49,7 @@ class Symbol(sympy.Symbol):
         matrix,
         name="Symbol",
         commutative=False,
-        backend: Optional[Backend] = None,
+        backend: Backend | None = None,
     ):
         self.target_qubit = int(q)
         self.backend = _check_backend(backend)
@@ -134,7 +132,7 @@ class PauliSymbol(Symbol):
         matrix = getattr(matrices, cls.__name__)
         return super().__new__(cls, q, matrix, cls.__name__, commutative, **assumptions)
 
-    def __init__(self, q, commutative=False, backend: Optional[Backend] = None):
+    def __init__(self, q, commutative=False, backend: Backend | None = None):
         name = self.__class__.__name__
         matrix = getattr(matrices, name)
         super().__init__(q, matrix, name, commutative, backend=backend)
@@ -151,8 +149,6 @@ class I(PauliSymbol):
         q (int): Target qubit id.
     """
 
-    pass
-
 
 class X(PauliSymbol):
     """Qibo symbol for the Pauli-X operator.
@@ -160,8 +156,6 @@ class X(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
-
-    pass
 
 
 class Y(PauliSymbol):
@@ -171,8 +165,6 @@ class Y(PauliSymbol):
         q (int): Target qubit id.
     """
 
-    pass
-
 
 class Z(PauliSymbol):
     """Qibo symbol for the Pauli-X operator.
@@ -180,5 +172,3 @@ class Z(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
-
-    pass

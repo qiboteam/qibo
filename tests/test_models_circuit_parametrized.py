@@ -49,7 +49,7 @@ def test_set_parameters_with_list(backend, trainable):
     circuit.add(gates.fSim(0, 2, theta=0.0, phi=0.0))
     circuit.add(gates.H(2))
     # execute once
-    final_state = backend.execute_circuit(circuit)
+    backend.execute_circuit(circuit)
 
     target_circuit = Circuit(3)
     target_circuit.add(gates.RX(0, theta=params[0]))
@@ -93,7 +93,7 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators):
     else:
         circuit.add(gates.U3(1, *params[4], trainable=trainable))
     # execute once
-    final_state = backend.execute_circuit(circuit)
+    backend.execute_circuit(circuit)
 
     target_circuit = Circuit(3)
     target_circuit.add(gates.RX(0, theta=params[0]))
@@ -137,7 +137,7 @@ def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators):
         circuit.add(gates.Unitary(params[1], 1, 2, trainable=trainable))
         trainable_params = [params[0]]
     # execute once
-    final_state = backend.execute_circuit(circuit)
+    backend.execute_circuit(circuit)
 
     target_circuit = Circuit(4)
     target_circuit.add(gates.RX(0, theta=params[0]))

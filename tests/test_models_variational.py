@@ -35,7 +35,7 @@ def assert_regression_fixture(backend, array, filename, rtol=1e-5, atol=1e-12):
     filename = REGRESSION_FOLDER / filename
     try:
         array_fixture = load(filename)
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         # case not tested in GitHub workflows because files exist
         np.savetxt(filename, array)
         array_fixture = load(filename)
@@ -163,7 +163,7 @@ def test_vqe(backend, method, options, compile, filename):
     backend.assert_allclose(best, min(loss_values), rtol=1e-6, atol=1e-6)
 
     # test energy fluctuation
-    state = backend.ones(2**nqubits) / float(np.sqrt(2**nqubits))
+    backend.ones(2**nqubits) / float(np.sqrt(2**nqubits))
     hadamard_circ = Circuit(nqubits)
     hadamard_circ.add([gates.H(qubit) for qubit in range(nqubits)])
     energy_fluctuation = v.energy_fluctuation(hadamard_circ)
@@ -229,7 +229,7 @@ def test_qaoa_callbacks(backend, accelerators):
     ham = Y(5, dense=False, backend=backend)
     qaoa = QAOA(ham, callbacks=[energy], accelerators=accelerators)
     qaoa.set_parameters(params)
-    final_state = qaoa(backend.cast(state, copy=True))
+    qaoa(backend.cast(state, copy=True))
 
     h_matrix = backend.to_numpy(h.matrix)
     m_matrix = backend.to_numpy(qaoa.mixer.matrix)
@@ -290,7 +290,7 @@ def test_qaoa_optimization(backend, method, options, dense, filename):
     initial_p = backend.cast([0.05, 0.06, 0.07, 0.08], dtype="float64")
     if backend.platform == "pytorch":
         initial_p.requires_grad = True
-    best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
+    _best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
 
@@ -308,7 +308,7 @@ test_values = [
 def test_falqon_optimization(backend, delta_t, max_layers, tolerance, filename):
     h = XXZ(3, backend=backend)
     falqon = FALQON(h)
-    best, params, extra = falqon.minimize(delta_t, max_layers, tol=tolerance)
+    _best, params, _extra = falqon.minimize(delta_t, max_layers, tol=tolerance)
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
 
@@ -321,7 +321,7 @@ def test_falqon_optimization_callback(backend):
     callback = TestCallback()
     h = XXZ(3, backend=backend)
     falqon = FALQON(h)
-    best, params, extra = falqon.minimize(0.1, 5, callback=callback)
+    _best, _params, extra = falqon.minimize(0.1, 5, callback=callback)
     assert len(extra["callbacks"]) == 5
 
 
@@ -360,7 +360,7 @@ def test_aavqe(backend, method, options, compile, filename):
     aavqe = AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max=1)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
-    best, params = aavqe.minimize(
+    _best, params = aavqe.minimize(
         params=initial_parameters, method=method, options=options, compile=compile
     )
     if method == "cma":
@@ -380,7 +380,7 @@ def test_custom_loss(backend, test_input, test_param, expected):
     h = XXZ(3, backend=backend)
     qaoa = QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]
-    best, params, _ = qaoa.minimize(
+    best, _params, _ = qaoa.minimize(
         initial_p, loss_func=test_input, loss_func_param=test_param
     )
     assert abs(best - expected) <= 0.01

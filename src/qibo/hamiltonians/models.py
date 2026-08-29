@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from functools import reduce
-from typing import Callable, List, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -12,11 +12,11 @@ from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 
 def FermiHubbard(
     nsites: int,
-    hopping_strength: Union[float, int] = -1.0,
-    interaction_strength: Union[float, int] = 0.5,
+    hopping_strength: float = -1.0,
+    interaction_strength: float = 0.5,
     dense: bool = True,
     closed_boundary: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Jordan-Wigner-transformed Fermi-Hubbard model for an one-dimensional spin chain.
 
@@ -147,10 +147,10 @@ def FermiHubbard(
 
 def GPP(
     adjacency_matrix: ArrayLike,
-    penalty_coeff: Union[float, int] = 0.0,
-    node_weights: Optional[ArrayLike] = None,
+    penalty_coeff: float = 0.0,
+    node_weights: ArrayLike | None = None,
     dense: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """The Graph Partitioning Problem (GPP) as a quadratic function.
 
@@ -237,10 +237,10 @@ def GPP(
 
 def Heisenberg(
     nqubits: int,
-    coupling_constants: Union[float, int, list, tuple],
-    external_field_strengths: Union[float, int],
+    coupling_constants: float | list | tuple,
+    external_field_strengths: float,
     dense: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Heisenberg model on a :math:`1`-dimensional periodic lattice.
 
@@ -284,7 +284,7 @@ def Heisenberg(
     if isinstance(coupling_constants, (list, tuple)) and len(coupling_constants) != 3:
         raise_error(
             ValueError,
-            f"When `coupling_constants` is type `int` or `list`, it must have length == 3.",
+            "When `coupling_constants` is type `int` or `list`, it must have length == 3.",
         )
 
     if isinstance(coupling_constants, (float, int)):
@@ -296,7 +296,7 @@ def Heisenberg(
     ):
         raise_error(
             ValueError,
-            f"When `external_field_strengths` is type `int` or `list`, it must have length == 3.",
+            "When `external_field_strengths` is type `int` or `list`, it must have length == 3.",
         )
 
     if isinstance(external_field_strengths, (float, int)):
@@ -348,11 +348,11 @@ def Heisenberg(
 
 def Ising(
     nqubits: int,
-    coupling_constants: Union[float, int, ArrayLike],
-    local_field_strengths: Union[float, int, tuple, ArrayLike],
+    coupling_constants: float | ArrayLike,
+    local_field_strengths: float | tuple | ArrayLike,
     dense: bool = True,
     closed_boundary: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """One-dimensional :math:`n`-qubit Ising model.
 
@@ -394,15 +394,15 @@ def Ising(
         Ising Hamiltonian.
     """
 
-    if isinstance(coupling_constants, (list, tuple)):
-        if (closed_boundary and len(coupling_constants) != nqubits) or (
-            not closed_boundary and len(coupling_constants) != (nqubits - 1)
-        ):
-            raise_error(
-                ValueError,
-                f"``coupling_constants`` does not have the correct len ({len(coupling_constants)}) "
-                + f" for the given ``closed_boundary`` condition ({closed_boundary}).",
-            )
+    if isinstance(coupling_constants, (list, tuple)) and (
+        (closed_boundary and len(coupling_constants) != nqubits)
+        or (not closed_boundary and len(coupling_constants) != (nqubits - 1))
+    ):
+        raise_error(
+            ValueError,
+            f"``coupling_constants`` does not have the correct len ({len(coupling_constants)}) "
+            + f" for the given ``closed_boundary`` condition ({closed_boundary}).",
+        )
 
     backend = _check_backend(backend)
 
@@ -457,8 +457,8 @@ def Ising(
 
         return Hamiltonian(nqubits, matrix, backend=backend)
 
-    interaction = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
-        q2, backend=backend
+    interaction = lambda q1, q2: (
+        symbols.Z(q1, backend=backend) * symbols.Z(q2, backend=backend)
     )
 
     form = sum(
@@ -485,7 +485,7 @@ def Ising(
 
 
 def LABS(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+    nqubits: int, dense: bool = True, backend: Backend | None = None
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Create Hamiltonian of the Low Autocorrelation Binary Sequences (LABS) problem.
 
@@ -538,8 +538,8 @@ def LABS(
 def MaxCut(
     nqubits: int,
     dense: bool = True,
-    adj_matrix: Optional[Union[list[list[float]], ArrayLike]] = None,
-    backend: Optional[Backend] = None,
+    adj_matrix: list[list[float]] | ArrayLike | None = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Max Cut Hamiltonian.
 
@@ -589,7 +589,7 @@ def TFIM(
     h: float = 0.0,
     dense: bool = True,
     closed_boundary: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """One-dimensional, :math:`n`-qubit Transverse field Ising model.
 
@@ -646,9 +646,10 @@ def TFIM(
 
         return Hamiltonian(nqubits, matrix, backend=backend)
 
-    term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
-        q2, backend=backend
-    ) + h * symbols.X(q1, backend=backend)
+    term = lambda q1, q2: (
+        symbols.Z(q1, backend=backend) * symbols.Z(q2, backend=backend)
+        + h * symbols.X(q1, backend=backend)
+    )
 
     form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1))
 
@@ -664,10 +665,10 @@ def TFIM(
 
 def XXX(
     nqubits: int,
-    coupling_constant: Union[float, int] = 1,
-    external_field_strengths: Union[float, int, list, tuple] = [0.5, 0, 0],
+    coupling_constant: float = 1,
+    external_field_strengths: float | list | tuple | None = None,
     dense: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Heisenberg :math:`\\mathrm{XXX}` model with periodic boundary conditions.
 
@@ -704,6 +705,8 @@ def XXX(
         :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
         Heisenberg :math:`\\mathrm{XXX}` Hamiltonian.
     """
+    if external_field_strengths is None:
+        external_field_strengths = [0.5, 0, 0]
     if not isinstance(coupling_constant, (float, int)):
         raise_error(
             TypeError,
@@ -722,9 +725,9 @@ def XXX(
 
 def XXZ(
     nqubits: int,
-    delta: Union[float, int] = 0.5,
+    delta: float = 0.5,
     dense: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Heisenberg :math:`\\mathrm{XXZ}` model with periodic boundary conditions.
 
@@ -761,7 +764,7 @@ def XXZ(
 
 
 def X(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+    nqubits: int, dense: bool = True, backend: Backend | None = None
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Non-interacting Pauli-:math:`X` Hamiltonian.
 
@@ -782,7 +785,7 @@ def X(
 
 
 def Y(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+    nqubits: int, dense: bool = True, backend: Backend | None = None
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Non-interacting Pauli-:math:`Y` Hamiltonian.
 
@@ -802,7 +805,7 @@ def Y(
 
 
 def Z(
-    nqubits: int, dense: bool = True, backend: Optional[Backend] = None
+    nqubits: int, dense: bool = True, backend: Backend | None = None
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Non-interacting Pauli-:math:`Z` Hamiltonian.
 
@@ -881,7 +884,7 @@ def _gpp_dense(
 
 def _gpp_symbolic(
     adjacency_matrix: ArrayLike,
-    penalty_coeff: float | int,
+    penalty_coeff: float,
     node_weights: ArrayLike,
     backend: Backend,
 ) -> SymbolicHamiltonian:
@@ -912,7 +915,7 @@ def _gpp_symbolic(
     return SymbolicHamiltonian(hamiltonian, backend=backend)
 
 
-def _multikron(matrix_list: List[ArrayLike], backend: Backend) -> ArrayLike:
+def _multikron(matrix_list: list[ArrayLike], backend: Backend) -> ArrayLike:
     """Calculates Kronecker product of a list of matrices.
 
     Args:
@@ -928,7 +931,7 @@ def _OneBodyPauli(
     nqubits: int,
     operator: Callable,
     dense: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Helper method for constructing non-interacting
     :math:`X`, :math:`Y`, and :math:`Z` Hamiltonians."""

@@ -1,7 +1,5 @@
 """Plotscripts to visualize circuit execution's result."""
 
-from typing import List, Optional, Tuple, Union
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
@@ -24,11 +22,11 @@ def plot_density_hist(
     circuit: Circuit,
     title: str = "",
     alpha: float = 0.5,
-    colors: Optional[List[str]] = None,
+    colors: list[str] | None = None,
     fig_width: int = 16,
     fig_height: int = 8,
-    n_most_relevant_components: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    n_most_relevant_components: int | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ):
     """Plot the real and imaginary parts of the density matrix.
@@ -120,7 +118,6 @@ def plot_density_hist(
         (ax1, dzr, "Real"),
         (ax2, dzi, "Imaginary"),
     ):
-
         max_dz = np.max(dz)
         min_dz = np.min(dz)
 
@@ -218,9 +215,9 @@ def plot_density_hist(
 
 
 def visualize_state(
-    execution_outcome: Union[QuantumState, MeasurementOutcomes, CircuitResult],
+    execution_outcome: QuantumState | MeasurementOutcomes | CircuitResult,
     mode: str = "probabilities",
-    n_most_relevant_components: Optional[int] = None,
+    n_most_relevant_components: int | None = None,
 ):
     """
     Plot circuit execution's result data according to the chosen ``mode``.
@@ -322,7 +319,7 @@ def visualize_state(
     return ax, ax.figure
 
 
-def _validate_colors(colors: List[str] | None) -> Tuple[str, str]:
+def _validate_colors(colors: list[str] | None) -> tuple[str, str]:
     if colors is None:
         return QIBO_DEFAULT_COLOR, QIBO_COMPLEMENTARY_COLOR
 
@@ -337,7 +334,7 @@ def _validate_colors(colors: List[str] | None) -> Tuple[str, str]:
     return pos_color, neg_color
 
 
-def _get_labels(nqubits: int) -> List[str]:
+def _get_labels(nqubits: int) -> list[str]:
     indices = np.arange(2**nqubits)
     bits = np.array(np.unravel_index(indices, [2] * nqubits)).T
     labels = ["".join(str(b) for b in row) for row in bits]

@@ -40,7 +40,7 @@ def QFT(nqubits: int, with_swaps: bool = True, accelerators=None, **kwargs) -> C
         if not with_swaps:
             raise_error(
                 NotImplementedError,
-                "Distributed QFT is only implemented " "with SWAPs.",
+                "Distributed QFT is only implemented with SWAPs.",
             )
         return _DistributedQFT(nqubits, accelerators, **kwargs)
 

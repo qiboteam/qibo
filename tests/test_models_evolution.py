@@ -3,7 +3,6 @@ import pytest
 from scipy.linalg import expm
 
 from qibo.callbacks import Callback, Energy
-from qibo.config import raise_error
 from qibo.hamiltonians import TFIM, AdiabaticHamiltonian, X, Z
 from qibo.models import AdiabaticEvolution, StateEvolution
 
@@ -34,13 +33,13 @@ def test_state_evolution_init(backend):
     assert evolution.nqubits == 2
     # time-dependent Hamiltonian bad type
     with pytest.raises(TypeError):
-        evol = StateEvolution(lambda t: "abc", dt=1e-2)
+        StateEvolution(lambda t: "abc", dt=1e-2)
     # dt < 0
     with pytest.raises(ValueError):
-        adev = StateEvolution(ham, dt=-1e-2)
+        StateEvolution(ham, dt=-1e-2)
     # pass accelerators without trotter Hamiltonian
     with pytest.raises(NotImplementedError):
-        adev = StateEvolution(ham, dt=1e-2, accelerators={"/GPU:0": 2})
+        StateEvolution(ham, dt=1e-2, accelerators={"/GPU:0": 2})
 
 
 def test_state_evolution_get_initial_state(backend):
@@ -48,7 +47,7 @@ def test_state_evolution_get_initial_state(backend):
     evolution = StateEvolution(ham, dt=1)
     # execute without initial state
     with pytest.raises(ValueError):
-        final_state = evolution(final_time=1)
+        evolution(final_time=1)
 
 
 @pytest.mark.parametrize(
@@ -65,7 +64,7 @@ def test_state_evolution_constant_hamiltonian(backend, solver, atol):
     checker = TimeStepChecker(target_psi, atol=atol)
     ham = Z(2, backend=backend)
     evolution = StateEvolution(ham, dt=dt, solver=solver, callbacks=[checker])
-    final_psi = evolution(final_time=1, initial_state=target_psi[0])
+    evolution(final_time=1, initial_state=target_psi[0])
 
 
 @pytest.mark.parametrize("nqubits,dt", [(2, 1e-2)])
@@ -79,7 +78,7 @@ def test_state_evolution_time_dependent_hamiltonian(backend, nqubits, dt):
 
     checker = TimeStepChecker(target_psi, atol=1e-8)
     evolution = StateEvolution(ham, dt=dt, callbacks=[checker])
-    final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
+    evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
 @pytest.mark.parametrize("nqubits", [5])
@@ -116,21 +115,21 @@ def test_adiabatic_evolution_init(backend):
     h0 = X(3, backend=backend)
     s = lambda t: t
     with pytest.raises(TypeError):
-        adev = AdiabaticEvolution(h0, lambda t: h0, s, dt=1e-2)
+        AdiabaticEvolution(h0, lambda t: h0, s, dt=1e-2)
     h1 = TFIM(2, backend=backend)
     with pytest.raises(TypeError):
-        adev = AdiabaticEvolution(lambda t: h1, h1, s, dt=1e-2)
+        AdiabaticEvolution(lambda t: h1, h1, s, dt=1e-2)
     # Hamiltonians with different number of qubits
     with pytest.raises(ValueError):
-        adev = AdiabaticEvolution(h0, h1, s, dt=1e-2)
+        AdiabaticEvolution(h0, h1, s, dt=1e-2)
     # Adiabatic Hamiltonian with bad hamiltonian types
     with pytest.raises(TypeError):
-        h = AdiabaticHamiltonian("a", "b")  # pylint: disable=E0110
+        AdiabaticHamiltonian("a", "b")  # pylint: disable=E0110
     # s with three arguments
     h0 = X(2, backend=backend)
     s = lambda t, a, b: t + a + b
     with pytest.raises(ValueError):
-        adev = AdiabaticEvolution(h0, h1, s, dt=1e-2)
+        AdiabaticEvolution(h0, h1, s, dt=1e-2)
 
 
 def test_adiabatic_evolution_schedule(backend):
@@ -155,7 +154,7 @@ def test_set_scheduling_parameters(backend):
     adevp = AdiabaticEvolution(h0, h1, sp, 1e-2)
     # access parametrized scheduling before setting parameters
     with pytest.raises(ValueError):
-        s = adevp.schedule
+        pass
 
     adevp.set_parameters([0.5, 1])
 
@@ -238,7 +237,7 @@ def test_trotterized_adiabatic_evolution(backend, accelerators, nqubits, dt):
         callbacks=[checker],
         accelerators=accelerators,
     )
-    final_psi = adev(final_time=1)
+    adev(final_time=1)
 
 
 @pytest.mark.parametrize("solver", ["rk4", "rk45"])
@@ -259,7 +258,7 @@ def test_adiabatic_evolution_execute_rk(backend, solver, dense, dt):
     adev = AdiabaticEvolution(
         h0, h1, lambda t: t, dt, solver="rk4", callbacks=[checker]
     )
-    final_psi = adev(final_time=1, initial_state=np.copy(target_psi[0]))
+    adev(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
 def test_adiabatic_evolution_execute_errors(backend):
@@ -268,12 +267,12 @@ def test_adiabatic_evolution_execute_errors(backend):
     # Non-zero ``start_time``
     adev = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     with pytest.raises(NotImplementedError):
-        final_state = adev(final_time=2, start_time=1)
+        adev(final_time=2, start_time=1)
     # execute without specifying variational parameters
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = AdiabaticEvolution(h0, h1, sp, dt=1e-1)
     with pytest.raises(RuntimeError):
-        final_state = adevp(final_time=1)
+        adevp(final_time=1)
 
 
 @pytest.mark.parametrize("solver,dt,atol", [("exp", 1e-1, 1e-10), ("rk45", 1e-2, 1e-2)])
@@ -323,11 +322,11 @@ def test_scheduling_optimization(backend, method, options, messages, dense, file
     if method == "sgd":
         if backend.platform != "tensorflow":
             with pytest.raises(RuntimeError):
-                best, params, _ = adevp.minimize(
+                adevp.minimize(
                     [0.5, 1], method=method, options=options, messages=messages
                 )
     else:
-        best, params, _ = adevp.minimize(
+        _best, params, _ = adevp.minimize(
             [0.5, 1], method=method, options=options, messages=messages
         )
 

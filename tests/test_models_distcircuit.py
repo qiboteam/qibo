@@ -45,7 +45,7 @@ def test_distributed_circuit_various_errors(backend):
         circuit.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
     # Attempt to access state before being set
     with pytest.raises(RuntimeError):
-        final_state = circuit.final_state
+        pass
     # Attempt to compile
     if backend.platform == "tensorflow":
         with pytest.raises(RuntimeError):

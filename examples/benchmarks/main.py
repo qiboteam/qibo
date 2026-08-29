@@ -57,7 +57,7 @@ def limit_gpu_memory(memory_limit=None):
         return
 
     print(f"\nAttempting to limit GPU memory to {memory_limit}.\n")
-    gpus = tf.config.list_physical_devices("GPU")
+    tf.config.list_physical_devices("GPU")
     for gpu in tf.config.list_physical_devices("GPU"):
         config = tf.config.experimental.VirtualDeviceConfiguration(
             memory_limit=memory_limit
@@ -117,13 +117,15 @@ def main(
     get_branch=True,
     nlayers=None,
     gate_type=None,
-    params={},
+    params=None,
     filename=None,
 ):
     """Runs circuit simulation benchmarks for different circuits.
 
     See benchmark documentation for a description of arguments.
     """
+    if params is None:
+        params = {}
     qibo.set_backend(backend)
     qibo.set_dtype(dtype)
     if device is not None:
@@ -210,7 +212,7 @@ def main(
 
     start_time = time.time()
     if nshots is not None:
-        freqs = result.frequencies()
+        result.frequencies()
     logs[-1]["measurement_time"] = time.time() - start_time
 
     print()

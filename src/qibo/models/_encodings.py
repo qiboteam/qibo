@@ -1,9 +1,9 @@
 """Helper functions for the `models.encodings` module."""
 
 import cmath
+import itertools
 import math
 from inspect import signature
-from typing import List, Optional, Set, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
@@ -16,7 +16,7 @@ from qibo.gates.abstract import Gate
 from qibo.models.circuit import Circuit  # to avoid circular import
 
 
-def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], weight: int) -> None:
+def _add_dicke_unitary_gate(circuit: Circuit, qubits: list[int], weight: int) -> None:
     """In-place addition to ``circuit`` of a U_{n,k} gate from Definition 2 of the paper [1]."""
     nqubits = len(qubits)
     for m in range(nqubits, weight, -1):
@@ -29,7 +29,7 @@ def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], weight: int) ->
         _add_scs_gate(circuit, qubits[:m], m - 1)
 
 
-def _add_scs_gate(circuit: Circuit, qubits: List[int], weight: int) -> None:
+def _add_scs_gate(circuit: Circuit, qubits: list[int], weight: int) -> None:
     """In-place addition of a Split & Cyclic Shift (SCS) gate to ``circuit``.
     Implements the SCS_{n,k} unitary from Definition 3 of the paper [1].
     Acts on the last weight+1 qubits of the nqubits passed qubits.
@@ -64,8 +64,8 @@ def _add_scs_gate(circuit: Circuit, qubits: List[int], weight: int) -> None:
 
 def _add_wbd_gate(
     circuit: Circuit,
-    first_register: List[int],
-    second_register: List[int],
+    first_register: list[int],
+    second_register: list[int],
     nqubits: int,
     mqubits: int,
     weight: int,
@@ -142,7 +142,7 @@ def _angle_mod_two_pi(angle: float) -> float:
     return angle % (2 * np.pi)
 
 
-def _binary_codewords(dims: int, backend: Optional[Backend] = None) -> ArrayLike:
+def _binary_codewords(dims: int, backend: Backend | None = None) -> ArrayLike:
     """Return a array of integers produced by `_binary_codewords_ehrlich(d)`.
 
     Adjusted so that the Hamming weight is strictly nondecreasing,
@@ -178,21 +178,19 @@ def _binary_codewords(dims: int, backend: Optional[Backend] = None) -> ArrayLike
         # insert the remainder words at positions that preserve
         # strictly increasing weights and distance ≤ 2 to neighbors
         for word in cwres:
-
             hw = hamming_weight(int(word))
 
             inserted = False
             for i in range(len(cw) - 1):
                 wi, wj = weights[i], weights[i + 1]
-                if wi <= hw <= wj:
-                    if (
-                        hamming_distance(int(word), int(cw[i])) <= 2
-                        and hamming_distance(int(word), int(cw[i + 1])) <= 2
-                    ):
-                        cw = backend.engine.insert(cw, i + 1, word, axis=0)
-                        weights = backend.engine.insert(weights, i + 1, hw)
-                        inserted = True
-                        break
+                if wi <= hw <= wj and (
+                    hamming_distance(int(word), int(cw[i])) <= 2
+                    and hamming_distance(int(word), int(cw[i + 1])) <= 2
+                ):
+                    cw = backend.engine.insert(cw, i + 1, word, axis=0)
+                    weights = backend.engine.insert(weights, i + 1, hw)
+                    inserted = True
+                    break
             if not inserted:
                 # append if no suitable interior gap is found
                 cw = backend.engine.hstack((cw, word))
@@ -201,7 +199,7 @@ def _binary_codewords(dims: int, backend: Optional[Backend] = None) -> ArrayLike
     return cw
 
 
-def _binary_codewords_ehrlich(dims: int, backend: Optional[Backend] = None):
+def _binary_codewords_ehrlich(dims: int, backend: Backend | None = None):
     """
     Yield fixed-width bitstrings representing integers 0..d-1, arranged so that
     Hamming weights are strictly nondecreasing. Uses at most hamming_weight(d) calls
@@ -240,7 +238,7 @@ def _binary_encoder_mottonen(
     data: ArrayLike,
     nqubits: int,
     complex_data: bool,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Binary encoder circuit using Möttönen uniformly controlled rotations.
@@ -321,7 +319,7 @@ def _binary_encoder_hopf(
     data: ArrayLike,
     nqubits: int,
     complex_data: bool,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:  # pylint: disable=unused-argument
     # TODO: generalize to complex-valued data
@@ -377,9 +375,9 @@ def _binary_encoder_hyperspherical(
     data: ArrayLike,
     nqubits: int,
     complex_data: bool,
-    codewords: Optional[List[int]] = None,
+    codewords: list[int] | None = None,
     keep_antictrls: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     backend = _check_backend(backend)
@@ -414,7 +412,7 @@ def _binary_encoder_hyperspherical(
 
 def _ehrlich_algorithm(
     initial_string: ArrayLike, return_indices: bool = True
-) -> List[str] | Tuple[List[str], List[List[int]]]:
+) -> list[str] | tuple[list[str], list[list[int]]]:
     """Return list of bitstrings with mininal Hamming distance between consecutive strings.
 
     Based on the Gray code called Ehrlich algorithm. For more details, please see Ref. [1].
@@ -467,8 +465,8 @@ def _ehrlich_algorithm(
 def _ehrlich_codewords_up_to_k(
     up2k: int,
     reversed_list: bool = False,
-    nqubits: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    nqubits: int | None = None,
+    backend: Backend | None = None,
 ):
     """
     Yield all bitstrings with monotonically changing Hamming weight from 0..up2k (or the reverse),
@@ -550,8 +548,8 @@ def _ehrlich_codewords_up_to_k(
 
 
 def _gate_params(
-    bsi: List[int], bsip1: List[int], keep_antictrls: bool = False
-) -> Tuple[List[int], ...]:
+    bsi: list[int], bsip1: list[int], keep_antictrls: bool = False
+) -> tuple[list[int], ...]:
 
     one_ind_bsi = {i for i in range(len(bsi)) if bsi[i] == 1}
     one_ind_bsip1 = {i for i in range(len(bsip1)) if bsip1[i] == 1}
@@ -574,9 +572,9 @@ def _gate_params(
 def _generate_rbs_angles(
     data: ArrayLike,
     architecture: str,
-    dims: Optional[int] = None,
-    backend: Optional[Backend] = None,
-) -> List[float]:
+    dims: int | None = None,
+    backend: Backend | None = None,
+) -> list[float]:
     """Generate list of angles for RBS gates based on ``architecture``.
 
     Args:
@@ -628,7 +626,7 @@ def _generate_rbs_angles(
 
 def _generate_rbs_pairs(
     nqubits: int, architecture: str, **kwargs
-) -> Tuple[Circuit, List[List[int]]]:
+) -> tuple[Circuit, list[list[int]]]:
     """Generate list of indexes representing the RBS connections.
 
     Creates circuit with all RBS initialised with 0.0 phase.
@@ -649,7 +647,7 @@ def _generate_rbs_pairs(
 
     if architecture == "diagonal":
         pairs_rbs = np.arange(nqubits)
-        pairs_rbs = [[pair] for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
+        pairs_rbs = [[pair] for pair in itertools.pairwise(pairs_rbs)]
 
     if architecture == "tree":
         pairs_rbs = [[(0, int(nqubits / 2))]]
@@ -674,13 +672,13 @@ def _generate_rbs_pairs(
 
 
 def _get_gate(
-    qubits_in: List[int],
-    qubits_out: List[int],
-    controls: List[int],
+    qubits_in: list[int],
+    qubits_out: list[int],
+    controls: list[int],
     theta: float,
     phi: float,
     complex_data: bool = False,
-) -> List[Gate]:
+) -> list[Gate]:
     """Return gate(s) necessary to encode a complex amplitude in a given computational basis state,
     given the computational basis state used to encode the previous amplitude.
 
@@ -740,14 +738,14 @@ def _get_gate(
 def _get_gate_sparse(
     distance: int,
     difference: int,
-    touched_qubits: Union[List[int], Tuple[int, ...]],
+    touched_qubits: list[int] | tuple[int, ...],
     complex_data: bool,
-    controls: Union[List[int], Tuple[int, ...]],
+    controls: list[int] | tuple[int, ...],
     hw_0: int,
     hw_1: int,
     theta: float,
     phi: float,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> Gate:
     backend = _check_backend(backend)
     if distance == 1:  # pragma: no cover
@@ -791,7 +789,7 @@ def _get_gate_sparse(
     return gate
 
 
-def _get_int_type(x: int, backend: Optional[Backend] = None) -> DTypeLike:
+def _get_int_type(x: int, backend: Backend | None = None) -> DTypeLike:
     # Candidates in increasing size of memory usage
 
     backend = _check_backend(backend)
@@ -811,7 +809,7 @@ def _get_int_type(x: int, backend: Optional[Backend] = None) -> DTypeLike:
     )
 
 
-def _get_markers(bitstring: ArrayLike, last_run: bool = False) -> Set[int]:
+def _get_markers(bitstring: ArrayLike, last_run: bool = False) -> set[int]:
     """Subroutine of the Ehrlich algorithm."""
     nqubits = len(bitstring)
     bitstring = list(bitstring)
@@ -831,8 +829,8 @@ def _get_markers(bitstring: ArrayLike, last_run: bool = False) -> Set[int]:
 
 
 def _get_next_bistring(
-    bitstring: ArrayLike, markers: Set[int], hamming_weight: int
-) -> Tuple[ArrayLike, Set[int], List[List[int]]]:
+    bitstring: ArrayLike, markers: set[int], hamming_weight: int
+) -> tuple[ArrayLike, set[int], list[list[int]]]:
     """Subroutine of the Ehrlich algorithm."""
     if len(markers) == 0:  # pragma: no cover
         return bitstring
@@ -871,9 +869,7 @@ def _get_next_bistring(
     return new_bitstring, markers, [qubits, controls]
 
 
-def _get_phase_gate_correction(
-    last_string: Union[ArrayLike, str], phase: float
-) -> Gate:
+def _get_phase_gate_correction(last_string: ArrayLike | str, phase: float) -> Gate:
     """Return final gate of HW-k circuits that encode complex data."""
 
     # to avoid circular import error
@@ -894,8 +890,8 @@ def _get_phase_gate_correction(
 
 
 def _get_phase_gate_correction_sparse(
-    last_string: Union[ArrayLike, str],
-    second_to_last_string: Union[ArrayLike, str],
+    last_string: ArrayLike | str,
+    second_to_last_string: ArrayLike | str,
     nqubits: int,
     last_data: complex,
     second_to_last_data: complex,
@@ -945,7 +941,7 @@ def _ladder_synthesis(qubits: int) -> list[Gate]:
     qubits_prime = [qubits[1]]
     left = [gates.CNOT(qubits[-2], qubits[-1])]
     right = [gates.CNOT(qubits[0], qubits[1])]
-    for j in range(1, int(math.ceil(nqubits / 2)) - 2 + 1):
+    for j in range(1, math.ceil(nqubits / 2) - 2 + 1):
         left.append(gates.CNOT(qubits[2 * j - 1], qubits[2 * j]))
         right.append(gates.CNOT(qubits[2 * j], qubits[2 * j + 1]))
         qubits_prime.append(qubits[2 * j + 1])
@@ -957,11 +953,11 @@ def _ladder_synthesis(qubits: int) -> list[Gate]:
 
 
 def _monotonic_hw_encoder_complex(
-    codewords: List[int],
+    codewords: list[int],
     data: ArrayLike,
     nqubits: int,
     keep_antictrls: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Implements Algorithm 4 from  Ref. [1].
@@ -1096,11 +1092,11 @@ def _monotonic_hw_encoder_complex(
 
 
 def _monotonic_hw_encoder_real(
-    codewords: List[int],
+    codewords: list[int],
     data: ArrayLike,
     nqubits: int,
     keep_antictrls: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Implements Algorithm 3 from Ref. [1].
@@ -1196,7 +1192,7 @@ def _monotonic_hw_encoder_real(
 
 
 def _mottonen_alpha_y(
-    amplitudes: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+    amplitudes: ArrayLike, n: int, k: int, backend: Backend | None = None
 ) -> ArrayLike:
     """Rotation angles for uniformly controlled Y rotation on qubit k.
 
@@ -1223,7 +1219,7 @@ def _mottonen_alpha_y(
 
 
 def _mottonen_alpha_z(
-    phases: ArrayLike, n: int, k: int, backend: Optional[Backend] = None
+    phases: ArrayLike, n: int, k: int, backend: Backend | None = None
 ) -> ArrayLike:
     """Rotation angles for uniformly controlled Z rotation on qubit k."""
     backend = _check_backend(backend)
@@ -1238,7 +1234,7 @@ def _mottonen_alpha_z(
 
 
 def _mottonen_compute_theta(
-    alpha: ArrayLike, backend: Optional[Backend] = None
+    alpha: ArrayLike, backend: Backend | None = None
 ) -> ArrayLike:
     """Map uniformly controlled rotation angles to Gray-code decomposition angles.
 
@@ -1272,7 +1268,7 @@ def _mottonen_compute_theta(
     return backend.reshape(backend.transpose(theta), orig_shape)
 
 
-def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLike:
+def _mottonen_gray_code(rank: int, backend: Backend | None = None) -> ArrayLike:
     """Return Gray code of given rank as integer array."""
     backend = _check_backend(backend)
 
@@ -1286,7 +1282,7 @@ def _mottonen_gray_code(rank: int, backend: Optional[Backend] = None) -> ArrayLi
 def _next_nearest_layer(
     nqubits: int,
     gate: Gate,
-    parameters: Union[List[int], Tuple[int, ...]],
+    parameters: list[int] | tuple[int, ...],
     closed_boundary: bool,
     **kwargs,
 ) -> Circuit:
@@ -1306,7 +1302,7 @@ def _next_nearest_layer(
 def _non_trivial_layers(
     nqubits: int,
     architecture: str = "pyramid",
-    entangling_gate: Union[str, Gate] = "RBS",
+    entangling_gate: str | Gate = "RBS",
     closed_boundary: bool = False,
     **kwargs,
 ) -> Circuit:
@@ -1355,7 +1351,7 @@ def _parametrized_two_qubit_gate(
     gate: Gate,
     q0: int,
     q1: int,
-    params: Optional[Union[List[int], Tuple[float, ...]]] = None,
+    params: list[int] | tuple[float, ...] | None = None,
 ) -> Gate:
     """Return two-qubit gate initialized with or without phases."""
     if params is not None:
@@ -1365,9 +1361,9 @@ def _parametrized_two_qubit_gate(
 
 
 def _perm_column_ops(
-    indices: List[int],
+    indices: list[int],
     n: int,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ):
     """Return (ell, gate_list) performing duplicate‑col removal + compaction."""
     backend = _check_backend(backend)
@@ -1422,9 +1418,7 @@ def _perm_column_ops(
     return ell, qgates, perm_matrix
 
 
-def _perm_pair_flip_ops(
-    n: int, m: int, backend: Optional[Backend] = None
-) -> List[Gate]:
+def _perm_pair_flip_ops(n: int, m: int, backend: Backend | None = None) -> list[Gate]:
     """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
     backend = _check_backend(backend)
     # let us flip the first qubit when the last
@@ -1439,8 +1433,8 @@ def _perm_pair_flip_ops(
 
 
 def _perm_row_ops(
-    perm_matrix: ArrayLike, ell: int, m: int, n: int, backend: Optional[Backend] = None
-) -> List[Gate]:
+    perm_matrix: ArrayLike, ell: int, m: int, n: int, backend: Backend | None = None
+) -> list[Gate]:
     """Return gates that reduce all rows after row0 to target form."""
     backend = _check_backend(backend)
 
@@ -1511,7 +1505,7 @@ def _perm_row_ops(
 
 
 def _pyramid_layer(
-    nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, ...]], **kwargs
+    nqubits: int, gate: Gate, parameters: list[int] | tuple[int, ...], **kwargs
 ) -> Circuit:
     """Create entangling layer in triangular shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
@@ -1533,7 +1527,7 @@ def _pyramid_layer(
 
 def _sort_data_sparse(
     data: ArrayLike, nqubits: int, backend: Backend
-) -> Tuple[ArrayLike, ArrayLike]:
+) -> tuple[ArrayLike, ArrayLike]:
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         hamming_weight,
     )
@@ -1560,7 +1554,7 @@ def _sort_data_sparse(
 
 
 def _sparse_encoder_farias(
-    data: ArrayLike, nqubits: int, backend: Optional[Backend] = None, **kwargs
+    data: ArrayLike, nqubits: int, backend: Backend | None = None, **kwargs
 ) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
@@ -1716,7 +1710,7 @@ def _sparse_encoder_farias(
 
 
 def _sparse_encoder_li(
-    data: ArrayLike, nqubits: int, backend: Optional[Backend] = None, **kwargs
+    data: ArrayLike, nqubits: int, backend: Backend | None = None, **kwargs
 ) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
@@ -1830,9 +1824,9 @@ def _up_to_k_encoder_hyperspherical(
     nqubits: int,
     up_to_k: int,
     complex_data: bool,
-    codewords: Optional[List[int]] = None,
+    codewords: list[int] | None = None,
     keep_antictrls: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     backend = _check_backend(backend)
@@ -1888,7 +1882,7 @@ def _up_to_k_encoder_hyperspherical(
 
 
 def _v_layer(
-    nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, ...]], **kwargs
+    nqubits: int, gate: Gate, parameters: list[int] | tuple[int, ...], **kwargs
 ) -> Circuit:
     """Create entangling layer in V shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
@@ -1908,7 +1902,7 @@ def _v_layer(
 
 
 def _x_layer(
-    nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, ...]], **kwargs
+    nqubits: int, gate: Gate, parameters: list[int] | tuple[int, ...], **kwargs
 ) -> Circuit:
     """Create entangling layer in X shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")

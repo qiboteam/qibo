@@ -224,7 +224,7 @@ def test_construct_backend(backend):
 
 
 def test_list_available_backends():
-    qulacs = False if sys.version_info[1] == 13 else True
+    qulacs = sys.version_info[1] != 13
     available_backends = {
         "numpy": True,
         "qulacs": qulacs,

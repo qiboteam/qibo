@@ -4,7 +4,6 @@ from functools import cache, reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -26,9 +25,7 @@ def _pauli_basis_normalization(nqubits: int):
     return float(np.sqrt(2**nqubits))
 
 
-def hamming_weight(
-    bitstring: Union[int, str, list, tuple], return_indexes: bool = False
-):
+def hamming_weight(bitstring: int | str | list | tuple, return_indexes: bool = False):
     """Calculates the Hamming weight of a bitstring.
 
     The Hamming weight of a bistring is the number of :math:'1's that the bistring contains.
@@ -63,8 +60,8 @@ def hamming_weight(
 
 
 def hamming_distance(
-    bitstring_1: Union[int, str, list, tuple],
-    bitstring_2: Union[int, str, list, tuple],
+    bitstring_1: int | str | list | tuple,
+    bitstring_2: int | str | list | tuple,
     return_indexes: bool = False,
 ):
     """Calculates the Hamming distance between two bistrings.
@@ -390,7 +387,7 @@ def total_variation_distance(
 def haar_integral(
     nqubits: int,
     power_t: int,
-    samples: Optional[int] = None,
+    samples: int | None = None,
     backend=None,
 ):
     """Returns the integral over pure states over the Haar measure.
@@ -450,7 +447,6 @@ def haar_integral(
         rho = backend.einsum("ijk,ijl->ikl", random_states, backend.conj(random_states))
 
         for state in rho:
-
             rand_unit_density = rand_unit_density + reduce(
                 backend.kron, [state] * power_t
             )
@@ -550,7 +546,7 @@ def _hadamard_transform_1d(array, backend=None):
     return array_copied
 
 
-def _cycles_from_perm(sigma: List[int]):
+def _cycles_from_perm(sigma: list[int]):
     """Extract the cycles from a permutation as follows:
     - Treat the permutation as a directed graph of arrows i->sigma(i).
     - Depth‑first walk from every unvisited vertex; each walk closes at the start -> a cycle.
@@ -599,7 +595,7 @@ def _star_matchings(cyc: list[int]):
     return [[(min(hub, v), max(hub, v))] for v in cyc[1:]]
 
 
-def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
+def _greedy_pack(matchings: list[list[tuple[int, int]]], m: int):
     """
     Add a matching to the current layer if
         - it shares no vertex with swaps already in the layer, and
@@ -644,9 +640,7 @@ def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
     return layers
 
 
-def decompose_permutation(
-    sigma: Union[List[int], Tuple[int, ...]], m: int, backend=None
-):
+def decompose_permutation(sigma: list[int] | tuple[int, ...], m: int, backend=None):
     """
      Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
     and a power‑of‑two budget ``m``, this function factors ``sigma``
@@ -676,7 +670,7 @@ def decompose_permutation(
 
     if not isinstance(sigma, (list, tuple)):
         raise_error(
-            TypeError, f"Permutation sigma must be ``list`` or ``tuple`` of ``int``s."
+            TypeError, "Permutation sigma must be ``list`` or ``tuple`` of ``int``s."
         )
 
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(len(sigma)))]) != 0:
@@ -685,7 +679,7 @@ def decompose_permutation(
         )
 
     if m > 0 and (m & (m - 1)) != 0:
-        raise_error(ValueError, f"budget m must be a power‑of‑two")
+        raise_error(ValueError, "budget m must be a power‑of‑two")
 
     matchings = [l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
 

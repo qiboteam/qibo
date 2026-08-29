@@ -9,7 +9,7 @@ def test_preprocessing_error(star_connectivity):
     circ = Circuit(7)
     preprocesser = Preprocessing(connectivity=star_connectivity())
     with pytest.raises(ValueError):
-        new_circuit = preprocesser(circuit=circ)
+        preprocesser(circuit=circ)
 
     wire_names = [0, 1, 2, "q3", "q4"]
     circ = Circuit(5, wire_names=wire_names)

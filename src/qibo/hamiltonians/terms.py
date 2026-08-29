@@ -1,5 +1,4 @@
 from functools import cached_property, reduce
-from typing import Optional
 
 import sympy
 from sympy.physics.paulialgebra import Pauli, evaluate_pauli_product
@@ -29,7 +28,7 @@ class HamiltonianTerm:
         q (list): List of target qubit ids.
     """
 
-    def __init__(self, matrix, *q, backend: Optional[Backend] = None):
+    def __init__(self, matrix, *q, backend: Backend | None = None):
         self.backend = _check_backend(backend)
         for qi in q:
             if qi < 0:
@@ -145,7 +144,7 @@ class SymbolicTerm(HamiltonianTerm):
         factors (sympy.Expr): Sympy expression for the underlying term.
     """
 
-    def __init__(self, coefficient, factors=1, backend: Optional[Backend] = None):
+    def __init__(self, coefficient, factors=1, backend: Backend | None = None):
         self._gate = None
         self.hamiltonian = None
         self.backend = _check_backend(backend)
@@ -168,7 +167,7 @@ class SymbolicTerm(HamiltonianTerm):
                     factor.backend = self.backend
                     if isinstance(factor.matrix, self.backend.tensor_types):
                         q = int(factor.target_qubit)
-                        if q in self.matrix_map.keys():
+                        if q in self.matrix_map:
                             # Check for possible simplifications only if current factor is X/Y/Z
                             if isinstance(factor, (X, Y, Z)):
                                 self._simplify_q_factors(factor, q)
@@ -381,7 +380,7 @@ class TermGroup(list):
             self._term = self.to_term()
         return self._term
 
-    def to_term(self, coefficients={}):
+    def to_term(self, coefficients=None):
         """Calculates a single :class:`qibo.hamiltonians.terms.HamiltonianTerm` by merging all terms in the group.
 
         Args:
@@ -389,6 +388,8 @@ class TermGroup(list):
                 coefficient to each term according to its parent Hamiltonian.
                 Useful for :class:`qibo.core.adiabatic.AdiabaticHamiltonian` calculations.
         """
+        if coefficients is None:
+            coefficients = {}
         c = coefficients.get(self[0].hamiltonian)
         merged = self[0] * c if c is not None else self[0]
         for term in self[1:]:

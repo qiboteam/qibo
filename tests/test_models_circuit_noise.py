@@ -129,15 +129,13 @@ def test_circuit_with_pauli_noise_errors():
     circuit = Circuit(2, density_matrix=True)
     circuit.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, [("X", 0.2)])])
     with pytest.raises(ValueError):
-        noisy_circuit = circuit.with_pauli_noise(list(zip(["X", "Y"], [0.2, 0.3])))
+        circuit.with_pauli_noise(list(zip(["X", "Y"], [0.2, 0.3])))
     circuit = Circuit(2, density_matrix=True)
     circuit.add([gates.H(0), gates.H(1)])
     with pytest.raises(ValueError):
-        noisy_circuit = circuit.with_pauli_noise(
-            {0: list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.1]))}
-        )
+        circuit.with_pauli_noise({0: list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.1]))})
     with pytest.raises(TypeError):
-        noisy_circuit = circuit.with_pauli_noise({0, 1})
+        circuit.with_pauli_noise({0, 1})
 
 
 def test_density_matrix_circuit_measurement(backend):

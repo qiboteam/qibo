@@ -89,7 +89,7 @@ def main(
 
     start_time = time.time()
     options = {"disp": False, "maxiter": maxiter}
-    best, params, _ = vqe.minimize(
+    best, _params, _ = vqe.minimize(
         initial_parameters, method=method, options=options, compile=False
     )
     logs[-1]["minimization_time"] = time.time() - start_time

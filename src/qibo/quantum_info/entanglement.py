@@ -1,7 +1,5 @@
 """Submodules with entanglement measures."""
 
-from typing import Optional
-
 import numpy as np
 
 from qibo.backends import Backend, _check_backend
@@ -281,7 +279,7 @@ def meyer_wallach_entanglement(state, backend=None):
 
 
 def entangling_capability(
-    circuit, samples: int, seed: Optional[int] = None, backend: Optional[Backend] = None
+    circuit, samples: int, seed: int | None = None, backend: Backend | None = None
 ):
     """Return the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
 

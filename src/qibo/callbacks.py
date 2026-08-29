@@ -1,8 +1,11 @@
 """Module defining circuit callbacks."""
 
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING
 
 from qibo.config import EIGVAL_CUTOFF, log, raise_error
+
+if TYPE_CHECKING:
+    from qibo.hamiltonians import Hamiltonian
 
 
 class Callback:
@@ -97,7 +100,7 @@ class EntanglementEntropy(Callback):
 
     def __init__(
         self,
-        partition: Optional[List[int]] = None,
+        partition: list[int] | None = None,
         compute_spectrum: bool = False,
         base: float = 2,
     ):
@@ -235,7 +238,7 @@ class Energy(Callback):
             object to calculate its expectation value.
     """
 
-    def __init__(self, hamiltonian: "hamiltonians.Hamiltonian"):  # type: ignore
+    def __init__(self, hamiltonian: "Hamiltonian"):
         super().__init__()
         self.hamiltonian = hamiltonian
 
@@ -297,7 +300,7 @@ class Gap(Callback):
             ...
     """
 
-    def __init__(self, mode: Union[str, int] = "gap", check_degenerate: bool = True):
+    def __init__(self, mode: str | int = "gap", check_degenerate: bool = True):
         super().__init__()
         if not isinstance(mode, (int, str)):
             raise_error(

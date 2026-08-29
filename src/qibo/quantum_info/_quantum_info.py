@@ -1,5 +1,5 @@
 import math
-from typing import Tuple, Union
+from typing import Tuple, Union  # noqa: F401, UP035  # used in exec'd string templates
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -13,7 +13,7 @@ def _pauli_basis(
     pauli_1: ArrayLike,
     pauli_2: ArrayLike,
     pauli_3: ArrayLike,
-    normalization: Union[float, int] = 1.0,
+    normalization: float = 1.0,
 ) -> ArrayLike:
     basis_single = ENGINE.vstack((pauli_0, pauli_1, pauli_2, pauli_3)).reshape(4, 2, 2)
     dim = 2**nqubits
@@ -31,7 +31,7 @@ def _pauli_basis(
 
 def _post_sparse_pauli_basis_vectorization(
     basis: ArrayLike, dim: int
-) -> Tuple[ArrayLike, ArrayLike]:
+) -> tuple[ArrayLike, ArrayLike]:
     indices = ENGINE.nonzero(basis)
     basis = basis[indices].reshape(-1, dim)
     indices = indices[1].reshape(-1, dim)
@@ -91,8 +91,8 @@ def _to_liouville_{order}(channel: ArrayLike) -> ArrayLike:
     return _reshuffling(channel, {ax1}, {ax2})
 """
 
-exec(_to_liouville.format(order="row", ax1=1, ax2=2))
-exec(_to_liouville.format(order="column", ax1=0, ax2=3))
+exec(_to_liouville.format(order="row", ax1=1, ax2=2))  # noqa: S102
+exec(_to_liouville.format(order="column", ax1=0, ax2=3))  # noqa: S102
 
 
 _to_pauli_liouville = """
@@ -154,7 +154,7 @@ for order in ("row", "column", "system"):
         _choi_to_kraus_cp,
         _kraus_to_choi,
     ):
-        exec(func.format(order=order))
+        exec(func.format(order=order))  # noqa: S102
 
 
 def _vectorization_row(state: ArrayLike, dim: int) -> ArrayLike:
@@ -359,7 +359,7 @@ def _inverse_tril(mat, block_inverse_threshold):
 
 def _sample_from_quantum_mallows_distribution(
     nqubits: int,
-) -> Tuple[ArrayLike, ArrayLike]:
+) -> tuple[ArrayLike, ArrayLike]:
     """Using the quantum Mallows distribution, samples a binary array
     representing a layer of Hadamard gates as well as an array with permutated
     qubit indexes. For more details, see Reference [1].
@@ -397,7 +397,7 @@ def _sample_from_quantum_mallows_distribution(
 
 def _super_op_from_bcsz_measure_preamble(
     dims: int, rank: int
-) -> Tuple[ArrayLike, ArrayLike]:
+) -> tuple[ArrayLike, ArrayLike]:
     super_op = _random_gaussian_matrix(
         dims**2,
         rank=rank,

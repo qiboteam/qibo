@@ -3,7 +3,6 @@
 from dataclasses import dataclass, field
 from functools import reduce
 from itertools import product
-from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -40,15 +39,15 @@ class Clifford:
     """
 
     symplectic_matrix: ArrayLike = field(init=False)
-    data: Union[ArrayLike, Circuit] = field(repr=False)
-    nqubits: Optional[int] = None
-    measurements: Optional[list] = None
+    data: ArrayLike | Circuit = field(repr=False)
+    nqubits: int | None = None
+    measurements: list | None = None
     nshots: int = 1000
-    platform: Optional[str] = None
+    platform: str | None = None
 
-    _backend: Optional[CliffordBackend] = field(default=None, repr=False)
+    _backend: CliffordBackend | None = field(default=None, repr=False)
     _measurement_gate: M = field(default=None, repr=False)
-    _samples: Optional[int] = field(default=None, repr=False)
+    _samples: int | None = field(default=None, repr=False)
 
     def __post_init__(self):
         if self._backend is None:
@@ -80,9 +79,9 @@ class Clifford:
     def from_circuit(
         cls,
         circuit: Circuit,
-        initial_state: Optional[ArrayLike] = None,
+        initial_state: ArrayLike | None = None,
         nshots: int = 1000,
-        platform: Optional[str] = None,
+        platform: str | None = None,
     ):
         """Allows to create a :class:`qibo.quantum_info.clifford.Clifford` object by executing the input circuit.
 
@@ -106,7 +105,7 @@ class Clifford:
 
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
-    def to_circuit(self, algorithm: Optional[str] = "AG04", **kwargs) -> Circuit:
+    def to_circuit(self, algorithm: str | None = "AG04", **kwargs) -> Circuit:
         """Converts symplectic matrix into a Clifford circuit.
 
         Args:
@@ -137,7 +136,7 @@ class Clifford:
 
     def generators(
         self, return_array: bool = False
-    ) -> Union[Tuple[List[str], List[int]], Tuple[List[ArrayLike], List[int]]]:
+    ) -> tuple[list[str], list[int]] | tuple[list[ArrayLike], list[int]]:
         """Extracts the generators of stabilizers and destabilizers.
 
         Args:
@@ -153,7 +152,7 @@ class Clifford:
 
     def stabilizers(
         self, symplectic: bool = False, return_array: bool = False
-    ) -> Union[ArrayLike, List[str]]:
+    ) -> ArrayLike | list[str]:
         """Extracts the stabilizers of the state.
 
         Args:
@@ -179,7 +178,7 @@ class Clifford:
 
     def destabilizers(
         self, symplectic: bool = False, return_array: bool = False
-    ) -> Union[ArrayLike, List[str]]:
+    ) -> ArrayLike | list[str]:
         """Extracts the destabilizers of the state.
 
         Args:
@@ -231,9 +230,7 @@ class Clifford:
 
         return self._measurement_gate
 
-    def samples(
-        self, binary: bool = True, registers: bool = False
-    ) -> Union[ArrayLike, Dict]:
+    def samples(self, binary: bool = True, registers: bool = False) -> ArrayLike | dict:
         """Returns raw measurement samples.
 
         Args:
@@ -303,7 +300,7 @@ class Clifford:
 
     def frequencies(
         self, binary: bool = True, registers: bool = False
-    ) -> Union[ArrayLike, Dict]:
+    ) -> ArrayLike | dict:
         """Returns the frequencies of measured samples.
 
         Args:
@@ -356,7 +353,7 @@ class Clifford:
         return freq
 
     def probabilities(
-        self, qubits: Optional[Union[List[int], Tuple[int, ...]]] = None
+        self, qubits: list[int] | tuple[int, ...] | None = None
     ) -> ArrayLike:
         """Computes the probabilities of the selected qubits from the measured samples.
 
@@ -418,7 +415,7 @@ class Clifford:
             _backend=self._backend,
         )
 
-    def _construct_operators(self, generators: list, phases: list) -> List[str]:
+    def _construct_operators(self, generators: list, phases: list) -> list[str]:
         """Helper function to construct all the operators from their generators.
 
         Args:

@@ -1,6 +1,5 @@
 import random
 from copy import deepcopy
-from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -27,9 +26,9 @@ class CircuitMap:
 
     def __init__(
         self,
-        circuit: Optional[Circuit] = None,
-        blocks: Optional[CircuitBlocks] = None,
-        temp: Optional[bool] = False,
+        circuit: Circuit | None = None,
+        blocks: CircuitBlocks | None = None,
+        temp: bool | None = False,
     ):
         self._p2l, self._l2p = [], []
 
@@ -118,7 +117,7 @@ class CircuitMap:
         self._routed_blocks.add_block(block.on_qubits(self.get_physical_qubits(block)))
         self.circuit_blocks.remove_block(block)
 
-    def routed_circuit(self, circuit_kwargs: Optional[dict] = None):
+    def routed_circuit(self, circuit_kwargs: dict | None = None):
         """Returns the routed circuit.
 
         Args:
@@ -163,7 +162,7 @@ class CircuitMap:
 
         self._update_mappings_swap(logical_swap, physical_swap)
 
-    def get_physical_qubits(self, block: Union[int, Block]):
+    def get_physical_qubits(self, block: int | Block):
         """Returns the physical qubits where a block is acting on.
 
         Args:
@@ -218,12 +217,12 @@ class Sabre(Router):
 
     def __init__(
         self,
-        connectivity: Optional[nx.Graph] = None,
+        connectivity: nx.Graph | None = None,
         lookahead: int = 2,
         decay_lookahead: float = 0.6,
         delta: float = 0.001,
         swap_threshold: float = 1.5,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ):
         self.connectivity = connectivity
         self.lookahead = lookahead
@@ -338,9 +337,9 @@ class Sabre(Router):
         """
         for measurement in self._final_measurements:
             original_qubits = measurement.qubits
-            routed_qubits = list(
+            routed_qubits = [
                 self.circuit_map.logical_to_physical[qubit] for qubit in original_qubits
-            )
+            ]
             routed_circuit.add(
                 measurement.on_qubits(dict(zip(original_qubits, routed_qubits)))
             )
@@ -532,9 +531,7 @@ class ShortestPaths(Router):
             If ``None``, defaults to :math:`42`. Defaults to ``None``.
     """
 
-    def __init__(
-        self, connectivity: Optional[nx.Graph] = None, seed: Optional[int] = None
-    ):
+    def __init__(self, connectivity: nx.Graph | None = None, seed: int | None = None):
         self.connectivity = connectivity
         self._front_layer = None
         self.circuit_map = None
@@ -780,9 +777,9 @@ class ShortestPaths(Router):
         conserving the measurement register."""
         for measurement in self._final_measurements:
             original_qubits = measurement.qubits
-            routed_qubits = list(
+            routed_qubits = [
                 self.circuit_map.logical_to_physical[qubit] for qubit in original_qubits
-            )
+            ]
             routed_circuit.add(
                 measurement.on_qubits(dict(zip(original_qubits, routed_qubits)))
             )
@@ -807,7 +804,7 @@ class StarConnectivityRouter(Router):
         connectivity (:class:`networkx.Graph`): Star connectivity graph.
     """
 
-    def __init__(self, connectivity: Optional[nx.Graph] = None):
+    def __init__(self, connectivity: nx.Graph | None = None):
         self.connectivity = connectivity
         self.middle_qubit = None
 

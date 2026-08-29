@@ -1,6 +1,11 @@
+from typing import TYPE_CHECKING
+
 from qibo.backends import _check_backend
 from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
+
+if TYPE_CHECKING:
+    from qibo.callbacks import Callback
 
 
 class CallbackGate(SpecialGate):
@@ -85,10 +90,8 @@ class FusedGate(SpecialGate):
         if self.marked or gate.marked:
             # gates are already fused
             return False
-        if len(self.qubit_set | gate.qubit_set) > max_qubits:
-            # combined qubits are more than ``max_qubits``
-            return False
-        return True
+        # combined qubits are more than ``max_qubits``
+        return len(self.qubit_set | gate.qubit_set) <= max_qubits
 
     def matrix(self, backend=None):
         """Returns matrix representation of special gate.

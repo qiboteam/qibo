@@ -4,7 +4,6 @@ import copy
 import sys
 from collections import Counter
 from collections.abc import Iterable
-from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -18,7 +17,7 @@ from qibo.gates.abstract import Gate
 from qibo.models._openqasm import QASMParser
 from qibo.result import CircuitResult, QuantumState
 
-NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
+NoiseMapType = tuple[int, int, int] | dict[int, tuple[int, int, int]]
 
 
 class _ParametrizedGates(list):
@@ -175,10 +174,10 @@ class Circuit:
 
     def __init__(
         self,
-        nqubits: Optional[Union[int, list]] = None,
-        accelerators: Optional[dict] = None,
+        nqubits: int | list | None = None,
+        accelerators: dict | None = None,
         density_matrix: bool = False,
-        wire_names: Optional[list] = None,
+        wire_names: list | None = None,
     ):
         nqubits, wire_names = _resolve_qubits(nqubits, wire_names)
         self.nqubits = nqubits
@@ -292,13 +291,13 @@ class Circuit:
         return newcircuit
 
     @property
-    def wire_names(self) -> Union[List[int], List[str]]:
+    def wire_names(self) -> list[int] | list[str]:
         if self._wire_names is None:
             return list(range(self.nqubits))
         return self._wire_names
 
     @wire_names.setter
-    def wire_names(self, wire_names: Optional[list]) -> None:
+    def wire_names(self, wire_names: list | None) -> None:
         if not isinstance(wire_names, (list, type(None))):
             raise_error(
                 TypeError,
@@ -735,7 +734,7 @@ class Circuit:
             gatecounter[gate.name] += 1
         return gatecounter
 
-    def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
+    def gates_of_type(self, gate: str | type) -> list[tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type or name.
 
         This method can be affected by how :meth:`qibo.gates.Gate.controlled_by`
@@ -786,7 +785,7 @@ class Circuit:
             )
 
     def set_parameters(
-        self, parameters: Union[List[float], Dict[str, float], ArrayLike]
+        self, parameters: list[float] | dict[str, float] | ArrayLike
     ) -> None:
         """Updates the parameters of the circuit's parametrized gates.
 
@@ -858,7 +857,7 @@ class Circuit:
 
     def get_parameters(
         self, output_format: str = "list", include_not_trainable: bool = False
-    ) -> Union[List, Dict]:  # pylint: disable=W0622
+    ) -> list | dict:  # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
         Inverse method of :meth:`qibo.models.circuit.Circuit.set_parameters`.
@@ -891,7 +890,7 @@ class Circuit:
 
         return params
 
-    def associate_gates_with_parameters(self) -> List[Gate]:
+    def associate_gates_with_parameters(self) -> list[Gate]:
         """Associates to each parameter its gate.
 
         Returns:
@@ -1002,7 +1001,7 @@ class Circuit:
         circuit.queue = queue.from_fused()
         return circuit
 
-    def unitary(self, backend: Optional[Backend] = None) -> ArrayLike:
+    def unitary(self, backend: Backend | None = None) -> ArrayLike:
         """Creates the unitary matrix corresponding to all circuit gates.
 
         This is a :math:`2^{n} \\times 2^{n}`` matrix obtained by
@@ -1035,7 +1034,7 @@ class Circuit:
             )
         return self._final_state
 
-    def compile(self, backend: Optional[Backend] = None) -> None:
+    def compile(self, backend: Backend | None = None) -> None:
         if self.accelerators:  # pragma: no cover
             raise_error(
                 RuntimeError, "Cannot compile circuit that uses custom operators."
@@ -1282,7 +1281,7 @@ class Circuit:
         the circuit into `pyqir` circuits.
         """
         try:
-            import qbraid_qir  # pylint: disable=C0415, W0611
+            import qbraid_qir  # noqa: F401  # pylint: disable=C0415, W0611
             from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
                 qasm2_to_qasm3,
             )
@@ -1315,7 +1314,7 @@ class Circuit:
             ) from e
 
         try:
-            import cudaq  # pylint: disable=C0415, W0611
+            import cudaq  # noqa: F401  # pylint: disable=C0415, W0611
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "``cudaq`` is not installed, please install it with `pip install cudaq`."
@@ -1349,7 +1348,7 @@ class Circuit:
             ) from e
 
         try:
-            import cudaq  # pylint: disable=C0415, W0611
+            import cudaq  # noqa: F401  # pylint: disable=C0415, W0611
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "``cudaq`` is not installed, please install it with `pip install cudaq`."
@@ -1360,10 +1359,10 @@ class Circuit:
     def _update_draw_matrix(
         self,
         matrix: ArrayLike,
-        idx: List[int],
+        idx: list[int],
         gate: Gate,
-        gate_symbol: Optional[str] = None,
-    ) -> Tuple[ArrayLike, List[int]]:
+        gate_symbol: str | None = None,
+    ) -> tuple[ArrayLike, list[int]]:
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
             if gate.draw_label:
@@ -1521,8 +1520,8 @@ class Circuit:
 
 
 def _resolve_qubits(
-    qubits: Union[int, List[int]], wire_names: Union[list, dict]
-) -> Tuple[int, Union[list, dict]]:
+    qubits: int | list[int], wire_names: list | dict
+) -> tuple[int, list | dict]:
     """Parse the input arguments for defining a circuit.
 
     Allows the user to initialize the circuit as follows:
@@ -1554,9 +1553,12 @@ def _resolve_qubits(
             return len(qubits), qubits
 
     if yes_qubits_yes_wires:
-        if isinstance(qubits, int) and isinstance(wire_names, list):
-            if qubits == len(wire_names):
-                return qubits, wire_names
+        if (
+            isinstance(qubits, int)
+            and isinstance(wire_names, list)
+            and qubits == len(wire_names)
+        ):
+            return qubits, wire_names
 
         raise_error(
             ValueError,
@@ -1566,7 +1568,7 @@ def _resolve_qubits(
     return len(wire_names), wire_names
 
 
-def _get_parameters_flatlist(parametrized_gates: List[Gate]):
+def _get_parameters_flatlist(parametrized_gates: list[Gate]):
     params = []
     for gate in parametrized_gates:
         gparams = gate.parameters

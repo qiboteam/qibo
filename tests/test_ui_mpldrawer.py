@@ -217,7 +217,6 @@ def test_layered_circuit():
     # Create variational ansatz circuit Twolocal
     ansatz = Circuit(nqubits)
     for l in range(nlayers):
-
         ansatz.add(gates.RY(q, theta=0) for q in range(nqubits))
 
         for i in range(nqubits - 3):
@@ -433,7 +432,6 @@ def test_plot_circuit_internal():
         "not_radius": 0.15,
         "swap_delta": 0.08,
         "label_buffer": 0.0,
-        "dpi": 100,
         "facecolor": "#d55e00",
         "edgecolor": "#f0e442",
         "fillcolor": "#cc79a7",
