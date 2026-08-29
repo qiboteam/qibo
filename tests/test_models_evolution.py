@@ -154,7 +154,7 @@ def test_set_scheduling_parameters(backend):
     adevp = AdiabaticEvolution(h0, h1, sp, 1e-2)
     # access parametrized scheduling before setting parameters
     with pytest.raises(ValueError):
-        pass
+        adevp.schedule
 
     adevp.set_parameters([0.5, 1])
 

@@ -40,9 +40,9 @@ def test_symbolic_hamiltonian_errors(backend):
     with pytest.raises(RuntimeError):
         SymbolicHamiltonian(z * x, backend=backend)
     # Invalid operation in Hamiltonian expresion
-    SymbolicHamiltonian(sympy.cos(Z(0, backend=backend)), backend=backend)
+    ham = SymbolicHamiltonian(sympy.cos(Z(0, backend=backend)), backend=backend)
     with pytest.raises(TypeError):
-        pass
+        ham.dense
 
 
 def test_symbolic_hamiltonian_form_setter(backend):

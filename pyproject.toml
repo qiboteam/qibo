@@ -70,7 +70,10 @@ ignore = ["BLE001"] # TODO: BLE001 is about except Exception, fix properly
 # (to trigger the exception) and smoke-test attribute reads.
 "tests/test_backends_global.py" = ["B018"]
 "tests/test_gates_gates.py" = ["B018"]
+"tests/test_hamiltonians_symbolic.py" = ["B018"]
 "tests/test_models_circuit_execution.py" = ["B018"]
+"tests/test_models_distcircuit.py" = ["B018"]
+"tests/test_models_evolution.py" = ["B018"]
 # Standalone illustrative example scripts and notebooks: shebangs are
 # intentional (scripts meant to be run), notebooks produce cell-level F821
 # false positives, and the rest are pedagogical code not part of the library.

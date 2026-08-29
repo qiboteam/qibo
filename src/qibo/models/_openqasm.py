@@ -1,5 +1,6 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
+import numpy as np  # noqa: F401  # used in eval() string templates
 import openqasm3
 
 import qibo

@@ -85,7 +85,7 @@ def test_final_state_property(backend):
     circuit.add([gates.H(0), gates.H(1)])
 
     with pytest.raises(RuntimeError):
-        pass
+        circuit.final_state
 
     backend.execute_circuit(circuit)._state
     target_state = np.ones(4) / 2
