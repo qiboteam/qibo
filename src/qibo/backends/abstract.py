@@ -5,6 +5,7 @@ from collections import Counter
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
 from string import ascii_letters
+from typing import TYPE_CHECKING
 
 from numpy.typing import ArrayLike, DTypeLike
 
@@ -12,9 +13,11 @@ from qibo import __version__, config
 from qibo.backends import einsum_utils
 from qibo.config import SHOT_BATCH_SIZE, log, raise_error
 from qibo.gates.abstract import Gate
-from qibo.gates.channels import Channel
-from qibo.models.circuit import Circuit
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
+
+if TYPE_CHECKING:
+    from qibo.gates.channels import Channel
+    from qibo.models.circuit import Circuit
 
 
 class Backend:
@@ -1961,7 +1964,7 @@ class Backend:
 
     def jacobian(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         parameters: ArrayLike,
         initial_state: ArrayLike | None = None,
         return_complex: bool = True,
@@ -2294,9 +2297,9 @@ class Backend:
 
     def apply_channel(
         self,
-        channel: Channel,
+        channel: "Channel",
         state: ArrayLike,
-        nqubits: int,
+        nqubits: int,  # type: ignore
     ) -> ArrayLike:
         """Apply a ``channel`` to quantum ``state``."""
 
@@ -2442,7 +2445,7 @@ class Backend:
 
     def execute_circuit(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         initial_state: ArrayLike | None = None,
         nshots: int = 1000,
     ) -> CircuitResult | MeasurementOutcomes | QuantumState:
@@ -2512,7 +2515,7 @@ class Backend:
 
     def execute_circuits(
         self,
-        circuits: list[Circuit],
+        circuits: list["Circuit"],  # type: ignore
         initial_states: ArrayLike | None = None,
         nshots: int | None = None,
         processes: int | None = None,
@@ -2528,7 +2531,7 @@ class Backend:
 
     def execute_circuit_repeated(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         nshots: int,
         initial_state: ArrayLike | None = None,
     ) -> CircuitResult | MeasurementOutcomes | QuantumState:  # pragma: no cover
@@ -2628,7 +2631,7 @@ class Backend:
 
     def execute_distributed_circuit(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         initial_state: ArrayLike | None = None,
         nshots: int | None = None,
     ) -> CircuitResult | MeasurementOutcomes | QuantumState:  # pragma: no cover
@@ -2815,7 +2818,7 @@ class Backend:
 
     def exp_value_diagonal_observable_dense_from_samples(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         observable: ArrayLike,
         nqubits: int,
         nshots: int,
@@ -2861,7 +2864,7 @@ class Backend:
 
     def exp_value_diagonal_observable_symbolic_from_samples(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         nqubits: int,
         terms_qubits: list[tuple[int, ...]],
         terms_coefficients: list[float],
@@ -2914,7 +2917,7 @@ class Backend:
         )
         return self.sum(expvals @ counts) + constant
 
-    def exp_value_observable_dense(self, circuit: Circuit, observable: ArrayLike):  # type: ignore
+    def exp_value_observable_dense(self, circuit: "Circuit", observable: ArrayLike):  # type: ignore
         """Compute the expectation value of a generic dense hamiltonian starting from the state.
 
         Args:
@@ -2934,7 +2937,7 @@ class Backend:
 
     def exp_value_observable_symbolic(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         terms: list[str],
         term_qubits: list[tuple[int, ...]],
         term_coefficients: list[float],
@@ -3148,8 +3151,8 @@ class Backend:
 
     def assert_circuitclose(
         self,
-        circuit: Circuit,
-        target_circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
+        target_circuit: "Circuit",  # type: ignore
         rtol: float = 1e-7,
         atol: float = 0.0,
     ) -> None:
@@ -3294,7 +3297,7 @@ class Backend:
 
     def _execute_circuit(
         self,
-        circuit: Circuit,
+        circuit: "Circuit",  # type: ignore
         initial_state: ArrayLike | None = None,
         nshots: int = 1000,
     ) -> CircuitResult | QuantumState:
