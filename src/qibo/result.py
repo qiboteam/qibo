@@ -41,7 +41,7 @@ class QuantumState:
     """
 
     def __init__(self, state, backend=None):
-        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+        from qibo.backends import (
             _check_backend,
         )
 
@@ -145,7 +145,7 @@ class QuantumState:
         Returns:
             :class:`qibo.result.QuantumState`: Quantum state object..
         """
-        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+        from qibo.backends import (
             construct_backend,
         )
 
@@ -516,7 +516,7 @@ class MeasurementOutcomes:
         Returns:
             :class:`qibo.result.MeasurementOutcomes`: Object storing the measurement outcomes.
         """
-        from qibo.backends import construct_backend  # pylint: disable=C0415
+        from qibo.backends import construct_backend
 
         if payload["probabilities"] is not None and payload["samples"] is not None:
             warnings.warn(
@@ -587,7 +587,7 @@ class MeasurementOutcomes:
                 result = MeasurementOutcomes.from_samples(samples)
                 print(result.frequencies())  # Counter({'01': 1, '10': 1, '11': 1})
         """
-        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+        from qibo.backends import (
             _check_backend,
         )
 
@@ -680,7 +680,7 @@ class MeasurementOutcomes:
                 result = MeasurementOutcomes.from_frequencies(freq)
                 print(result.frequencies())  # Counter({'00': 50, '11': 50})
         """
-        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+        from qibo.backends import (
             _check_backend,
         )
 

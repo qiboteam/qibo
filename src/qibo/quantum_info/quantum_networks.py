@@ -552,7 +552,7 @@ class QuantumNetwork:
                 + "Use `link_product` method to specify the subscript.",
             )
 
-        return self.link_product(subscripts, second_network)  # pylint: disable=E0606
+        return self.link_product(subscripts, second_network)
 
     def __str__(self):
         """Method to define how to print relevant information of the quantum network."""
@@ -787,12 +787,12 @@ class QuantumComb(QuantumNetwork):
     @classmethod
     def from_operator(
         cls, operator, partition=None, inverse=False, pure=False, backend=None
-    ):  # pylint: disable=W0237
+    ):
         comb = super().from_operator(operator, partition, None, pure, backend)
         if inverse:
             # Convert mathmetical convention of Choi operator to physical convention
             comb.partition = comb.partition[::-1]
-            comb._tensor = comb._tensor.T  # pylint: disable=W0212
+            comb._tensor = comb._tensor.T
         return comb
 
 
@@ -1002,13 +1002,13 @@ def link_product(
             raise_error(TypeError, f"The {i}-th operator is not a ``QuantumNetwork``.")
 
     if backend is None:  # pragma: no cover
-        backend = operands[0]._backend  # pylint: disable=W0212
+        backend = operands[0]._backend
 
     tensors = [
         (
             backend.to_numpy(operand.full())
             if operand.is_pure()
-            else backend.to_numpy(operand._tensor)  # pylint: disable=W0212
+            else backend.to_numpy(operand._tensor)
         )
         for operand in operands
     ]

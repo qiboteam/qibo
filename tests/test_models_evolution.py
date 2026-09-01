@@ -124,7 +124,7 @@ def test_adiabatic_evolution_init(backend):
         AdiabaticEvolution(h0, h1, s, dt=1e-2)
     # Adiabatic Hamiltonian with bad hamiltonian types
     with pytest.raises(TypeError):
-        AdiabaticHamiltonian("a", "b")  # pylint: disable=E0110
+        AdiabaticHamiltonian("a", "b")
     # s with three arguments
     h0 = X(2, backend=backend)
     s = lambda t, a, b: t + a + b
@@ -136,8 +136,8 @@ def test_adiabatic_evolution_schedule(backend):
     h0 = X(3, backend=backend)
     h1 = TFIM(3, backend=backend)
     adev = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
-    assert adev.schedule(0.2) == 0.2  # pylint: disable=E1102
-    assert adev.schedule(0.8) == 0.8  # pylint: disable=E1102
+    assert adev.schedule(0.2) == 0.2
+    assert adev.schedule(0.8) == 0.8
     # s(0) != 0
     with pytest.raises(ValueError):
         adev = AdiabaticEvolution(h0, h1, lambda t: t + 1, dt=1e-2)
@@ -160,7 +160,7 @@ def test_set_scheduling_parameters(backend):
 
     target_s = lambda t: 0.5 * np.sqrt(t) + 0.5 * t
     for t in np.random.random(10):
-        assert adevp.schedule(t) == target_s(t)  # pylint: disable=E1102
+        assert adevp.schedule(t) == target_s(t)
 
 
 @pytest.mark.parametrize("dense", [False, True])

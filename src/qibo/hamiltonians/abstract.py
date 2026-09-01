@@ -102,9 +102,7 @@ class AbstractHamiltonian:
         Returns:
             float: The expectation value.
         """
-        return self.backend.expectation_value(  # pylint: disable=no-member
-            self.matrix, state, normalize
-        )
+        return self.backend.expectation_value(self.matrix, state, normalize)
 
     @abstractmethod
     def expectation_from_samples(

@@ -246,7 +246,7 @@ class Circuit:
                 times each device will be used.
                 The total number of logical devices must be a power of 2.
         """
-        from qibo.models.distcircuit import DistributedQueues  # pylint: disable=C0415
+        from qibo.models.distcircuit import DistributedQueues
 
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(np.log2(self.ndevices))
@@ -857,7 +857,7 @@ class Circuit:
 
     def get_parameters(
         self, output_format: str = "list", include_not_trainable: bool = False
-    ) -> list | dict:  # pylint: disable=W0622
+    ) -> list | dict:
         """Returns the parameters of all parametrized gates in the circuit.
 
         Inverse method of :meth:`qibo.models.circuit.Circuit.set_parameters`.
@@ -1082,14 +1082,13 @@ class Circuit:
             or ``qibo.result.CircuitResult`` depending on the circuit's configuration.
         """
         if self.compiled:
-            # pylint: disable=E1101
             state = self.compiled.executor(initial_state, nshots)
             self._final_state = self.compiled.result(state, nshots)
             return self._final_state
 
         backend = _Global.backend()
         transpiler = _Global.transpiler()
-        transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
+        transpiled_circuit, _ = transpiler(self)
 
         if self.accelerators:  # pragma: no cover
             return backend.execute_distributed_circuit(
@@ -1219,7 +1218,7 @@ class Circuit:
                 such as ``qiskit``. Defaults to ``False``.
         """
         string = self.to_qasm(extended_compatibility=extended_compatibility)
-        with open(qasm_file, "w") as file:  # pylint: disable=W1514
+        with open(qasm_file, "w") as file:
             file.writelines(string)
 
     @classmethod
@@ -1268,7 +1267,7 @@ class Circuit:
             :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
             specified by the given QASM script.
         """
-        with open(qasm_file) as file:  # pylint: disable=W1514
+        with open(qasm_file) as file:
             string = file.read()
 
         return cls.from_qasm(string, **circuit_kwargs)
@@ -1281,11 +1280,11 @@ class Circuit:
         the circuit into `pyqir` circuits.
         """
         try:
-            import qbraid_qir  # noqa: F401  # pylint: disable=C0415, W0611
-            from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
+            import qbraid_qir  # noqa: F401
+            from qbraid.transpiler.conversions.qasm2 import (
                 qasm2_to_qasm3,
             )
-            from qbraid.transpiler.conversions.qasm3 import (  # pylint: disable=C0415
+            from qbraid.transpiler.conversions.qasm3 import (
                 qasm3_to_pyqir,
             )
         except ModuleNotFoundError as e:  # pragma: no cover
@@ -1301,10 +1300,10 @@ class Circuit:
         the circuit into `cudaq` circuits.
         """
         try:
-            from qbraid.transpiler.conversions.openqasm3 import (  # pylint: disable=C0415
+            from qbraid.transpiler.conversions.openqasm3 import (
                 openqasm3_to_cudaq,
             )
-            from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
+            from qbraid.transpiler.conversions.qasm2 import (
                 qasm2_to_qasm3,
             )
         except ModuleNotFoundError as e:
@@ -1314,7 +1313,7 @@ class Circuit:
             ) from e
 
         try:
-            import cudaq  # noqa: F401  # pylint: disable=C0415, W0611
+            import cudaq  # noqa: F401
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "``cudaq`` is not installed, please install it with `pip install cudaq`."
@@ -1338,7 +1337,7 @@ class Circuit:
             given circuit.
         """
         try:
-            from qbraid.transpiler.conversions.cudaq import (  # pylint: disable=C0415
+            from qbraid.transpiler.conversions.cudaq import (
                 cudaq_to_qasm2,
             )
         except ModuleNotFoundError as e:
@@ -1348,7 +1347,7 @@ class Circuit:
             ) from e
 
         try:
-            import cudaq  # noqa: F401  # pylint: disable=C0415, W0611
+            import cudaq  # noqa: F401
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "``cudaq`` is not installed, please install it with `pip install cudaq`."

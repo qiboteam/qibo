@@ -460,7 +460,7 @@ def lanczos(
         differential and integral operators*, Journal of Research of the National Bureau of
         Standards. 45 (4): 255–282 (1950).
     """
-    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+    from qibo.quantum_info.random_ensembles import (
         random_statevector,
     )
 

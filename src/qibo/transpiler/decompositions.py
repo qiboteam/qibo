@@ -58,19 +58,19 @@ class GateDecompositions:
     def _set_precision_cliff_plus_t(
         self, epsilon: float = 1e-16, mpmath_dps: int = 256
     ):
-        import mpmath  # pylint: disable=C0415
+        import mpmath
 
         mpmath.mp.dps = mpmath_dps
         self._epsilon = mpmath.mpmathify(epsilon)
 
-    def _rz_into_cliff_and_t(  # pylint: disable=R1710
+    def _rz_into_cliff_and_t(
         self,
         theta: float,
         qubit: int = 0,
     ):
         try:
-            import mpmath  # pylint: disable=C0415
-            from pygridsynth.gridsynth import gridsynth_gates  # pylint: disable=C0415
+            import mpmath
+            from pygridsynth.gridsynth import gridsynth_gates
 
             theta = float(theta)
             theta = mpmath.mpmathify(theta)
@@ -784,11 +784,11 @@ standard_decompositions.add(
 )
 standard_decompositions.add(
     gates.GeneralizedRBS,
-    lambda gate: _decomposition_generalized_rbs(gate),  # pylint: disable=W0108
+    lambda gate: _decomposition_generalized_rbs(gate),
 )
 
 try:
-    import pygridsynth  # pylint: disable=C0415,W0611
+    import pygridsynth
 except ModuleNotFoundError:  # pragma: no cover
     pygridsynth = None
 

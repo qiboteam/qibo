@@ -132,7 +132,7 @@ class Hamiltonian(AbstractHamiltonian):
         if nshots is None:
             return self.backend.exp_value_observable_dense(circuit, self.matrix)
 
-        from qibo import gates  # pylint: disable=import-outside-toplevel
+        from qibo import gates
 
         circuit = circuit.copy(True)
         circuit.add(gates.M(*range(self.nqubits)))
@@ -155,7 +155,7 @@ class Hamiltonian(AbstractHamiltonian):
         Returns:
             float: The expectation value.
         """
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+        from qibo import Circuit
 
         circuit = Circuit(1)
 
@@ -210,7 +210,7 @@ class Hamiltonian(AbstractHamiltonian):
         return self.__class__(
             self.nqubits,
             new_matrix,
-            backend=self.backend,  # pylint: disable=E0606
+            backend=self.backend,
         )
 
     def __sub__(self, other):
@@ -233,7 +233,7 @@ class Hamiltonian(AbstractHamiltonian):
         return self.__class__(
             self.nqubits,
             new_matrix,
-            backend=self.backend,  # pylint: disable=E0606
+            backend=self.backend,
         )
 
     def __rsub__(self, other):
@@ -259,7 +259,7 @@ class Hamiltonian(AbstractHamiltonian):
         return self.__class__(
             self.nqubits,
             new_matrix,
-            backend=self.backend,  # pylint: disable=E0606
+            backend=self.backend,
         )
 
     def __mul__(self, other):
@@ -570,7 +570,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 f"Cannot calculate matrix for symbolic term of type {type(term)}.",
             )
 
-        return result  # pylint: disable=E0606
+        return result
 
     def _calculate_dense_from_form(self) -> Hamiltonian:
         """Calculates equivalent Hamiltonian using symbolic form.
@@ -647,7 +647,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             float: The expectation value.
         """
 
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+        from qibo import Circuit
 
         circuit = Circuit(1)
 
@@ -772,8 +772,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             accelerators (dict, optional): Dictionary with accelerators for distributed circuits.
                 Defaults to ``None``.
         """
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
-        from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
+        from qibo import Circuit
+        from qibo.hamiltonians.terms import (
             TermGroup,
         )
 

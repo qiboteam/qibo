@@ -185,7 +185,7 @@ class AdiabaticEvolution(StateEvolution):
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=None, accelerators=None):
         if callbacks is None:
             callbacks = []
-        self.hamiltonian = AdiabaticHamiltonian(h0, h1)  # pylint: disable=E0110
+        self.hamiltonian = AdiabaticHamiltonian(h0, h1)
         super().__init__(self.hamiltonian, dt, solver, callbacks, accelerators)
 
         # Set evolution model to "Gap" callback if one exists

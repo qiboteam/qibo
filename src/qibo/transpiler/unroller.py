@@ -28,7 +28,7 @@ class FlagMeta(EnumMeta):
                 return super().__getitem__(keys)
             except KeyError:
                 return super().__getitem__("NONE")
-        return reduce(or_, [cls[key] for key in keys])  # pylint: disable=E1136
+        return reduce(or_, [cls[key] for key in keys])
 
 
 class NativeGates(Flag, metaclass=FlagMeta):
@@ -76,7 +76,7 @@ class NativeGates(Flag, metaclass=FlagMeta):
         return natives
 
     @classmethod
-    def from_gate(cls, gate: Gate):  # pylint: disable=R1710
+    def from_gate(cls, gate: Gate):
         """Create a :class:`qibo.transpiler.unroller.NativeGates`
         object from a :class:`qibo.gates.gates.Gate`."""
         if isinstance(gate, Gate):
@@ -199,7 +199,7 @@ def _translate_single_qubit_gates(
     return u3_dec(gate, backend)
 
 
-def _translate_two_qubit_gates(  # pylint: disable=R1710
+def _translate_two_qubit_gates(
     gate: Gate, native_gates: NativeGates, backend: Backend
 ) -> list[Gate]:
     """Helper method for :meth:`translate_gate`.

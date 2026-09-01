@@ -4,8 +4,6 @@
 # Simplified Plotting Routines for Quantum Circuits
 # https://github.com/rpmuller/PlotQCircuit
 
-# pylint: disable=protected-access,R0912,R0913,R0914,R0915,R0917
-
 import json
 from collections.abc import Iterator
 from pathlib import Path

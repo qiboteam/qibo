@@ -105,7 +105,7 @@ def entanglement_of_formation(
     Returns:
         float: entanglement of formation of state :math:`\\rho`.
     """
-    from qibo.quantum_info.entropies import shannon_entropy  # pylint: disable=C0415
+    from qibo.quantum_info.entropies import shannon_entropy
 
     backend = _check_backend(backend)
 

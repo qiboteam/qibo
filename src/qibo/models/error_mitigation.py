@@ -31,7 +31,7 @@ from qibo.symbols import X, Y, Z
 @cache
 def SIMULATION_BACKEND():
     """Cached Numpy backend."""
-    from qibo.backends import NumpyBackend  # pylint: disable=import-outside-toplevel
+    from qibo.backends import NumpyBackend
 
     return NumpyBackend()
 
@@ -39,7 +39,7 @@ def SIMULATION_BACKEND():
 @cache
 def CLIFFORD_BACKEND(platform: str = "numpy"):
     """Cached Clifford backend."""
-    from qibo.backends import CliffordBackend  # pylint: disable=import-outside-toplevel
+    from qibo.backends import CliffordBackend
 
     return CliffordBackend(platform)
 
@@ -105,7 +105,7 @@ def get_noisy_circuit(
     Returns:
         :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
     """
-    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    from qibo import Circuit
 
     if global_unitary_folding:
         copy_circuit = Circuit(**circuit.init_kwargs)
@@ -773,7 +773,7 @@ def get_response_matrix(
     Returns:
         ArrayLike: the computed (`nqubits`, `nqubits`) response matrix for readout mitigation.
     """
-    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    from qibo import Circuit
 
     backend = _check_backend(backend)
 
@@ -841,7 +841,7 @@ def apply_resp_mat_readout_mitigation(
         ) * np.sum(frequencies)
 
     for i, value in enumerate(mitigated_frequencies):
-        state._frequencies[i] = float(value[0].real)  # pylint: disable=W0212
+        state._frequencies[i] = float(value[0].real)
 
     return state
 
@@ -887,8 +887,8 @@ def apply_randomized_readout_mitigation(
         *Model-free readout-error mitigation for quantum expectation values*.
         `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
     """
-    from qibo import Circuit  # pylint: disable=import-outside-toplevel
-    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+    from qibo import Circuit
+    from qibo.quantum_info import (
         random_pauli,
     )
 
@@ -922,7 +922,7 @@ def apply_randomized_readout_mitigation(
             result = _execute_circuit(
                 circ, qubit_map, noise_model, nshots_r, backend=backend
             )
-            result._samples = result.apply_bitflips(error_map)  # pylint: disable=W0212
+            result._samples = result.apply_bitflips(error_map)
             results.append(result)
             freqs.append(result.frequencies(binary=False))
         freq[k, :] = freqs
@@ -932,7 +932,7 @@ def apply_randomized_readout_mitigation(
         freq_sum = freq[0, j]
         for frs in freq[1::, j]:
             freq_sum += frs
-        results[j]._frequencies = freq_sum  # pylint: disable=W0212
+        results[j]._frequencies = freq_sum
 
     return results
 
@@ -985,7 +985,7 @@ def get_expectation_val_with_readout_mitigation(
 
     if len(circuit.measurements) == 0:
         circuit = circuit.copy()
-        circuit._final_state = None  # pylint: disable=W0212
+        circuit._final_state = None
         qubits = [
             factor.target_qubit
             for term in observable.terms
@@ -995,14 +995,12 @@ def get_expectation_val_with_readout_mitigation(
         circuit.add(gates.M(*qubits))
 
     if "ncircuits" in readout:
-        circuit_result, circuit_result_cal = (  # pylint: disable=W0632
-            apply_randomized_readout_mitigation(
-                circuit,
-                noise_model,
-                nshots,
-                readout["ncircuits"],
-                backend=backend,
-            )
+        circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
+            circuit,
+            noise_model,
+            nshots,
+            readout["ncircuits"],
+            backend=backend,
         )
     else:
         circuit_result = _execute_circuit(
@@ -1042,7 +1040,7 @@ def sample_clifford_training_circuit(
     Returns:
         :class:`qibo.models.Circuit`: the sampled circuit.
     """
-    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info import (
         random_clifford,
     )
 

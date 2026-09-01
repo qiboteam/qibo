@@ -5,7 +5,6 @@ from collections import Counter
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
 from string import ascii_letters
-from typing import TYPE_CHECKING
 
 from numpy.typing import ArrayLike, DTypeLike
 
@@ -13,14 +12,12 @@ from qibo import __version__, config
 from qibo.backends import einsum_utils
 from qibo.config import SHOT_BATCH_SIZE, log, raise_error
 from qibo.gates.abstract import Gate
+from qibo.gates.channels import Channel
+from qibo.models.circuit import Circuit
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
-if TYPE_CHECKING:
-    from qibo.gates.channels import Channel
-    from qibo.models.circuit import Circuit
 
-
-class Backend:  # pylint: disable=R0904
+class Backend:
     def __init__(self):
         super().__init__()
 
@@ -96,7 +93,7 @@ class Backend:  # pylint: disable=R0904
         self,
         array: ArrayLike,
         dtype: DTypeLike = None,
-        copy: bool = False,  # pylint: disable=unused-argument
+        copy: bool = False,
     ) -> ArrayLike:  # pragma: no cover
         """Cast an object as the array type of the current backend.
 
@@ -1082,7 +1079,7 @@ class Backend:  # pylint: disable=R0904
         if dtype is None:
             dtype = self.dtype
 
-        array = self.cast(array, dtype=dtype)  # pylint: disable=E1111
+        array = self.cast(array, dtype=dtype)
 
         return self.engine.linalg.norm(array, order, **kwargs)
 
@@ -1854,7 +1851,7 @@ class Backend:  # pylint: disable=R0904
         if dtype is None:
             dtype = self.dtype
 
-        array = self.cast(array, dtype=dtype)  # pylint: disable=E1111
+        array = self.cast(array, dtype=dtype)
 
         return self.engine.linalg.norm(array, order, **kwargs)
 
@@ -1952,8 +1949,8 @@ class Backend:  # pylint: disable=R0904
             log.warning(  # pragma: no cover
                 "Since `k == matrix.shape[0]`, transforming sparse matrix into dense matrix."
             )
-            matrix = self.to_numpy(matrix)  # pylint: disable=E1111  # pragma: no cover
-            matrix = self.cast(  # pylint: disable=E1111  # pragma: no cover
+            matrix = self.to_numpy(matrix)  # pragma: no cover
+            matrix = self.cast(  # pragma: no cover
                 matrix, dtype=matrix.dtype
             )
 
@@ -1964,7 +1961,7 @@ class Backend:  # pylint: disable=R0904
 
     def jacobian(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         parameters: ArrayLike,
         initial_state: ArrayLike | None = None,
         return_complex: bool = True,
@@ -1990,7 +1987,7 @@ class Backend:  # pylint: disable=R0904
         used for exponentiation.
         """
         if eigenvectors is None or self.is_sparse(matrix):
-            _matrix = self.expm(phase * matrix)  # pylint: disable=E1111
+            _matrix = self.expm(phase * matrix)
 
             return self.cast(
                 _matrix, dtype=_matrix.dtype
@@ -2047,7 +2044,7 @@ class Backend:  # pylint: disable=R0904
     def partial_trace(
         self, state: ArrayLike, traced_qubits: tuple[int, ...] | list[int]
     ) -> ArrayLike:
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=state.dtype)
 
         nqubits = math.log2(state.shape[0])
 
@@ -2093,7 +2090,7 @@ class Backend:  # pylint: disable=R0904
     def depolarizing_error_density_matrix(
         self, gate: Gate, state: ArrayLike, nqubits: int
     ) -> ArrayLike:
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=state.dtype)
         shape = state.shape
         target_qubits = gate.target_qubits
         lam = gate.init_kwargs["lam"]
@@ -2165,7 +2162,7 @@ class Backend:  # pylint: disable=R0904
             dtype = self.dtype
 
         self._validate_nqubits(nqubits, density_matrix=density_matrix)
-        state = self.cast([1, -1], dtype=dtype)  # pylint: disable=E1111
+        state = self.cast([1, -1], dtype=dtype)
         state = reduce(self.kron, [state] * nqubits)
 
         state /= 2 ** (nqubits / 2)
@@ -2182,8 +2179,8 @@ class Backend:  # pylint: disable=R0904
         if dtype is None:
             dtype = self.dtype
 
-        state_1 = self.cast(state_1, dtype=dtype)  # pylint: disable=E1111
-        state_2 = self.cast(state_2, dtype=dtype)  # pylint: disable=E1111
+        state_1 = self.cast(state_1, dtype=dtype)
+        state_2 = self.cast(state_2, dtype=dtype)
 
         return self.sum(self.conj(state_1) * state_2)
 
@@ -2214,9 +2211,9 @@ class Backend:  # pylint: disable=R0904
         nqubits: int,  # type: ignore
     ) -> ArrayLike:
         """Apply reset error to density matrix."""
-        from qibo.gates.gates import X  # pylint: disable=import-outside-toplevel
+        from qibo.gates.gates import X
 
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=state.dtype)
         shape = state.shape
         qubit = gate.target_qubits[0]
         p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
@@ -2236,7 +2233,7 @@ class Backend:  # pylint: disable=R0904
         self, gate: Gate, state: ArrayLike, nqubits: int
     ) -> ArrayLike:
         """Apply thermal relaxation error to density matrix."""
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=state.dtype)
         shape = state.shape
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.reshape(state, shape)
@@ -2281,12 +2278,12 @@ class Backend:  # pylint: disable=R0904
         self, noiseless_samples: ArrayLike, bitflip_probabilities: ArrayLike
     ) -> ArrayLike:
         sprobs = self.random_sample(noiseless_samples.shape)
-        sprobs = self.cast(sprobs, dtype="float64")  # pylint: disable=E1111
+        sprobs = self.cast(sprobs, dtype="float64")
 
-        flip_0 = self.cast(  # pylint: disable=E1111
+        flip_0 = self.cast(
             sprobs < bitflip_probabilities[0], dtype=noiseless_samples.dtype
         )
-        flip_1 = self.cast(  # pylint: disable=E1111
+        flip_1 = self.cast(
             sprobs < bitflip_probabilities[1], dtype=noiseless_samples.dtype
         )
 
@@ -2297,16 +2294,16 @@ class Backend:  # pylint: disable=R0904
 
     def apply_channel(
         self,
-        channel: "Channel",
+        channel: Channel,
         state: ArrayLike,
-        nqubits: int,  # type: ignore
+        nqubits: int,
     ) -> ArrayLike:
         """Apply a ``channel`` to quantum ``state``."""
 
         density_matrix = bool(len(state.shape) == 2)
 
         if density_matrix:
-            state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+            state = self.cast(state, dtype=state.dtype)
 
             new_state = (1 - channel.coefficient_sum) * state
             for coeff, gate in zip(channel.coefficients, channel.gates):
@@ -2376,7 +2373,7 @@ class Backend:  # pylint: disable=R0904
                 "gates.",
             )
 
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=state.dtype)
         state = self.reshape(state, 2 * nqubits * (2,))
         matrix = gate.matrix(self)
 
@@ -2445,7 +2442,7 @@ class Backend:  # pylint: disable=R0904
 
     def execute_circuit(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         initial_state: ArrayLike | None = None,
         nshots: int = 1000,
     ) -> CircuitResult | MeasurementOutcomes | QuantumState:
@@ -2475,9 +2472,7 @@ class Backend:  # pylint: disable=R0904
             return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if initial_state is not None:
-            initial_state = self.cast(  # pylint: disable=E1111
-                initial_state, dtype=initial_state.dtype
-            )  # pylint: disable=E1111
+            initial_state = self.cast(initial_state, dtype=initial_state.dtype)
             valid_shape = 2 * (2**nqubits,) if density_matrix else (2**nqubits,)
             if tuple(initial_state.shape) != valid_shape:
                 raise_error(
@@ -2517,13 +2512,13 @@ class Backend:  # pylint: disable=R0904
 
     def execute_circuits(
         self,
-        circuits: list["Circuit"],  # type: ignore
+        circuits: list[Circuit],
         initial_states: ArrayLike | None = None,
         nshots: int | None = None,
         processes: int | None = None,
     ) -> list[CircuitResult | MeasurementOutcomes | QuantumState]:  # pragma: no cover
         """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
-        from qibo.parallel import (  # pylint: disable=import-outside-toplevel
+        from qibo.parallel import (
             parallel_circuits_execution,
         )
 
@@ -2533,7 +2528,7 @@ class Backend:  # pylint: disable=R0904
 
     def execute_circuit_repeated(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         nshots: int,
         initial_state: ArrayLike | None = None,
     ) -> CircuitResult | MeasurementOutcomes | QuantumState:  # pragma: no cover
@@ -2574,14 +2569,10 @@ class Backend:  # pylint: disable=R0904
         )
 
         for _ in range(nshots):
-            state = self.cast(  # pylint: disable=E1111
-                state_copy, dtype=state_copy.dtype, copy=True
-            )
+            state = self.cast(state_copy, dtype=state_copy.dtype, copy=True)
 
             if not density_matrix and circuit.accelerators:  # pragma: no cover
-                state = self.execute_distributed_circuit(  # pylint: disable=E1111
-                    circuit, state
-                )
+                state = self.execute_distributed_circuit(circuit, state)
             else:
                 for gate in circuit.queue:
                     if gate.symbolic_parameters:
@@ -2604,9 +2595,7 @@ class Backend:  # pylint: disable=R0904
 
         if density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_states = self.cast(  # pylint: disable=E1111
-                final_states, dtype=final_states[0].dtype
-            )
+            final_states = self.cast(final_states, dtype=final_states[0].dtype)
             final_state = self.mean(final_states, axis=0)
             if circuit.measurements:
                 final_result = CircuitResult(
@@ -2619,7 +2608,7 @@ class Backend:  # pylint: disable=R0904
             else:
                 final_result = QuantumState(final_state, backend=self)
 
-            circuit._final_state = final_result  # pylint: disable=protected-access
+            circuit._final_state = final_result
 
             return final_result
 
@@ -2633,13 +2622,13 @@ class Backend:  # pylint: disable=R0904
             samples
         )
 
-        circuit._final_state = final_result  # pylint: disable=protected-access
+        circuit._final_state = final_result
 
         return final_result
 
     def execute_distributed_circuit(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         initial_state: ArrayLike | None = None,
         nshots: int | None = None,
     ) -> CircuitResult | MeasurementOutcomes | QuantumState:  # pragma: no cover
@@ -2659,7 +2648,7 @@ class Backend:  # pylint: disable=R0904
         elif callable(_matrix):
             return self.matrix_parametrized(gate)
 
-        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
+        return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate: Gate) -> ArrayLike:
         """Convert a parametrized gate to its matrix representation in the computational basis."""
@@ -2677,7 +2666,7 @@ class Backend:  # pylint: disable=R0904
         else:
             _matrix = _matrix(*gate.parameters)
 
-        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
+        return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_fused(self, fgate: Gate) -> ArrayLike:
         """Fuse matrices of multiple gates."""
@@ -2690,7 +2679,7 @@ class Backend:  # pylint: disable=R0904
             # the ``Gate.controlled_by`` method
             num_controls = len(gate.control_qubits)
             if num_controls > 0:
-                gmatrix = self.block_diag(  # pylint: disable=E1111
+                gmatrix = self.block_diag(
                     self.identity(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
                 )
             # Kronecker product with identity is needed to make the
@@ -2705,7 +2694,7 @@ class Backend:  # pylint: disable=R0904
             qubits = list(gate.qubits)
             indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
             indices = self.argsort(
-                self.cast(indices, dtype=self.int64)  # pylint: disable=E1111
+                self.cast(indices, dtype=self.int64)
             )  # required by cupy
             indices = [int(elem) for elem in indices]
             transpose_indices = indices
@@ -2724,7 +2713,7 @@ class Backend:  # pylint: disable=R0904
 
     def aggregate_shots(self, shots: ArrayLike) -> ArrayLike:
         """Collect shots to a single array."""
-        return self.cast(shots, dtype=shots[0].dtype)  # pylint: disable=E1111
+        return self.cast(shots, dtype=shots[0].dtype)
 
     def calculate_frequencies(self, samples: ArrayLike) -> Counter:
         """Calculate measurement frequencies from shots."""
@@ -2753,7 +2742,7 @@ class Backend:  # pylint: disable=R0904
             rtype = self.real(state).dtype
             unmeasured_qubits = tuple(set(range(nqubits)) ^ set(qubits))
             state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
-            probs = self.cast(state, dtype=rtype)  # pylint: disable=E1111
+            probs = self.cast(state, dtype=rtype)
             if len(unmeasured_qubits) != 0:
                 probs = self.sum(probs, axis=unmeasured_qubits)
 
@@ -2791,7 +2780,7 @@ class Backend:  # pylint: disable=R0904
         """Convert samples from binary representation to decimal."""
         qrange = self.arange(nqubits - 1, -1, -1, dtype=self.int32)
         qrange = (2**qrange)[:, None]
-        samples = self.cast(samples, dtype=self.int32)  # pylint: disable=E1111
+        samples = self.cast(samples, dtype=self.int32)
         return (samples @ qrange)[:, 0]
 
     def update_frequencies(
@@ -2810,7 +2799,7 @@ class Backend:  # pylint: disable=R0904
         density_matrix = bool(len(state.shape) == 2)
 
         if density_matrix:
-            ev = self.real(self.trace(self.cast(hamiltonian @ state)))  # pylint: disable=E1111
+            ev = self.real(self.trace(self.cast(hamiltonian @ state)))
             if normalize:  # pragma: no cover
                 norm = self.real(self.trace(state))
                 ev /= norm
@@ -2826,7 +2815,7 @@ class Backend:  # pylint: disable=R0904
 
     def exp_value_diagonal_observable_dense_from_samples(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         observable: ArrayLike,
         nqubits: int,
         nshots: int,
@@ -2872,7 +2861,7 @@ class Backend:  # pylint: disable=R0904
 
     def exp_value_diagonal_observable_symbolic_from_samples(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         nqubits: int,
         terms_qubits: list[tuple[int, ...]],
         terms_coefficients: list[float],
@@ -2925,7 +2914,7 @@ class Backend:  # pylint: disable=R0904
         )
         return self.sum(expvals @ counts) + constant
 
-    def exp_value_observable_dense(self, circuit: "Circuit", observable: ArrayLike):  # type: ignore
+    def exp_value_observable_dense(self, circuit: Circuit, observable: ArrayLike):  # type: ignore
         """Compute the expectation value of a generic dense hamiltonian starting from the state.
 
         Args:
@@ -2945,7 +2934,7 @@ class Backend:  # pylint: disable=R0904
 
     def exp_value_observable_symbolic(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         terms: list[str],
         term_qubits: list[tuple[int, ...]],
         term_coefficients: list[float],
@@ -3081,7 +3070,7 @@ class Backend:  # pylint: disable=R0904
         Returns:
             float: The calculated expectation value.
         """
-        from qibo import gates  # pylint: disable=import-outside-toplevel
+        from qibo import gates
 
         rotated_circuits = []
         qubit_maps = []
@@ -3159,8 +3148,8 @@ class Backend:  # pylint: disable=R0904
 
     def assert_circuitclose(
         self,
-        circuit: "Circuit",  # type: ignore
-        target_circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
+        target_circuit: Circuit,
         rtol: float = 1e-7,
         atol: float = 0.0,
     ) -> None:
@@ -3254,7 +3243,7 @@ class Backend:  # pylint: disable=R0904
         nqubits: int,
         normalize: bool = True,
     ) -> ArrayLike:
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=state.dtype)
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
         order = list(qubits) + [qubit + nqubits for qubit in qubits]
@@ -3284,7 +3273,7 @@ class Backend:  # pylint: disable=R0904
         nqubits: int,
         normalize: bool = True,
     ) -> ArrayLike:
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=state.dtype)
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
         state = self.reshape(state, nqubits * (2,))
@@ -3305,7 +3294,7 @@ class Backend:  # pylint: disable=R0904
 
     def _execute_circuit(
         self,
-        circuit: "Circuit",  # type: ignore
+        circuit: Circuit,
         initial_state: ArrayLike | None = None,
         nshots: int = 1000,
     ) -> CircuitResult | QuantumState:
@@ -3361,7 +3350,7 @@ class Backend:  # pylint: disable=R0904
 
         u_matrix, s_matrix, vh_matrix = self.singular_value_decomposition(matrix)
         # cast needed because of different dtypes in `torch`
-        s_matrix = self.cast(s_matrix, dtype=dtype)  # pylint: disable=E1111
+        s_matrix = self.cast(s_matrix, dtype=dtype)
         s_matrix_inv = self.where(
             self.abs(s_matrix) < precision_singularity, 0.0, s_matrix**power
         )

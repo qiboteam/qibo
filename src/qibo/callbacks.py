@@ -128,7 +128,7 @@ class EntanglementEntropy(Callback):
             ]
 
     def apply(self, backend, state):
-        from qibo.quantum_info.entropies import (  # pylint: disable=import-outside-toplevel
+        from qibo.quantum_info.entropies import (
             entanglement_entropy,
         )
 
@@ -210,7 +210,7 @@ class Overlap(Callback):
     def apply(self, backend, state):
         density_matrix = bool(len(state.shape) == 2)
         if density_matrix:
-            from qibo.quantum_info.metrics import (  # pylint: disable=import-outside-toplevel
+            from qibo.quantum_info.metrics import (
                 fidelity,
             )
 
@@ -328,7 +328,7 @@ class Gap(Callback):
                 RuntimeError,
                 "Gap callback can only be used in adiabatic evolution models.",
             )
-        hamiltonian = self.evolution.solver.current_hamiltonian  # pylint: disable=E1101
+        hamiltonian = self.evolution.solver.current_hamiltonian
         assert type(hamiltonian.backend) == type(backend)
         # Call the eigenvectors so that they are cached for the ``exp`` call
         hamiltonian.eigenvectors()

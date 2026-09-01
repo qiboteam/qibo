@@ -10,17 +10,17 @@ from qibo.config import raise_error
 def HammingWeightBackend(platform=None):
     """Dynamically create a HammingWeightBackend class based on the selected backend."""
 
-    from qibo.backends import construct_backend  # pylint: disable=C415
+    from qibo.backends import construct_backend
 
     if platform is None:
-        from qibo.backends import (  # pylint: disable=C0415
+        from qibo.backends import (
             _check_backend,
             _get_engine_name,
         )
 
         platform = _get_engine_name(_check_backend(platform))
 
-    backend = None  # needed for pylint
+    backend = None
     if platform == "numpy":
         backend = construct_backend("numpy", platform=platform)
     elif platform in ("numba", "cupy", "cuquantum"):
@@ -42,7 +42,7 @@ def HammingWeightBackend(platform=None):
         if method_name in methods:
             methods[method_name] = cache(methods[method_name])
 
-    HWBackend = type("HammingWeightBackend", (backend.__class__,), methods)  # pylint: disable=E0606
+    HWBackend = type("HammingWeightBackend", (backend.__class__,), methods)
 
     hw_backend = HWBackend()
     hw_backend.name = "hamming_weight"

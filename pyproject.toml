@@ -115,7 +115,6 @@ optional = true
 [tool.poetry.group.tests.dependencies]
 pytest = ">=7.2.1,<10.0.0"
 pytest-cov = "^4.0.0"
-pylint = "^3.3.5"
 matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "ch" }
 stim = "^1.15.0"
@@ -159,12 +158,6 @@ qinfo = ["stim"]
 qulacs = ["qulacs"]
 cudaq = ["qbraid"]
 qir = ["qbraid"]
-
-[tool.pylint.main]
-ignored-modules = ["cvxpy", "torch"]
-
-[tool.pylint.reports]
-output-format = "colorized"
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']

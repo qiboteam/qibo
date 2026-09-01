@@ -78,7 +78,7 @@ class Channel(Gate):
                 + f"with index {max(self.target_qubits)}.",
             )
 
-        from qibo.quantum_info.superoperator_transformations import (  # pylint: disable=C0415
+        from qibo.quantum_info.superoperator_transformations import (
             vectorization,
         )
 
@@ -132,7 +132,7 @@ class Channel(Gate):
             Liouville representation of the channel.
         """
 
-        from qibo.quantum_info.superoperator_transformations import (  # pylint: disable=C0415
+        from qibo.quantum_info.superoperator_transformations import (
             choi_to_liouville,
         )
 
@@ -171,7 +171,7 @@ class Channel(Gate):
             Pauli-Liouville representation of the channel.
         """
 
-        from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
+        from qibo.quantum_info.basis import comp_basis_to_pauli
 
         backend = _check_backend(backend)
 

@@ -1,7 +1,5 @@
 """Module defining the Hamming-weight-preserving backend."""
 
-# pylint: disable=W0212
-
 from functools import cache
 from itertools import combinations
 from math import comb
@@ -391,7 +389,7 @@ def execute_circuit(
         containing the results of circuit execution of a Hamming-weight-preserving
         circuit.
     """
-    from qibo.quantum_info.hamming_weight import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.hamming_weight import (
         HammingWeightResult,
     )
 

@@ -866,7 +866,7 @@ def diamond_norm(
     .. note::
         This function requires the optional CVXPY package to be installed.
     """
-    import cvxpy  # pylint: disable=import-outside-toplevel  #type: ignore
+    import cvxpy  # type: ignore
 
     backend = _check_backend(backend)
 
@@ -992,7 +992,7 @@ def expressibility(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+    from qibo.quantum_info.utils import (
         haar_integral,
         pqc_integral,
     )

@@ -306,7 +306,7 @@ class AAVQE:
             compile (bool): whether the TensorFlow graph should be compiled.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        from qibo.models import VQE  # pylint: disable=import-outside-toplevel
+        from qibo.models import VQE
 
         t = 0.0
         while (t - self._t_max) <= self.ATOL_TIME:
@@ -365,7 +365,7 @@ class QAOA:
             best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
     """
 
-    from qibo import hamiltonians, optimizers  # pylint: disable=import-outside-toplevel
+    from qibo import hamiltonians, optimizers
 
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=None, accelerators=None

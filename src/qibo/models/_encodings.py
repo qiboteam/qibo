@@ -149,7 +149,7 @@ def _binary_codewords(dims: int, backend: Backend | None = None) -> ArrayLike:
     and consecutive words have Hamming distance <= 2.
 
     """
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.utils import (
         hamming_distance,
         hamming_weight,
     )
@@ -321,7 +321,7 @@ def _binary_encoder_hopf(
     complex_data: bool,
     backend: Backend | None = None,
     **kwargs,
-) -> Circuit:  # pylint: disable=unused-argument
+) -> Circuit:
     # TODO: generalize to complex-valued data
     backend = _check_backend(backend)
 
@@ -501,7 +501,7 @@ def _ehrlich_codewords_up_to_k(
     def ones_right(k: int):
         return "0" * (n - k) + "1" * k
 
-    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+    from qibo.quantum_info.utils import (
         hamming_distance,
     )
 
@@ -873,7 +873,7 @@ def _get_phase_gate_correction(last_string: ArrayLike | str, phase: float) -> Ga
     """Return final gate of HW-k circuits that encode complex data."""
 
     # to avoid circular import error
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.utils import (
         hamming_weight,
     )
 
@@ -898,7 +898,7 @@ def _get_phase_gate_correction_sparse(
     circuit: Circuit,
     phis: ArrayLike,
 ):
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.utils import (
         hamming_weight,
     )
 
@@ -1528,7 +1528,7 @@ def _pyramid_layer(
 def _sort_data_sparse(
     data: ArrayLike, nqubits: int, backend: Backend
 ) -> tuple[ArrayLike, ArrayLike]:
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.utils import (
         hamming_weight,
     )
 
@@ -1606,8 +1606,8 @@ def _sparse_encoder_farias(
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
-    from qibo.models.encodings import comp_basis_encoder  # pylint: disable=C0415
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+    from qibo.models.encodings import comp_basis_encoder
+    from qibo.quantum_info.utils import (
         hamming_distance,
         hamming_weight,
     )
@@ -1762,7 +1762,7 @@ def _sparse_encoder_li(
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
-    from qibo.models.encodings import permutation_synthesis  # pylint: disable=C0415
+    from qibo.models.encodings import permutation_synthesis
 
     backend = _check_backend(backend)
 

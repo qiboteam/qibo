@@ -2,7 +2,6 @@ import os
 from importlib import import_module
 
 import networkx as nx
-import numpy as np  # noqa: F401
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
@@ -53,7 +52,7 @@ class MetaBackend:
         dtype = kwargs.pop("dtype", "complex128")
 
         if backend == "qulacs":
-            from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
+            from qibo.backends.qulacs import QulacsBackend
 
             backend_obj = QulacsBackend()
             backend_obj.set_dtype(dtype=dtype)
@@ -322,7 +321,7 @@ def list_available_backends(*providers: str) -> dict:
     return available_backends
 
 
-def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
+def construct_backend(backend, **kwargs) -> Backend:
     """Construct a generic native or non-native qibo backend.
 
     Args:
@@ -340,7 +339,6 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
             module = import_module(provider)
             return module.MetaBackend.load(**kwargs)
         except ImportError as e:
-            # pylint: disable=unsupported-membership-test
             if provider not in e.msg:
                 raise
             raise MissingBackend(

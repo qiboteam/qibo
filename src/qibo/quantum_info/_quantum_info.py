@@ -22,10 +22,7 @@ def _pauli_basis(
     operands = [basis_single for _ in range(nqubits)]
     inputs = [item for pair in zip(operands, input_indices) for item in pair]
     return (
-        ENGINE.einsum(  # pylint: disable=too-many-function-args
-            *inputs, output_indices
-        ).reshape(dim**2, dim, dim)
-        / normalization
+        ENGINE.einsum(*inputs, output_indices).reshape(dim**2, dim, dim) / normalization
     )
 
 

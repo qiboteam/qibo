@@ -36,7 +36,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         measurements=None,
         nshots: int = 1000,
         platform=None,
-    ):  # pylint: disable=too-many-arguments
+    ):
 
         backend = HammingWeightBackend(platform)
         QuantumState.__init__(self, state, backend)

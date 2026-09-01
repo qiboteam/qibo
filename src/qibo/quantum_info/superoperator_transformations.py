@@ -807,7 +807,7 @@ def kraus_to_chi(
     Returns:
         ndarray: Chi-matrix representation of the Kraus channel.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
+    from qibo.quantum_info.basis import comp_basis_to_pauli
 
     backend = _check_backend(backend)
 
@@ -982,7 +982,7 @@ def liouville_to_pauli(
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
+    from qibo.quantum_info.basis import comp_basis_to_pauli
 
     method = _check_pauli_transform_method(method)
     backend = _check_backend(backend)
@@ -1199,7 +1199,7 @@ def pauli_to_liouville(
     Returns:
         ndarray: superoperator in the Liouville representation.
     """
-    from qibo.quantum_info.basis import pauli_to_comp_basis  # pylint: disable=C0415
+    from qibo.quantum_info.basis import pauli_to_comp_basis
 
     method = _check_pauli_transform_method(method)
     backend = _check_backend(backend)

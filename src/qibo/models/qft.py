@@ -63,13 +63,13 @@ def _DistributedQFT(nqubits, accelerators=None, **kwargs):
     circuit = Circuit(nqubits, accelerators, **kwargs)
     icrit = nqubits // 2 + nqubits % 2
     if accelerators is not None:
-        circuit.global_qubits = range(circuit.nlocal, nqubits)  # pylint: disable=E1101
-        if icrit < circuit.nglobal:  # pylint: disable=E1101
+        circuit.global_qubits = range(circuit.nlocal, nqubits)
+        if icrit < circuit.nglobal:
             raise_error(
                 NotImplementedError,
                 f"Cannot implement QFT for {nqubits} qubits "
                 + f"using {circuit.nglobal} global qubits.",
-            )  # pylint: disable=E1101
+            )
 
     for i1 in range(nqubits):
         if i1 < icrit:

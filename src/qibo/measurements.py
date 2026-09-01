@@ -7,7 +7,7 @@ from qibo.config import raise_error
 
 def _check_backend(backend):
     """This is only needed due to the circular import with qibo.backends."""
-    from qibo.backends import _check_backend  # pylint: disable=import-outside-toplevel
+    from qibo.backends import _check_backend
 
     return _check_backend(backend)
 

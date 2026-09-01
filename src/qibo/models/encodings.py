@@ -809,7 +809,7 @@ def permutation_synthesis(
     if m > 0 and (m & (m - 1)) != 0:
         raise_error(ValueError, "budget ``m`` must be a power of 2.")
 
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.utils import (
         decompose_permutation,
     )
 
@@ -1115,7 +1115,7 @@ def unary_encoder_random_gaussian(
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+    from qibo.quantum_info.random_ensembles import (
         _ProbabilityDistributionGaussianLoader,
     )
 

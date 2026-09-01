@@ -123,7 +123,7 @@ class HamiltonianTerm:
         if density_matrix:
             return backend.apply_gate_half_density_matrix(gate, state, nqubits)
 
-        return backend.apply_gate(gate, state, nqubits)  # pylint: disable=E1102
+        return backend.apply_gate(gate, state, nqubits)
 
 
 class SymbolicTerm(HamiltonianTerm):

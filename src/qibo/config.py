@@ -150,7 +150,7 @@ class CustomHandler(logging.StreamHandler):
 
     def format(self, record):
         """Format the record with specific format."""
-        from qibo import __version__  # pylint: disable=C0415
+        from qibo import __version__
 
         fmt = f"[Qibo {__version__}|%(levelname)s|%(asctime)s]: %(message)s"
         return logging.Formatter(fmt, datefmt="%Y-%m-%d %H:%M:%S").format(record)

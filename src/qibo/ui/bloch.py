@@ -168,7 +168,7 @@ class BlochSphere:
         on the considered state and yields its cartesian coordinates on the Bloch sphere.
         """
         if self._numpy_backend is None:
-            from qibo.backends.numpy import NumpyBackend  # pylint: disable=C0415
+            from qibo.backends.numpy import NumpyBackend
 
             self._numpy_backend = NumpyBackend()
 

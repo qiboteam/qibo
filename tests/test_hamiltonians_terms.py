@@ -62,7 +62,7 @@ def test_hamiltonian_term_gates(backend):
 
 def test_hamiltonian_term_exponentiation(backend):
     """Test exp gate application of ``HamiltonianTerm``."""
-    from scipy.linalg import expm  # pylint: disable=C0415
+    from scipy.linalg import expm
 
     matrix = np.random.random((2, 2))
     term = HamiltonianTerm(matrix, 1, backend=backend)

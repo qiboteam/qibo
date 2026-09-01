@@ -104,7 +104,7 @@ class Gate:
             f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
-    def check_controls(func):  # pylint: disable=E0213
+    def check_controls(func):
         def wrapper(self, *args):
             if self.control_qubits:
                 raise_error(
@@ -113,7 +113,7 @@ class Gate:
                     + f"on gate {self} because it is already "
                     + f"controlled by {self.control_qubits}.",
                 )
-            return func(self, *args)  # pylint: disable=E1102
+            return func(self, *args)
 
         return wrapper
 
@@ -270,7 +270,7 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        from qibo.gates import (  # pylint: disable=import-outside-toplevel
+        from qibo.gates import (
             gates,
             measurements,
         )
@@ -359,7 +359,7 @@ class Gate:
         Returns:
             ndarray: Matrix representation of gate.
         """
-        from qibo.backends import _check_backend  # pylint: disable=C0415
+        from qibo.backends import _check_backend
 
         backend = _check_backend(backend)
 
@@ -511,7 +511,7 @@ class Gate:
         """
         try:
             if method == "clifford_plus_t":
-                from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+                from qibo.transpiler.decompositions import (
                     clifford_plus_t,
                 )
 
@@ -522,7 +522,7 @@ class Gate:
                 func._set_precision_cliff_plus_t(epsilon, mpmath_dps)
 
             else:
-                from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+                from qibo.transpiler.decompositions import (
                     standard_decompositions,
                 )
 
@@ -686,7 +686,7 @@ class ParametrizedGate(Gate):
         """
 
     def matrix(self, backend=None) -> ArrayLike:
-        from qibo.backends import _check_backend  # pylint: disable=C0415
+        from qibo.backends import _check_backend
 
         backend = _check_backend(backend)
 

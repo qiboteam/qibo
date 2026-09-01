@@ -99,8 +99,8 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     from qibo.models import QFT
 
     circuit = QFT(nqubits, accelerators={"/GPU:0": ndevices})
-    circuit.queues.set(circuit.queue)  # pylint: disable=E1101
-    check_device_queues(circuit.queues)  # pylint: disable=E1101
+    circuit.queues.set(circuit.queue)
+    check_device_queues(circuit.queues)
 
 
 def test_transform_queue_simple():

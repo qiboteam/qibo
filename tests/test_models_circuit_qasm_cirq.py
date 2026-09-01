@@ -45,7 +45,7 @@ def test_simple_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -70,7 +70,7 @@ def test_singlequbit_gates_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -91,7 +91,7 @@ def test_multiqubit_gates_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -113,7 +113,7 @@ def test_toffoli_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -131,7 +131,7 @@ def test_parametrized_gate_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -159,7 +159,7 @@ def test_ugates_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
