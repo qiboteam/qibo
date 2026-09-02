@@ -207,7 +207,7 @@ class AdiabaticEvolution(StateEvolution):
             raise_error(
                 ValueError,
                 "Scheduling function shoud take one or "
-                "two arguments but it takes {nparams}.",
+                f"two arguments but it takes {nparams}.",
             )
 
     @property

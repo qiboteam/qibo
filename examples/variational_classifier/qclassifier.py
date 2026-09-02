@@ -81,7 +81,6 @@ class QuantumClassifer:
         Returns:
             Circuit implementing the variational ansatz for angles "theta"
         """
-        np.array(theta[0 : self.measured_qubits])
         angles = theta[self.measured_qubits :]
 
         self._circuit.set_parameters(angles)
