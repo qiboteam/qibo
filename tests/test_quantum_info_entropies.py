@@ -23,7 +23,6 @@ from qibo.quantum_info.linalg_operations import matrix_power
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_statevector,
-    random_unitary,
 )
 
 
@@ -31,27 +30,27 @@ def test_shannon_entropy_errors(backend):
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, -2, backend=backend)
+        shannon_entropy(prob, -2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([[1.0], [0.0]])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
+        shannon_entropy(prob, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
+        shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, -1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
+        shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.1, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
+        shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([0.5, 0.4999999])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
+        shannon_entropy(prob, backend=backend)
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
@@ -76,37 +75,37 @@ def test_classical_relative_entropy(backend, base, kind):
         prob_q = np.random.rand(1, 5)
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, backend=backend)
+        classical_relative_entropy(prob, prob_q, backend=backend)
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, backend=backend)
+        classical_relative_entropy(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([-1, 2.0])
         prob_q = np.random.rand(1, 5)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, backend=backend)
+        classical_relative_entropy(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, backend=backend)
+        classical_relative_entropy(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.random.rand(1, 2)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, backend=backend)
+        classical_relative_entropy(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.array([0.0, 1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, base=-2, backend=backend)
+        classical_relative_entropy(prob, prob_q, base=-2, backend=backend)
 
     prob_p = np.random.rand(10)
     prob_q = np.random.rand(10)
@@ -156,39 +155,39 @@ def test_classical_renyi_entropy(backend, alpha, base, kind):
     with pytest.raises(TypeError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha="2", backend=backend)
+        classical_renyi_entropy(prob, alpha="2", backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha=-2, backend=backend)
+        classical_renyi_entropy(prob, alpha=-2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha, base="2", backend=backend)
+        classical_renyi_entropy(prob, alpha, base="2", backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha, base=-2, backend=backend)
+        classical_renyi_entropy(prob, alpha, base=-2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([[1.0], [0.0]])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha, backend=backend)
+        classical_renyi_entropy(prob, alpha, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha, backend=backend)
+        classical_renyi_entropy(prob, alpha, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, -1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha, backend=backend)
+        classical_renyi_entropy(prob, alpha, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.1, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha, backend=backend)
+        classical_renyi_entropy(prob, alpha, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([0.5, 0.4999999])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_renyi_entropy(prob, alpha, backend=backend)
+        classical_renyi_entropy(prob, alpha, backend=backend)
 
     prob_dist = np.random.rand(10)
     prob_dist /= np.sum(prob_dist)
@@ -225,55 +224,43 @@ def test_classical_relative_renyi_entropy(backend, alpha, base, kind):
         prob_q = np.random.rand(1, 5)
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
-            prob, prob_q, alpha, base, backend=backend
-        )
+        classical_relative_renyi_entropy(prob, prob_q, alpha, base, backend=backend)
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
-            prob, prob_q, alpha, base, backend=backend
-        )
+        classical_relative_renyi_entropy(prob, prob_q, alpha, base, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([-1, 2.0])
         prob_q = np.random.rand(1, 5)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
-            prob, prob_q, alpha, base, backend=backend
-        )
+        classical_relative_renyi_entropy(prob, prob_q, alpha, base, backend=backend)
     with pytest.raises(ValueError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
-            prob, prob_q, alpha, base, backend=backend
-        )
+        classical_relative_renyi_entropy(prob, prob_q, alpha, base, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.random.rand(1, 2)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
-            prob, prob_q, alpha, base, backend=backend
-        )
+        classical_relative_renyi_entropy(prob, prob_q, alpha, base, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.array([0.0, 1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
-            prob, prob_q, alpha, base=-2, backend=backend
-        )
+        classical_relative_renyi_entropy(prob, prob_q, alpha, base=-2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([1.0, 0.0])
         prob_q = np.array([0.0, 1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
+        classical_relative_renyi_entropy(
             prob, prob_q, alpha="1", base=base, backend=backend
         )
     with pytest.raises(ValueError):
@@ -281,7 +268,7 @@ def test_classical_relative_renyi_entropy(backend, alpha, base, kind):
         prob_q = np.array([0.0, 1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_renyi_entropy(
+        classical_relative_renyi_entropy(
             prob, prob_q, alpha=-2, base=base, backend=backend
         )
 
@@ -328,39 +315,39 @@ def test_classical_tsallis_entropy(backend, alpha, base, kind):
     with pytest.raises(TypeError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha="2", backend=backend)
+        classical_tsallis_entropy(prob, alpha="2", backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha=-2, backend=backend)
+        classical_tsallis_entropy(prob, alpha=-2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha, base="2", backend=backend)
+        classical_tsallis_entropy(prob, alpha, base="2", backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha, base=-2, backend=backend)
+        classical_tsallis_entropy(prob, alpha, base=-2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([[1.0], [0.0]])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha, backend=backend)
+        classical_tsallis_entropy(prob, alpha, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha, backend=backend)
+        classical_tsallis_entropy(prob, alpha, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, -1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha, backend=backend)
+        classical_tsallis_entropy(prob, alpha, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.1, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha, backend=backend)
+        classical_tsallis_entropy(prob, alpha, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([0.5, 0.4999999])
         prob = backend.cast(prob, dtype=prob.dtype)
-        test = classical_tsallis_entropy(prob, alpha, backend=backend)
+        classical_tsallis_entropy(prob, alpha, backend=backend)
 
     prob_dist = np.random.rand(10)
     prob_dist /= np.sum(prob_dist)
@@ -456,18 +443,18 @@ def test_relative_von_neumann_entropy(backend, base):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         target = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_von_neumann_entropy(state, target, base=base, backend=backend)
+        relative_von_neumann_entropy(state, target, base=base, backend=backend)
     with pytest.raises(TypeError):
         target = np.random.rand(2, 3)
         target = backend.cast(target, dtype=target.dtype)
         state = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_von_neumann_entropy(state, target, base=base, backend=backend)
+        relative_von_neumann_entropy(state, target, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
         target = np.array([0.0, 1.0])
         target = backend.cast(target, dtype=target.dtype)
-        test = relative_von_neumann_entropy(state, target, base=0, backend=backend)
+        relative_von_neumann_entropy(state, target, base=0, backend=backend)
 
     nqubits = 2
     dims = 2**nqubits
@@ -489,7 +476,7 @@ def test_mutual_information(backend, base):
     with pytest.raises(ValueError):
         state = np.ones((3, 3))
         state = backend.cast(state, dtype=state.dtype)
-        test = mutual_information(state, [0], backend)
+        mutual_information(state, [0], backend)
 
     state_a = random_density_matrix(4, backend=backend)
     state_b = random_density_matrix(4, backend=backend)
@@ -508,16 +495,16 @@ def test_renyi_entropy(backend, alpha, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = renyi_entropy(state, alpha=alpha, base=base, backend=backend)
+        renyi_entropy(state, alpha=alpha, base=base, backend=backend)
     with pytest.raises(TypeError):
         state = random_statevector(4, backend=backend)
-        test = renyi_entropy(state, alpha="2", base=base, backend=backend)
+        renyi_entropy(state, alpha="2", base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
-        test = renyi_entropy(state, alpha=-1, base=base, backend=backend)
+        renyi_entropy(state, alpha=-1, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
-        test = renyi_entropy(state, alpha=alpha, base=0, backend=backend)
+        renyi_entropy(state, alpha=alpha, base=0, backend=backend)
 
     state = random_density_matrix(4, backend=backend)
 
@@ -555,34 +542,24 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         target = random_density_matrix(4, backend=backend)
-        test = relative_renyi_entropy(
-            state, target, alpha=alpha, base=base, backend=backend
-        )
+        relative_renyi_entropy(state, target, alpha=alpha, base=base, backend=backend)
     with pytest.raises(TypeError):
         target = np.random.rand(2, 3)
         target = backend.cast(target, dtype=target.dtype)
         state = random_density_matrix(4, backend=backend)
-        test = relative_renyi_entropy(
-            state, target, alpha=alpha, base=base, backend=backend
-        )
+        relative_renyi_entropy(state, target, alpha=alpha, base=base, backend=backend)
     with pytest.raises(TypeError):
         state = random_statevector(4, backend=backend)
         target = random_statevector(4, backend=backend)
-        test = relative_renyi_entropy(
-            state, target, alpha="2", base=base, backend=backend
-        )
+        relative_renyi_entropy(state, target, alpha="2", base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
         target = random_statevector(4, backend=backend)
-        test = relative_renyi_entropy(
-            state, target, alpha=-1, base=base, backend=backend
-        )
+        relative_renyi_entropy(state, target, alpha=-1, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
         target = random_statevector(4, backend=backend)
-        test = relative_renyi_entropy(
-            state, target, alpha=alpha, base=0, backend=backend
-        )
+        relative_renyi_entropy(state, target, alpha=alpha, base=0, backend=backend)
 
     state = (
         random_statevector(4, backend=backend)
@@ -660,16 +637,16 @@ def test_tsallis_entropy(backend, alpha, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = tsallis_entropy(state, alpha=alpha, base=base, backend=backend)
+        tsallis_entropy(state, alpha=alpha, base=base, backend=backend)
     with pytest.raises(TypeError):
         state = random_statevector(4, backend=backend)
-        test = tsallis_entropy(state, alpha="2", base=base, backend=backend)
+        tsallis_entropy(state, alpha="2", base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
-        test = tsallis_entropy(state, alpha=-1, base=base, backend=backend)
+        tsallis_entropy(state, alpha=-1, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
-        test = tsallis_entropy(state, alpha=alpha, base=0, backend=backend)
+        tsallis_entropy(state, alpha=alpha, base=0, backend=backend)
 
     state = random_density_matrix(4, backend=backend)
 
@@ -703,13 +680,13 @@ def test_relative_tsallis_entropy(backend, alpha, base, state_flag, target_flag)
     target = random_statevector(4, backend=backend)
 
     with pytest.raises(TypeError):
-        test = relative_tsallis_entropy(state, target, alpha=1j, backend=backend)
+        relative_tsallis_entropy(state, target, alpha=1j, backend=backend)
 
     with pytest.raises(ValueError):
-        test = relative_tsallis_entropy(state, target, alpha=3, backend=backend)
+        relative_tsallis_entropy(state, target, alpha=3, backend=backend)
 
     with pytest.raises(ValueError):
-        test = relative_tsallis_entropy(state, target, alpha=-1.0, backend=backend)
+        relative_tsallis_entropy(state, target, alpha=-1.0, backend=backend)
 
     state = (
         random_statevector(4, seed=10, backend=backend)

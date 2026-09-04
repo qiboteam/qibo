@@ -132,7 +132,7 @@ def extract_probability(qubits, counts, samples):
     Returns:
         prob (list): normalized probabilities for the measured outcomes.
     """
-    form = "{0:0%sb}" % str(qubits)  # qubits?
+    form = f"{{0:0{qubits!s}b}}"  # qubits?
     prob = []
     for i in reversed(range(qubits)):
         prob.append(counts.get(form.format(2**i), 0) / samples)
@@ -177,7 +177,7 @@ def load_quantum_sim(qu, S0, sig, r, T):
         pdf (np.array): probability distribution for the asset's price evolution.
     """
     values, pdf = get_pdf(qu, S0, sig, r, T)
-    q, ancilla, circuit = create_qc(qu)
+    q, _ancilla, circuit = create_qc(qu)
     lognormal_parameters = rw_parameters(
         qu, pdf
     )  # Solve for the parameters needed to create the target lognormal distribution
@@ -312,9 +312,9 @@ def run_payoff_quantum_sim(qubits, circuit, shots, S, K):
     counts_payoff_sim = job_payoff_sim.frequencies(binary=True, registers=False)
     ones = 0
     zeroes = 0
-    for key in counts_payoff_sim.keys():  # Post-selection
+    for key in counts_payoff_sim:  # Post-selection
         unary = 0
-        for i in range(0, qubits):
+        for i in range(qubits):
             unary += int(key[i])
         if unary == 1:
             if int(key[qubits]) == 0:
@@ -437,9 +437,9 @@ def run_Q_operator(qubits, circuit, shots):
     counts_payoff_sim = job_payoff_sim.frequencies(binary=True, registers=False)
     ones = 0
     zeroes = 0
-    for key in counts_payoff_sim.keys():
+    for key in counts_payoff_sim:
         unary = 0
-        for i in range(0, qubits):
+        for i in range(qubits):
             unary += int(key[i])
         if unary == 1:
             if int(key[qubits]) == 0:
@@ -567,7 +567,7 @@ def amplitude_estimation(bins, M, data, shots=10000):
     """
     S0, sig, r, T, K = data
     circuit, S = load_payoff_quantum_sim(bins, S0, sig, r, T, K)
-    qu_payoff_sim = run_payoff_quantum_sim(bins, circuit, shots, S, K)
+    run_payoff_quantum_sim(bins, circuit, shots, S, K)
     m_s = np.arange(0, M + 1, 1)
     circuits = []
     for j, m in enumerate(m_s):
@@ -580,7 +580,8 @@ def amplitude_estimation(bins, M, data, shots=10000):
         ones_s.append(ones)
         zeroes_s.append(zeroes)
     theta_max_s, error_theta_s = aux.get_theta(m_s, ones_s, zeroes_s)
-    a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(
-        np.sin(2 * theta_max_s) * error_theta_s
+    a_s, error_s = (
+        np.sin(theta_max_s) ** 2,
+        np.abs(np.sin(2 * theta_max_s) * error_theta_s),
     )
     return a_s, error_s

@@ -37,9 +37,9 @@ from qibo.quantum_info.utils import (
 )
 def test_hamming_weight(bitstring, kind):
     with pytest.raises(TypeError):
-        test = hamming_weight("0101", return_indexes="True")
+        hamming_weight("0101", return_indexes="True")
     with pytest.raises(TypeError):
-        test = hamming_weight(2.3)
+        hamming_weight(2.3)
 
     bitstring = f"{bitstring:b}"
     weight_test = len(bitstring.replace("0", ""))
@@ -66,11 +66,11 @@ bitstring_1, bitstring_2 = "11111", "10101"
 )
 def test_hamming_distance(bitstring_1, bitstring_2):
     with pytest.raises(TypeError):
-        test = hamming_distance("0101", "1010", return_indexes="True")
+        hamming_distance("0101", "1010", return_indexes="True")
     with pytest.raises(TypeError):
-        test = hamming_distance(2.3, "1010")
+        hamming_distance(2.3, "1010")
     with pytest.raises(TypeError):
-        test = hamming_distance("1010", 2.3)
+        hamming_distance("1010", 2.3)
 
     distance = hamming_distance(bitstring_1, bitstring_2)
     indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
@@ -132,31 +132,31 @@ def test_hellinger(backend, validate, kind):
         prob_q = np.random.rand(1, 5)
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = hellinger_distance(prob, prob_q, backend=backend)
+        hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = hellinger_distance(prob, prob_q, backend=backend)
+        hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([-1, 2.0])
         prob_q = np.random.rand(1, 5)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.random.rand(1, 2)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
     prob_p = np.random.rand(10)
     prob_q = np.random.rand(10)
@@ -223,19 +223,19 @@ def test_total_variation_distance(backend, validate, kind):
         prob_q = np.random.rand(1, 5)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = total_variation_distance(prob, prob_q, validate=True, backend=backend)
+        total_variation_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = total_variation_distance(prob, prob_q, validate=True, backend=backend)
+        total_variation_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.random.rand(1, 2)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = total_variation_distance(prob, prob_q, validate=True, backend=backend)
+        total_variation_distance(prob, prob_q, validate=True, backend=backend)
 
     prob_p = np.random.rand(10)
     prob_q = np.random.rand(10)
@@ -264,13 +264,13 @@ def test_total_variation_distance(backend, validate, kind):
 def test_haar_integral_errors(backend):
     with pytest.raises(TypeError):
         nqubits, power_t, samples = 0.5, 2, 10
-        test = haar_integral(nqubits, power_t, samples, backend=backend)
+        haar_integral(nqubits, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
         nqubits, power_t, samples = 2, 0.5, 10
-        test = haar_integral(nqubits, power_t, samples, backend=backend)
+        haar_integral(nqubits, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
         nqubits, power_t, samples = 2, 1, 1.2
-        test = haar_integral(nqubits, power_t, samples=samples, backend=backend)
+        haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
 
 @pytest.mark.parametrize("power_t", [1, 2])
@@ -289,11 +289,11 @@ def test_pqc_integral(backend):
     with pytest.raises(TypeError):
         power_t, samples = 0.5, 10
         circuit = Circuit(2)
-        test = pqc_integral(circuit, power_t, samples, backend=backend)
+        pqc_integral(circuit, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
         power_t, samples = 2, 0.5
         circuit = Circuit(2)
-        test = pqc_integral(circuit, power_t, samples, backend=backend)
+        pqc_integral(circuit, power_t, samples, backend=backend)
 
     circuit = Circuit(2)
     power_t, samples = 1, 100

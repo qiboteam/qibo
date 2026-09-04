@@ -18,7 +18,7 @@ def test_grover_init(backend):
     assert grover.sup_size == 32
     assert not grover.iterative
     grover = Grover(
-        oracle, superposition_circuit=superposition, superposition_size=int(2**5)
+        oracle, superposition_circuit=superposition, superposition_size=(2**5)
     )
     assert grover.oracle == oracle
     assert grover.superposition == superposition
@@ -54,7 +54,7 @@ def test_grover_initial_state(backend):
         number_solutions=1,
     )
     assert grover.initial_state_circuit == initial_state
-    solution, iterations = grover(logs=True, backend=backend)
+    solution, _iterations = grover(logs=True, backend=backend)
     assert solution == ["11111"]
 
 
@@ -62,7 +62,7 @@ def test_grover_target_amplitude(backend):
     oracle = Circuit(5 + 1)
     oracle.add(gates.X(5).controlled_by(*range(5)))
     grover = Grover(oracle, superposition_qubits=5, target_amplitude=1 / 2 ** (5 / 2))
-    solution, iterations = grover(logs=True, backend=backend)
+    solution, _iterations = grover(logs=True, backend=backend)
     assert len(solution) == 1
     assert solution == ["11111"]
 
@@ -77,7 +77,7 @@ def test_grover_wrong_solution(backend):
     oracle = Circuit(5 + 1)
     oracle.add(gates.X(5).controlled_by(*range(5)))
     grover = Grover(oracle, superposition_qubits=5, check=check, number_solutions=2)
-    solution, iterations = grover(logs=True, backend=backend)
+    solution, _iterations = grover(logs=True, backend=backend)
     assert len(solution) == 2
 
 
@@ -95,11 +95,11 @@ def test_grover_iterative(backend):
     oracle.add(gates.X(5).controlled_by(*range(5)))
     grover = Grover(oracle, superposition_qubits=5, check=None, iterative=True)
     with pytest.raises(ValueError):
-        solution, iterations = grover(backend=backend)
+        grover(backend=backend)
     grover = Grover(oracle, superposition_qubits=5, check=check_false, iterative=True)
-    solution, iterations = grover(backend=backend)
+    solution, _iterations = grover(backend=backend)
     grover = Grover(oracle, superposition_qubits=5, check=check, iterative=True)
-    solution, iterations = grover(logs=True, backend=backend)
+    solution, _iterations = grover(logs=True, backend=backend)
     assert solution == "11111"
 
 

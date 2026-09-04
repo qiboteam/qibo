@@ -54,7 +54,7 @@ def test_fuse_blocks_error():
     block_1 = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
     block_2 = Block(qubits=(1, 2), gates=[gates.CZ(1, 2)])
     with pytest.raises(BlockingError):
-        fused = block_1.fuse(block_2)
+        block_1.fuse(block_2)
 
 
 @pytest.mark.parametrize("qubits", [(0, 1), (2, 1)])
@@ -166,7 +166,7 @@ def test_initial_block_decomposition_error():
     circ = Circuit(3)
     circ.add(gates.TOFFOLI(0, 1, 2))
     with pytest.raises(BlockingError):
-        blocks = _initial_block_decomposition(circ)
+        _initial_block_decomposition(circ)
 
 
 def test_block_decomposition_error():
@@ -390,4 +390,4 @@ def test_return_last_block_error():
 
     # No blocks in the circuit
     with pytest.raises(BlockingError):
-        last_block = circuit_blocks.return_last_block()
+        circuit_blocks.return_last_block()

@@ -4,7 +4,6 @@ import math
 from functools import reduce
 from itertools import combinations
 
-import networkx as nx
 import numpy as np
 import pytest
 from scipy.optimize import curve_fit
@@ -47,15 +46,15 @@ def _gaussian(x, a, b, c):
 )
 def test_comp_basis_encoder(backend, basis_element):
     with pytest.raises(TypeError):
-        circuit = comp_basis_encoder(2.3)
+        comp_basis_encoder(2.3)
     with pytest.raises(ValueError):
-        circuit = comp_basis_encoder("0b001")
+        comp_basis_encoder("0b001")
     with pytest.raises(ValueError):
-        circuit = comp_basis_encoder("001", nqubits=2)
+        comp_basis_encoder("001", nqubits=2)
     with pytest.raises(TypeError):
-        circuit = comp_basis_encoder("001", nqubits=3.1)
+        comp_basis_encoder("001", nqubits=3.1)
     with pytest.raises(ValueError):
-        circuit = comp_basis_encoder(3)
+        comp_basis_encoder(3)
 
     zero = np.array([1, 0], dtype=complex)
     one = np.array([0, 1], dtype=complex)
@@ -199,7 +198,7 @@ def test_binary_encoder(
         # need to insert zeros at the end of target to get
         # matching shapes
         trail_zeros = backend.zeros(
-            2 ** int(math.ceil(math.log2(dims))) - dims, dtype=target.dtype
+            2 ** math.ceil(math.log2(dims)) - dims, dtype=target.dtype
         )
         target = backend.concatenate((target, trail_zeros))
 
@@ -212,14 +211,14 @@ def test_binary_encoder(
 def test_unary_encoder(backend, nqubits, architecture, seed):
     with pytest.raises(TypeError):
         data = backend.random_sample(nqubits, seed=seed)
-        test = unary_encoder(nqubits, data=data, architecture=True)
+        unary_encoder(nqubits, data=data, architecture=True)
     with pytest.raises(ValueError):
         data = backend.random_sample(nqubits, seed=seed)
-        test = unary_encoder(nqubits, data=data, architecture="semi-diagonal")
+        unary_encoder(nqubits, data=data, architecture="semi-diagonal")
     if architecture == "tree":
         with pytest.raises(ValueError):
             data = backend.random_sample(nqubits + 1, seed=seed)
-            test = unary_encoder(nqubits, data=data, architecture=architecture)
+            unary_encoder(nqubits, data=data, architecture=architecture)
 
     # sampling random data in interval [-1, 1]
     data = 2 * backend.random_sample(nqubits) - 1
@@ -789,11 +788,11 @@ def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
 def test_fanout_and_ladder_synthesis(backend, nqubits):
     with pytest.raises(ValueError):
         qubits = [0, 1, 3]
-        test = ladder_synthesis(qubits, return_circuit=True)
+        ladder_synthesis(qubits, return_circuit=True)
 
     with pytest.raises(ValueError):
         qubits = [0, 1, 3]
-        test = fanout_synthesis(qubits)
+        fanout_synthesis(qubits)
 
     qubits = list(range(nqubits))
     fanout = fanout_synthesis(qubits)

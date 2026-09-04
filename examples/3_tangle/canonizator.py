@@ -85,7 +85,7 @@ def canonical_tangle(
     result = circuit(state, nshots=shots).frequencies(binary=False)
     measures = np.zeros(8)
     for i, r in result.items():
-        measures[i] = result[i] / shots
+        measures[i] = r / shots
     if post_selection:
         measures[1] = 0
         measures[2] = 0

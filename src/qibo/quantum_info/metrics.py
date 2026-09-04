@@ -1,7 +1,5 @@
 """Distances, metrics, and measures for quantum states and channels."""
 
-from typing import Optional, Union
-
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy import sparse
@@ -11,7 +9,7 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.models.circuit import Circuit
 
 
-def purity(state: ArrayLike, backend: Optional[Backend] = None) -> float:
+def purity(state: ArrayLike, backend: Backend | None = None) -> float:
     """Purity of a quantum state :math:`\\rho`.
 
     This is given by
@@ -48,7 +46,7 @@ def purity(state: ArrayLike, backend: Optional[Backend] = None) -> float:
     return float(pur)
 
 
-def impurity(state: ArrayLike, backend: Optional[Backend] = None) -> float:
+def impurity(state: ArrayLike, backend: Backend | None = None) -> float:
     """Impurity of quantum state :math:`\\rho`.
 
     This is given by :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
@@ -67,7 +65,7 @@ def impurity(state: ArrayLike, backend: Optional[Backend] = None) -> float:
 
 
 def trace_distance(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Trace distance between two quantum states, :math:`\\rho` and
     :math:`\\sigma`:
@@ -116,7 +114,7 @@ def trace_distance(
 
 
 def hilbert_schmidt_inner_product(
-    operator_A: ArrayLike, operator_B: ArrayLike, backend: Optional[Backend] = None
+    operator_A: ArrayLike, operator_B: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Calculate the Hilbert-Schmidt inner product between two operators.
 
@@ -144,7 +142,7 @@ def hilbert_schmidt_inner_product(
 
 
 def hilbert_schmidt_distance(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Calculate the Hilbert-Schmidt distance between two quantum states:
 
@@ -199,7 +197,7 @@ def fidelity(
     state: ArrayLike,
     target: ArrayLike,
     precision_tol: float = 1e-8,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> float:
     """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho` and
     ``target`` state :math:`\\sigma`. In general,
@@ -267,7 +265,7 @@ def fidelity(
 
 
 def infidelity(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Infidelity between ``state`` :math:`\\rho` and ``target`` state
     :math:`\\sigma`, which is given by
@@ -292,7 +290,7 @@ def infidelity(
 
 
 def a_fidelity(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Return the :math:`A`-fidelity between two quantum states.
 
@@ -359,7 +357,7 @@ def a_fidelity(
 
 
 def n_fidelity(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Return the :math:`N`-fidelity between two quantum states.
 
@@ -419,7 +417,7 @@ def n_fidelity(
 
 
 def chen_fidelity(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Return the Chen fidelity between two quantum states.
 
@@ -470,7 +468,7 @@ def chen_fidelity(
 
 
 def geometric_mean_fidelity(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Return the geometric-mean fidelity between two quantum states.
 
@@ -526,7 +524,7 @@ def geometric_mean_fidelity(
 
 
 def max_fidelity(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Return max fidelity between two quantum states.
 
@@ -578,7 +576,7 @@ def max_fidelity(
 
 
 def bures_angle(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Calculates the Bures angle :math:`D_{A}` between a ``state``
     :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
@@ -607,7 +605,7 @@ def bures_angle(
 
 
 def bures_distance(
-    state: ArrayLike, target: ArrayLike, backend: Optional[Backend] = None
+    state: ArrayLike, target: ArrayLike, backend: Backend | None = None
 ) -> float:
     """Calculates the Bures distance :math:`D_{B}` between a ``state``
     :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
@@ -638,9 +636,9 @@ def bures_distance(
 
 def process_fidelity(
     channel: ArrayLike,
-    target: Optional[ArrayLike] = None,
+    target: ArrayLike | None = None,
     check_unitary: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> float:
     """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and
     a ``target`` unitary channel :math:`U`. The process fidelity is defined as
@@ -664,12 +662,11 @@ def process_fidelity(
     """
     backend = _check_backend(backend)
 
-    if target is not None:
-        if channel.shape != target.shape:
-            raise_error(
-                TypeError,
-                f"Channels must have the same dims, but {channel.shape} != {target.shape}",
-            )
+    if target is not None and channel.shape != target.shape:
+        raise_error(
+            TypeError,
+            f"Channels must have the same dims, but {channel.shape} != {target.shape}",
+        )
 
     dim = int(np.sqrt(channel.shape[0]))
 
@@ -705,9 +702,9 @@ def process_fidelity(
 
 def process_infidelity(
     channel: ArrayLike,
-    target: Optional[ArrayLike] = None,
+    target: ArrayLike | None = None,
     check_unitary: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> float:
     """Process infidelity between quantum channel :math:`\\mathcal{E}` and a
     ``target`` unitary channel :math:`U`. The process infidelity is defined as
@@ -739,9 +736,9 @@ def process_infidelity(
 
 def average_gate_fidelity(
     channel: ArrayLike,
-    target: Optional[ArrayLike] = None,
+    target: ArrayLike | None = None,
     check_unitary: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> float:
     """Average gate fidelity between a quantum ``channel`` :math:`\\mathcal{E}`
     and a ``target`` unitary channel :math:`U`. The average gate fidelity is
@@ -784,9 +781,9 @@ def average_gate_fidelity(
 
 def gate_error(
     channel: ArrayLike,
-    target: Optional[ArrayLike] = None,
+    target: ArrayLike | None = None,
     check_unitary: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> float:
     """Gate error between a quantum ``channel`` :math:`\\mathcal{E}` and a
     ``target`` unitary channel :math:`U`, which is defined as
@@ -820,8 +817,8 @@ def gate_error(
 
 def diamond_norm(
     channel: ArrayLike,
-    target: Optional[ArrayLike] = None,
-    backend: Optional[Backend] = None,
+    target: ArrayLike | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> float:  # pragma: no cover
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
@@ -869,16 +866,15 @@ def diamond_norm(
     .. note::
         This function requires the optional CVXPY package to be installed.
     """
-    import cvxpy  # pylint: disable=import-outside-toplevel  #type: ignore
+    import cvxpy  # type: ignore
 
     backend = _check_backend(backend)
 
-    if target is not None:
-        if channel.shape != target.shape:
-            raise_error(
-                TypeError,
-                f"Channels must have the same dims, but {channel.shape} != {target.shape}",
-            )
+    if target is not None and channel.shape != target.shape:
+        raise_error(
+            TypeError,
+            f"Channels must have the same dims, but {channel.shape} != {target.shape}",
+        )
 
     if target is not None:
         channel -= target
@@ -959,8 +955,8 @@ def expressibility(
     circuit: Circuit,
     power_t: int,
     samples: int,
-    order: Union[int, float, str] = 2,
-    backend: Optional[Backend] = None,
+    order: float | str = 2,
+    backend: Backend | None = None,
 ) -> float:
     """Returns the expressibility :math:`\\|A\\|` of a parametrized circuit,
     where
@@ -996,7 +992,7 @@ def expressibility(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+    from qibo.quantum_info.utils import (
         haar_integral,
         pqc_integral,
     )
@@ -1016,7 +1012,7 @@ def frame_potential(
     circuit: Circuit,
     power_t: int,
     samples: int,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> float:
     """Returns the frame potential of a parametrized circuit under uniform
     sampling of the parameters.
@@ -1096,10 +1092,10 @@ def frame_potential(
 
 def quantum_fisher_information_matrix(
     circuit: Circuit,
-    parameters: Optional[ArrayLike] = None,
-    initial_state: Optional[ArrayLike] = None,
+    parameters: ArrayLike | None = None,
+    initial_state: ArrayLike | None = None,
     return_complex: bool = True,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ) -> ArrayLike:  # pragma: no cover
     """Calculate the Quantum Fisher Information Matrix (QFIM) of a parametrized ``circuit``.
 

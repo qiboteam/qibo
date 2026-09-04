@@ -1,5 +1,3 @@
-from typing import Optional
-
 import networkx as nx
 
 from qibo import gates
@@ -16,7 +14,7 @@ class Preprocessing(Optimizer):
         connectivity (:class:`networkx.Graph`): Hardware connectivity.
     """
 
-    def __init__(self, connectivity: Optional[nx.Graph] = None):
+    def __init__(self, connectivity: nx.Graph | None = None):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit) -> Circuit:
@@ -62,7 +60,7 @@ class Rearrange(Optimizer):
     def __init__(self, max_qubits: int = 1):
         self.max_qubits = max_qubits
 
-    def __call__(self, circuit: Circuit, backend: Optional[Backend] = None) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         backend = _check_backend(backend)
         fused_circuit = circuit.fuse(max_qubits=self.max_qubits)
         new = circuit.__class__(nqubits=circuit.nqubits, wire_names=circuit.wire_names)

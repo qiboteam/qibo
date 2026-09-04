@@ -16,7 +16,6 @@ def main(h_value, collisions, b):
         result of the Grover search and checks if it has found a correct preimage.
     """
     q = 4
-    m = 8
     rot = [1, 2]
     constant_1 = 5
     constant_2 = 9

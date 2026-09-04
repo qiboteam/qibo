@@ -57,7 +57,7 @@ def test_memory_error(backend, accelerators):
     circuit = Circuit(40, accelerators)
     circuit.add(gates.H(i) for i in range(0, 40, 5))
     with pytest.raises(RuntimeError):
-        final_state = backend.execute_circuit(circuit)
+        backend.execute_circuit(circuit)
 
 
 def test_repeated_execute(backend, accelerators):
@@ -85,7 +85,7 @@ def test_final_state_property(backend):
     circuit.add([gates.H(0), gates.H(1)])
 
     with pytest.raises(RuntimeError):
-        final_state = circuit.final_state
+        circuit.final_state
 
     backend.execute_circuit(circuit)._state
     target_state = np.ones(4) / 2

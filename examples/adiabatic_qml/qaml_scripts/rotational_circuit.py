@@ -56,7 +56,7 @@ class rotational_circuit:
         fac = swap * (l - s) / (1 - s)
 
         # (the multiplication by t not sure where does it come from)
-        ti = t / self.finalT
+        t / self.finalT
         real_part = swap * np.cos(integral) * (1 + fac) / normalize
         imag_part = np.sin(integral) * (1 - fac) / normalize
 
@@ -124,7 +124,7 @@ class rotational_circuit:
         fac = self.f(l, s)
 
         norma = self.n(l, s)
-        inside00 = gt = 1 + fac**2 + 2 * fac * np.cos(2 * I)
+        inside00 = 1 + fac**2 + 2 * fac * np.cos(2 * I)
 
         absu00 = norma * np.sqrt(inside00)
 

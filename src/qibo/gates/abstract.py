@@ -2,9 +2,8 @@
 
 import json
 from abc import abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from math import pi
-from typing import List, Sequence, Tuple
 
 import sympy
 from numpy.typing import ArrayLike
@@ -105,7 +104,7 @@ class Gate:
             f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
-    def check_controls(func):  # pylint: disable=E0213
+    def check_controls(func):
         def wrapper(self, *args):
             if self.control_qubits:
                 raise_error(
@@ -114,7 +113,7 @@ class Gate:
                     + f"on gate {self} because it is already "
                     + f"controlled by {self.control_qubits}.",
                 )
-            return func(self, *args)  # pylint: disable=E1102
+            return func(self, *args)
 
         return wrapper
 
@@ -141,7 +140,7 @@ class Gate:
         return a or b
 
     @property
-    def control_qubits(self) -> Tuple[int, ...]:
+    def control_qubits(self) -> tuple[int, ...]:
         """Tuple with ids of control qubits sorted in increasing order."""
         return tuple(sorted(self._control_qubits))
 
@@ -271,7 +270,7 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        from qibo.gates import (  # pylint: disable=import-outside-toplevel
+        from qibo.gates import (
             gates,
             measurements,
         )
@@ -298,7 +297,7 @@ class Gate:
             except RuntimeError as e:  # pragma: no cover
                 if "controlled" in e.args[0]:
                     return gate
-                raise e
+                raise
 
         return gate
 
@@ -360,7 +359,7 @@ class Gate:
         Returns:
             ndarray: Matrix representation of gate.
         """
-        from qibo.backends import _check_backend  # pylint: disable=C0415
+        from qibo.backends import _check_backend
 
         backend = _check_backend(backend)
 
@@ -420,12 +419,12 @@ class Gate:
         return gate
 
     @property
-    def parameters(self) -> Tuple[float, ...]:
+    def parameters(self) -> tuple[float, ...]:
         """Returns a tuple containing the current value of gate's parameters."""
         return self._parameters
 
     @property
-    def qasm_label(self) -> str | Tuple[str, str]:
+    def qasm_label(self) -> str | tuple[str, str]:
         """String corresponding to OpenQASM operation of the gate.
         For more exotic gates, both the internal qibo name of the gate
         and the custom gate QASM definition are returned as a tuple for
@@ -437,7 +436,7 @@ class Gate:
         )
 
     @property
-    def qubits(self) -> Tuple[int, ...]:
+    def qubits(self) -> tuple[int, ...]:
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
@@ -467,7 +466,7 @@ class Gate:
         return encoded_simple
 
     @property
-    def target_qubits(self) -> Tuple[int, ...]:
+    def target_qubits(self) -> tuple[int, ...]:
         """Tuple with ids of target qubits."""
         return self._target_qubits
 
@@ -512,7 +511,7 @@ class Gate:
         """
         try:
             if method == "clifford_plus_t":
-                from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+                from qibo.transpiler.decompositions import (
                     clifford_plus_t,
                 )
 
@@ -523,7 +522,7 @@ class Gate:
                 func._set_precision_cliff_plus_t(epsilon, mpmath_dps)
 
             else:
-                from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+                from qibo.transpiler.decompositions import (
                     standard_decompositions,
                 )
 
@@ -546,7 +545,7 @@ class Gate:
                 + f"for gate {self.__class__.__name__}.",
             )
 
-    def _control_mask_after_stripping(self, gates) -> List[bool]:
+    def _control_mask_after_stripping(self, gates) -> list[bool]:
         """Returns a mask indicating which gates should be controlled."""
         left = 0
         right = len(gates) - 1
@@ -687,7 +686,7 @@ class ParametrizedGate(Gate):
         """
 
     def matrix(self, backend=None) -> ArrayLike:
-        from qibo.backends import _check_backend  # pylint: disable=C0415
+        from qibo.backends import _check_backend
 
         backend = _check_backend(backend)
 

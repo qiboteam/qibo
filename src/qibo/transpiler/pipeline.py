@@ -60,13 +60,15 @@ class Passes:
 
     def __init__(
         self,
-        passes: list = None,
+        passes: list | None = None,
         connectivity: nx.Graph = None,
-        native_gates: NativeGates = NativeGates.default(),
-        on_qubits: list = None,
+        native_gates: NativeGates | None = None,
+        on_qubits: list | None = None,
     ):
         if on_qubits is not None:
             connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
+        if native_gates is None:
+            native_gates = NativeGates.default()
         self.connectivity = connectivity
         self.native_gates = native_gates
         self.passes = [] if passes is None else passes
@@ -93,9 +95,10 @@ class Passes:
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
                 circuit, final_layout = transpiler_pass(circuit)
-            elif isinstance(transpiler_pass, Unroller):
-                circuit = transpiler_pass(circuit)
-            elif transpiler_pass.__class__.__name__ == "QiskitPasses":
+            elif (
+                isinstance(transpiler_pass, Unroller)
+                or transpiler_pass.__class__.__name__ == "QiskitPasses"
+            ):
                 circuit = transpiler_pass(circuit)
             else:
                 raise_error(

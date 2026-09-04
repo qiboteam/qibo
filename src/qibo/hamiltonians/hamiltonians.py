@@ -3,7 +3,7 @@
 from functools import cache, cached_property, reduce
 from itertools import chain
 from operator import add, sub
-from typing import Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import sympy
@@ -14,6 +14,9 @@ from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
 from qibo.symbols import PauliSymbol, Symbol
+
+if TYPE_CHECKING:
+    from qibo.models.circuit import Circuit
 
 
 class Hamiltonian(AbstractHamiltonian):
@@ -30,9 +33,7 @@ class Hamiltonian(AbstractHamiltonian):
             Defaults to ``None``.
     """
 
-    def __init__(
-        self, nqubits: int, matrix: ArrayLike, backend: Optional[Backend] = None
-    ):
+    def __init__(self, nqubits: int, matrix: ArrayLike, backend: Backend | None = None):
         self._backend = _check_backend(backend)
 
         if not (
@@ -105,7 +106,7 @@ class Hamiltonian(AbstractHamiltonian):
         return self._exp.get("result")
 
     def expectation(
-        self, circuit, nshots: Optional[int] = None, qubit_map: Optional[dict] = None
+        self, circuit, nshots: int | None = None, qubit_map: dict | None = None
     ) -> float:
         """Computes the expectation value for a given circuit. This works only for diagonal
         observables if ``nshots != None``.
@@ -120,7 +121,7 @@ class Hamiltonian(AbstractHamiltonian):
         Returns:
             float: The expectation value.
         """
-        if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
+        if circuit.__class__.__name__ != "Circuit":  # pragma: no cover
             log.warning(
                 "Calculation of expectation values starting from the state is deprecated, "
                 + "use the ``expectation_from_state`` method if you really need it, "
@@ -131,7 +132,7 @@ class Hamiltonian(AbstractHamiltonian):
         if nshots is None:
             return self.backend.exp_value_observable_dense(circuit, self.matrix)
 
-        from qibo import gates  # pylint: disable=import-outside-toplevel
+        from qibo import gates
 
         circuit = circuit.copy(True)
         circuit.add(gates.M(*range(self.nqubits)))
@@ -141,8 +142,8 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(
         self,
-        frequencies: Dict[str | int, int],
-        qubit_map: Optional[Tuple[int, ...]] = None,
+        frequencies: dict[str | int, int],
+        qubit_map: tuple[int, ...] | None = None,
     ) -> float:
         """Compute the expectation value starting from some samples, works only for diagonal
         observables.
@@ -154,7 +155,7 @@ class Hamiltonian(AbstractHamiltonian):
         Returns:
             float: The expectation value.
         """
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+        from qibo import Circuit
 
         circuit = Circuit(1)
 
@@ -197,9 +198,7 @@ class Hamiltonian(AbstractHamiltonian):
                     "Only Hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = self.matrix + other.matrix
-        elif isinstance(other, self.backend.numeric_types) or isinstance(
-            other, self.backend.tensor_types
-        ):
+        elif isinstance(other, (self.backend.numeric_types, self.backend.tensor_types)):
             new_matrix = self.matrix + other * self._backend.identity(
                 self.matrix.shape[0], dtype=self.matrix.dtype
             )
@@ -209,7 +208,9 @@ class Hamiltonian(AbstractHamiltonian):
                 f"Hamiltonian addition to {type(other)} not implemented.",
             )
         return self.__class__(
-            self.nqubits, new_matrix, backend=self.backend  # pylint: disable=E0606
+            self.nqubits,
+            new_matrix,
+            backend=self.backend,
         )
 
     def __sub__(self, other):
@@ -230,7 +231,9 @@ class Hamiltonian(AbstractHamiltonian):
                 f"Hamiltonian subtraction to {type(other)} not implemented.",
             )
         return self.__class__(
-            self.nqubits, new_matrix, backend=self.backend  # pylint: disable=E0606
+            self.nqubits,
+            new_matrix,
+            backend=self.backend,
         )
 
     def __rsub__(self, other):
@@ -254,7 +257,9 @@ class Hamiltonian(AbstractHamiltonian):
                 f"Hamiltonian subtraction to {type(other)} not implemented.",
             )
         return self.__class__(
-            self.nqubits, new_matrix, backend=self.backend  # pylint: disable=E0606
+            self.nqubits,
+            new_matrix,
+            backend=self.backend,
         )
 
     def __mul__(self, other):
@@ -329,8 +334,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def __init__(
         self,
         form: sympy.Expr,
-        nqubits: Optional[int] = None,
-        backend: Optional[Backend] = None,
+        nqubits: int | None = None,
+        backend: Backend | None = None,
     ):
         super().__init__()
         if not isinstance(form, sympy.Expr):
@@ -362,7 +367,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
 
     @property
-    def dense(self) -> "MatrixHamiltonian":  # type: ignore
+    def dense(self) -> Hamiltonian:
         """Creates the equivalent Hamiltonian matrix."""
         return self.calculate_dense()
 
@@ -410,7 +415,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return terms
 
     @cached_property
-    def simple_terms(self) -> Tuple[List[float], List[str], List[Tuple[int, ...]]]:
+    def simple_terms(self) -> tuple[list[float], list[str], list[tuple[int, ...]]]:
         """A simpler (more framework agnostic) representation of the of terms
         composing the Hamiltonian, defined as: their scalar coefficients,
         the strings of the names of their observables and the qubits they act on
@@ -457,7 +462,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     @cached_property
     def diagonal_simple_terms(
         self,
-    ) -> Tuple[List[List[float]], List[List[str]], List[List[Tuple[int, ...]]]]:
+    ) -> tuple[list[list[float]], list[list[str]], list[list[tuple[int, ...]]]]:
         """A simpler (more framework agnostic) representation of the simultaneously
         diagonalizable terms of the hamiltonian, defined as: their scalar coefficients,
         the strings of the names of their observables and the qubits they act on.
@@ -501,7 +506,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def exp(self, a: ArrayLike) -> ArrayLike:
         return self.dense.exp(a)
 
-    @cache
+    @cache  # noqa: B019
     def _get_symbol_matrix(self, term):
         """Calculates numerical matrix corresponding to symbolic expression.
 
@@ -565,7 +570,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 f"Cannot calculate matrix for symbolic term of type {type(term)}.",
             )
 
-        return result  # pylint: disable=E0606
+        return result
 
     def _calculate_dense_from_form(self) -> Hamiltonian:
         """Calculates equivalent Hamiltonian using symbolic form.
@@ -583,7 +588,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # costly ``sympy.expand`` call
         return self._calculate_dense_from_form()
 
-    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None) -> float:  # type: ignore
+    def expectation(self, circuit: "Circuit", nshots: int | None = None) -> float:  # type: ignore
         """Computes the expectation value for a given circuit.
 
         Args:
@@ -596,7 +601,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         Returns:
             float: The expectation value.
         """
-        if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
+        if circuit.__class__.__name__ != "Circuit":  # pragma: no cover
             log.warning(
                 "Calculation of expectation values starting from the state is deprecated, "
                 + "use the ``expectation_from_state`` method if you really need it, "
@@ -628,8 +633,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(
         self,
-        frequencies: Dict[str | int, int],
-        qubit_map: Optional[Tuple[int, ...]] = None,
+        frequencies: dict[str | int, int],
+        qubit_map: tuple[int, ...] | None = None,
     ) -> float:
         """Compute the expectation value starting from some samples, works only for diagonal
         observables.
@@ -642,7 +647,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             float: The expectation value.
         """
 
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+        from qibo import Circuit
 
         circuit = Circuit(1)
 
@@ -759,7 +764,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         return self.apply_gates(other, density_matrix=True)
 
-    def circuit(self, dt: Union[float, int], accelerators: Optional[dict] = None):
+    def circuit(self, dt: float, accelerators: dict | None = None):
         """Circuit that implements a Trotter step of this Hamiltonian.
 
         Args:
@@ -767,8 +772,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             accelerators (dict, optional): Dictionary with accelerators for distributed circuits.
                 Defaults to ``None``.
         """
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
-        from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
+        from qibo import Circuit
+        from qibo.hamiltonians.terms import (
             TermGroup,
         )
 
@@ -796,6 +801,5 @@ def _calculate_nqubits_from_form(form):
                 + f"you can define a custom symbol for {symbol} by subclassing "
                 + " ``qibo.symbols.Symbol``.",
             )
-        if q > nqubits:  # pylint: disable=E0606
-            nqubits = q
+        nqubits = max(nqubits, q)
     return nqubits + 1

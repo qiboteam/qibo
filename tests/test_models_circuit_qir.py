@@ -2,9 +2,6 @@
 
 import re
 
-import numpy as np
-import pytest
-from openqasm3 import parser
 from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
 from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
 
@@ -17,7 +14,7 @@ def _clean_qir_code(circuit_code: str) -> str:
     program_id = re.sub(
         r"source_filename = \"([^\"]*)\"", r"\g<1>", circuit_code.split("\n")[1]
     )
-    return re.sub(f"{program_id}", "program-id", circuit_code, flags=re.M)
+    return re.sub(f"{program_id}", "program-id", circuit_code, flags=re.MULTILINE)
 
 
 def test_empty():

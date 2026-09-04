@@ -1,8 +1,6 @@
-import networkx as nx
 import numpy as np
 import pytest
-import qiskit.transpiler.passes as passes
-from qiskit.transpiler import PassManager
+from qiskit.transpiler import PassManager, passes
 
 from qibo import gates
 from qibo.models import Circuit
@@ -141,7 +139,6 @@ def test_custom_passes(backend, router, placer, ngates, nqubits, star_connectivi
         transpiled_circuit=transpiled_circ,
         connectivity=connectivity,
         final_layout=final_layout,
-        native_gates=NativeGates.default(),
     )
 
 

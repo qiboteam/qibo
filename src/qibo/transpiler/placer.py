@@ -1,5 +1,3 @@
-from typing import List, Optional, Tuple
-
 import networkx as nx
 import numpy as np
 
@@ -13,7 +11,7 @@ from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.router import _find_connected_qubit
 
 
-def _find_gates_qubits_pairs(circuit: Circuit) -> List[Tuple[int]]:
+def _find_gates_qubits_pairs(circuit: Circuit) -> list[tuple[int]]:
     """Helper method for :meth:`qibo.transpiler.placer`.
 
     Translate circuit into a list of pairs of qubits to be used by the router and placer.
@@ -50,7 +48,7 @@ class StarConnectivityPlacer(Placer):
         connectivity (:class:`networkx.Graph`): Star connectivity graph.
     """
 
-    def __init__(self, connectivity: Optional[nx.Graph] = None):
+    def __init__(self, connectivity: nx.Graph | None = None):
         self.connectivity = connectivity
         self.middle_qubit = None
 
@@ -73,23 +71,22 @@ class StarConnectivityPlacer(Placer):
                     PlacementError,
                     "Gates targeting more than 2 qubits are not supported",
                 )
-            if len(gate.qubits) == 2:
-                if middle_qubit_idx not in gate.qubits:
-                    new_middle = _find_connected_qubit(
-                        gate.qubits,
-                        circuit.queue[i + 1 :],
-                        error=PlacementError,
-                        mapping=list(range(circuit.nqubits)),
-                    )
+            if len(gate.qubits) == 2 and middle_qubit_idx not in gate.qubits:
+                new_middle = _find_connected_qubit(
+                    gate.qubits,
+                    circuit.queue[i + 1 :],
+                    error=PlacementError,
+                    mapping=list(range(circuit.nqubits)),
+                )
 
-                    (
-                        wire_names[middle_qubit_idx],
-                        wire_names[new_middle],
-                    ) = (
-                        wire_names[new_middle],
-                        wire_names[middle_qubit_idx],
-                    )
-                    break
+                (
+                    wire_names[middle_qubit_idx],
+                    wire_names[new_middle],
+                ) = (
+                    wire_names[new_middle],
+                    wire_names[middle_qubit_idx],
+                )
+                break
 
         circuit.wire_names = wire_names
 
@@ -121,7 +118,7 @@ class Subgraph(Placer):
         connectivity (:class:`networkx.Graph`): Hardware connectivity.
     """
 
-    def __init__(self, connectivity: Optional[nx.Graph] = None):
+    def __init__(self, connectivity: nx.Graph | None = None):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit) -> None:
@@ -181,16 +178,16 @@ class Random(Placer):
 
     def __init__(
         self,
-        connectivity: Optional[nx.Graph] = None,
+        connectivity: nx.Graph | None = None,
         samples: int = 100,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ):
 
         self.connectivity = connectivity
         self.samples = samples
         self.seed = seed
 
-    def __call__(self, circuit, backend: Optional[Backend] = None) -> None:
+    def __call__(self, circuit, backend: Backend | None = None) -> None:
         """Find an initial layout of the given circuit using random greedy algorithm.
 
         Args:
@@ -271,14 +268,14 @@ class ReverseTraversal(Placer):
     def __init__(
         self,
         routing_algorithm: Router,
-        connectivity: Optional[nx.Graph] = None,
-        depth: Optional[int] = None,
+        connectivity: nx.Graph | None = None,
+        depth: int | None = None,
     ):
         self.connectivity = connectivity
         self.routing_algorithm = routing_algorithm
         self.depth = depth
 
-    def __call__(self, circuit: Circuit, backend: Optional[Backend] = None) -> None:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Find the initial layout of the given circuit using Reverse Traversal placement.
 
         Args:

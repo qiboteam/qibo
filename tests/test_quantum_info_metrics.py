@@ -40,7 +40,7 @@ def test_purity_and_impurity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = purity(state, backend=backend)
+        purity(state, backend=backend)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
@@ -67,19 +67,19 @@ def test_trace_distance(backend):
     with pytest.raises(TypeError):
         state = random_density_matrix(2, pure=True, backend=backend)
         target = random_density_matrix(4, pure=True, backend=backend)
-        test = trace_distance(state, target, backend=backend)
+        trace_distance(state, target, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        test = trace_distance(state, target, backend=backend)
+        trace_distance(state, target, backend=backend)
     with pytest.raises(TypeError):
         state = np.array([])
         target = np.array([])
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=state.dtype)
-        test = trace_distance(state, target, backend=backend)
+        trace_distance(state, target, backend=backend)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
@@ -158,13 +158,13 @@ def test_fidelity_and_infidelity_and_bures(backend):
     with pytest.raises(TypeError):
         state = random_density_matrix(2, pure=True, backend=backend)
         target = random_density_matrix(4, pure=True, backend=backend)
-        test = fidelity(state, target, backend=backend)
+        fidelity(state, target, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        test = fidelity(state, target, backend=backend)
+        fidelity(state, target, backend=backend)
 
     state = backend.maximally_mixed_state(4)
     target = backend.maximally_mixed_state(4)
@@ -278,20 +278,26 @@ def test_process_fidelity_and_infidelity(backend, seed):
     d = 2
     rng = np.random.default_rng(seed)
     with pytest.raises(TypeError):
-        channel = rng.random(d**2, d**2)
-        target = rng.random(d**2, d)
+        channel = rng.random((d**2, d**2))
+        target = rng.random((d**2, d))
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        test = process_fidelity(channel, target, backend=backend)
+        process_fidelity(channel, target, backend=backend)
+    with pytest.raises(TypeError):
+        channel = rng.random((d**2, d**2))
+        target = rng.random((d**2, d))
+        channel = backend.cast(channel, dtype=channel.dtype)
+        target = backend.cast(target, dtype=target.dtype)
+        process_infidelity(channel, target, backend=backend)
     with pytest.raises(TypeError):
         channel = random_hermitian(d**2, seed=rng, backend=backend)
-        test = process_fidelity(channel, check_unitary=True, backend=backend)
+        process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
-        channel = 10 * rng.random(d**2, d**2)
-        target = 10 * rng.random(d**2, d**2)
+        channel = 10 * rng.random((d**2, d**2))
+        target = 10 * rng.random((d**2, d**2))
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        test = process_fidelity(channel, target, check_unitary=True, backend=backend)
+        process_fidelity(channel, target, check_unitary=True, backend=backend)
 
     channel = backend.identity(d**2)
 
@@ -441,4 +447,4 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
         params = np.random.rand(3)
         params = backend.cast(params, dtype=params.dtype)
         with pytest.raises(NotImplementedError):
-            test = quantum_fisher_information_matrix(circuit, params, backend=backend)
+            quantum_fisher_information_matrix(circuit, params, backend=backend)

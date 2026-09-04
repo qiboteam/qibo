@@ -35,17 +35,17 @@ def test_abstract_callback_properties():
 
 
 def test_creating_callbacks():
-    callback = EntanglementEntropy()
-    callback = EntanglementEntropy([1, 2], compute_spectrum=True)
-    callback = Norm()
-    callback = Overlap(0)
-    callback = Energy("test")
-    callback = Gap()
-    callback = Gap(2)
+    EntanglementEntropy()
+    EntanglementEntropy([1, 2], compute_spectrum=True)
+    Norm()
+    Overlap(0)
+    Energy("test")
+    Gap()
+    Gap(2)
     with pytest.raises(ValueError):
-        callback = Gap("test")
+        Gap("test")
     with pytest.raises(TypeError):
-        callback = Gap(1.0)
+        Gap(1.0)
 
 
 def test_getitem_bad_indexing(backend):
@@ -54,7 +54,7 @@ def test_getitem_bad_indexing(backend):
     circuit.add(gates.RY(0, 0.1234))
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CallbackGate(entropy))
-    final_state = backend.execute_circuit(circuit)
+    backend.execute_circuit(circuit)
     entropy[0]
     with pytest.raises(IndexError):
         entropy[1]
@@ -105,7 +105,7 @@ def test_entropy_in_circuit(backend, density_matrix, base):
     circuit.add(gates.CallbackGate(entropy))
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(circuit)
+    backend.execute_circuit(circuit)
 
     target = [0, 0, np.log(2)] / np.log(base)
     values = [backend.to_numpy(x) for x in entropy]
@@ -275,7 +275,7 @@ def test_state_callback(backend, density_matrix, copy):
     circuit.add(gates.CallbackGate(statec))
     circuit.add(gates.H(1))
     circuit.add(gates.CallbackGate(statec))
-    final_state = backend.execute_circuit(circuit)
+    backend.execute_circuit(circuit)
 
     target_state0 = backend.cast([1, 0, 1, 0]) / float(np.sqrt(2))
     target_state1 = backend.ones(4) / 2.0
@@ -381,7 +381,7 @@ def test_gap(backend, dense, check_degenerate):
     evolution = AdiabaticEvolution(
         h0, h1, lambda t: t, dt=1e-1, callbacks=[gap, ground, excited]
     )
-    final_state = evolution(final_time=1.0)
+    evolution(final_time=1.0)
     targets = {k: np.stack(v) for k, v in targets.items()}
 
     values = {

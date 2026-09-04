@@ -24,7 +24,7 @@ def duerr_hoyer_algo(distances):
         New cluster assigned for that point.
     """
     qibo.set_backend(backend="qiboml", platform="tensorflow")
-    tf = qibo.get_backend().tf
+    qibo.get_backend().tf
 
     k = len(distances)
     n = int(math.floor(math.log2(k)) + 1)
@@ -32,7 +32,7 @@ def duerr_hoyer_algo(distances):
     # choose random threshold
     index_rand = np.random.choice(k)
     threshold = distances[index_rand]
-    max_iters = int(math.ceil(np.sqrt(2**n)))
+    max_iters = math.ceil(np.sqrt(2**n))
 
     for _ in range(max_iters):
         qc = Circuit(n)

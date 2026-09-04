@@ -102,7 +102,7 @@ def test_measurement_gate_errors(backend):
         gate.controlled_by(1)
     # attempting to construct unitary
     with pytest.raises(NotImplementedError):
-        matrix = gate.matrix(backend)
+        gate.matrix(backend)
 
 
 def test_measurement_circuit(backend, accelerators):
@@ -246,7 +246,7 @@ def test_circuit_copy_with_measurements(backend, accelerators):
     rg1 = r1.frequencies(registers=True)
     rg2 = r2.frequencies(registers=True)
     assert rg1.keys() == rg2.keys()
-    for k in rg1.keys():
+    for k in rg1:
         assert rg1[k] == rg2[k]
 
 
@@ -283,7 +283,7 @@ def test_final_state(backend, accelerators):
     circuit.add(gates.M(0, 1))
     circuit.add(gates.M(2))
     circuit.add(gates.X(3))
-    result = backend.execute_circuit(circuit, nshots=100)
+    backend.execute_circuit(circuit, nshots=100)
     circuit = Circuit(4, accelerators)
     circuit.add(gates.X(1))
     circuit.add(gates.X(2))
@@ -293,13 +293,13 @@ def test_final_state(backend, accelerators):
 
 
 def test_measurement_gate_bitflip_errors():
-    gate = gates.M(0, 1, p0=2 * [0.1])
+    gates.M(0, 1, p0=2 * [0.1])
     with pytest.raises(ValueError):
-        gate = gates.M(0, 1, p0=4 * [0.1])
+        gates.M(0, 1, p0=4 * [0.1])
     with pytest.raises(KeyError):
-        gate = gates.M(0, 1, p0={0: 0.1, 2: 0.2})
+        gates.M(0, 1, p0={0: 0.1, 2: 0.2})
     with pytest.raises(TypeError):
-        gate = gates.M(0, 1, p0="test")
+        gates.M(0, 1, p0="test")
 
 
 def test_register_measurements(backend):
@@ -381,7 +381,6 @@ def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
     circuit.add(gates.M(1, 4, register_name="B"))
     result = backend.execute_circuit(circuit, nshots=100)
 
-    target = {}
     decimal_samples = {"A": np.ones((100,)), "B": 2 * np.ones((100,))}
     binary_samples = {"A": np.zeros((100, 2)), "B": np.zeros((100, 2))}
     binary_samples["A"][:, 1] = 1
@@ -450,10 +449,13 @@ def test_measurement_basis_list(backend):
     circuit.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
     result = backend.execute_circuit(circuit, nshots=100)
     assert result.frequencies() == {"0011": 100}
-    assert str(circuit) == """q0: ─H─H───M─
+    assert (
+        str(circuit)
+        == """q0: ─H─H───M─
 q1: ───────M─
 q2: ─X─H─H─M─
 q3: ─X─────M─"""
+    )
 
 
 def test_measurement_basis_list_error():

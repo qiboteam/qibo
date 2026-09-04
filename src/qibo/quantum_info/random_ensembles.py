@@ -2,7 +2,6 @@
 
 import math
 import warnings
-from typing import Optional, Union
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -47,7 +46,7 @@ class _probability_distribution_sin(rv_continuous):  # pragma: no cover
 
 
 def uniform_sampling_U3(
-    ngates: int, seed: Optional[int] = None, backend: Optional[Backend] = None
+    ngates: int, seed: int | None = None, backend: Backend | None = None
 ):
     """Samples parameters for Haar-random :class:`qibo.gates.U3`.
 
@@ -91,11 +90,11 @@ def uniform_sampling_U3(
 
 def random_gaussian_matrix(
     dims: int,
-    rank: Optional[int] = None,
+    rank: int | None = None,
     mean: float = 0.0,
     stddev: float = 1.0,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Generates a random Gaussian Matrix.
 
@@ -156,8 +155,8 @@ def random_hermitian(
     dims: int,
     semidefinite: bool = False,
     normalize: bool = False,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Generates a random Hermitian matrix :math:`H`, i.e.
     a random matrix such that :math:`H = H^{\\dagger}.`
@@ -196,9 +195,9 @@ def random_hermitian(
 
 def random_unitary(
     dims: int,
-    measure: Optional[str] = None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    measure: str | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Returns a random Unitary operator :math:`U`, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
@@ -235,16 +234,16 @@ def random_unitary(
 def random_quantum_channel(
     dims: int,
     representation: str = "liouville",
-    measure: Optional[str] = None,
-    rank: Optional[int] = None,
+    measure: str | None = None,
+    rank: int | None = None,
     order: str = "row",
     normalize: bool = False,
-    precision_tol: Optional[float] = None,
+    precision_tol: float | None = None,
     validate_cp: bool = True,
-    nqubits: Optional[int] = None,
+    nqubits: int | None = None,
     initial_state_env=None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Creates a random superoperator from an unitary operator in one of the
     supported superoperator representations.
@@ -309,13 +308,12 @@ def random_quantum_channel(
         "liouville",
         "pauli",
         "stinespring",
+    ) and (
+        ("chi-" not in representation and "pauli-" not in representation)
+        or len(representation.split("-")) != 2
+        or set(representation.split("-")[1]) != {"I", "X", "Y", "Z"}
     ):
-        if (
-            ("chi-" not in representation and "pauli-" not in representation)
-            or len(representation.split("-")) != 2
-            or set(representation.split("-")[1]) != {"I", "X", "Y", "Z"}
-        ):
-            raise_error(ValueError, f"representation {representation} not implemented.")
+        raise_error(ValueError, f"representation {representation} not implemented.")
 
     backend = _check_backend(backend)
     backend.set_seed(seed)
@@ -379,9 +377,9 @@ def random_quantum_channel(
 
 def random_statevector(
     dims: int,
-    dtype: Optional[DTypeLike] = None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    dtype: DTypeLike | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
@@ -430,14 +428,14 @@ def random_statevector(
 
 def random_density_matrix(
     dims: int,
-    rank: Optional[int] = None,
+    rank: int | None = None,
     pure: bool = False,
     metric: str = "hilbert-schmidt",
-    basis: Optional[str] = None,
+    basis: str | None = None,
     normalize: bool = False,
     order: str = "row",
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Creates a random density matrix :math:`\\rho`. If ``pure=True``,
 
@@ -490,13 +488,16 @@ def random_density_matrix(
     if metric not in ["hilbert-schmidt", "ginibre", "bures"]:
         raise_error(ValueError, f"metric {metric} not implemented.")
 
-    if basis is not None and basis != "pauli":
-        if (
+    if (
+        basis is not None
+        and basis != "pauli"
+        and (
             "pauli-" not in basis
             or len(basis.split("-")) != 2
             or set(basis.split("-")[1]) != {"I", "X", "Y", "Z"}
-        ):
-            raise_error(ValueError, f"basis {basis} nor recognized.")
+        )
+    ):
+        raise_error(ValueError, f"basis {basis} nor recognized.")
 
     if normalize and basis is None:
         raise_error(ValueError, "normalize cannot be True when basis=None.")
@@ -531,8 +532,8 @@ def random_density_matrix(
 def random_clifford(
     nqubits: int,
     return_circuit: bool = True,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ):
     """Generates a random :math:`n`-qubit Clifford operator, where :math:`n` is ``nqubits``.
@@ -656,12 +657,12 @@ def random_clifford(
 def random_pauli(
     qubits,
     depth: int,
-    max_qubits: Optional[int] = None,
-    subset: Optional[list] = None,
+    max_qubits: int | None = None,
+    subset: list | None = None,
     return_circuit: bool = True,
     density_matrix: bool = False,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Creates random Pauli operator(s).
 
@@ -767,11 +768,11 @@ def random_pauli(
 
 def random_pauli_hamiltonian(
     nqubits: int,
-    max_eigenvalue: Optional[Union[int, float]] = None,
+    max_eigenvalue: float | None = None,
     normalize: bool = False,
     pauli_order: str = "IXYZ",
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Generates a random Hamiltonian in the Pauli basis.
 
@@ -804,7 +805,7 @@ def random_pauli_hamiltonian(
     if isinstance(max_eigenvalue, (int, float)) is False and normalize is True:
         raise_error(
             TypeError,
-            f"when normalize=True, max_eigenvalue must be type float, "
+            "when normalize=True, max_eigenvalue must be type float, "
             + f"but it is {type(max_eigenvalue)}.",
         )
     elif (
@@ -872,10 +873,10 @@ def random_stochastic_matrix(
     dims: int,
     bistochastic: bool = False,
     diagonally_dominant: bool = False,
-    precision_tol: Optional[float] = None,
-    max_iterations: Optional[int] = None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    precision_tol: float | None = None,
+    max_iterations: int | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Creates a random stochastic matrix.
 

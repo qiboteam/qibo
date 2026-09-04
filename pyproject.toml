@@ -45,6 +45,54 @@ optional = true
 pdbpp = "^0.10.3"
 ipython = "^8.34.0"
 
+[tool.poetry.group.analysis]
+optional = true
+
+[tool.poetry.group.analysis.dependencies]
+ruff = "^0.16.5"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+extend-select = ["I", "UP"]
+ignore = ["BLE001"] # TODO: BLE001 is about except Exception, fix properly
+
+[tool.ruff.lint.per-file-ignores]
+# Optional-dependency tests: the import is commented out and the module is
+# skipped, so the names are only referenced inside skipped code.
+"tests/test_backends_qibotn.py" = ["F821"]
+"tests/test_cirq.py" = ["F821"]
+"tests/test_models_circuit_cudaq.py" = ["F821"]
+"tests/test_models_circuit_qasm_cirq.py" = ["F821"]
+# Intentional bare expressions: attribute access inside ``pytest.raises``
+# (to trigger the exception) and smoke-test attribute reads.
+"tests/test_backends_global.py" = ["B018"]
+"tests/test_gates_gates.py" = ["B018"]
+"tests/test_hamiltonians_symbolic.py" = ["B018"]
+"tests/test_models_circuit_execution.py" = ["B018"]
+"tests/test_models_distcircuit.py" = ["B018"]
+"tests/test_models_evolution.py" = ["B018"]
+# Standalone illustrative example scripts and notebooks: shebangs are
+# intentional (scripts meant to be run), notebooks produce cell-level F821
+# false positives, and the rest are pedagogical code not part of the library.
+"examples/**" = [
+  "B018",
+  "B019",
+  "E722",
+  "EXE001",
+  "F821",
+  "PLW0127",
+  "RUF059",
+  "S102",
+  "S110",
+  "SIM113",
+  "SIM115",
+  "TRY002",
+  "UP031",
+]
+
 [tool.poetry.group.docs]
 optional = true
 
@@ -67,7 +115,6 @@ optional = true
 [tool.poetry.group.tests.dependencies]
 pytest = ">=7.2.1,<10.0.0"
 pytest-cov = "^4.0.0"
-pylint = "^3.3.5"
 matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "ch" }
 stim = "^1.15.0"
@@ -78,8 +125,12 @@ pygridsynth = "^2.0.0"
 
 [tool.poe.tasks]
 test = "pytest"
-lint = "pylint src --errors-only"
-lint-warnings = "pylint src --exit-zero"
+lint = "ruff check"
+lint-warnings = """
+  ruff check --exit-zero \
+  --select F,E,W,C90,N,UP,BLE,FBT,B,A,C4,T10,EM,EXE,ISC,ICN,LOG,G,INP,PIE,T20,PT,Q,RSE,\
+           RET,SLF,SLOT,SIM,TC,INT,ARG,PTH,ERA,NPY,PERF,RUF
+"""
 docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
@@ -107,12 +158,6 @@ qinfo = ["stim"]
 qulacs = ["qulacs"]
 cudaq = ["qbraid"]
 qir = ["qbraid"]
-
-[tool.pylint.main]
-ignored-modules = ["cvxpy", "torch"]
-
-[tool.pylint.reports]
-output-format = "colorized"
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']

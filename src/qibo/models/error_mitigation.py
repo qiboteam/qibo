@@ -1,10 +1,11 @@
 """Error Mitigation Methods."""
 
 import math
+from collections.abc import Callable
 from functools import cache, reduce
 from inspect import signature
 from operator import mul
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -19,6 +20,9 @@ from qibo.backends import (
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.noise import NoiseModel
+
+if TYPE_CHECKING:
+    from qibo.models.circuit import Circuit
 from qibo.result import CircuitResult
 from qibo.symbols import X, Y, Z
 
@@ -27,7 +31,7 @@ from qibo.symbols import X, Y, Z
 @cache
 def SIMULATION_BACKEND():
     """Cached Numpy backend."""
-    from qibo.backends import NumpyBackend  # pylint: disable=import-outside-toplevel
+    from qibo.backends import NumpyBackend
 
     return NumpyBackend()
 
@@ -35,7 +39,7 @@ def SIMULATION_BACKEND():
 @cache
 def CLIFFORD_BACKEND(platform: str = "numpy"):
     """Cached Clifford backend."""
-    from qibo.backends import CliffordBackend  # pylint: disable=import-outside-toplevel
+    from qibo.backends import CliffordBackend
 
     return CliffordBackend(platform)
 
@@ -85,7 +89,7 @@ def get_noisy_circuit(
     circuit: "Circuit",  # type: ignore
     num_insertions: int,
     global_unitary_folding: bool = True,
-    insertion_gate: bool = None,
+    insertion_gate: bool | None = None,
 ):
     """Standalone function to generate the noisy circuit with the inverse gate pairs insertions.
 
@@ -101,7 +105,7 @@ def get_noisy_circuit(
     Returns:
         :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
     """
-    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    from qibo import Circuit
 
     if global_unitary_folding:
         copy_circuit = Circuit(**circuit.init_kwargs)
@@ -160,17 +164,17 @@ def get_noisy_circuit(
 
 def ZNE(
     circuit: "Circuit",  # type: ignore
-    observable: Union[Hamiltonian, SymbolicHamiltonian],
+    observable: Hamiltonian | SymbolicHamiltonian,
     noise_levels: ArrayLike,
     noise_model: NoiseModel = None,
     nshots: int = 10000,
     solve_for_gammas: bool = False,
     global_unitary_folding: bool = True,
     insertion_gate: str = "CNOT",
-    readout: dict = None,
-    qubit_map: List[int] = None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    readout: dict | None = None,
+    qubit_map: list[int] | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Runs the Zero Noise Extrapolation (ZNE) method for error mitigation.
 
@@ -260,10 +264,10 @@ def ZNE(
 
 def sample_training_circuit_cdr(
     circuit: "Circuit",  # type: ignore
-    replacement_gates: List[Tuple[str, dict]] = None,
+    replacement_gates: list[tuple[str, dict]] | None = None,
     sigma: float = 0.5,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
 
@@ -294,9 +298,8 @@ def sample_training_circuit_cdr(
         replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
     gates_to_replace = []
     for i, gate in enumerate(circuit.queue):
-        if isinstance(gate, gates.RZ):
-            if not gate.clifford:
-                gates_to_replace.append((i, gate))
+        if isinstance(gate, gates.RZ) and not gate.clifford:
+            gates_to_replace.append((i, gate))
     if not gates_to_replace:
         raise_error(ValueError, "No non-Clifford RZ gate found, no circuit sampled.")
     replacement, distance = [], []
@@ -357,11 +360,11 @@ def sample_training_circuit_cdr(
 
 def _curve_fit(
     backend: Backend,
-    model: callable,
+    model: Callable,
     params: ArrayLike,
     xdata: ArrayLike,
     ydata: ArrayLike,
-    lr: Union[float, int] = 1.0,
+    lr: float = 1.0,
     max_iter: int = 100,
     tolerance_grad: float = 1e-5,
 ):
@@ -419,16 +422,16 @@ def _curve_fit(
 
 def CDR(
     circuit: "Circuit",  # type: ignore
-    observable: Union[Hamiltonian, SymbolicHamiltonian],
+    observable: Hamiltonian | SymbolicHamiltonian,
     noise_model: NoiseModel,
     nshots: int = 10000,
-    model: callable = lambda x, a, b: a * x + b,
+    model: Callable = lambda x, a, b: a * x + b,
     n_training_samples: int = 100,
     full_output: bool = False,
-    readout: Optional[dict] = None,
-    qubit_map: Optional[List[int]] = None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    readout: dict | None = None,
+    qubit_map: list[int] | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Runs the Clifford Data Regression error mitigation method.
 
@@ -558,18 +561,18 @@ def CDR(
 
 def vnCDR(
     circuit: "Circuit",  # type: ignore
-    observable: Union[Hamiltonian, SymbolicHamiltonian],
+    observable: Hamiltonian | SymbolicHamiltonian,
     noise_levels: ArrayLike,
     noise_model: NoiseModel,
     nshots: int = 10000,
-    model: callable = None,
+    model: Callable | None = None,
     n_training_samples: int = 100,
     insertion_gate: str = "CNOT",
     full_output: bool = False,
-    readout: Optional[dict] = None,
-    qubit_map: Optional[List[int]] = None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    readout: dict | None = None,
+    qubit_map: list[int] | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Runs the variable-noise Clifford Data Regression error mitigation method.
 
@@ -748,10 +751,10 @@ def iterative_bayesian_unfolding(
 
 def get_response_matrix(
     nqubits: int,
-    qubit_map: Optional[List[int]] = None,
-    noise_model: Optional[NoiseModel] = None,
+    qubit_map: list[int] | None = None,
+    noise_model: NoiseModel | None = None,
     nshots: int = 10000,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ):
     """Computes the response matrix for readout mitigation.
 
@@ -770,7 +773,7 @@ def get_response_matrix(
     Returns:
         ArrayLike: the computed (`nqubits`, `nqubits`) response matrix for readout mitigation.
     """
-    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    from qibo import Circuit
 
     backend = _check_backend(backend)
 
@@ -800,7 +803,7 @@ def get_response_matrix(
 
 
 def apply_resp_mat_readout_mitigation(
-    state: CircuitResult, response_matrix: ArrayLike, iterations: Optional[int] = None
+    state: CircuitResult, response_matrix: ArrayLike, iterations: int | None = None
 ):
     """
     Applies readout error mitigation to the given state using the provided response matrix.
@@ -838,7 +841,7 @@ def apply_resp_mat_readout_mitigation(
         ) * np.sum(frequencies)
 
     for i, value in enumerate(mitigated_frequencies):
-        state._frequencies[i] = float(value[0].real)  # pylint: disable=W0212
+        state._frequencies[i] = float(value[0].real)
 
     return state
 
@@ -849,7 +852,7 @@ def apply_randomized_readout_mitigation(
     nshots: int = 10000,
     ncircuits: int = 10,
     qubit_map=None,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     backend=None,
 ):
     """Readout mitigation method that transforms the bias in an expectation value into a
@@ -884,8 +887,8 @@ def apply_randomized_readout_mitigation(
         *Model-free readout-error mitigation for quantum expectation values*.
         `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
     """
-    from qibo import Circuit  # pylint: disable=import-outside-toplevel
-    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+    from qibo import Circuit
+    from qibo.quantum_info import (
         random_pauli,
     )
 
@@ -919,7 +922,7 @@ def apply_randomized_readout_mitigation(
             result = _execute_circuit(
                 circ, qubit_map, noise_model, nshots_r, backend=backend
             )
-            result._samples = result.apply_bitflips(error_map)  # pylint: disable=W0212
+            result._samples = result.apply_bitflips(error_map)
             results.append(result)
             freqs.append(result.frequencies(binary=False))
         freq[k, :] = freqs
@@ -929,20 +932,20 @@ def apply_randomized_readout_mitigation(
         freq_sum = freq[0, j]
         for frs in freq[1::, j]:
             freq_sum += frs
-        results[j]._frequencies = freq_sum  # pylint: disable=W0212
+        results[j]._frequencies = freq_sum
 
     return results
 
 
 def get_expectation_val_with_readout_mitigation(
     circuit: "Circuit",  # type: ignore
-    observable: Union[Hamiltonian, SymbolicHamiltonian],
-    noise_model: Optional[NoiseModel] = None,
+    observable: Hamiltonian | SymbolicHamiltonian,
+    noise_model: NoiseModel | None = None,
     nshots: int = 10000,
-    readout: Optional[dict] = None,
-    qubit_map: Optional[List[int]] = None,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    readout: dict | None = None,
+    qubit_map: list[int] | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """CDR: Applies readout error mitigation to the given circuit and observable.
 
@@ -982,7 +985,7 @@ def get_expectation_val_with_readout_mitigation(
 
     if len(circuit.measurements) == 0:
         circuit = circuit.copy()
-        circuit._final_state = None  # pylint: disable=W0212
+        circuit._final_state = None
         qubits = [
             factor.target_qubit
             for term in observable.terms
@@ -992,14 +995,12 @@ def get_expectation_val_with_readout_mitigation(
         circuit.add(gates.M(*qubits))
 
     if "ncircuits" in readout:
-        circuit_result, circuit_result_cal = (  # pylint: disable=W0632
-            apply_randomized_readout_mitigation(
-                circuit,
-                noise_model,
-                nshots,
-                readout["ncircuits"],
-                backend=backend,
-            )
+        circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
+            circuit,
+            noise_model,
+            nshots,
+            readout["ncircuits"],
+            backend=backend,
         )
     else:
         circuit_result = _execute_circuit(
@@ -1022,8 +1023,8 @@ def get_expectation_val_with_readout_mitigation(
 
 def sample_clifford_training_circuit(
     circuit: "Circuit",  # type: ignore
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """Samples a training circuit for CDR by susbtituting all the non-Clifford gates.
 
@@ -1039,7 +1040,7 @@ def sample_clifford_training_circuit(
     Returns:
         :class:`qibo.models.Circuit`: the sampled circuit.
     """
-    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info import (
         random_clifford,
     )
 
@@ -1079,9 +1080,9 @@ def sample_clifford_training_circuit(
 
 def error_sensitive_circuit(
     circuit: "Circuit",  # type: ignore
-    observable: Union[Hamiltonian, SymbolicHamiltonian],
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    observable: Hamiltonian | SymbolicHamiltonian,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """
     Generates a Clifford circuit that preserves the same circuit frame as the input circuit,
@@ -1189,15 +1190,15 @@ def error_sensitive_circuit(
 
 def ICS(
     circuit: "Circuit",  # type: ignore
-    observable: Union[Hamiltonian, SymbolicHamiltonian],
-    readout: Optional[dict] = None,
-    qubit_map: Optional[List[int]] = None,
-    noise_model: Optional[NoiseModel] = None,
+    observable: Hamiltonian | SymbolicHamiltonian,
+    readout: dict | None = None,
+    qubit_map: list[int] | None = None,
+    noise_model: NoiseModel | None = None,
     nshots: int = int(1e4),
     n_training_samples: int = 10,
     full_output: bool = False,
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
 ):
     """
     Computes the Important Clifford Sampling method.

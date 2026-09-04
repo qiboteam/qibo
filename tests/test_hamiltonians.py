@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from scipy import sparse
 
-from qibo import Circuit, gates, hamiltonians
+from qibo import Circuit, gates
 from qibo.backends import construct_backend
 from qibo.hamiltonians.hamiltonians import Hamiltonian
 from qibo.hamiltonians.models import TFIM, XXZ, SymbolicHamiltonian
@@ -23,13 +23,13 @@ from .utils import random_sparse_matrix
 
 def test_hamiltonian_init(backend):
     with pytest.raises(TypeError):
-        H = Hamiltonian(2, "test", backend=backend)
+        Hamiltonian(2, "test", backend=backend)
     with pytest.raises(ValueError):
-        H1 = Hamiltonian(-2, np.eye(4), backend=backend)
+        Hamiltonian(-2, np.eye(4), backend=backend)
     with pytest.raises(RuntimeError):
-        H2 = Hamiltonian(np.eye(2), np.eye(4), backend=backend)
+        Hamiltonian(np.eye(2), np.eye(4), backend=backend)
     with pytest.raises(ValueError):
-        H3 = Hamiltonian(4, np.eye(10), backend=backend)
+        Hamiltonian(4, np.eye(10), backend=backend)
 
 
 @pytest.mark.parametrize(
@@ -151,9 +151,9 @@ def test_hamiltonian_addition(backend, sparse_type):
     H1 = XXZ(nqubits=2, delta=0.5, backend=backend)
     H2 = XXZ(nqubits=3, delta=0.1, backend=backend)
     with pytest.raises(RuntimeError):
-        R = H1 + H2
+        H1 + H2
     with pytest.raises(RuntimeError):
-        R = H1 - H2
+        H1 - H2
 
 
 def test_hamiltonian_operation_errors(backend):
@@ -162,15 +162,15 @@ def test_hamiltonian_operation_errors(backend):
     H2 = XXZ(nqubits=2, delta=0.1, backend=backend)
 
     with pytest.raises(NotImplementedError):
-        R = H1 * H2
+        H1 * H2
     with pytest.raises(NotImplementedError):
-        R = H1 + "a"
+        H1 + "a"
     with pytest.raises(NotImplementedError):
-        R = H1 * "a"
+        H1 * "a"
     with pytest.raises(NotImplementedError):
-        R = H2 - (2,)
+        H2 - (2,)
     with pytest.raises(NotImplementedError):
-        R = [3] - H1
+        [3] - H1
 
 
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])

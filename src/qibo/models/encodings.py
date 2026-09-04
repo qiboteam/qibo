@@ -2,7 +2,6 @@
 
 import math
 from inspect import signature
-from typing import List, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -10,7 +9,7 @@ from scipy.special import binom
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
@@ -40,10 +39,10 @@ from qibo.models.circuit import Circuit
 def binary_encoder(
     nqubits: int,
     parametrization: str = "hyperspherical",
-    data: Optional[ArrayLike] = None,
-    codewords: Optional[List[int]] = None,
+    data: ArrayLike | None = None,
+    codewords: list[int] | None = None,
     keep_antictrls: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
@@ -150,7 +149,7 @@ def binary_encoder(
 
 
 def comp_basis_encoder(
-    basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None, **kwargs
+    basis_element: int | str | list | tuple, nqubits: int | None = None, **kwargs
 ) -> Circuit:
     """Create circuit that performs encoding of bitstrings into computational basis states.
 
@@ -177,9 +176,10 @@ def comp_basis_encoder(
             + f"but it is type {type(basis_element)}.",
         )
 
-    if isinstance(basis_element, (str, list, tuple)):
-        if any(elem not in ["0", "1", 0, 1] for elem in basis_element):
-            raise_error(ValueError, "all elements must be 0 or 1.")
+    if isinstance(basis_element, (str, list, tuple)) and any(
+        elem not in ["0", "1", 0, 1] for elem in basis_element
+    ):
+        raise_error(ValueError, "all elements must be 0 or 1.")
 
     if nqubits is not None and not isinstance(nqubits, int):
         raise_error(
@@ -331,7 +331,7 @@ def dicke_state(
 def entangling_layer(
     nqubits: int,
     architecture: str = "diagonal",
-    entangling_gate: Union[str, gates.Gate] = "CNOT",
+    entangling_gate: str | gates.Gate = "CNOT",
     closed_boundary: bool = False,
     **kwargs,
 ) -> Circuit:
@@ -457,7 +457,7 @@ def entangling_layer(
 
 def fanout_synthesis(
     qubits: list[int] | tuple[int],
-    nqubits: Optional[int] = None,
+    nqubits: int | None = None,
     **kwargs,
 ) -> Circuit:
     """Synthesis of the Fanout gate in logarithmic depth.
@@ -527,9 +527,7 @@ def ghz_state(nqubits: int, **kwargs) -> Circuit:
     return circuit
 
 
-def graph_state(
-    matrix: ArrayLike, backend: Optional[Backend] = None, **kwargs
-) -> Circuit:
+def graph_state(matrix: ArrayLike, backend: Backend | None = None, **kwargs) -> Circuit:
     """Create circuit encoding an undirected graph state given its adjacency matrix.
 
     Given a graph :math:`G = (V, E)` with :math:`V` being the set of vertices and :math:`E`
@@ -579,13 +577,13 @@ def graph_state(
 def hamming_weight_encoder(
     nqubits: int,
     weight: int,
-    data: Optional[ArrayLike] = None,
+    data: ArrayLike | None = None,
     complex_data: bool = False,
     full_hwp: bool = False,
     optimize_controls: bool = True,
     phase_correction: bool = True,
-    initial_string: Optional[ArrayLike] = None,
-    backend: Optional[Backend] = None,
+    initial_string: ArrayLike | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
@@ -708,7 +706,7 @@ def hamming_weight_encoder(
 
 def ladder_synthesis(
     qubits: list[int] | tuple[int],
-    nqubits: Optional[int] = None,
+    nqubits: int | None = None,
     return_circuit: bool = False,
     **kwargs,
 ) -> list[Gate] | Circuit:
@@ -758,9 +756,9 @@ def ladder_synthesis(
 
 
 def permutation_synthesis(
-    sigma: Union[List[int], tuple[int, ...]],
+    sigma: list[int] | tuple[int, ...],
     m: int = 2,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Return circuit that implements a given permutation.
@@ -811,7 +809,7 @@ def permutation_synthesis(
     if m > 0 and (m & (m - 1)) != 0:
         raise_error(ValueError, "budget ``m`` must be a power of 2.")
 
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info.utils import (
         decompose_permutation,
     )
 
@@ -838,8 +836,8 @@ def permutation_synthesis(
 def phase_encoder(
     nqubits: int,
     rotation: str = "RY",
-    data: Optional[ArrayLike] = None,
-    backend: Optional[Backend] = None,
+    data: ArrayLike | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Create circuit that performs the phase encoding of ``data``.
@@ -886,8 +884,8 @@ def phase_encoder(
 def sparse_encoder(
     data: ArrayLike,
     method: str = "li",
-    nqubits: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    nqubits: int | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
@@ -982,8 +980,8 @@ def sparse_encoder(
 def unary_encoder(
     nqubits: int,
     architecture: str = "tree",
-    data: Optional[ArrayLike] = None,
-    backend: Optional[Backend] = None,
+    data: ArrayLike | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Create circuit that performs the (deterministic) unary encoding of ``data``.
@@ -1015,13 +1013,16 @@ def unary_encoder(
     if architecture not in ("diagonal", "tree"):
         raise_error(ValueError, f"``architecture`` {architecture} not found.")
 
-    if data is not None:
-        if architecture == "tree" and not math.log2(len(data)).is_integer():
-            raise_error(
-                ValueError,
-                "When ``architecture = 'tree'``, len(data) must be a power of 2. "
-                + f"However, it is {len(data)}.",
-            )
+    if (
+        data is not None
+        and architecture == "tree"
+        and not math.log2(len(data)).is_integer()
+    ):
+        raise_error(
+            ValueError,
+            "When ``architecture = 'tree'``, len(data) must be a power of 2. "
+            + f"However, it is {len(data)}.",
+        )
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(gates.X(nqubits - 1))
@@ -1039,8 +1040,8 @@ def unary_encoder(
 def unary_encoder_random_gaussian(
     nqubits: int,
     architecture: str = "tree",
-    seed: Optional[int] = None,
-    backend: Optional[Backend] = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Create a circuit that performs the unary encoding of a random Gaussian state.
@@ -1114,7 +1115,7 @@ def unary_encoder_random_gaussian(
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+    from qibo.quantum_info.random_ensembles import (
         _ProbabilityDistributionGaussianLoader,
     )
 
@@ -1146,11 +1147,11 @@ def unary_encoder_random_gaussian(
 def up_to_k_hamming_weight_encoder(
     nqubits: int,
     up_to_k: int,
-    data: Optional[ArrayLike] = None,
+    data: ArrayLike | None = None,
     complex_data: bool = False,
-    codewords: Optional[List[int]] = None,
+    codewords: list[int] | None = None,
     keep_antictrls: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
     **kwargs,
 ) -> Circuit:
     """Create a circuit that encodes ``data`` in the Hamming-weight-:math:`\\leq k`

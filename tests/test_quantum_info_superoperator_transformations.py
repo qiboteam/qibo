@@ -582,7 +582,7 @@ def test_choi_to_stinespring(
 ):
     if validate_cp is True:
         with pytest.raises(NotImplementedError):
-            test = choi_to_stinespring(
+            choi_to_stinespring(
                 backend.cast(test_non_CP),
                 order=order,
                 validate_cp=validate_cp,
@@ -890,7 +890,7 @@ def test_kraus_to_chi(backend, normalize, order, pauli_order, test_kraus):
 def test_kraus_to_stinespring(backend, nqubits):
     with pytest.raises(ValueError):
         initial_state_env = random_statevector(4, backend=backend)
-        test = kraus_to_stinespring(
+        kraus_to_stinespring(
             test_kraus,
             nqubits=nqubits,
             initial_state_env=initial_state_env,
@@ -898,7 +898,7 @@ def test_kraus_to_stinespring(backend, nqubits):
         )
     with pytest.raises(ValueError):
         initial_state_env = random_density_matrix(2, pure=True, backend=backend)
-        test = kraus_to_stinespring(
+        kraus_to_stinespring(
             test_kraus,
             nqubits=nqubits,
             initial_state_env=initial_state_env,

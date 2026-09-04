@@ -464,7 +464,7 @@ def test_sabre_random_circuits_grid(backend, decay, look, n_gates, grid_connecti
 
 def test_sabre_memory_map(star_connectivity):
     connectivity = star_connectivity()
-    layout_circ = Circuit(5)
+    Circuit(5)
     router = Sabre(connectivity=connectivity)
     router._preprocessing(circuit=star_circuit())
     router._memory_map = [[1, 0, 2, 3, 4]]
@@ -515,7 +515,7 @@ def test_star_error_multi_qubit(star_connectivity):
     connectivity = star_connectivity(middle_qubit_idx=2)
     transpiler = StarConnectivityRouter(connectivity)
     with pytest.raises(ConnectivityError):
-        transpiled, hardware_qubits = transpiler(circuit=circuit)
+        _transpiled, _hardware_qubits = transpiler(circuit=circuit)
 
     chip = nx.Graph()
     chip.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4)])
@@ -599,7 +599,7 @@ def test_undo():
 def test_circuitmap_no_circuit():
     # If a `CircuitMap` is not a temporary instance and is created without a circuit, it should raise an error.
     with pytest.raises(ValueError):
-        circuit_map = CircuitMap()
+        CircuitMap()
 
 
 def test_logical_to_physical_setter():

@@ -92,13 +92,13 @@ class BaseAdiabaticHamiltonian:
                 "the total evolution time and "
                 "scheduling.",
             )
-        st = self.schedule(t / self.total_time)  # pylint: disable=E1102
+        st = self.schedule(t / self.total_time)
         return self.h0 * (1 - st) + self.h1 * st
 
     def circuit(self, dt, accelerators=None, t=0):  # pragma: no cover
         raise_error(
             NotImplementedError,
-            "Trotter circuit is not available " "for full matrix Hamiltonians.",
+            "Trotter circuit is not available for full matrix Hamiltonians.",
         )
 
 
@@ -133,14 +133,9 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
         Returns:
             :class:`qibo.models.Circuit`: Circuit implementing the Trotterized evolution.
         """
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
-        from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
-            TermGroup,
-        )
+        from qibo import Circuit
 
-        # pylint: disable=E1102
         st = self.schedule(t / self.total_time) if t != 0 else 0
-        # pylint: enable=E1102
         coefficients = {self.h0: 1 - st, self.h1: st}
 
         groups = self.groups

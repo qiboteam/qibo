@@ -29,18 +29,18 @@ def test_hamiltonian_term_initialization_errors():
 
     # Wrong HamiltonianTerm matrix
     with pytest.raises(TypeError):
-        t = HamiltonianTerm("test", 0, 1, backend=backend)
+        HamiltonianTerm("test", 0, 1, backend=backend)
     # Passing negative target qubits in HamiltonianTerm
     with pytest.raises(ValueError):
-        t = HamiltonianTerm("test", 0, -1, backend=backend)
+        HamiltonianTerm("test", 0, -1, backend=backend)
     # Passing matrix shape incompatible with number of qubits
     with pytest.raises(ValueError):
-        t = HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2, backend=backend)
+        HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2, backend=backend)
     # Merging terms with invalid qubits
     t1 = HamiltonianTerm(np.random.random((4, 4)), 0, 1, backend=backend)
     t2 = HamiltonianTerm(np.random.random((4, 4)), 1, 2, backend=backend)
     with pytest.raises(ValueError):
-        t = t1.merge(t2)
+        t1.merge(t2)
 
 
 def test_hamiltonian_term_gates(backend):
@@ -62,7 +62,7 @@ def test_hamiltonian_term_gates(backend):
 
 def test_hamiltonian_term_exponentiation(backend):
     """Test exp gate application of ``HamiltonianTerm``."""
-    from scipy.linalg import expm  # pylint: disable=C0415
+    from scipy.linalg import expm
 
     matrix = np.random.random((2, 2))
     term = HamiltonianTerm(matrix, 1, backend=backend)

@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from typing import Dict, Optional, Tuple
 
 from numpy.typing import ArrayLike
 
@@ -32,7 +31,6 @@ class AbstractHamiltonian:
         For :math:`n` qubits, can be a dense :math:`2^{n} \\times 2^{n}` array or a sparse
         matrix, depending on how the Hamiltonian was created.
         """
-        pass
 
     @abstractmethod
     def eigenvalues(self, k=6):  # pragma: no cover
@@ -78,7 +76,7 @@ class AbstractHamiltonian:
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def expectation(self, circuit, nshots: Optional[int] = None):  # pragma: no cover
+    def expectation(self, circuit, nshots: int | None = None):  # pragma: no cover
         """Computes the expectation value for a given circuit.
 
         Args:
@@ -104,15 +102,13 @@ class AbstractHamiltonian:
         Returns:
             float: The expectation value.
         """
-        return self.backend.expectation_value(  # pylint: disable=no-member
-            self.matrix, state, normalize
-        )
+        return self.backend.expectation_value(self.matrix, state, normalize)
 
     @abstractmethod
     def expectation_from_samples(
         self,
-        frequencies: Dict[str | int, int],
-        qubit_map: Optional[Tuple[int, ...]] = None,
+        frequencies: dict[str | int, int],
+        qubit_map: tuple[int, ...] | None = None,
     ):  # pragma: no cover
         pass
 

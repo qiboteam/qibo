@@ -22,7 +22,7 @@ def construct_clifford_backend(backend):
         "CuQuantumBackend",
     ):
         with pytest.raises(NotImplementedError):
-            clifford_backend = CliffordBackend(backend.name)
+            CliffordBackend(backend.name)
         pytest.skip("Clifford backend not defined for the this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
@@ -64,7 +64,7 @@ def test_clifford_from_circuit(backend, measurement):
 @pytest.mark.parametrize("algorithm", ["AG04", "BM20"])
 @pytest.mark.parametrize("nqubits", [1, 3, 10])
 def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
-    clifford_backend = construct_clifford_backend(backend)
+    construct_clifford_backend(backend)
 
     if backend.platform in ("cupy", "cuquantum"):
         clifford = random_clifford(nqubits, seed=seed, backend=NumpyBackend())
@@ -336,7 +336,7 @@ def test_clifford_samples_frequencies(backend, binary):
 
 
 def test_clifford_samples_error(backend):
-    clifford_backend = construct_clifford_backend(backend)
+    construct_clifford_backend(backend)
 
     c = random_clifford(1, backend=backend)
     obj = Clifford.from_circuit(c, platform=_get_engine_name(backend))
@@ -348,7 +348,7 @@ def test_clifford_samples_error(backend):
 @pytest.mark.parametrize("deep", [False, True])
 @pytest.mark.parametrize("nqubits", [1, 10, 100])
 def test_clifford_copy(backend, nqubits, deep):
-    clifford_backend = construct_clifford_backend(backend)
+    construct_clifford_backend(backend)
 
     if backend.platform in ("cupy", "cuquantum") and nqubits > 2:
         circuit = random_clifford(nqubits, backend=NumpyBackend())
@@ -368,7 +368,7 @@ def test_clifford_copy(backend, nqubits, deep):
     assert copy.platform == clifford.platform
 
 
-@pytest.mark.parametrize("pauli_2", ["Z", "Y", "Y"])
+@pytest.mark.parametrize("pauli_2", ["Z", "Y"])
 @pytest.mark.parametrize("pauli_1", ["X", "Y", "Z"])
 def test_one_qubit_paulis_string_product(pauli_1, pauli_2):
     products = {

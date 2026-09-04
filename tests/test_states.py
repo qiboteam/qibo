@@ -15,7 +15,7 @@ def test_measurement_result_repr():
 def test_measurement_result_error(backend):
     result = MeasurementResult(gates.M(0).qubits)
     with pytest.raises(RuntimeError):
-        samples = result.samples(backend=backend)
+        result.samples(backend=backend)
 
 
 @pytest.mark.parametrize("target", range(5))

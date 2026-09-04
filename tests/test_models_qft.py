@@ -80,6 +80,6 @@ def test_qft_execution(backend, nqubits, random, density_matrix):
 def test_qft_errors():
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
     with pytest.raises(NotImplementedError):
-        circuit = QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
+        QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
-        circuit = _DistributedQFT(2, accelerators={"/GPU:0": 4})
+        _DistributedQFT(2, accelerators={"/GPU:0": 4})

@@ -86,11 +86,11 @@ def train_qkmedians(
 
         # if verbose
         if (i % nprint == 0) and (verbose is True):
-            print(f"Loss at epoch {i+1}: {loss[-1]:.8}")
+            print(f"Loss at epoch {i + 1}: {loss[-1]:.8}")
 
         if loss_epoch < tolerance:
             centroids = new_centroids
-            print(f"Converged after {i+1} iterations.")
+            print(f"Converged after {i + 1} iterations.")
             break
         elif (
             loss_epoch > tolerance and i > new_tol * 200

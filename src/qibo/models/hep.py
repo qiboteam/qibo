@@ -38,7 +38,6 @@ class qPDF:
             raise_error(NotImplementedError, f"Ansatz {ansatz} not found.")
 
         # load ansatz
-        # pylint: disable-next=E0606
         self.circuit, self.rotation, self.nparams = ansatz_function(layers, nqubits)
 
         # load backend

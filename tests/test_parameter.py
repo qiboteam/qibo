@@ -87,27 +87,18 @@ def test_parameter_errors():
     param.trainable = [1, 1, 1]
     param.features = 1
 
-    try:
+    with pytest.raises(TypeError):
         param()
-        assert False
-    except Exception as e:
-        assert True
 
     param.trainable = [1, 1]
     param.features = [1]
-    try:
+    with pytest.raises(TypeError):
         param()
-        assert False
-    except Exception as e:
-        assert True
 
     param.trainable = [1, 1, 1]
     param.features = [1, 1]
-    try:
+    with pytest.raises(TypeError):
         param()
-        assert False
-    except Exception as e:
-        assert True
 
     # test type error due to wrong initialization
     with pytest.raises(TypeError):

@@ -4,11 +4,10 @@
 # Simplified Plotting Routines for Quantum Circuits
 # https://github.com/rpmuller/PlotQCircuit
 
-# pylint: disable=protected-access,R0912,R0913,R0914,R0915,R0917
-
 import json
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator, Optional, Union
+from typing import Any
 
 import matplotlib
 import matplotlib.lines
@@ -63,7 +62,7 @@ def plot_circuit(
     scale: float = 0.6,
     cluster_gates: bool = True,
     fold: int = -1,
-    style: Optional[Union[dict, str]] = None,
+    style: dict | str | None = None,
 ) -> tuple:
     """Main matplotlib plot function for Qibo circuit
 
@@ -134,7 +133,6 @@ def plot_circuit(
     hash_unitary_gates = []
     all_gates = []
     for gate in circuit.queue:
-
         _build_unitary_gates_register(gate, hash_unitary_gates)
 
         if isinstance(gate, gates.FusedGate):
@@ -541,7 +539,6 @@ def _draw_controls(
                 "MS",
                 "UNITARY",
             ]:
-
                 symbol = SYMBOLS.get(name, name)
 
                 if is_dagger:
@@ -1117,9 +1114,9 @@ def _composed_rectangle(
 def _auto_fit_fontsize(
     text: Text,
     width: float,
-    height: Optional[float],
-    fig: Optional[Figure] = None,
-    ax: Optional[Axes] = None,
+    height: float | None,
+    fig: Figure | None = None,
+    ax: Axes | None = None,
 ) -> float:
     """
     Auto-decrease the fontsize of a text object.
@@ -1283,13 +1280,11 @@ def _build_unitary_gates_register(gate: Any, array_register: list) -> None:
         and len(gate._target_qubits) > 1
         and gate.name.upper() == "UNITARY"
     ):
-        i = 0
         dict_register = {}
-        for qbit in gate._target_qubits:
+        for i, qbit in enumerate(gate._target_qubits):
             final_hash = _u_hash(gate, qbit)
             param_init_hash = _global_gate_hash(gate)
             dict_register[final_hash + "-" + param_init_hash] = str(i)
-            i += 1
         array_register.append(dict_register)
 
 
@@ -1453,7 +1448,7 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
     return gates_plot
 
 
-def _plot_params(style: Optional[Union[dict, str]]) -> dict:
+def _plot_params(style: dict | str | None) -> dict:
     """
     Given a style name, the function gets the style configuration.
     If the style is not available, it return the default style.
@@ -1469,7 +1464,7 @@ def _plot_params(style: Optional[Union[dict, str]]) -> dict:
     if not isinstance(style, dict):
         style = (
             STYLE.get(style)
-            if (style is not None and style in STYLE.keys())
+            if (style is not None and style in STYLE)
             else STYLE["default"]
         )
 
@@ -1583,7 +1578,7 @@ def _draw_gates_with_folds(
     schedule: bool = False,
     fold: int = -1,
     num_folds: int = 0,
-    folded_layout: Optional[dict] = None,
+    folded_layout: dict | None = None,
 ) -> None:
     """Draw all gates in a folded circuit layout.
 
@@ -1636,7 +1631,7 @@ def _fold_coords(
     fold: int,
     num_qubits: int,
     num_folds: int,
-    folded_layout: Optional[dict] = None,
+    folded_layout: dict | None = None,
 ) -> tuple:
     """Map gate index to folded coordinates.
 
@@ -1683,7 +1678,7 @@ def _draw_controls_with_folds(
     plot_params: dict,
     fold: int = -1,
     num_folds: int = 0,
-    folded_layout: Optional[dict] = None,
+    folded_layout: dict | None = None,
 ) -> None:
     """Draw controls and connectors for a folded gate.
 
@@ -1851,7 +1846,7 @@ def _draw_target_with_folds(
     plot_params: dict,
     fold: int = -1,
     num_folds: int = 0,
-    folded_layout: Optional[dict] = None,
+    folded_layout: dict | None = None,
 ) -> None:
     """Draw the target symbol for a folded gate.
 

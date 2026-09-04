@@ -1,7 +1,5 @@
 """Tests for HammingWeight backend."""
 
-from itertools import product
-
 import numpy as np
 import pytest
 from scipy.special import binom
@@ -18,7 +16,7 @@ def construct_hamming_weight_backend(backend):
 
 
 def test_set_backend(backend):
-    hamming_bkd = construct_hamming_weight_backend(backend)
+    construct_hamming_weight_backend(backend)
     platform = _get_engine_name(backend)
     set_backend("hamming_weight", platform=platform)
     assert get_backend().name == HammingWeightBackend(platform=platform).name
@@ -37,7 +35,7 @@ def test_global_backend(backend):
 def get_full_initial_state(state, weight, nqubits, backend):
     if (
         backend._dict_indexes is None
-        or list(backend._dict_indexes.keys())[0].count("1") != weight
+        or next(iter(backend._dict_indexes.keys())).count("1") != weight
     ):
         backend._dict_indexes = backend._get_lexicographical_order(nqubits, weight)
 

@@ -3,7 +3,6 @@
 
 import json
 from math import pi
-from typing import Optional
 
 import pytest
 
@@ -21,7 +20,7 @@ def test_one_qubit_gates_init(gate_name):
     assert gate.target_qubits == (0,)
 
 
-def gate_from_json(gate_name: str, control: Optional[list] = None):
+def gate_from_json(gate_name: str, control: list | None = None):
     gate = getattr(gates, gate_name)(0)
 
     control = [] if control is None else control
@@ -312,7 +311,7 @@ def test_kraus_channel_init():
     qubits = [(0,), (0, 1), (0, 2), (3,)]
     ops = [np.random.random((2 ** len(q), 2 ** len(q))) for q in qubits]
     gate = gates.KrausChannel(qubits, ops)
-    gate.target_qubits == (0, 1, 2, 3)
+    assert gate.target_qubits == (0, 1, 2, 3)
     for g in gate.gates:
         assert isinstance(g, gates.Unitary)
     qubits.append((4,))
@@ -327,7 +326,7 @@ def test_unitary_channel_init():
     qubits = [(0,), (0, 1), (0, 2), (3,)]
     ops = [(0.1, np.random.random((2 ** len(q), 2 ** len(q)))) for q in qubits]
     gate = gates.UnitaryChannel(qubits, ops)
-    gate.target_qubits == (0, 1, 2, 3)
+    assert gate.target_qubits == (0, 1, 2, 3)
     for g in gate.gates:
         assert isinstance(g, gates.Unitary)
 

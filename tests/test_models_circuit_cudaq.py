@@ -11,7 +11,9 @@ cudaq = pytest.importorskip("cudaq")
 
 
 def _clean_cudaq_code(circuit_code: str) -> str:
-    return re.sub(r"__nvqpp__mlirgen__[a-zA-Z0-9_]+", "", circuit_code, flags=re.M)
+    return re.sub(
+        r"__nvqpp__mlirgen__[a-zA-Z0-9_]+", "", circuit_code, flags=re.MULTILINE
+    )
 
 
 def test_empty():

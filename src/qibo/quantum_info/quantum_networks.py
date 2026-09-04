@@ -1,14 +1,15 @@
 """Module defining the `QuantumNetwork` class and adjacent functions."""
 
+import logging
 from functools import reduce
-from logging import warning
 from operator import mul
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
+
+log = logging.getLogger(__name__)
 
 
 class QuantumNetwork:
@@ -45,8 +46,8 @@ class QuantumNetwork:
     def __init__(
         self,
         tensor,
-        partition: Optional[Union[List[int], Tuple[int]]] = None,
-        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
+        partition: list[int] | tuple[int] | None = None,
+        system_input: list[bool] | tuple[bool] | None = None,
         pure: bool = False,
         backend=None,
     ):
@@ -91,11 +92,11 @@ class QuantumNetwork:
             list: order to reshape operator into tensor.
         """
         return list(
-            sum(zip(list(range(0, nsystems)), list(range(nsystems, nsystems * 2))), ())
+            sum(zip(list(range(nsystems)), list(range(nsystems, nsystems * 2))), ())
         )
 
     @classmethod
-    def _operator_to_tensor(cls, operator, partition: List[int]):
+    def _operator_to_tensor(cls, operator, partition: list[int]):
 
         n = len(partition)
         order = cls._order_operator_to_tensor(n)
@@ -122,8 +123,8 @@ class QuantumNetwork:
     def from_operator(
         cls,
         operator,
-        partition: Optional[Union[List[int], Tuple[int]]] = None,
-        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
+        partition: list[int] | tuple[int] | None = None,
+        system_input: list[bool] | tuple[bool] | None = None,
         pure: bool = False,
         backend=None,
     ):
@@ -249,9 +250,7 @@ class QuantumNetwork:
         """Returns bool indicading if the Choi operator of the network is pure."""
         return self._pure
 
-    def is_hermitian(
-        self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
-    ):
+    def is_hermitian(self, order: int | str | None = None, precision_tol: float = 1e-8):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` is Hermitian.
 
         Hermicity is calculated as distance between :math:`\\mathcal{J}` and
@@ -420,7 +419,7 @@ class QuantumNetwork:
             backend=self._backend,
         )
 
-    def __mul__(self, number: Union[float, int]):
+    def __mul__(self, number: float):
         """Returns quantum network with its Choi operator multiplied by a scalar.
 
         If the quantum network is pure and ``number > 0.0``, the method returns a pure quantum
@@ -460,11 +459,10 @@ class QuantumNetwork:
             backend=self._backend,
         )
 
-    def __rmul__(self, number: Union[float, int]):
-        """"""
+    def __rmul__(self, number: float):
         return self.__mul__(number)
 
-    def __truediv__(self, number: Union[float, int]):
+    def __truediv__(self, number: float):
         """Returns quantum network with its Choi operator divided by a scalar.
 
         If the quantum network is pure and ``number > 0.0``, the method returns a pure quantum
@@ -543,7 +541,7 @@ class QuantumNetwork:
                     ValueError,
                     "Systems of the channel do not match the super-channel: "
                     + f"{self.partition[1], self.partition[2]} != "
-                    + f"{second_network.partition[0],second_network.partition[1]}.",
+                    + f"{second_network.partition[0], second_network.partition[1]}.",
                 )
 
             subscripts = "jklm,kl -> jm"
@@ -554,7 +552,7 @@ class QuantumNetwork:
                 + "Use `link_product` method to specify the subscript.",
             )
 
-        return self.link_product(subscripts, second_network)  # pylint: disable=E0606
+        return self.link_product(subscripts, second_network)
 
     def __str__(self):
         """Method to define how to print relevant information of the quantum network."""
@@ -605,7 +603,7 @@ class QuantumNetwork:
             )
 
     @staticmethod
-    def _check_system_input(system_input, partition) -> Tuple[bool]:
+    def _check_system_input(system_input, partition) -> tuple[bool]:
         """
         If `system_input` not defined, assume the network follows the order of a quantum Comb.
         """
@@ -714,8 +712,8 @@ class QuantumComb(QuantumNetwork):
     def __init__(
         self,
         tensor,
-        partition: Optional[Union[List[int], Tuple[int]]] = None,
-        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
+        partition: list[int] | tuple[int] | None = None,
+        system_input: list[bool] | tuple[bool] | None = None,
         pure: bool = False,
         backend=None,
     ):
@@ -731,15 +729,13 @@ class QuantumComb(QuantumNetwork):
                 + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
             )
         if system_input is not None:
-            warning("system_input is ignored for QuantumComb")
+            log.warning("system_input is ignored for QuantumComb")
 
         super().__init__(
             tensor, partition, [True, False] * (len(partition) // 2), pure, backend
         )
 
-    def is_causal(
-        self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
-    ):
+    def is_causal(self, order: int | str | None = None, precision_tol: float = 1e-8):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` satisfies causal order
 
         Causality is calculated based on a recursive constrains.
@@ -791,12 +787,12 @@ class QuantumComb(QuantumNetwork):
     @classmethod
     def from_operator(
         cls, operator, partition=None, inverse=False, pure=False, backend=None
-    ):  # pylint: disable=W0237
+    ):
         comb = super().from_operator(operator, partition, None, pure, backend)
         if inverse:
             # Convert mathmetical convention of Choi operator to physical convention
             comb.partition = comb.partition[::-1]
-            comb._tensor = comb._tensor.T  # pylint: disable=W0212
+            comb._tensor = comb._tensor.T
         return comb
 
 
@@ -831,8 +827,8 @@ class QuantumChannel(QuantumComb):
     def __init__(
         self,
         tensor,
-        partition: Optional[Union[List[int], Tuple[int]]] = None,
-        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
+        partition: list[int] | tuple[int] | None = None,
+        system_input: list[bool] | tuple[bool] | None = None,
         pure: bool = False,
         backend=None,
     ):
@@ -859,9 +855,7 @@ class QuantumChannel(QuantumComb):
 
         super().__init__(tensor, partition, pure=pure, backend=backend)
 
-    def is_unital(
-        self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
-    ):
+    def is_unital(self, order: int | str | None = None, precision_tol: float = 1e-8):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` is unital.
 
         A map is unital if it preserves the identity operator.
@@ -921,7 +915,7 @@ class QuantumChannel(QuantumComb):
 
     def is_channel(
         self,
-        order: Optional[Union[int, str]] = None,
+        order: int | str | None = None,
         precision_tol_causal: float = 1e-8,
         precision_tol_psd: float = 1e-8,
     ):
@@ -1008,13 +1002,13 @@ def link_product(
             raise_error(TypeError, f"The {i}-th operator is not a ``QuantumNetwork``.")
 
     if backend is None:  # pragma: no cover
-        backend = operands[0]._backend  # pylint: disable=W0212
+        backend = operands[0]._backend
 
     tensors = [
         (
             backend.to_numpy(operand.full())
             if operand.is_pure()
-            else backend.to_numpy(operand._tensor)  # pylint: disable=W0212
+            else backend.to_numpy(operand._tensor)
         )
         for operand in operands
     ]
@@ -1032,18 +1026,19 @@ def link_product(
     if not surpress_warning:
         for ind in idx_rm:
             found = 0
+            is_input = None
             for i, script in enumerate(inputs):
                 index = script.find(ind)
                 if index < 0:
                     continue
                 found += 1
                 if found > 1 and is_input == operands[inds[i]].system_input[index]:
-                    warning(
+                    log.warning(
                         f"Index {ind} connects two {'input' if is_input else 'output'} systems."
                     )
                 is_input = operands[inds[i]].system_input[index]
                 if found > 2:
-                    warning(
+                    log.warning(
                         f"Index {ind} appears multiple times in the input subscripts {input_str}."
                     )
 

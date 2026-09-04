@@ -9,9 +9,7 @@ from qibo.models.grover import Grover
 
 def one_sum(sum_qubits):
     circuit = Circuit(sum_qubits + 1)
-    circuit.add(
-        gates.X(q).controlled_by(*range(0, q)) for q in range(sum_qubits, 0, -1)
-    )
+    circuit.add(gates.X(q).controlled_by(*range(q)) for q in range(sum_qubits, 0, -1))
 
     return circuit
 

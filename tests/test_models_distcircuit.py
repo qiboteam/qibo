@@ -45,7 +45,7 @@ def test_distributed_circuit_various_errors(backend):
         circuit.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
     # Attempt to access state before being set
     with pytest.raises(RuntimeError):
-        final_state = circuit.final_state
+        circuit.final_state
     # Attempt to compile
     if backend.platform == "tensorflow":
         with pytest.raises(RuntimeError):
@@ -99,8 +99,8 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     from qibo.models import QFT
 
     circuit = QFT(nqubits, accelerators={"/GPU:0": ndevices})
-    circuit.queues.set(circuit.queue)  # pylint: disable=E1101
-    check_device_queues(circuit.queues)  # pylint: disable=E1101
+    circuit.queues.set(circuit.queue)
+    check_device_queues(circuit.queues)
 
 
 def test_transform_queue_simple():

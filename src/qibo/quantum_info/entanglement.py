@@ -1,7 +1,5 @@
 """Submodules with entanglement measures."""
 
-from typing import Optional
-
 import numpy as np
 
 from qibo.backends import Backend, _check_backend
@@ -107,7 +105,7 @@ def entanglement_of_formation(
     Returns:
         float: entanglement of formation of state :math:`\\rho`.
     """
-    from qibo.quantum_info.entropies import shannon_entropy  # pylint: disable=C0415
+    from qibo.quantum_info.entropies import shannon_entropy
 
     backend = _check_backend(backend)
 
@@ -281,7 +279,7 @@ def meyer_wallach_entanglement(state, backend=None):
 
 
 def entangling_capability(
-    circuit, samples: int, seed: Optional[int] = None, backend: Optional[Backend] = None
+    circuit, samples: int, seed: int | None = None, backend: Backend | None = None
 ):
     """Return the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
 

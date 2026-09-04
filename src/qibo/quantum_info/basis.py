@@ -1,5 +1,3 @@
-from typing import Optional
-
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.quantum_info.utils import _get_single_paulis, _pauli_basis_normalization
@@ -10,9 +8,9 @@ def pauli_basis(
     normalize: bool = False,
     vectorize: bool = False,
     sparse: bool = False,
-    order: Optional[str] = None,
+    order: str | None = None,
     pauli_order: str = "IXYZ",
-    backend: Optional[Backend] = None,
+    backend: Backend | None = None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
 

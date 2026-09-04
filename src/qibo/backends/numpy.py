@@ -1,17 +1,13 @@
 """Module defining the Numpy backend."""
 
-from typing import Optional, Tuple, Union
-
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 from scipy.linalg import block_diag, expm, fractional_matrix_power, logm
-from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse import coo_matrix, csr_matrix, issparse
 from scipy.sparse import eye as eye_sparse
-from scipy.sparse import issparse
 from scipy.sparse.linalg import eigsh
 from scipy.sparse.linalg import expm as expm_sparse
 
-from qibo import __version__
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import raise_error
@@ -36,7 +32,7 @@ class NumpyBackend(Backend):
         self.versions[self.name] = self.engine.__version__
 
     def cast(
-        self, array: ArrayLike, dtype: Optional[DTypeLike] = None, copy: bool = False
+        self, array: ArrayLike, dtype: DTypeLike | None = None, copy: bool = False
     ) -> ArrayLike:
         """Cast an object as the array type of the current backend.
 
@@ -147,7 +143,7 @@ class NumpyBackend(Backend):
         """
         return csr_matrix(array, **kwargs)
 
-    def eigsh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+    def eigsh(self, array: ArrayLike, **kwargs) -> tuple[ArrayLike, ArrayLike]:
         """Compute the eigenvalues and right eigenvectors of a two-dimensional sparse ``array``
         that is assumed to be Hermitian.
 
@@ -192,9 +188,9 @@ class NumpyBackend(Backend):
     def matrix_power(
         self,
         matrix: ArrayLike,
-        power: Union[float, int],
+        power: float,
         precision_singularity: float = 1e-14,
-        dtype: Optional[DTypeLike] = None,
+        dtype: DTypeLike | None = None,
     ) -> ArrayLike:
         """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
@@ -229,7 +225,7 @@ class NumpyBackend(Backend):
     ########################################################################################
 
     def _identity_sparse(
-        self, dims: int, dtype: Optional[DTypeLike] = None, **kwargs
+        self, dims: int, dtype: DTypeLike | None = None, **kwargs
     ) -> ArrayLike:
         if dtype is None:  # pragma: no cover
             dtype = self.dtype

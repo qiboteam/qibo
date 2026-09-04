@@ -4,7 +4,7 @@ from operator import mul
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates, set_dtype
+from qibo import Circuit, gates
 from qibo.backends import construct_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.error_mitigation import (
@@ -22,7 +22,9 @@ from qibo.quantum_info import random_stochastic_matrix
 from qibo.symbols import Z
 
 
-def get_noise_model(error, gate, resp_matrix=[False, None]):
+def get_noise_model(error, gate, resp_matrix=None):
+    if resp_matrix is None:
+        resp_matrix = [False, None]
     noise = NoiseModel()
     noise.add(error, gate)
     if resp_matrix[0]:

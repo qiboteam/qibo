@@ -80,7 +80,7 @@ def optimize(
             # set parameters to circuit
             circuit.set_parameters(params)
     """
-    from qibo.backends import _check_backend  # pylint: disable=import-outside-toplevel
+    from qibo.backends import _check_backend
 
     backend = _check_backend(backend)
     if method == "cma":

@@ -70,7 +70,7 @@ def main(
 
     start_time = time.time()
     options = {"disp": True, "maxiter": maxiter}
-    best, params, _ = qaoa.minimize(initial_parameters, method=method, options=options)
+    best, _params, _ = qaoa.minimize(initial_parameters, method=method, options=options)
     logs[-1]["minimization_time"] = time.time() - start_time
 
     logs[-1]["best_energy"] = float(best)

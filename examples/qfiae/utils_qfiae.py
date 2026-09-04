@@ -1,14 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from qibo import Circuit, gates
-from qibo.models.iqae import IQAE
-
 
 def fourier_series(coeffs, x_val, period=2 * np.pi):
     """Compute the Fourier series for a given set of coefficients in exponencial form."""
 
-    xval_len = len(x_val)
+    len(x_val)
     x_vals = x_val.reshape(len(x_val))
     n = 0
     series = coeffs[0] * np.exp(1j * n * x_vals * (2 * np.pi / period))

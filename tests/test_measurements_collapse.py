@@ -93,7 +93,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
 def test_measurement_collapse_bitflip_noise(backend):
     circuit = Circuit(4)
     with pytest.raises(NotImplementedError):
-        output = circuit.add(gates.M(0, 1, p0=0.2, collapse=True))
+        circuit.add(gates.M(0, 1, p0=0.2, collapse=True))
 
 
 @pytest.mark.parametrize("density_matrix", [True, False])
@@ -283,7 +283,7 @@ def test_collapse_after_measurement(backend):
 
 def test_collapse_error(backend):
     circuit = Circuit(1)
-    m = circuit.add(gates.M(0, collapse=True))
+    circuit.add(gates.M(0, collapse=True))
     with pytest.raises(Exception) as exc_info:
         backend.execute_circuit(circuit)
     assert (

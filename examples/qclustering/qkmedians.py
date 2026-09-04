@@ -41,7 +41,7 @@ def find_centroids(points, cluster_labels, clusters=2):
     """
 
     centroids = np.zeros([clusters, points.shape[1]])
-    k = points.shape[1]
+    points.shape[1]
     for j in range(clusters):
         points_class_i = points[cluster_labels == j]
         median = np.median(points_class_i, axis=0)
@@ -72,7 +72,7 @@ def find_nearest_neighbour(points, centroids, mintype="classic", nshots=10000):
     """
 
     n = points.shape[0]
-    num_features = points.shape[1]
+    points.shape[1]
     k = centroids.shape[0]  # number of centroids
     cluster_label = []
     distances = []

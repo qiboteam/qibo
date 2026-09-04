@@ -2,7 +2,7 @@
 Resources for parallel circuit evaluation.
 """
 
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from joblib import Parallel, delayed
 
@@ -10,7 +10,7 @@ from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 
-def parallel_execution(circuit, states, processes: Optional[int] = None, backend=None):
+def parallel_execution(circuit, states, processes: int | None = None, backend=None):
     """Execute circuit for multiple states.
 
     Example:
@@ -125,7 +125,7 @@ def parallel_parametrized_execution(
     circuit,
     parameters,
     initial_state=None,
-    processes: Optional[int] = None,
+    processes: int | None = None,
     backend=None,
 ):
     """Execute circuit for multiple parameters and fixed initial_state.

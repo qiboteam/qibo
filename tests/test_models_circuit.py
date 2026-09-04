@@ -83,11 +83,11 @@ def test_circuit_init_resolve_qubits():
 
 def test_circuit_init_resolve_qubits_err():
     with pytest.raises(ValueError):
-        a = Circuit()
+        Circuit()
     with pytest.raises(ValueError):
-        b = Circuit(3, wire_names=["a", "b"])
+        Circuit(3, wire_names=["a", "b"])
     with pytest.raises(ValueError):
-        circuit = Circuit(["a", "b", "c"], wire_names=["x", "y"])
+        Circuit(["a", "b", "c"], wire_names=["x", "y"])
 
 
 def test_eigenstate(backend):
@@ -287,17 +287,7 @@ def test_summary(capsys):
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.TOFFOLI(0, 1, 2))
     circuit.add(gates.H(2))
-    target_summary = "\n".join(
-        [
-            "Circuit depth = 5",
-            "Total number of gates = 6",
-            "Number of qubits = 3",
-            "Most common gates:",
-            "h: 3",
-            "cx: 2",
-            "ccx: 1",
-        ]
-    )
+    target_summary = "Circuit depth = 5\nTotal number of gates = 6\nNumber of qubits = 3\nMost common gates:\nh: 3\ncx: 2\nccx: 1"
     circuit.summary()
     out, _ = capsys.readouterr()
     assert out.rstrip("\n") == target_summary

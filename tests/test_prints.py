@@ -63,8 +63,7 @@ class CodeText:
                     line_num = self.line_counter + offset + 1
                     raise_error(
                         ValueError,
-                        f"Found `{target_word}` in line {line_num} "
-                        f"of {self.filedir}.",
+                        f"Found `{target_word}` in line {line_num} of {self.filedir}.",
                     )
 
 

@@ -4,11 +4,9 @@ from collections import Counter
 from functools import cache, reduce
 from importlib.util import find_spec, module_from_spec
 from itertools import product
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
-from numpy.typing import ArrayLike, DTypeLike
-from scipy.sparse import eye as eye_sparse
+from numpy.typing import ArrayLike
 
 from qibo import gates
 from qibo.backends.abstract import Backend
@@ -30,20 +28,20 @@ class CliffordBackend(Backend):
         `Phys. Rev. A 70, 052328 (2004) <https://doi.org/10.1103/PhysRevA.70.052328>`_.
     """
 
-    def __init__(self, platform: Optional[str] = None):
+    def __init__(self, platform: str | None = None):
         super().__init__()
 
         self.name = "clifford"
         self.platform = platform
 
         if self.platform == "stim":
-            import stim  # pylint: disable=C0415
+            import stim
 
             self.platform = "stim"
             self._stim = stim
         else:
             if self.platform is None:
-                from qibo.backends import (  # pylint: disable=C0415
+                from qibo.backends import (
                     _check_backend,
                     _get_engine_name,
                 )
@@ -59,8 +57,8 @@ class CliffordBackend(Backend):
         if self.platform in ("numpy", "stim"):
             self.engine = np
         elif self.platform == "numba":
-            import numba  # pylint: disable=import-outside-toplevel
-            from qibojit.backends import (  # pylint: disable=C0415
+            import numba
+            from qibojit.backends import (
                 clifford_operations_cpu,
             )
 
@@ -73,8 +71,8 @@ class CliffordBackend(Backend):
                     self._platform, method, getattr(clifford_operations_cpu, method)
                 )
         elif self.platform == "cupy":  # pragma: no cover
-            import cupy  # pylint: disable=import-outside-toplevel,E0401
-            from qibojit.backends import (  # pylint: disable=C0415
+            import cupy
+            from qibojit.backends import (
                 clifford_operations_gpu,
             )
 
@@ -164,7 +162,7 @@ class CliffordBackend(Backend):
         `Dehaene & Moor (2003) <https://arxiv.org/abs/quant-ph/0304125>`_."""
         qubit_indices = list(gate.qubits)
         m = len(qubit_indices)
-        matrix = gate._parameters[0]  # pylint: disable=protected-access
+        matrix = gate._parameters[0]
         matrix = self.cast(matrix, dtype=matrix.dtype)
 
         symplectic_m, phase_h_m = self._compute_symplectic_matrix(matrix, m)
@@ -191,10 +189,10 @@ class CliffordBackend(Backend):
 
         return symplectic_matrix
 
-    def execute_circuit(  # pylint: disable=R1710
+    def execute_circuit(
         self,
         circuit,
-        initial_state: Optional[ArrayLike] = None,
+        initial_state: ArrayLike | None = None,
         nshots: int = 1000,
     ):
         """Execute a Clifford circuits.
@@ -209,7 +207,7 @@ class CliffordBackend(Backend):
         Returns:
             :class:`qibo.quantum_info.clifford.Clifford`: Object storing to the final results.
         """
-        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+        from qibo.quantum_info.clifford import Clifford
 
         if self.platform == "stim":
             return self._execute_circuit_stim(circuit, initial_state, nshots)
@@ -217,7 +215,7 @@ class CliffordBackend(Backend):
         for gate in circuit.queue:
             if (
                 not gate.clifford
-                and not gate.__class__.__name__ == "M"
+                and gate.__class__.__name__ != "M"
                 and not isinstance(gate, gates.PauliNoiseChannel)
             ):
                 raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
@@ -236,9 +234,7 @@ class CliffordBackend(Backend):
                 else initial_state
             )
             if i_phase is False:
-                state = self._platform._clifford_pre_execution_reshape(  # pylint: disable=protected-access
-                    state
-                )
+                state = self._platform._clifford_pre_execution_reshape(state)
             for gate in circuit.queue:
                 if i_phase:
                     if isinstance(gate, gates.M):
@@ -254,9 +250,7 @@ class CliffordBackend(Backend):
             if i_phase:
                 state = self._convert_dehaene_to_aaronson(state)
             else:
-                state = self._platform._clifford_post_execution_reshape(  # pylint: disable=protected-access
-                    state, nqubits
-                )
+                state = self._platform._clifford_post_execution_reshape(state, nqubits)
             clifford = Clifford(
                 state,
                 measurements=circuit.measurements,
@@ -275,7 +269,7 @@ class CliffordBackend(Backend):
             )
 
     def execute_circuit_repeated(
-        self, circuit, nshots: int = 1000, initial_state: Optional[ArrayLike] = None
+        self, circuit, nshots: int = 1000, initial_state: ArrayLike | None = None
     ):
         """Execute a Clifford circuits ``nshots`` times.
 
@@ -293,7 +287,7 @@ class CliffordBackend(Backend):
         Returns:
             :class:`qibo.quantum_info.clifford.Clifford`: Object storing to the final results.
         """
-        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+        from qibo.quantum_info.clifford import Clifford
 
         circuit_copy = circuit.copy()
         samples = []
@@ -332,11 +326,11 @@ class CliffordBackend(Backend):
     def sample_shots(
         self,
         state: ArrayLike,
-        qubits: Union[List[int], Tuple[int, ...]],
+        qubits: list[int] | tuple[int, ...],
         nqubits: int,
         nshots: int,
         collapse: bool = False,
-    ) -> ArrayLike:  # pylint: disable=W0221
+    ) -> ArrayLike:
         """Sample shots by measuring selected ``qubits`` in symplectic matrix of a ``state``.
 
         Args:
@@ -365,7 +359,7 @@ class CliffordBackend(Backend):
 
     def symplectic_matrix_to_generators(
         self, symplectic_matrix: ArrayLike, return_array: bool = False
-    ) -> Union[Tuple[List[str], List[int]], Tuple[List[ArrayLike], List[int]]]:
+    ) -> tuple[list[str], list[int]] | tuple[list[ArrayLike], list[int]]:
         """Extract the stabilizers and destabilizers generators from symplectic matrix.
 
         Args:
@@ -386,7 +380,7 @@ class CliffordBackend(Backend):
         for x, z in zip(x_part, z_part):
             paulis = [bits_to_gate[f"{zz}{xx}"] for xx, zz in zip(x, z)]
             if return_array:
-                from qibo import matrices  # pylint: disable=C0415
+                from qibo import matrices
 
                 paulis = [self.cast(getattr(matrices, p)) for p in paulis]
                 matrix = reduce(self.kron, paulis)
@@ -412,9 +406,7 @@ class CliffordBackend(Backend):
         Returns:
             ndarray: Reshaped state.
         """
-        return self._platform._clifford_pre_execution_reshape(  # pylint: disable=protected-access
-            state
-        )
+        return self._platform._clifford_pre_execution_reshape(state)
 
     def _clifford_post_execution_reshape(
         self, state: ArrayLike, nqubits: int
@@ -428,13 +420,11 @@ class CliffordBackend(Backend):
         Returns:
             ndarray: Reshaped state.
         """
-        return self._platform._clifford_post_execution_reshape(  # pylint: disable=protected-access
-            state, nqubits
-        )
+        return self._platform._clifford_post_execution_reshape(state, nqubits)
 
     def _compute_symplectic_matrix(
         self, unitary: ArrayLike, m: int
-    ) -> Tuple[ArrayLike, ArrayLike]:
+    ) -> tuple[ArrayLike, ArrayLike]:
         """Compute the symplectic matrix for Clifford unitary on :math`m` qubits
         and the phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
         :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0`
@@ -535,7 +525,7 @@ class CliffordBackend(Backend):
         self,
         symplectic_m: ArrayLike,
         n: int,
-        qubit_indices: Union[List[int], Tuple[int, ...]],
+        qubit_indices: list[int] | tuple[int, ...],
     ) -> ArrayLike:
         """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
         symplectic_n = self.identity(2 * n, dtype=self.uint8)
@@ -552,7 +542,7 @@ class CliffordBackend(Backend):
         self,
         phase_m: ArrayLike,
         n: int,
-        qubit_indices: Union[List[int], Tuple[int, ...]],
+        qubit_indices: list[int] | tuple[int, ...],
     ):
         """Embed m-qubit phase vector into n-qubit system."""
         phase_n = self.zeros(2 * n, dtype=self.uint8)
@@ -565,20 +555,18 @@ class CliffordBackend(Backend):
         return phase_n
 
     def _execute_circuit_stim(
-        self, circuit, initial_state: Optional[ArrayLike] = None, nshots: int = 1000
+        self, circuit, initial_state: ArrayLike | None = None, nshots: int = 1000
     ):
-        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+        from qibo.quantum_info.clifford import Clifford
 
-        circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
+        circuit_stim = self._stim.Circuit()
         for gate in circuit.queue:
             name = gate.__class__.__name__
             name = "S_DAG" if name == "SDG" else name
             circuit_stim.append(name, list(gate.qubits))
 
         x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
-            self._stim.Tableau.from_circuit(  # pylint: disable=no-member
-                circuit_stim
-            ).to_numpy()
+            self._stim.Tableau.from_circuit(circuit_stim).to_numpy()
         )
         symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
         symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
@@ -602,7 +590,7 @@ class CliffordBackend(Backend):
 
     @staticmethod
     @cache
-    def _pauli_generators(m: int) -> List[str]:
+    def _pauli_generators(m: int) -> list[str]:
         pauli_gens_x, pauli_gens_z = [], []
         for ind in range(m):
             p = ["I"] * m
@@ -615,7 +603,7 @@ class CliffordBackend(Backend):
 
     def _pauli_string_to_matrix(self, pauli_str: str) -> ArrayLike:
         """Convert Pauli string to matrix (tensor product)."""
-        from qibo import matrices  # pylint: disable=C0415
+        from qibo import matrices
 
         paulis = {
             pauli: self.cast(getattr(matrices, pauli), dtype=self.dtype)

@@ -287,7 +287,6 @@ class QuantumCNN:
         Returns:
             Circuit implementing the variational ansatz for angles "theta".
         """
-        bias = np.array(theta[0 : self.measured_qubits])
         angles = theta[self.measured_qubits :]
 
         self.set_circuit_params(angles)
@@ -371,7 +370,7 @@ class QuantumCNN:
         """
         from qibo.optimizers import optimize
 
-        loss, optimal_angles, result = optimize(
+        loss, optimal_angles, _result = optimize(
             self.Cost_function, init_theta, args=(data, labels, nshots), method=method
         )
 

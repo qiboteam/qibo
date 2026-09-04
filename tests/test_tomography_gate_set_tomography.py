@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from sympy import S
 
-from qibo import Circuit, gates, symbols
+from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
@@ -171,7 +171,7 @@ def test__get_observable(j, nqubits):
 def test__extract_nqubits():
     correct_nqubits = [1, 1, 2, 3]
     gates_to_test = [gates.Z, (gates.RX, [np.pi / 2]), gates.CNOT, gates.TOFFOLI]
-    for idx in range(0, len(gates_to_test)):
+    for idx in range(len(gates_to_test)):
         gate = gates_to_test[idx]
         if isinstance(gate, tuple):
             gate, _ = gate
@@ -179,7 +179,7 @@ def test__extract_nqubits():
             assert _extract_nqubits(gate) == correct_nqubits[idx]
         else:
             with pytest.raises(RuntimeError):
-                nqubits = _extract_nqubits(gate)
+                _extract_nqubits(gate)
 
 
 def test__extract_gate_default_qubits():
@@ -240,7 +240,7 @@ def test__extract_gate_user_defined_qubits():
 )
 def test__extract_gate_error(gate, error_type):
     with pytest.raises(error_type):
-        extracted_gate, _ = _extract_gate(gate)
+        _extracted_gate, _ = _extract_gate(gate)
 
 
 @pytest.mark.parametrize(
@@ -252,7 +252,7 @@ def test__extract_gate_error(gate, error_type):
 )
 def test_gate_tomography_value_error(backend, nqubits, gate):
     with pytest.raises(ValueError):
-        matrix_jk = _gate_tomography(
+        _gate_tomography(
             nqubits=nqubits,
             gate=[gate],
             nshots=int(1e4),
@@ -500,7 +500,7 @@ def test_gate_tomography_ancilla_error(backend):
     nqubits = 2
     gate_list = [gates.T(0), gates.TDG(0)]
     with pytest.raises(ValueError):
-        matrix_jk = _gate_tomography(
+        _gate_tomography(
             nqubits=nqubits,
             gate=gate_list,
             nshots=int(1e4),
@@ -512,8 +512,8 @@ def test_gate_tomography_ancilla_error(backend):
 
 def test__get_swap_pairs():
     true_swap_pairs = [[(0, 2)], [(1, 2)], [(0, 2), (1, 3)]]
-    for ancilla in range(0, 3):
-        gate_list = [gates.T(0), gates.TDG(0)]
+    for ancilla in range(3):
+        [gates.T(0), gates.TDG(0)]
 
         nqubits = 2
         additional_qubits = 0 if ancilla is None else (1 if ancilla in (0, 1) else 2)
@@ -587,7 +587,7 @@ def test_GST(backend, target_gates, pauli_liouville):
 def test_GST_2qb_basis_op_diff_registers(backend):
     gate_set = [gates.T, gates.TDG, gates.S]
     with pytest.raises(RuntimeError):
-        matrices = GST(
+        GST(
             gate_set=gate_set,
             two_qubit_basis_op_diff_registers=True,
             include_empty=False,
@@ -604,7 +604,7 @@ def test_GST_2qb_basis_op_diff_registers(backend):
 )
 def test_GST_2qb_basis_op_diff_registers_incorrect_gates(backend, gate_set):
     with pytest.raises(RuntimeError):
-        matrices = GST(
+        GST(
             gate_set=gate_set,
             two_qubit_basis_op_diff_registers=True,
             include_empty=False,
@@ -627,7 +627,7 @@ def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
         np.eye(4),
     ]
 
-    for _i in range(0, 3):
+    for _i in range(3):
         test_matrix = GST(
             gate_set=gate_set[_i],
             nshots=int(1e4),
@@ -665,13 +665,10 @@ def test_GST_invertible_matrix(backend):
 def test_GST_non_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
-        matrices = GST(
-            gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend
-        )
+        GST(gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend)
 
 
 def test_GST_with_transpiler(backend, star_connectivity):
-    import networkx as nx
 
     target_gates = [gates.SX(0), gates.Z(0), gates.CNOT(0, 1)]
     gate_set = [

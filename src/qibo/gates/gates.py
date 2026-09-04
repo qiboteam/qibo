@@ -1,9 +1,6 @@
 """Module defining built-in quantum gate classes."""
 
-# pylint: disable=C0103,W0212,W0223
-
 import math
-from typing import List, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -91,7 +88,7 @@ class X(Gate):
 
     def _base_decompose(
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
         Args:
@@ -183,7 +180,7 @@ class X(Gate):
 
     def decompose(
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         return self._base_decompose(
             *free, use_toffolis=use_toffolis, method=method, **kwargs
         )
@@ -233,7 +230,7 @@ class Y(Gate):
         return gate
 
     def basis_rotation(self) -> Gate:
-        from qibo import matrices  # pylint: disable=C0415
+        from qibo import matrices
 
         matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
         gate = Unitary(matrix, self.target_qubits[0], trainable=False)
@@ -322,9 +319,9 @@ class SX(Gate):
     def qasm_label(self) -> str:
         return "sx"
 
-    def decompose(  # pylint: disable=W0246
+    def decompose(
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         """Decomposition of :math:`\\sqrt{X}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -337,7 +334,6 @@ class SX(Gate):
         )
 
     def _dagger(self) -> Gate:
-        """"""
         return SXDG(self.init_args[0])
 
 
@@ -373,7 +369,6 @@ class SXDG(Gate):
         return "sxdg"
 
     def _dagger(self) -> Gate:
-        """"""
         return SX(self.init_args[0])
 
 
@@ -614,16 +609,13 @@ class _Rn_(ParametrizedGate):
         return _is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> Gate:
-        """"""
-        return self.__class__(
-            self.target_qubits[0], -self.parameters[0]
-        )  # pylint: disable=E1130
+        return self.__class__(self.target_qubits[0], -self.parameters[0])
 
     @Gate.check_controls
     def controlled_by(self, *q: int) -> Gate:
         """Fall back to CRn if there is only one control."""
         if len(q) == 1:
-            gate = self._controlled_gate(  # pylint: disable=E1102
+            gate = self._controlled_gate(
                 q[0], self.target_qubits[0], **self.init_kwargs
             )
         else:
@@ -814,9 +806,7 @@ class PRX(ParametrizedGate):
     def _dagger(self) -> Gate:
         theta = -self.theta
         phi = self.phi
-        return self.__class__(
-            self.target_qubits[0], theta, phi
-        )  # pylint: disable=E1130
+        return self.__class__(self.target_qubits[0], theta, phi)
 
 
 class GPI(ParametrizedGate):
@@ -853,7 +843,7 @@ class GPI(ParametrizedGate):
         self.init_kwargs = {"phi": phi, "trainable": trainable}
 
     @property
-    def qasm_label(self) -> Tuple[str, str]:
+    def qasm_label(self) -> tuple[str, str]:
         return "gpi", "gate gpi(phi) q {u3(pi, phi - pi/2, pi/2 - phi) q;}"
 
 
@@ -891,7 +881,7 @@ class GPI2(ParametrizedGate):
         self.init_kwargs = {"phi": phi, "trainable": trainable}
 
     @property
-    def qasm_label(self) -> Tuple[str, str]:
+    def qasm_label(self) -> tuple[str, str]:
         return "gpi2", "gate gpi2(phi) q {u3(pi/2, phi - pi/2, pi/2 - phi) q;}"
 
     @property
@@ -899,7 +889,6 @@ class GPI2(ParametrizedGate):
         return _is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> Gate:
-        """"""
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
@@ -928,7 +917,7 @@ class _Un_(ParametrizedGate):
     def controlled_by(self, *q: int) -> Gate:
         """Fall back to CUn if there is only one control."""
         if len(q) == 1:
-            gate = self._controlled_gate(  # pylint: disable=E1102
+            gate = self._controlled_gate(
                 q[0], self.target_qubits[0], **self.init_kwargs
             )
         else:
@@ -975,7 +964,7 @@ class U1(_Un_):
 
     def _dagger(self) -> Gate:
         theta = -self.parameters[0]
-        return self.__class__(self.target_qubits[0], theta)  # pylint: disable=E1130
+        return self.__class__(self.target_qubits[0], theta)
 
 
 class U2(_Un_):
@@ -1015,7 +1004,6 @@ class U2(_Un_):
         return "u2"
 
     def _dagger(self) -> Gate:
-        """"""
         phi, lam = self.parameters
         phi, lam = math.pi - lam, -math.pi - phi
         return self.__class__(self.target_qubits[0], phi, lam)
@@ -1062,9 +1050,9 @@ class U3(_Un_):
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
-    def decompose(  # pylint: disable=W0246
+    def decompose(
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         """Decomposition of :math:`U_{3}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -1091,8 +1079,7 @@ class U3(_Un_):
         return "u3"
 
     def _dagger(self) -> Gate:
-        """"""
-        theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
+        theta, lam, phi = tuple(-x for x in self.parameters)
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
 
@@ -1137,7 +1124,6 @@ class U1q(_Un_):
         return _is_hamming_weight_given_angle(self.parameters[0])
 
     def _dagger(self) -> Gate:
-        """"""
         theta, phi = self.init_kwargs["theta"], self.init_kwargs["phi"]
         return self.__class__(self.init_args[0], -theta, phi)
 
@@ -1301,7 +1287,6 @@ class CSX(Gate):
         return "csx"
 
     def _dagger(self) -> Gate:
-        """"""
         return CSXDG(*self.init_args)
 
 
@@ -1337,7 +1322,6 @@ class CSXDG(Gate):
         return "csxdg"
 
     def _dagger(self) -> Gate:
-        """"""
         return CSX(*self.init_args)
 
 
@@ -1369,11 +1353,10 @@ class _CRn_(ParametrizedGate):
         return _is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> Gate:
-        """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
         theta = -self.parameters[0]
-        return self.__class__(q0, q1, theta)  # pylint: disable=E1130
+        return self.__class__(q0, q1, theta)
 
 
 class CRX(_CRn_):
@@ -1549,11 +1532,10 @@ class CU1(_CUn_):
         return "cu1"
 
     def _dagger(self) -> Gate:
-        """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
         theta = -self.parameters[0]
-        return self.__class__(q0, q1, theta)  # pylint: disable=E1130
+        return self.__class__(q0, q1, theta)
 
 
 class CU2(_CUn_):
@@ -1593,7 +1575,6 @@ class CU2(_CUn_):
         self.parameters = phi, lam
 
     def _dagger(self) -> Gate:
-        """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
         phi, lam = self.parameters
@@ -1659,10 +1640,9 @@ class CU3(_CUn_):
         return "cu3"
 
     def _dagger(self) -> Gate:
-        """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
+        theta, lam, phi = tuple(-x for x in self.parameters)
         return self.__class__(q0, q1, theta, phi, lam)
 
 
@@ -1898,9 +1878,8 @@ class fSim(ParametrizedGate):
         return True
 
     def _dagger(self) -> Gate:
-        """"""
         q0, q1 = self.target_qubits
-        params = (-x for x in self.parameters)  # pylint: disable=E1130
+        params = (-x for x in self.parameters)
         return self.__class__(q0, q1, *params)
 
 
@@ -1939,7 +1918,6 @@ class SYC(Gate):
         return True
 
     def _dagger(self) -> Gate:
-        """"""
         return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
 
 
@@ -2002,7 +1980,7 @@ class GeneralizedfSim(ParametrizedGate):
                 ValueError,
                 f"Invalid rotation shape {shape} for generalized fSim gate",
             )
-        ParametrizedGate.parameters.fset(self, x)  # pylint: disable=no-member
+        ParametrizedGate.parameters.fset(self, x)
 
 
 class _Rnn_(ParametrizedGate):
@@ -2029,9 +2007,8 @@ class _Rnn_(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     def _dagger(self) -> Gate:
-        """"""
         q0, q1 = self.target_qubits
-        return self.__class__(q0, q1, -self.parameters[0])  # pylint: disable=E1130
+        return self.__class__(q0, q1, -self.parameters[0])
 
 
 class RXX(_Rnn_):
@@ -2212,9 +2189,9 @@ class RXXYY(_Rnn_):
     def hamming_weight(self) -> bool:
         return True
 
-    def decompose(  # pylint: disable=W0246
+    def decompose(
         self, *free, use_toffolis=True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
 
         This decomposition has a global phase difference with respect to
@@ -2297,7 +2274,6 @@ class MS(ParametrizedGate):
         return "ms"
 
     def _dagger(self) -> Gate:
-        """"""
         q0, q1 = self.target_qubits
         phi0, phi1, theta = self.parameters
         return self.__class__(q0, q1, phi0 + math.pi, phi1, theta)
@@ -2344,12 +2320,11 @@ class GIVENS(ParametrizedGate):
         return True
 
     def _dagger(self) -> Gate:
-        """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
-    def decompose(  # pylint: disable=W0246
+    def decompose(
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         """Decomposition of GIVENS gate according to the decomposition of the
         RBS gate in Ref. [1].
 
@@ -2409,12 +2384,11 @@ class RBS(ParametrizedGate):
         return True
 
     def _dagger(self) -> Gate:
-        """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def _base_decompose(
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         """Decomposition of RBS gate as in Ref. [1].
 
         Args:
@@ -2498,9 +2472,9 @@ class ECR(Gate):
     def clifford(self) -> bool:
         return True
 
-    def decompose(  # pylint: disable=W0246
+    def decompose(
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Gate]:
+    ) -> list[Gate]:
         """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
 
         A global phase difference exists between the definitions of
@@ -2551,7 +2525,7 @@ class TOFFOLI(Gate):
     def qasm_label(self) -> str:
         return "ccx"
 
-    def congruent(self, use_toffolis: bool = True) -> List[Gate]:
+    def congruent(self, use_toffolis: bool = True) -> list[Gate]:
         """Congruent representation of ``TOFFOLI`` gate.
 
         This is a helper method for the decomposition of multi-control ``X`` gates.
@@ -2738,8 +2712,8 @@ class GeneralizedRBS(ParametrizedGate):
 
     def __init__(
         self,
-        qubits_in: Union[Tuple[int], List[int]],
-        qubits_out: Union[Tuple[int], List[int]],
+        qubits_in: tuple[int] | list[int],
+        qubits_out: tuple[int] | list[int],
         theta: float,
         phi: float = 0.0,
         trainable: bool = True,
@@ -2793,7 +2767,7 @@ class Unitary(ParametrizedGate):
         unitary: ArrayLike,
         *q: int,
         trainable: bool = True,
-        name: str = None,
+        name: str | None = None,
         check_unitary: bool = True,
     ):
         super().__init__(trainable)
@@ -2877,14 +2851,14 @@ def _check_engine(array: ArrayLike):
     if (array.__class__.__name__ == "Tensor") or (
         isinstance(array, tuple) and array[0].__class__.__name__ == "Tensor"
     ):
-        import torch  # pylint: disable=C0415
+        import torch
 
         return torch
 
     return np
 
 
-def _is_clifford_given_angle(angle: Union[float, int], precision_tol: float = 1e-8):
+def _is_clifford_given_angle(angle: float, precision_tol: float = 1e-8):
     """Helper function to update Clifford boolean condition according to
     the given angle ``angle``."""
     return isinstance(angle, (float, int)) and bool(
@@ -2892,7 +2866,7 @@ def _is_clifford_given_angle(angle: Union[float, int], precision_tol: float = 1e
     )
 
 
-def _is_hamming_weight_given_angle(angle: Union[float, int], target: float = 2 * np.pi):
+def _is_hamming_weight_given_angle(angle: float, target: float = 2 * np.pi):
     """Helper function to update Hamming weight boolean condition according to
     the given angles ``angle`` and ``target``."""
     return isinstance(angle, (float, int)) and (angle % target).is_integer()

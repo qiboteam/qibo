@@ -16,7 +16,7 @@ pytest.skip(allow_module_level=True)
 
 
 def test_from_qasm_simple(backend, accelerators):
-    target = f"""OPENQASM 2.0;
+    target = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[5];
 h q[0];
@@ -24,7 +24,6 @@ h q[1];
 h q[2];
 h q[3];
 h q[4];"""
-    import qibo
 
     c = Circuit.from_qasm(target, accelerators)
     assert c.nqubits == 5
@@ -46,9 +45,7 @@ def test_simple_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = (
-        cirq.Simulator().simulate(c2).final_state_vector
-    )  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -73,9 +70,7 @@ def test_singlequbit_gates_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = (
-        cirq.Simulator().simulate(c2).final_state_vector
-    )  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -96,9 +91,7 @@ def test_multiqubit_gates_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = (
-        cirq.Simulator().simulate(c2).final_state_vector
-    )  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -120,9 +113,7 @@ def test_toffoli_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = (
-        cirq.Simulator().simulate(c2).final_state_vector
-    )  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -140,9 +131,7 @@ def test_parametrized_gate_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = (
-        cirq.Simulator().simulate(c2).final_state_vector
-    )  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -157,7 +146,7 @@ def test_cu1_cirq():
     c1.add(gates.CU1(0, 1, 0.567))
     # catches unknown gate "cu1"
     with pytest.raises(exception.QasmException):
-        c2 = circuit_from_qasm(c1.to_qasm())
+        circuit_from_qasm(c1.to_qasm())
 
 
 def test_ugates_cirq(backend):
@@ -170,9 +159,7 @@ def test_ugates_cirq(backend):
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
-    final_state_c2 = (
-        cirq.Simulator().simulate(c2).final_state_vector
-    )  # pylint: disable=no-member
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector
     backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
@@ -198,13 +185,13 @@ def test_crotations_cirq():
     c1.add(gates.RY(1, 0.3).controlled_by(2))
     # catches unknown gate "crx"
     with pytest.raises(exception.QasmException):
-        c2 = circuit_from_qasm(c1.to_qasm())
+        circuit_from_qasm(c1.to_qasm())
 
 
 def test_from_qasm_evaluation(backend):
     import numpy as np
 
-    target = f"""OPENQASM 2.0;
+    target = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[2];
 h q[0];

@@ -76,7 +76,7 @@ def main(nqubits, subsize, nlayers, nshots, RY, method, maxiter):
 
     # We train the QSVD
     print("Training QSVD...")
-    cost_function, optimal_angles = Qsvd.minimize(
+    _cost_function, optimal_angles = Qsvd.minimize(
         initial_parameters,
         init_state=initial_state,
         nshots=nshots,

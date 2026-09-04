@@ -37,11 +37,11 @@ def test_commutator(backend):
     matrix_3 = backend.cast(matrix_3, dtype=matrix_3.dtype)
 
     with pytest.raises(TypeError):
-        test = commutator(matrix_1, matrix_2)
+        commutator(matrix_1, matrix_2)
     with pytest.raises(TypeError):
-        test = commutator(matrix_2, matrix_1)
+        commutator(matrix_2, matrix_1)
     with pytest.raises(TypeError):
-        test = commutator(matrix_2, matrix_3)
+        commutator(matrix_2, matrix_3)
 
     I, X, Y, Z = (
         backend.matrices.I(2),
@@ -74,11 +74,11 @@ def test_anticommutator(backend):
     matrix_3 = backend.cast(matrix_3, dtype=matrix_3.dtype)
 
     with pytest.raises(TypeError):
-        test = anticommutator(matrix_1, matrix_2)
+        anticommutator(matrix_1, matrix_2)
     with pytest.raises(TypeError):
-        test = anticommutator(matrix_2, matrix_1)
+        anticommutator(matrix_2, matrix_1)
     with pytest.raises(TypeError):
-        test = anticommutator(matrix_2, matrix_3)
+        anticommutator(matrix_2, matrix_3)
 
     I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
     I = backend.cast(I, dtype=I.dtype)
@@ -105,14 +105,14 @@ def test_partial_trace(backend, density_matrix):
         state = np.random.rand(2, 2, 2).astype(complex)
         state += 1j * np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
-        test = partial_trace(state, 1, backend=backend)
+        partial_trace(state, 1, backend=backend)
     with pytest.raises(ValueError):
         state = (
             random_density_matrix(5, backend=backend)
             if density_matrix
             else random_statevector(5, backend=backend)
         )
-        test = partial_trace(state, 1, backend=backend)
+        partial_trace(state, 1, backend=backend)
 
     nqubits = 4
     circuit = Circuit(nqubits, density_matrix=density_matrix)
@@ -156,12 +156,12 @@ def _werner_state(p, backend):
 def test_partial_transpose(backend, p, statevector, batch):
     with pytest.raises(ValueError):
         state = random_density_matrix(3, backend=backend)
-        test = partial_transpose(state, [0], backend)
+        partial_transpose(state, [0], backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2, 2).astype(complex)
         state += 1j * np.random.rand(2, 2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
-        test = partial_transpose(state, [1], backend=backend)
+        partial_transpose(state, [1], backend=backend)
 
     if statevector:
         zero, one = np.array([1, 0], dtype=complex), np.array([0, 1], dtype=complex)
@@ -236,7 +236,7 @@ def test_matrix_power(backend, power, singular):
 
     if isinstance(power, str):
         with pytest.raises(TypeError):
-            test = matrix_power(state, power, backend=backend)
+            matrix_power(state, power, backend=backend)
     elif power == -0.5 and singular:
         # When the singular matrix is a state, this power should be itself
         backend.assert_allclose(matrix_power(state, power, backend=backend), state)

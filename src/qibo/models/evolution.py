@@ -1,7 +1,7 @@
 """Models for time evolution of state vectors."""
 
 from qibo import optimizers, solvers
-from qibo.callbacks import Gap, Norm
+from qibo.callbacks import Gap
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.adiabatic import AdiabaticHamiltonian, BaseAdiabaticHamiltonian
@@ -51,7 +51,11 @@ class StateEvolution:
             final_state2 = evolve(final_time=2, initial_state=initial_state)
     """
 
-    def __init__(self, hamiltonian, dt, solver="exp", callbacks=[], accelerators=None):
+    def __init__(
+        self, hamiltonian, dt, solver="exp", callbacks=None, accelerators=None
+    ):
+        if callbacks is None:
+            callbacks = []
         hamtypes = (AbstractHamiltonian, BaseAdiabaticHamiltonian)
         if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
@@ -123,7 +127,7 @@ class StateEvolution:
         """
         if initial_state is None:
             raise_error(
-                ValueError, "StateEvolution cannot be used without " "initial state."
+                ValueError, "StateEvolution cannot be used without initial state."
             )
         state = self.backend.cast(initial_state)
         self.solver.t = start_time
@@ -178,8 +182,10 @@ class AdiabaticEvolution(StateEvolution):
 
     ATOL = 1e-7  # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[], accelerators=None):
-        self.hamiltonian = AdiabaticHamiltonian(h0, h1)  # pylint: disable=E0110
+    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=None, accelerators=None):
+        if callbacks is None:
+            callbacks = []
+        self.hamiltonian = AdiabaticHamiltonian(h0, h1)
         super().__init__(self.hamiltonian, dt, solver, callbacks, accelerators)
 
         # Set evolution model to "Gap" callback if one exists
@@ -200,8 +206,8 @@ class AdiabaticEvolution(StateEvolution):
         else:
             raise_error(
                 ValueError,
-                f"Scheduling function shoud take one or "
-                "two arguments but it takes {nparams}.",
+                "Scheduling function shoud take one or "
+                f"two arguments but it takes {nparams}.",
             )
 
     @property
@@ -210,8 +216,7 @@ class AdiabaticEvolution(StateEvolution):
         if self.hamiltonian.schedule is None:
             raise_error(
                 ValueError,
-                "Cannot access scheduling function before "
-                "setting its free parameters.",
+                "Cannot access scheduling function before setting its free parameters.",
             )
         return self.hamiltonian.schedule
 
@@ -233,11 +238,10 @@ class AdiabaticEvolution(StateEvolution):
         self.hamiltonian.total_time = params[-1]
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
-        """"""
         if start_time != 0:
             raise_error(
                 NotImplementedError,
-                "Adiabatic evolution supports only t=0 " "as initial time.",
+                "Adiabatic evolution supports only t=0 as initial time.",
             )
         self.hamiltonian.total_time = final_time - start_time
         if initial_state is None:
