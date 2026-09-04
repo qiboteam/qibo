@@ -18,7 +18,7 @@ distributed with pypi* for the packages listed above.
 +------------------+------+---------+-----------+---------+
 
 .. note::
-      All packages are supported for Python >= 3.9.
+      All packages are supported for Python >= 3.11.
 
 
 Backend installation
@@ -38,7 +38,7 @@ Installing with pip
 """""""""""""""""""
 
 The installation using ``pip`` is the recommended approach to install Qibo.
-Make sure you have Python 3.9 or greater, then use ``pip`` to install ``qibo`` with:
+Make sure you have Python 3.11 or greater, then use ``pip`` to install ``qibo`` with:
 
 .. code-block:: bash
 
