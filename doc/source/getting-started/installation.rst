@@ -38,7 +38,7 @@ Installing with pip
 """""""""""""""""""
 
 The installation using ``pip`` is the recommended approach to install Qibo.
-Make sure you have Python 3.9 or greater, then use ``pip`` to install ``qibo`` with:
+Make sure you have Python 3.10 or greater, then use ``pip`` to install ``qibo`` with:
 
 .. code-block:: bash
 
@@ -57,11 +57,16 @@ develop the code from source.
 In order to install Qibo from source, you can simply clone the GitHub repository
 with
 
-.. code-block::
+.. code-block:: bash
 
       git clone https://github.com/qiboteam/qibo.git
       cd qibo
-      pip install .
+
+Then synchronize the development environment using ``uv``:
+
+.. code-block:: bash
+
+      uv sync
 
 _______________________
 

@@ -1289,7 +1289,7 @@ class Circuit:
             )
         except ModuleNotFoundError as e:  # pragma: no cover
             raise ModuleNotFoundError(
-                "The optional dependency qbraid is missing, please install it with `poetry install --extras qir`"
+                "The optional dependency qbraid is missing, please install it with `uv sync --extra qir`"
             ) from e
         return qasm3_to_pyqir(qasm2_to_qasm3(self.to_qasm()))
 
@@ -1309,7 +1309,7 @@ class Circuit:
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, "
-                "please install it with `poetry install --extras cudaq`"
+                "please install it with `uv sync --extra cudaq`"
             ) from e
 
         try:
@@ -1343,7 +1343,7 @@ class Circuit:
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, "
-                "please install it with `poetry install --extras cudaq`"
+                "please install it with `uv sync --extra cudaq`"
             ) from e
 
         try:
