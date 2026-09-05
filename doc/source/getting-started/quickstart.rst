@@ -2,7 +2,7 @@ Quick start
 -----------
 
 To quickly install Qibo and a lightweight simulator for CPU, open a
-terminal with ``python >= 3.8`` and type:
+terminal and type:
 
 .. code-block:: bash
 
