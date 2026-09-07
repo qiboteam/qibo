@@ -197,7 +197,7 @@ def FoldedXXZ(
                 term = reduce(backend.kron, base)
                 hamiltonian += term
 
-        return (-1 / 8) * hamiltonian
+        return Hamiltonian(nqubits, (-1 / 8) * hamiltonian, backend=backend)
 
     X = lambda j: symbols.X(j, backend=backend)
     Y = lambda j: symbols.Y(j, backend=backend)
