@@ -27,6 +27,7 @@ __all__ = [
     "XXZ",
     "AdiabaticHamiltonian",
     "FermiHubbard",
+    "FoldedXXZ",
     "Hamiltonian",
     "Heisenberg",
     "Ising",

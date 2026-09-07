@@ -369,7 +369,7 @@ def test_ising(
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_folded_xxz(backend, nqubits, dense):
     with pytest.raises(ValueError):
-        test = FoldedXXZ(3, dense=dense, backend=backend)
+        FoldedXXZ(3, dense=dense, backend=backend)
 
     I, X = backend.matrices.I(), backend.matrices.X
     Y, Z = backend.matrices.Y, backend.matrices.Z
