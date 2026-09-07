@@ -10,6 +10,7 @@ from qibo.hamiltonians.models import (
     XXX,
     XXZ,
     FermiHubbard,
+    FoldedXXZ,
     Heisenberg,
     Ising,
     MaxCut,
