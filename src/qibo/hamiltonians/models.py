@@ -145,6 +145,77 @@ def FermiHubbard(
     return hamiltonian
 
 
+def FoldedXXZ(
+    nqubits: int, dense: bool = True, backend: Backend | None = None
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Folded XXZ model on an one-dimensional chain with open boundary conditions.
+
+    This model is the :math:`\\Delta \\rightarrow \\infty` limit of the XXZ model.
+
+    .. math::
+        H_{\\Delta \\rightarrow \\infty} = -\\frac{1}{8} \\, \\sum_{j=0}^{n-4} \\,
+            (1 + Z_{j} \\, Z_{j+3}) \\, (X_{j+1} \\, X_{j+2} + Y_{j+1} \\, Y_{j+2})
+
+    Args:
+        nqubits (int): number of qubits. It is equivalent to the number of chain sites :math:`N`
+            plus :math:`2` boundary qubits, *i.e.*, :math:`N + 2`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        The folded XXZ Hamiltonian.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient eigenstate preparation in an
+        integrable model with Hilbert space fragmentation*,
+        `PRX Quantum 6, 030316 (2025) <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    if nqubits < 4:
+        raise_error(ValueError, f"``nqubits`` must be at least 4, but it is {nqubits}.")
+
+    backend = _check_backend(backend)
+
+    if dense:
+        dim = 2**nqubits
+        X = backend.matrices.X
+        Y = backend.matrices.Y
+        Z = backend.matrices.Z
+
+        hamiltonian = backend.zeros((dim, dim), dtype=backend.dtype)
+        for j in range(nqubits - 3):
+            for pauli in (X, Y):
+                base = [backend.matrices.I()] * nqubits
+
+                base[j + 1] = pauli
+                base[j + 2] = pauli
+                term = reduce(backend.kron, base)
+                hamiltonian += term
+
+                base[j] = Z
+                base[j + 3] = Z
+                term = reduce(backend.kron, base)
+                hamiltonian += term
+
+        return Hamiltonian(nqubits, (-1 / 8) * hamiltonian, backend=backend)
+
+    X = lambda j: symbols.X(j, backend=backend)
+    Y = lambda j: symbols.Y(j, backend=backend)
+    Z = lambda j: symbols.Z(j, backend=backend)
+
+    ham = (-1 / 8) * sum(
+        (1 + Z(j) * Z(j + 3)) * (X(j + 1) * X(j + 2) + Y(j + 1) * Y(j + 2))
+        for j in range(nqubits - 3)
+    )
+
+    return SymbolicHamiltonian(ham, backend=backend)
+
+
 def GPP(
     adjacency_matrix: ArrayLike,
     penalty_coeff: float = 0.0,
@@ -707,6 +778,7 @@ def XXX(
     """
     if external_field_strengths is None:
         external_field_strengths = [0.5, 0, 0]
+
     if not isinstance(coupling_constant, (float, int)):
         raise_error(
             TypeError,
