@@ -1396,6 +1396,14 @@ Heisenberg XXZ
     :member-order: bysource
 
 
+Folded XXZ model
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.FoldedXXZ
+    :members:
+    :member-order: bysource
+
+
 Graph Partitioning Problem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
