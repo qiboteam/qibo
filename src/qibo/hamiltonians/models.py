@@ -150,7 +150,7 @@ def FoldedXXZ(
 ) -> Hamiltonian | SymbolicHamiltonian:
     """Folded XXZ model on an one-dimensional chain with open boundary conditions.
 
-    This models is the :math:`\\Delta \\rightarrow \\infty` limit of the XXZ model.
+    This model is the :math:`\\Delta \\rightarrow \\infty` limit of the XXZ model.
 
     .. math::
         H_{\\Delta \\rightarrow \\infty} = -\\frac{1}{8} \\, \\sum_{j=0}^{j-4} \\,
