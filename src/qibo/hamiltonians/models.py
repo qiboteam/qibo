@@ -153,7 +153,7 @@ def FoldedXXZ(
     This models is the :math:`\\Delta \\rightarrow \\infty` limit of the XXZ model.
 
     .. math::
-        H_{\\Delta \\rightarrow \\infty} = -\\frac{1}{8} \\, \\sum_{n=0}^{n-4} \\,
+        H_{\\Delta \\rightarrow \\infty} = -\\frac{1}{8} \\, \\sum_{j=0}^{j-4} \\,
             (1 + Z_{j} \\, Z_{j+3}) \\, (X_{j+1} \\, X_{j+2} + Y_{j+1} \\, Y_{j+2})
 
     Args:
