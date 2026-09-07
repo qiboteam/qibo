@@ -170,6 +170,11 @@ def FoldedXXZ(
     Returns:
         :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
         The folded XXZ Hamiltonian.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient eigenstate preparation in an
+        integrable model with Hilbert space fragmentation*,
+        `PRX Quantum 6, 030316 (2025) <https://doi.org/10.1103/g9f9-p8ks>`_.
     """
     if nqubits < 4:
         raise_error(ValueError, f"``nqubits`` must be at least 4, but it is {nqubits}.")
