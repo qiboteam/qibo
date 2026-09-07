@@ -398,7 +398,4 @@ def test_folded_xxz(backend, nqubits, dense):
 
     hamiltonian = FoldedXXZ(nqubits, dense=dense, backend=backend)
 
-    if not dense:
-        hamiltonian = hamiltonian.matrix
-
-    backend.assert_allclose(hamiltonian, target)
+    backend.assert_allclose(hamiltonian.matrix, target)
