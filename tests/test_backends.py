@@ -1,4 +1,5 @@
 import sys
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -215,6 +216,27 @@ def test_set_backend_error():
 def test_metabackend_load_error():
     with pytest.raises(ValueError):
         MetaBackend.load("non-existing-backend")
+
+
+def test_construct_backend_qibojit_runtime_error_fallback():
+    """``construct_backend`` should fall back to the ``numba`` platform when
+    the auto-selected ``qibojit`` GPU platform fails with a ``RuntimeError``
+    (e.g. cupy's ``CUDARuntimeError`` raised when cupy is installed but no
+    GPU driver is available), while still propagating the error when the GPU
+    platform was explicitly requested.
+    """
+    import qibojit.backends
+
+    with mock.patch.object(
+        qibojit.backends.CupyBackend,
+        "__init__",
+        side_effect=RuntimeError("cudaErrorInsufficientDriver"),
+    ):
+        backend = construct_backend("qibojit")
+        assert backend.platform == "numba"
+
+        with pytest.raises(RuntimeError):
+            construct_backend("qibojit", platform="cupy")
 
 
 def test_construct_backend(backend):
