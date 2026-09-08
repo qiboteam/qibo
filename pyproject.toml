@@ -37,7 +37,6 @@ qir = ["qbraid[qir]>=0.10.0,<0.11.0"]
 
 [dependency-groups]
 dev = [
-  "pdbpp>=0.10.3,<0.11.0",
   "ipython>=8.34.0,<9.0.0",
 ]
 analysis = ["ruff>=0.16.5,<0.17.0"]
@@ -52,13 +51,13 @@ docs = [
   "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
   "seaborn>=0.13.2,<0.14.0",
   "ipykernel>=6.29.4,<7.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git@ch",
+  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
 ]
 tests = [
   "pytest>=7.2.1,<10.0.0",
   "pytest-cov>=4.0.0,<5.0.0",
   "matplotlib>=3.7.0,<4.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git@ch",
+  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
   "stim>=1.15.0,<2.0.0",
   "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
   "qiskit>=2.2.3,<3.0.0",
@@ -68,12 +67,12 @@ tests = [
 cuda11 = [
   "cupy-cuda11x>=13.1.0,<14.0.0",
   "cuquantum-python-cu11>=24.1.0,<25.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git@ch",
+  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
 ]
 cuda12 = [
   "cupy-cuda12x>=13.1.0,<14.0.0",
   "cuquantum-python-cu12>=24.1.0,<25.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git@ch",
+  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
 ]
 
 [build-system]

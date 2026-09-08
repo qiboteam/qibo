@@ -530,22 +530,19 @@ analysis = [{ name = "ruff", specifier = ">=0.16.5,<0.17.0" }]
 cuda11 = [
     { name = "cupy-cuda11x", specifier = ">=13.1.0,<14.0.0" },
     { name = "cuquantum-python-cu11", specifier = ">=24.1.0,<25.0.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=ch" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
 ]
 cuda12 = [
     { name = "cupy-cuda12x", specifier = ">=13.1.0,<14.0.0" },
     { name = "cuquantum-python-cu12", specifier = ">=24.1.0,<25.0.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=ch" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
 ]
-dev = [
-    { name = "ipython", specifier = ">=8.34.0,<9.0.0" },
-    { name = "pdbpp", specifier = ">=0.10.3,<0.11.0" },
-]
+dev = [{ name = "ipython", specifier = ">=8.34.0,<9.0.0" }]
 docs = [
     { name = "furo", specifier = ">=2022.12.7,<2023.0.0" },
     { name = "ipykernel", specifier = ">=6.29.4,<7.0.0" },
     { name = "nbsphinx", specifier = ">=0.8.12,<0.9.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=ch" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
     { name = "qulacs", marker = "python_full_version < '3.13'", specifier = ">=0.6.4,<0.7.0" },
     { name = "recommonmark", specifier = ">=0.7.1,<0.8.0" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14.0" },
@@ -560,7 +557,7 @@ tests = [
     { name = "pytest", specifier = ">=7.2.1,<10.0.0" },
     { name = "pytest-cov", specifier = ">=4.0.0,<5.0.0" },
     { name = "qbraid", extras = ["cudaq", "qir"], specifier = ">=0.10.0,<0.11.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=ch" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
     { name = "qiskit", specifier = ">=2.2.3,<3.0.0" },
     { name = "qulacs", marker = "python_full_version < '3.13'", specifier = ">=0.6.4,<0.7.0" },
     { name = "stim", specifier = ">=1.15.0,<2.0.0" },
