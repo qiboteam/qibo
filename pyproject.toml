@@ -32,7 +32,7 @@ Documentation = "https://qibo.science/docs/qibo/stable"
 [project.optional-dependencies]
 qinfo = ["stim>=1.15.0,<2.0.0"]
 qulacs = ["qulacs>=0.6.4,<0.7.0; python_version < '3.13'"]
-cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0"]
+cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform != 'win32'"]
 qir = ["qbraid[qir]>=0.10.0,<0.11.0"]
 
 [dependency-groups]
@@ -61,7 +61,8 @@ tests = [
   "stim>=1.15.0,<2.0.0",
   "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
   "qiskit>=2.2.3,<3.0.0",
-  "qbraid[cudaq,qir]>=0.10.0,<0.11.0",
+  "qbraid[cudaq,qir]>=0.10.0,<0.11.0; sys_platform != 'win32'",
+  "qbraid[qir]>=0.10.0,<0.11.0; sys_platform == 'win32'",
   "pygridsynth>=2.0.0,<3.0.0",
 ]
 cuda11 = [
