@@ -79,12 +79,6 @@ cuda12 = [
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
 
-[tool.uv]
-override-dependencies = ["qibo @ file://${PROJECT_ROOT}"]
-
-[tool.uv.sources]
-qibo = { workspace = true }
-
 [tool.poe.tasks]
 test = "pytest"
 lint = "ruff check"
