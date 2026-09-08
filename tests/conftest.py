@@ -52,7 +52,9 @@ for backend_name in BACKENDS:
         AVAILABLE_BACKENDS.append(backend_name)
         if _backend.supports_multigpu:  # pragma: no cover
             MULTIGPU_BACKENDS.append(backend_name)
-    except ImportError:
+    except (ImportError, RuntimeError):
+        # RuntimeError covers, e.g., cupy's CUDARuntimeError raised when the
+        # cupy package is installed but no GPU/driver is available.
         pass
 
 try:
