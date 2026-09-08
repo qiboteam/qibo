@@ -112,7 +112,9 @@ class _Global:
                 try:
                     backend = construct_backend(**kwargs)
                     break
-                except (ImportError, MissingBackend):
+                except (ImportError, MissingBackend, RuntimeError):
+                    # RuntimeError covers, e.g., cupy's CUDARuntimeError raised
+                    # when cupy is installed but no GPU/driver is available.
                     pass
 
         if backend is None:  # pragma: no cover
