@@ -13,6 +13,7 @@ from qibo.hamiltonians.models import (
     TFIM,
     XXX,
     FermiHubbard,
+    FoldedXXZ,
     Heisenberg,
     Ising,
     MaxCut,
@@ -362,3 +363,39 @@ def test_ising(
     hamiltonian = backend.real(hamiltonian.matrix)
 
     backend.assert_allclose(hamiltonian, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_folded_xxz(backend, nqubits, dense):
+    with pytest.raises(ValueError):
+        FoldedXXZ(3, dense=dense, backend=backend)
+
+    I, X = backend.matrices.I(), backend.matrices.X
+    Y, Z = backend.matrices.Y, backend.matrices.Z
+
+    if nqubits == 4:
+        target = reduce(backend.kron, [I, X, X, I]) + reduce(backend.kron, [I, Y, Y, I])
+        target += reduce(backend.kron, [Z, X, X, Z]) + reduce(
+            backend.kron, [Z, Y, Y, Z]
+        )
+
+    if nqubits == 5:
+        target = reduce(backend.kron, [I, X, X, I, I]) + reduce(
+            backend.kron, [I, Y, Y, I, I]
+        )
+        target += reduce(backend.kron, [Z, X, X, Z, I]) + reduce(
+            backend.kron, [Z, Y, Y, Z, I]
+        )
+        target += reduce(backend.kron, [I, I, X, X, I]) + reduce(
+            backend.kron, [I, I, Y, Y, I]
+        )
+        target += reduce(backend.kron, [I, Z, X, X, Z]) + reduce(
+            backend.kron, [I, Z, Y, Y, Z]
+        )
+
+    target *= -1 / 8
+
+    hamiltonian = FoldedXXZ(nqubits, dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target)
