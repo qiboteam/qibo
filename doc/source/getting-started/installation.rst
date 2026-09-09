@@ -61,6 +61,7 @@ with
 
       git clone https://github.com/qiboteam/qibo.git
       cd qibo
+      pip install .
 
 Then synchronize the development environment using ``uv``:
 
