@@ -11,9 +11,22 @@ cudaq = pytest.importorskip("cudaq")
 
 
 def _clean_cudaq_code(circuit_code: str) -> str:
-    return re.sub(
-        r"__nvqpp__mlirgen__[a-zA-Z0-9_]+", "", circuit_code, flags=re.MULTILINE
+    """Normalize the non-deterministic, version-dependent kernel naming.
+
+    ``cudaq``'s builder API (``cudaq.make_kernel``) generates a unique kernel
+    name (and entry-point rewrite suffix) that changes both between runs
+    (memory address based) and between ``cudaq`` versions (e.g. the suffix
+    wording changed from ``_PyKernelEntryPointRewrite`` to
+    ``.PyKernelFakeEntryPoint``). Strip it out so only the structural MLIR
+    content is compared.
+    """
+    code = re.sub(
+        r"quake\.mangled_name_map = \{.*?\}\}",
+        "quake.mangled_name_map = {}}",
+        circuit_code,
+        flags=re.DOTALL,
     )
+    return re.sub(r"@__nvqpp__mlirgen__[\w.]+", "@__nvqpp__mlirgen__", code)
 
 
 def test_empty():

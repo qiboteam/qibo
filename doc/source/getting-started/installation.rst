@@ -57,11 +57,17 @@ develop the code from source.
 In order to install Qibo from source, you can simply clone the GitHub repository
 with
 
-.. code-block::
+.. code-block:: bash
 
       git clone https://github.com/qiboteam/qibo.git
       cd qibo
       pip install .
+
+Then synchronize the development environment using ``uv``:
+
+.. code-block:: bash
+
+      uv sync
 
 _______________________
 
