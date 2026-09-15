@@ -1,0 +1,28 @@
+# AI code review using GitHub Copilot CLI.
+#
+# Trigger: add the "run-qibot" label to a pull request.
+#
+# The review logic lives in the reusable workflow
+# qiboteam/workflows/.github/workflows/ai-review.yml; this file only wires up
+# the trigger, inputs and secrets.
+name: ai-review
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  ai-review:
+    if: github.event.label.name == 'run-qibot'
+    uses: qiboteam/workflows/.github/workflows/ai-review.yml@uv
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+      provider-type: "openai"
+      max-ai-credits: 100
+    secrets:
+      copilot_provider_base_url: ${{ secrets.COPILOT_PROVIDER_BASE_URL }}
+      copilot_provider_api_key: ${{ secrets.COPILOT_PROVIDER_API_KEY }}
+      copilot_provider_max_prompt_tokens: ${{ secrets.COPILOT_PROVIDER_MAX_PROMPT_TOKENS }}
+      copilot_provider_max_output_tokens: ${{ secrets.COPILOT_PROVIDER_MAX_OUTPUT_TOKENS }}
+      copilot_model: ${{ secrets.COPILOT_MODEL }}
+      copilot_pat: ${{ secrets.COPILOT_PAT }}
