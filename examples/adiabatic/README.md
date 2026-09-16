@@ -1,6 +1,6 @@
 # Simple Adiabatic Evolution Examples
 
-Code at: [https://github.com/qiboteam/qibo/tree/master/examples/adiabatic](https://github.com/qiboteam/qibo/tree/master/examples/adiabatic)
+Code at: [https://github.com/qiboteam/qibo/tree/main/examples/adiabatic](https://github.com/qiboteam/qibo/tree/main/examples/adiabatic)
 
 ## Introduction
 

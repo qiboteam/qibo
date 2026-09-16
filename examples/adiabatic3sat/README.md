@@ -1,6 +1,6 @@
 # Adiabatic evolution for solving an Exact Cover problem
 
-Code at: [https://github.com/qiboteam/qibo/tree/master/examples/adiabatic3sat](https://github.com/qiboteam/qibo/tree/master/examples/adiabatic3sat)
+Code at: [https://github.com/qiboteam/qibo/tree/main/examples/adiabatic3sat](https://github.com/qiboteam/qibo/tree/main/examples/adiabatic3sat)
 
 ## Introduction
 

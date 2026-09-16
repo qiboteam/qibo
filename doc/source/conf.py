@@ -82,7 +82,7 @@ html_title = "Qibo · v" + release
 html_theme_options = {
     "top_of_page_button": "edit",
     "source_repository": "https://github.com/qiboteam/qibo/",
-    "source_branch": "master",
+    "source_branch": "main",
     "source_directory": "doc/source/",
     "light_logo": "qibo_logo_dark.svg",
     "dark_logo": "qibo_logo_light.svg",

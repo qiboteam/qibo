@@ -1,6 +1,6 @@
-![Logo](https://github.com/qiboteam/qibo/blob/master/doc/source/_static/qibo_logo_dark.svg)
+![Logo](https://github.com/qiboteam/qibo/blob/main/doc/source/_static/qibo_logo_dark.svg)
 
-[![codecov](https://codecov.io/gh/qiboteam/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)
+[![codecov](https://codecov.io/gh/qiboteam/qibo/branch/main/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)
 ![PyPI - Version](https://img.shields.io/pypi/v/qibo)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qibo)
 

@@ -1,6 +1,6 @@
 # Variational Quantum Classifier
 
-Code at: [https://github.com/qiboteam/qibo/tree/master/examples/variational_classifier](https://github.com/qiboteam/qibo/tree/master/examples/variational_classifier).
+Code at: [https://github.com/qiboteam/qibo/tree/main/examples/variational_classifier](https://github.com/qiboteam/qibo/tree/main/examples/variational_classifier).
 
 ## Problem overview
 

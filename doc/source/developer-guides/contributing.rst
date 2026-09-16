@@ -7,17 +7,17 @@ Code review process
 -------------------
 
 All code submissions require a review and continous integration tests
-beforing accepting the code and merging to the git master branch.
+beforing accepting the code and merging to the git main branch.
 
 We use the GitHub pull request mechanism which can be summarized as follows:
 
 1. Fork the Qibo repository.
 
-2. Checkout master and create a new branch from it
+2. Checkout main and create a new branch from it
 
     .. code-block::
 
-        git checkout master -b new_branch
+        git checkout main -b new_branch
 
    where ``new_branch`` is the name of your new branch.
 
