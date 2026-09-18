@@ -18,7 +18,7 @@ jobs:
 
   deploy-docs:
     needs: [version]
-    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@25aeda1851ca8617a6933cdac199c95cc3c11796
+    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@uv
     with:
       python-version: "3.11"
       trigger-label: "${{needs.version.outputs.version}}"
