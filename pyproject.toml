@@ -1,6 +1,6 @@
 [project]
 name = "qibo"
-version = "0.3.5"
+version = "0.3.6"
 description = "A framework for quantum computing with hardware acceleration."
 authors = [{ name = "The Qibo team" }]
 license = "Apache-2.0"
