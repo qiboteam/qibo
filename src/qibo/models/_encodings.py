@@ -283,7 +283,7 @@ def _binary_encoder_mottonen(
             control_indices = backend.cast(control_indices, dtype=backend.int64)
             for i, control_index in enumerate(control_indices):
                 circuit.add(gates.RY(target, theta_y[i]))
-                circuit.add(gates.CNOT(control[control_index], target))
+                circuit.add(gates.CNOT(control[int(control_index)], target))
                 parameters.append(theta_y[i])
 
     if complex_data or not backend.allclose(phases, 0):
@@ -301,7 +301,7 @@ def _binary_encoder_mottonen(
                 control_indices = backend.cast(control_indices, dtype=backend.int64)
                 for i, control_index in enumerate(control_indices):
                     circuit.add(gates.RZ(target, theta_z[i]))
-                    circuit.add(gates.CNOT(control[control_index], target))
+                    circuit.add(gates.CNOT(control[int(control_index)], target))
                     parameters.append(theta_z[i])
 
         global_phase = -float(backend.sum(phases) / dims)
