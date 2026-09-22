@@ -444,14 +444,17 @@ def _ehrlich_algorithm(
     """
     k = np.unique(initial_string, return_counts=True)
     if len(k[1]) == 1:  # pragma: no cover
-        return ["".join([str(item) for item in np.array(initial_string)])]
+        return ["".join([str(item) for item in np.copy(initial_string)])]
 
     k = k[1][1]
     n = len(initial_string)
     n_choose_k = int(binom(n, k))
 
     markers = _get_markers(initial_string, last_run=False)
-    string = np.array(initial_string)
+    # np.array() forces a host copy and cupy disallows that implicit
+    # conversion; np.copy() dispatches through __array_function__ instead,
+    # which cupy supports, mirroring _get_next_bistring's usage below.
+    string = np.copy(initial_string)
     strings = ["".join(str(elem) for elem in string[::-1])]
     controls_and_targets = []
     for _ in range(n_choose_k - 1):
