@@ -192,7 +192,7 @@ def _decomposition_BM20(clifford, **kwargs):
         )
 
     last_row = clifford_copy._backend.cast([False] * 3, dtype=bool)
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     for qubit in range(nqubits):
         position = [qubit, qubit + nqubits]
         single_qubit_circuit = _single_qubit_clifford_decomposition(
