@@ -487,8 +487,12 @@ class MeasurementOutcomes:
         :class:`qibo.result.MeasurementOutcomes`."""
         args = {
             "measurements": [m.to_json() for m in self.measurements],
-            "probabilities": self._probs,
-            "samples": self._samples,
+            "probabilities": (
+                None if self._probs is None else self.backend.to_numpy(self._probs)
+            ),
+            "samples": (
+                None if self._samples is None else self.backend.to_numpy(self._samples)
+            ),
             "nshots": self.nshots,
             "nqubits": self._nqubits,
             "dtype": self.__class__.__name__,

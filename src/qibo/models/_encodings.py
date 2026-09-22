@@ -170,31 +170,34 @@ def _binary_codewords(dims: int, backend: Backend | None = None) -> ArrayLike:
         cwres, cw = cw[dres:], cw[:dres]
 
         # keep weights for O(1) lookups
-        weights = backend.cast(
-            [hamming_weight(int(w)) for w in cw],
-            dtype=_get_int_type(n, backend=backend),
-        )
+        # done with plain Python lists rather than backend arrays because
+        # cupy has no equivalent of ``numpy.insert``
+        cw = [int(w) for w in cw]
+        weights = [hamming_weight(w) for w in cw]
 
         # insert the remainder words at positions that preserve
         # strictly increasing weights and distance ≤ 2 to neighbors
         for word in cwres:
-            hw = hamming_weight(int(word))
+            word = int(word)
+            hw = hamming_weight(word)
 
             inserted = False
             for i in range(len(cw) - 1):
                 wi, wj = weights[i], weights[i + 1]
                 if wi <= hw <= wj and (
-                    hamming_distance(int(word), int(cw[i])) <= 2
-                    and hamming_distance(int(word), int(cw[i + 1])) <= 2
+                    hamming_distance(word, cw[i]) <= 2
+                    and hamming_distance(word, cw[i + 1]) <= 2
                 ):
-                    cw = backend.engine.insert(cw, i + 1, word, axis=0)
-                    weights = backend.engine.insert(weights, i + 1, hw)
+                    cw.insert(i + 1, word)
+                    weights.insert(i + 1, hw)
                     inserted = True
                     break
             if not inserted:
                 # append if no suitable interior gap is found
-                cw = backend.engine.hstack((cw, word))
-                weights = backend.engine.hstack((weights, hw))
+                cw.append(word)
+                weights.append(hw)
+
+        cw = backend.cast(cw, dtype=_get_int_type(dims, backend=backend))
 
     return cw
 
