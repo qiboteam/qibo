@@ -1258,7 +1258,8 @@ def _mottonen_compute_theta(
     new_shape = (orig_shape[0],) + (2,) * nqubits if broadcasted else (2,) * nqubits
     theta = backend.reshape(alpha, new_shape)
 
-    hadamard = np.array([[1, 1], [1, -1]]) / 2
+    # cast to a backend tensor: cupy's tensordot rejects a raw numpy operand
+    hadamard = backend.cast(np.array([[1, 1], [1, -1]]) / 2, dtype=theta.dtype)
     for i in range(broadcasted, nqubits + broadcasted):
         theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
 
