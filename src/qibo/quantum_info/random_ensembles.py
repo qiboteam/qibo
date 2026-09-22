@@ -648,8 +648,7 @@ def random_clifford(
     cliff = Clifford(tableau, platform=engine)
 
     if return_circuit:
-        # BM20 is CNOT-optimal but only supports nqubits <= 3
-        method = "BM20" if engine == "cupy" and nqubits <= 3 else "AG04"
+        method = "BM20" if engine == "cupy" else "AG04"
         return cliff.to_circuit(method, **kwargs)
 
     return cliff
