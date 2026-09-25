@@ -98,11 +98,7 @@ def test_ud_eigenvalues(backend, seed):
     unitary_recon = backend.kron(ua, ub) @ ud @ backend.kron(va, vb)
     backend.assert_allclose(unitary_recon, unitary)
 
-    ud_bell = (
-        backend.transpose(backend.conj(backend.cast(bell_basis)), (1, 0))
-        @ ud
-        @ backend.cast(bell_basis)
-    )
+    ud_bell = backend.dagger(backend.cast(bell_basis)) @ ud @ backend.cast(bell_basis)
     ud_diag = backend.diag(ud_bell)
 
     backend.assert_allclose(backend.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6)

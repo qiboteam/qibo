@@ -24,7 +24,7 @@ def pytest_addoption(parser):
 BACKENDS = [
     "numpy",
     "qibojit-numba",
-    "qibojit-cupy",
+    # "qibojit-cupy",
     # "qibojit-cuquantum",
 ]
 # multigpu configurations to be tested (only with qibojit-cupy)

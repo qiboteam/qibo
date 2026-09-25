@@ -262,7 +262,7 @@ def magic_decomposition(
     psi_tilde = backend.conj(backend.sqrt(eigvals)) * backend.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
-    dag = lambda U: backend.transpose(backend.conj(U), (1, 0))
+    dag = lambda U: backend.dagger(U)
     ua, ub = dag(ua_dagger), dag(ub_dagger)
     return calculate_diagonal(unitary, ua, ub, va, vb, backend=backend)
 
