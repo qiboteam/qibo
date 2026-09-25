@@ -1591,14 +1591,14 @@ class Backend:
         self.engine.random.shuffle(array, **kwargs)
 
     def sign(
-        self, array: ArrayLike, nonzero: bool = True, **kwargs
+        self, array: ArrayLike, nonzero: bool = False, **kwargs
     ) -> ArrayLike:  # pragma: no cover
         """Return an element-wise indication of the sign of a number.
 
         Args:
             array (ArrayLike): input array.
             nonzero (bool, optional): if ``True`` and sign is :math:`0.0`, returns :math:`1.0`.
-                If ``False`` and sign is :math:`0.0`, returns :math:`0.0`. Defaults to ``True``.
+                If ``False`` and sign is :math:`0.0`, returns :math:`0.0`. Defaults to ``False``.
             kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
