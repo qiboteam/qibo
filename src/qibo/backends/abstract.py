@@ -1590,18 +1590,27 @@ class Backend:
         """
         self.engine.random.shuffle(array, **kwargs)
 
-    def sign(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+    def sign(
+        self, array: ArrayLike, nonzero: bool = True, **kwargs
+    ) -> ArrayLike:  # pragma: no cover
         """Return an element-wise indication of the sign of a number.
 
         Args:
             array (ArrayLike): input array.
+            nonzero (bool, optional): if ``True`` and sign is :math:`0.0`, returns :math:`1.0`.
+                If ``False`` and sign is :math:`0.0`, returns :math:`0.0`. Defaults to ``True``.
             kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
             ArrayLike: The resulting array with signs of the elements in ``array``.
         """
-        return self.engine.sign(array, **kwargs)
+        sign = self.engine.sign(array, **kwargs)
+
+        if nonzero and sign == 0:
+            return self.cast(1.0, dtype=self.int64)
+
+        return sign
 
     def sin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         """Calculate the element-wise sine of values in ``array``.
