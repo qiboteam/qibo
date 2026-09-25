@@ -1607,7 +1607,8 @@ class Backend:
         """
         sign = self.engine.sign(array, **kwargs)
 
-        if nonzero and sign == 0:
+        if nonzero:
+            sign = self.where(sign == 0, 1, sign)
             return self.cast(1.0, dtype=self.int64)
 
         return sign
