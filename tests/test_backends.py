@@ -7,6 +7,7 @@ import pytest
 import qibo
 from qibo import Circuit, construct_backend, gates, list_available_backends, set_backend
 from qibo.backends import MetaBackend
+from qibo.quantum_info.random_ensembles import random_unitary
 
 from .conftest import AVAILABLE_BACKENDS
 
@@ -206,6 +207,15 @@ def test_minus_state(backend, nqubits, density_matrix):
     target = backend.execute_circuit(target).state()
 
     backend.assert_allclose(state, target)
+
+
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_dagger(backend, nqubits):
+    for matrix in (backend.matrices.X, backend.matrices.Y, backend.matrices.Z):
+        backend.assert_allclose(backend.dagger(matrix), matrix)
+
+    rand = random_unitary(2**nqubits, backend=backend)
+    backend.assert_allclose(backend.dagger(rand), backend.inv(rand))
 
 
 def test_set_backend_error():

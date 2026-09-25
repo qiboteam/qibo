@@ -637,6 +637,17 @@ class Backend:
         """
         return self.engine.cumsum(array, **kwargs)
 
+    def dagger(self, array: ArrayLike) -> ArrayLike:
+        """Return the conjugate transpose of an ``array``.
+
+        Args:
+            array (ArrayLike): input array.
+
+        Returns:
+            ArrayLike: Conjugate transpose of the input ``array``.
+        """
+        return self.transpose(self.conj(array))
+
     def default_rng(self, seed: int | None = None) -> ArrayLike:
         """Create a new random number Generator using the engine's default setting.
 
