@@ -1609,7 +1609,6 @@ class Backend:
 
         if nonzero:
             sign = self.where(sign == 0, 1, sign)
-            return self.cast(1.0, dtype=self.int64)
 
         return sign
 
