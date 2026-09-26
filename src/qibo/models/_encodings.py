@@ -170,31 +170,34 @@ def _binary_codewords(dims: int, backend: Backend | None = None) -> ArrayLike:
         cwres, cw = cw[dres:], cw[:dres]
 
         # keep weights for O(1) lookups
-        weights = backend.cast(
-            [hamming_weight(int(w)) for w in cw],
-            dtype=_get_int_type(n, backend=backend),
-        )
+        # done with plain Python lists rather than backend arrays because
+        # cupy has no equivalent of ``numpy.insert``
+        cw = [int(w) for w in cw]
+        weights = [hamming_weight(w) for w in cw]
 
         # insert the remainder words at positions that preserve
         # strictly increasing weights and distance ≤ 2 to neighbors
         for word in cwres:
-            hw = hamming_weight(int(word))
+            word = int(word)
+            hw = hamming_weight(word)
 
             inserted = False
             for i in range(len(cw) - 1):
                 wi, wj = weights[i], weights[i + 1]
                 if wi <= hw <= wj and (
-                    hamming_distance(int(word), int(cw[i])) <= 2
-                    and hamming_distance(int(word), int(cw[i + 1])) <= 2
+                    hamming_distance(word, cw[i]) <= 2
+                    and hamming_distance(word, cw[i + 1]) <= 2
                 ):
-                    cw = backend.engine.insert(cw, i + 1, word, axis=0)
-                    weights = backend.engine.insert(weights, i + 1, hw)
+                    cw.insert(i + 1, word)
+                    weights.insert(i + 1, hw)
                     inserted = True
                     break
             if not inserted:
                 # append if no suitable interior gap is found
-                cw = backend.engine.hstack((cw, word))
-                weights = backend.engine.hstack((weights, hw))
+                cw.append(word)
+                weights.append(hw)
+
+        cw = backend.cast(cw, dtype=_get_int_type(dims, backend=backend))
 
     return cw
 
@@ -280,7 +283,7 @@ def _binary_encoder_mottonen(
             control_indices = backend.cast(control_indices, dtype=backend.int64)
             for i, control_index in enumerate(control_indices):
                 circuit.add(gates.RY(target, theta_y[i]))
-                circuit.add(gates.CNOT(control[control_index], target))
+                circuit.add(gates.CNOT(control[int(control_index)], target))
                 parameters.append(theta_y[i])
 
     if complex_data or not backend.allclose(phases, 0):
@@ -298,7 +301,7 @@ def _binary_encoder_mottonen(
                 control_indices = backend.cast(control_indices, dtype=backend.int64)
                 for i, control_index in enumerate(control_indices):
                     circuit.add(gates.RZ(target, theta_z[i]))
-                    circuit.add(gates.CNOT(control[control_index], target))
+                    circuit.add(gates.CNOT(control[int(control_index)], target))
                     parameters.append(theta_z[i])
 
         global_phase = -float(backend.sum(phases) / dims)
@@ -441,14 +444,17 @@ def _ehrlich_algorithm(
     """
     k = np.unique(initial_string, return_counts=True)
     if len(k[1]) == 1:  # pragma: no cover
-        return ["".join([str(item) for item in np.array(initial_string)])]
+        return ["".join([str(item) for item in np.copy(initial_string)])]
 
     k = k[1][1]
     n = len(initial_string)
     n_choose_k = int(binom(n, k))
 
     markers = _get_markers(initial_string, last_run=False)
-    string = np.array(initial_string)
+    # np.array() forces a host copy and cupy disallows that implicit
+    # conversion; np.copy() dispatches through __array_function__ instead,
+    # which cupy supports, mirroring _get_next_bistring's usage below.
+    string = np.copy(initial_string)
     strings = ["".join(str(elem) for elem in string[::-1])]
     controls_and_targets = []
     for _ in range(n_choose_k - 1):
@@ -1252,7 +1258,8 @@ def _mottonen_compute_theta(
     new_shape = (orig_shape[0],) + (2,) * nqubits if broadcasted else (2,) * nqubits
     theta = backend.reshape(alpha, new_shape)
 
-    hadamard = np.array([[1, 1], [1, -1]]) / 2
+    # cast to a backend tensor: cupy's tensordot rejects a raw numpy operand
+    hadamard = backend.cast(np.array([[1, 1], [1, -1]]) / 2, dtype=theta.dtype)
     for i in range(broadcasted, nqubits + broadcasted):
         theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
 
