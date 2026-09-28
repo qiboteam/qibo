@@ -326,6 +326,61 @@ For example
     3: ─────────o──|───────o──|────o──|──H─U1───|─x─
     4: ────────────o──────────o───────o────o──H─x───
 
+By default, every gate acting on more than one qubit is drawn in its own column.
+Setting ``parallel=True`` draws multi-qubit gates that act on disjoint sets of qubits
+in the same column, as is already done for single-qubit gates, which gives a more
+compact diagram for circuits built in layers.
+A gate is drawn across every qubit line between its outermost qubits, so gates whose
+vertical connectors would cross are still drawn in separate columns.
+For example, for a brickwork layer of ``CZ`` gates
+
+.. testcode::
+
+    from qibo import Circuit, gates
+
+    circuit = Circuit(6)
+    circuit.add(gates.H(qubit) for qubit in range(6))
+    circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(0, 5, 2))
+    circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(1, 5, 2))
+    circuit.add(gates.RY(qubit, theta=0.1) for qubit in range(6))
+
+    circuit.draw()
+    # Prints
+    '''
+    0: ─H─o─────────RY─
+    1: ─H─Z─────o───RY─
+    2: ─H───o───Z───RY─
+    3: ─H───Z─────o─RY─
+    4: ─H─────o───Z─RY─
+    5: ─H─────Z─────RY─
+    '''
+
+    circuit.draw(parallel=True)
+    # Prints
+    '''
+    0: ─H─o─RY────
+    1: ─H─Z─o──RY─
+    2: ─H─o─Z──RY─
+    3: ─H─Z─o──RY─
+    4: ─H─o─Z──RY─
+    5: ─H─Z─RY────
+    '''
+.. testoutput::
+    :hide:
+
+    0: ─H─o─────────RY─
+    1: ─H─Z─────o───RY─
+    2: ─H───o───Z───RY─
+    3: ─H───Z─────o─RY─
+    4: ─H─────o───Z─RY─
+    5: ─H─────Z─────RY─
+    0: ─H─o─RY────
+    1: ─H─Z─o──RY─
+    2: ─H─o─Z──RY─
+    3: ─H─Z─o──RY─
+    4: ─H─o─Z──RY─
+    5: ─H─Z─RY────
+
 How to visualize a circuit with style?
 --------------------------------------
 
