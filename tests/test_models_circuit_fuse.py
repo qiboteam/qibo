@@ -241,21 +241,15 @@ def test_fused_gate_draw():
     assert circuit.diagram(parallel=True) == ref
 
     # disjoint fused blocks are drawn in parallel only if ``parallel=True``
-    ref = "\n".join(
-        [
-            "0: ─[─H─o─]──────────────",
-            "1: ─[───X─]────────────o─",
-            "2: ─────────[─H─o────]─Z─",
-            "3: ─────────[───X─RY─]───",
-        ]
+    ref = (
+        "0: ─[─H─o─]──────────────\n1: ─[───X─]────────────o─\n"
+        + "2: ─────────[─H─o────]─Z─\n3: ─────────[───X─RY─]───"
     )
-    ref_parallel = "\n".join(
-        [
-            "0: ─[─H─o─]──────",
-            "1: ─[───X─]────o─",
-            "2: ─[─H─o────]─Z─",
-            "3: ─[───X─RY─]───",
-        ]
+    ref_parallel = (
+        "0: ─[─H─o─]──────\n"
+        + "1: ─[───X─]────o─\n"
+        + "2: ─[─H─o────]─Z─\n"
+        + "3: ─[───X─RY─]───"
     )
     circuit = Circuit(4)
     circuit.add(gates.H(0))

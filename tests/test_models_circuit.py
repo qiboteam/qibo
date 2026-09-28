@@ -287,7 +287,10 @@ def test_summary(capsys):
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.TOFFOLI(0, 1, 2))
     circuit.add(gates.H(2))
-    target_summary = "Circuit depth = 5\nTotal number of gates = 6\nNumber of qubits = 3\nMost common gates:\nh: 3\ncx: 2\nccx: 1"
+    target_summary = (
+        "Circuit depth = 5\nTotal number of gates = 6\nNumber of qubits = 3\n"
+        + "Most common gates:\nh: 3\ncx: 2\nccx: 1"
+    )
     circuit.summary()
     out, _ = capsys.readouterr()
     assert out.rstrip("\n") == target_summary
