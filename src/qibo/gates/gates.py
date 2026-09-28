@@ -2751,11 +2751,13 @@ class Unitary(ParametrizedGate):
     Args:
         unitary: Unitary matrix as a tensor supported by the backend.
         *q (int): Qubit id numbers that the gate acts on.
-        trainable (bool): whether gate parameters can be updated using
+        trainable (bool, optional): whether gate parameters can be updated using
             :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
-        name (str): Optional name for the gate.
-        check_unitary (bool): if ``True``, checks if ``unitary`` is an unitary operator.
+        name (str, optional): name for the gate.
+        draw_label (str, optional): label for drawing the gate in a circuit
+            with :meth:`qibo.models.Circuit.draw`.
+        check_unitary (bool, optional): if ``True``, checks if ``unitary`` is an unitary operator.
             If ``False``, check is not performed and ``unitary`` attribute
             defaults to ``False``. Note that, even when the check is performed,
             there is no enforcement. This allows the user to create
@@ -2786,6 +2788,7 @@ class Unitary(ParametrizedGate):
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {
             "name": name,
+            "draw_label": draw_label,
             "check_unitary": check_unitary,
             "trainable": trainable,
         }
