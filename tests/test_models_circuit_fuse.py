@@ -237,3 +237,27 @@ def test_fused_gate_draw():
     circuit.add(gates.SWAP(1, 3))
     circuit = circuit.fuse()
     assert str(circuit) == ref
+    # the QFT gates all reach the last wire, so nothing can be drawn in parallel
+    assert circuit.diagram(parallel=True) == ref
+
+    # disjoint fused blocks are drawn in parallel only if ``parallel=True``
+    ref = (
+        "0: ─[─H─o─]──────────────\n1: ─[───X─]────────────o─\n"
+        + "2: ─────────[─H─o────]─Z─\n3: ─────────[───X─RY─]───"
+    )
+    ref_parallel = (
+        "0: ─[─H─o─]──────\n"
+        + "1: ─[───X─]────o─\n"
+        + "2: ─[─H─o────]─Z─\n"
+        + "3: ─[───X─RY─]───"
+    )
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.H(2))
+    circuit.add(gates.CNOT(2, 3))
+    circuit.add(gates.RY(3, 0.2))
+    circuit.add(gates.CZ(1, 2))
+    circuit = circuit.fuse()
+    assert str(circuit) == ref
+    assert circuit.diagram(parallel=True) == ref_parallel

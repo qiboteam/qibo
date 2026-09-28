@@ -1361,6 +1361,7 @@ class Circuit:
         idx: list[int],
         gate: Gate,
         gate_symbol: str | None = None,
+        parallel: bool = False,
     ) -> tuple[ArrayLike, list[int]]:
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
@@ -1380,21 +1381,28 @@ class Circuit:
             targets = list(gate.target_qubits)
         controls = list(gate.control_qubits)
 
-        # identify boundaries
-        qubits = targets + controls
-        qubits.sort()
-        min_qubits_id = qubits[0]
-        max_qubits_id = qubits[-1]
+        # identify boundaries. The gate occupies every wire between its
+        # outermost qubits, since the vertical connector ``|`` is drawn
+        # on the wires in between.
+        qubits = sorted(targets + controls)
+        span = range(qubits[0], qubits[-1] + 1)
 
-        # identify column
-        col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
+        # identify the wires that fix the column of this gate and that are
+        # advanced after drawing it. Single-qubit gates are always drawn in
+        # parallel. Multi-qubit gates block all wires unless ``parallel=True``,
+        # in which case they only block the wires in their span, so that gates
+        # acting on disjoint (and non-interleaved) sets of wires share a column.
+        wires = span if parallel or len(span) == 1 else range(self.nqubits)
+
+        # identify column: the earliest one that is free on every wire in ``wires``
+        col = max(idx[iq] for iq in wires)
 
         # extend matrix
         for iq in range(self.nqubits):
             matrix[iq].extend((1 + col - len(matrix[iq])) * [""])
 
         # fill
-        for iq in range(min_qubits_id, max_qubits_id + 1):
+        for iq in span:
             if iq in targets:
                 matrix[iq][col] = gate_symbol
             elif iq in controls:
@@ -1403,15 +1411,18 @@ class Circuit:
                 matrix[iq][col] = "|"
 
         # update indexes
-        if not controls and len(targets) == 1:
-            idx[targets[0]] += 1
-        else:
-            idx = [col + 1] * self.nqubits
+        for iq in wires:
+            idx[iq] = col + 1
 
         return matrix, idx
 
-    def diagram(self, line_wrap: int = 70, legend: bool = False) -> str:
-        """Build the string representation of the circuit diagram."""
+    def diagram(
+        self, line_wrap: int = 100, legend: bool = False, parallel: bool = False
+    ) -> str:
+        """Build the string representation of the circuit diagram.
+
+        See :meth:`qibo.models.circuit.Circuit.draw` for the arguments.
+        """
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         wire_names = [str(name) for name in self.wire_names]
@@ -1420,14 +1431,22 @@ class Circuit:
         for gate in self.queue:
             if isinstance(gate, gates.FusedGate):
                 # start fused gate
-                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "[")
+                matrix, idx = self._update_draw_matrix(
+                    matrix, idx, gate, "[", parallel=parallel
+                )
                 # draw gates contained in the fused gate
                 for subgate in gate.gates:
-                    matrix, idx = self._update_draw_matrix(matrix, idx, subgate)
+                    matrix, idx = self._update_draw_matrix(
+                        matrix, idx, subgate, parallel=parallel
+                    )
                 # end fused gate
-                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "]")
+                matrix, idx = self._update_draw_matrix(
+                    matrix, idx, gate, "]", parallel=parallel
+                )
             else:
-                matrix, idx = self._update_draw_matrix(matrix, idx, gate)
+                matrix, idx = self._update_draw_matrix(
+                    matrix, idx, gate, parallel=parallel
+                )
 
         # Add some spacers
         for col in range(len(matrix[0])):
@@ -1505,17 +1524,25 @@ class Circuit:
     def __str__(self):
         return self.diagram()
 
-    def draw(self, line_wrap: int = 70, legend: bool = False) -> None:
+    def draw(
+        self, line_wrap: int = 100, legend: bool = False, parallel: bool = False
+    ) -> None:
         """Draw text circuit using unicode symbols.
 
         Args:
             line_wrap (int, optional): maximum number of characters per line. This option
                 split the circuit text diagram in chunks of line_wrap characters.
-                Defaults to :math:`70`.
+                Defaults to :math:`100`.
             legend (bool, optional): If ``True`` prints a legend below the circuit for
                 callbacks and channels. Defaults to ``False``.
+            parallel (bool, optional): If ``True``, multi-qubit gates acting on disjoint
+                sets of wires are drawn in the same column, as single-qubit gates already
+                are. A gate occupies every wire between its outermost qubits, so gates
+                whose vertical connectors would cross are still drawn in separate columns.
+                If ``False``, each multi-qubit gate is drawn in its own column.
+                Defaults to ``False``.
         """
-        sys.stdout.write(self.diagram(line_wrap, legend) + "\n")
+        sys.stdout.write(self.diagram(line_wrap, legend, parallel) + "\n")
 
 
 def _resolve_qubits(

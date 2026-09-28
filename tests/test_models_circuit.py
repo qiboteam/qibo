@@ -287,7 +287,10 @@ def test_summary(capsys):
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.TOFFOLI(0, 1, 2))
     circuit.add(gates.H(2))
-    target_summary = "Circuit depth = 5\nTotal number of gates = 6\nNumber of qubits = 3\nMost common gates:\nh: 3\ncx: 2\nccx: 1"
+    target_summary = (
+        "Circuit depth = 5\nTotal number of gates = 6\nNumber of qubits = 3\n"
+        + "Most common gates:\nh: 3\ncx: 2\nccx: 1"
+    )
     circuit.summary()
     out, _ = capsys.readouterr()
     assert out.rstrip("\n") == target_summary
@@ -758,6 +761,57 @@ def test_circuit_draw_wire_names_int():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
     assert str(circuit) == ref
+
+
+def test_circuit_draw_parallel_multiqubit_gates(capsys):
+    """Multi-qubit gates on disjoint wires share a column only if ``parallel=True``."""
+    ref = (
+        "0: ─H─o─────────RX─o─────o───\n"
+        "1: ─H─X─────o──────|─X───o───\n"
+        "2: ─H───o───X──────Z─────X───\n"
+        "3: ─H───Z─────o────────o─────\n"
+        "4: ─H─────x───X────────|───M─\n"
+        "5: ─H─────x────────────Z───M─"
+    )
+    ref_parallel = (
+        "0: ─H─o─RX─o───o─\n"
+        "1: ─H─X─o──|─X─o─\n"
+        "2: ─H─o─X──Z───X─\n"
+        "3: ─H─Z─o──o─────\n"
+        "4: ─H─x─X──|─M───\n"
+        "5: ─H─x────Z─M───"
+    )
+    circuit = Circuit(6)
+    circuit.add(gates.H(qubit) for qubit in range(6))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CZ(2, 3))
+    circuit.add(gates.SWAP(4, 5))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(3, 4))
+    circuit.add(gates.RX(0, 0.1))
+    circuit.add(gates.CZ(0, 2))
+    # the connector of ``CZ(0, 2)`` crosses wire 1, so ``X(1)`` goes after it
+    circuit.add(gates.X(1))
+    circuit.add(gates.CZ(3, 5))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.M(4, 5))
+
+    circuit.draw()
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref
+
+    circuit.draw(parallel=True)
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref_parallel
+
+    # gates on disjoint qubits whose connectors interleave cannot share a column
+    ref_parallel = "0: ─o───o─\n1: ─|─o─X─\n2: ─Z─|─X─\n3: ───Z─o─"
+    circuit = Circuit(4)
+    circuit.add(gates.CZ(0, 2))
+    circuit.add(gates.CZ(1, 3))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(3, 2))
+    assert circuit.diagram(parallel=True) == ref_parallel
 
 
 def test_circuit_draw_line_wrap(capsys):
