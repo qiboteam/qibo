@@ -802,14 +802,7 @@ def test_circuit_draw_parallel_multiqubit_gates(capsys):
     assert out.rstrip("\n") == ref_parallel
 
     # gates on disjoint qubits whose connectors interleave cannot share a column
-    ref_parallel = "\n".join(
-        [
-            "0: ─o───o─",
-            "1: ─|─o─X─",
-            "2: ─Z─|─X─",
-            "3: ───Z─o─",
-        ]
-    )
+    ref_parallel = "0: ─o───o─\n1: ─|─o─X─\n2: ─Z─|─X─\n3: ───Z─o─"
     circuit = Circuit(4)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.CZ(1, 3))
