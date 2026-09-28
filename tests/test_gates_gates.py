@@ -1681,9 +1681,10 @@ def test_unitary_initialization(backend):
     assert not gates.Unitary(matrix, 0, 1, check_unitary=False).unitary
     assert gates.Unitary(random_unitary(2, backend=backend), 0).unitary
 
-    gate = gates.Unitary(random_unitary(2, backend=backend), draw_label="W")
+    gate = gates.Unitary(random_unitary(4, backend=backend), 0, 1, draw_label="W")
     assert gate.draw_label == "W"
     assert gate.dagger().draw_label == "W"
+    assert gate.on_qubits({0: 1, 1: 2}).draw_label == "W"
 
 
 def test_unitary_common_gates(backend):
