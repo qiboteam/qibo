@@ -2768,11 +2768,12 @@ class Unitary(ParametrizedGate):
         *q: int,
         trainable: bool = True,
         name: str | None = None,
+        draw_label: str | None = None,
         check_unitary: bool = True,
     ):
         super().__init__(trainable)
         self.name = "Unitary" if name is None else name
-        self.draw_label = "U"
+        self.draw_label = "U" if draw_label is None else draw_label
         self.target_qubits = tuple(q)
         self._hamming_weight = False
         self._clifford = False
