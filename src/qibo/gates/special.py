@@ -31,7 +31,7 @@ class Barrier(SpecialGate):
 
     Args:
         q (int): Indices of the qubits the barrier acts on.
-
+        q (int, ...): Indices of the qubits the barrier acts on.
     Example:
 
         .. testcode::
