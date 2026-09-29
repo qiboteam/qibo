@@ -273,6 +273,6 @@ def remove_barriers(circuit):
         :class:`qibo.models.circuit.Circuit`: Copy of ``circuit`` without barriers.
     """
     new_circuit = circuit.copy(deep=True)
-    kept_gates = [gate for gate in new_circuit.queue if gate.name != "barrier"]
+    kept_gates = [gate for gate in new_circuit.queue if not isinstance(gate, Barrier)]
     new_circuit.queue[:] = kept_gates
     return new_circuit
