@@ -2807,6 +2807,14 @@ Gate decomposition
 Optimizer
 ^^^^^^^^^
 
+Inverse cancellation
+""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.InverseCancellation
+    :members:
+    :member-order: bysource
+
+
 Preprocessing
 """""""""""""
 
