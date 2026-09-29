@@ -30,7 +30,6 @@ class Barrier(SpecialGate):
         never allow a wrong one.
 
     Args:
-        q (int): Indices of the qubits the barrier acts on.
         q (int, ...): Indices of the qubits the barrier acts on.
     Example:
 
