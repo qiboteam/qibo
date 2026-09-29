@@ -784,18 +784,27 @@ def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
         backend.assert_circuitclose(circuit, target)
 
 
+@pytest.mark.parametrize("method", [None, "parity"])
 @pytest.mark.parametrize("nqubits", [6, 8, 10])
-def test_fanout_and_ladder_synthesis(backend, nqubits):
+def test_fanout_and_ladder_synthesis(backend, nqubits, method):
     with pytest.raises(ValueError):
         qubits = [0, 1, 3]
         ladder_synthesis(qubits, return_circuit=True)
 
     with pytest.raises(ValueError):
         qubits = [0, 1, 3]
-        fanout_synthesis(qubits)
+        fanout_synthesis(qubits, method=method)
+
+    with pytest.raises(ValueError):
+        fanout_synthesis(qubits=[0, 1, 2], method="foo")
+
+    qubits = (0, 1)
+    fanout = fanout_synthesis(qubits, method=method)
+    target = gates.FanOut(*qubits).matrix(backend)
+    backend.assert_allclose(fanout.unitary(backend), target)
 
     qubits = list(range(nqubits))
-    fanout = fanout_synthesis(qubits)
+    fanout = fanout_synthesis(qubits, method=method)
     target = gates.FanOut(*qubits).matrix(backend)
     backend.assert_allclose(fanout.unitary(backend), target)
 

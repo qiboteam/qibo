@@ -19,6 +19,7 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _binary_encoder_hyperspherical,
     _binary_encoder_mottonen,
     _ehrlich_algorithm,
+    _fanout_parity_tree,
     _generate_rbs_angles,
     _generate_rbs_pairs,
     _get_gate,
@@ -458,6 +459,7 @@ def entangling_layer(
 def fanout_synthesis(
     qubits: list[int] | tuple[int],
     nqubits: int | None = None,
+    method: str | None = None,
     **kwargs,
 ) -> Circuit:
     """Synthesis of the Fanout gate in logarithmic depth.
@@ -468,6 +470,9 @@ def fanout_synthesis(
         qubits (list[int] | tuple[int]): qubits in which the CNOT ladder acts on.
         nqubits (int, optional): total number of qubits in the circuit. To be used when
             the total number of qubits differ from `len(qubits)`. Defaults to ``None``.
+        method (str, optional): if `"parity"`, return a fanout decomposition based on parity trees.
+            If ``None``, return a decomposition based on CNOT-ladder synthesis.
+            Defaults to ``None``.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit containing the sequence of gates in parallel.
@@ -479,6 +484,14 @@ def fanout_synthesis(
         Springer, Cham. (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
 
     """
+
+    if method not in (None, "parity"):
+        raise_error(
+            ValueError, f"Unknown method {method!r}. Expected ``None`` or 'parity'."
+        )
+
+    if method == "parity":
+        return _fanout_parity_tree(qubits, nqubits, **kwargs)
 
     if nqubits is None:
         if set(qubits) != set(range(len(qubits))):
