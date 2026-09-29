@@ -172,6 +172,8 @@ class QASMParser:
                 nqubits += q_size
             elif isinstance(statement, openqasm3.ast.QuantumGateDefinition):
                 self._def_gate(statement)
+            elif isinstance(statement, openqasm3.ast.QuantumBarrier):
+                gates.append(self._get_barrier(statement))
             elif isinstance(statement, openqasm3.ast.Include):
                 continue
             elif isinstance(statement, openqasm3.ast.ClassicalDeclaration):
@@ -213,6 +215,19 @@ class QASMParser:
                 )
             qubits = self.q_registers[qubit]
         return qibo.gates.M(*qubits, register_name=register)
+
+    def _get_barrier(self, barrier):
+        """Converts a :class:`openqasm3.ast.QuantumBarrier` statement
+        into :class:`qibo.gates.special.Barrier`."""
+        qubits = []
+        for qubit in barrier.qubits:
+            target = self._get_qubit(qubit)
+            # a bare register name (``barrier q;``) means every qubit of it
+            if isinstance(target, str):
+                qubits.extend(self.q_registers[target])
+            else:
+                qubits.append(target)
+        return qibo.gates.Barrier(*qubits)
 
     def _get_qubit(self, qubit):
         """Extracts the qubit from a :class:`openqasm3.ast.QubitDeclaration` statement."""

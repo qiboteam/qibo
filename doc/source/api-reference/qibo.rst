@@ -1012,6 +1012,15 @@ Arbitrary unitary
     :members:
     :member-order: bysource
 
+
+Barrier
+"""""""
+
+.. autoclass:: qibo.gates.Barrier
+    :members:
+    :member-order: bysource
+
+
 Callback gate
 """""""""""""
 
