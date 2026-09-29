@@ -795,6 +795,9 @@ def test_fanout_and_ladder_synthesis(backend, nqubits, method):
         qubits = [0, 1, 3]
         fanout_synthesis(qubits)
 
+    with pytest.raises(ValueError):
+        fanout_synthesis(qubits=[0, 1, 3], method="foo")
+
     qubits = list(range(nqubits))
     fanout = fanout_synthesis(qubits, method=method)
     target = gates.FanOut(*qubits).matrix(backend)

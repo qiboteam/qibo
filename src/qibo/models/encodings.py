@@ -486,7 +486,10 @@ def fanout_synthesis(
     """
 
     if method not in (None, "parity"):
-        raise_error(ValueError, f"Unknown method {method!r}. Expected None or 'parity'.")
+        raise_error(
+            ValueError, f"Unknown method {method!r}. Expected ``None`` or 'parity'."
+        )
+
     if method == "parity":
         return _fanout_parity_tree(qubits, nqubits, **kwargs)
 

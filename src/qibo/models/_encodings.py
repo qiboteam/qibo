@@ -550,7 +550,7 @@ def _ehrlich_codewords_up_to_k(
 def _fanout_parity_tree(
     qubits: list[int] | tuple[int], nqubits: int | None = None, **kwargs
 ) -> Circuit:
-    """Synthesis of :math:`k`-target fanout with a depth :math:`2 \\lceil \\log_{2} k \\rceil + 1`.
+    """Synthesis of :math:`k`-target fanout with a depth :math:`2 \\lceil \\log_{2} k \\rceil + 3`.
 
     Since :math:`(H \\otimes H) \\, \\mathrm{CNOT}_{t \\to a} \\, (H \\otimes H) =
     \\mathrm{CNOT}_{a \\to t}`, the fanout from :math:`a` to
