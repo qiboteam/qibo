@@ -142,3 +142,34 @@ def test_remove_barriers_removes_barrier_class_defined_in_qibo():
     circuit.add(gates.Barrier(0, 1))
     circuit.add(Barrier(0, 1))
     assert [gate.name for gate in remove_barriers(circuit).queue] == ["h"]
+
+
+def _circuit() -> Circuit:
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Barrier(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Barrier(*range(circuit.nqubits)))
+    return circuit
+
+
+def test_qasm_round_trip():
+    imported = Circuit.from_qasm(_circuit().to_qasm())
+    assert [(gate.name, gate.qubits) for gate in imported.queue] == [
+        ("h", (0,)),
+        ("barrier", (0, 1)),
+        ("cx", (0, 1)),
+        ("barrier", (0, 1, 2)),
+    ]
+    assert all(
+        isinstance(gate, gates.Barrier)
+        for gate in imported.queue
+        if gate.name == "barrier"
+    )
+
+
+def test_qasm_import_of_a_whole_register():
+    qasm = 'OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[3];\nh q[0];\nbarrier q;\n'
+    barrier = Circuit.from_qasm(qasm).queue[1]
+    assert barrier.name == "barrier"
+    assert barrier.qubits == (0, 1, 2)
