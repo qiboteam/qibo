@@ -37,7 +37,7 @@ class Barrier(SpecialGate):
         .. testcode::
 
             from qibo import Circuit, gates
-            from barrier import Barrier
+            from qibo.gates.special import Barrier
 
             circuit = Circuit(3)
             circuit.add(gates.H(0))
@@ -93,7 +93,7 @@ class Barrier(SpecialGate):
                 Every qubit of the barrier must appear as a key.
 
         Returns:
-            :class:`barrier.Barrier`: Barrier acting on the mapped qubits.
+            :class:`qibo.gates.Barrier`: Barrier acting on the mapped qubits.
         """
         missing = [q for q in self.target_qubits if q not in qubit_map]
         if len(missing) > 0:
