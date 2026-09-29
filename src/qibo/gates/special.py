@@ -257,7 +257,7 @@ class FusedGate(SpecialGate):
         return state
 
 
-def remove_barriers(circuit: "Circuit") -> "Circuit":
+def remove_barriers(circuit):
     """Return a deep copy of ``circuit`` with every barrier removed.
 
     Use it before :mod:`qibo.transpiler`: its placer, router and unroller do not

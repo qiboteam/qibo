@@ -61,7 +61,7 @@ def test_barrier_clifford_backend():
 
 
 def test_barrier_draw():
-    expected = "\n".join(["0: ─H─░─o─░─", "1: ───░─X─░─", "2: ───────░─"])
+    expected = "0: ─H─░─o─░─\n1: ───░─X─░─\n2: ───────░─"
     assert _bell_circuit(True).diagram() == expected
 
 
