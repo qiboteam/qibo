@@ -471,7 +471,7 @@ def fanout_synthesis(
         nqubits (int, optional): total number of qubits in the circuit. To be used when
             the total number of qubits differ from `len(qubits)`. Defaults to ``None``.
         method (str, optional): if `"parity"`, return a fanout decomposition based on parity trees.
-            If ``None``, return decomposition based on synthesis of ladder CNOT ladders.
+            If ``None``, return a decomposition based on CNOT-ladder synthesis.
             Defaults to ``None``.
 
     Returns:
