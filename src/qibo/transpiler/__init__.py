@@ -1,4 +1,9 @@
-from qibo.transpiler.optimizer import InverseCancellation, Preprocessing, Rearrange
+from qibo.transpiler.optimizer import (
+    InverseCancellation,
+    Preprocessing,
+    Rearrange,
+    TGateRules,
+)
 from qibo.transpiler.pipeline import Passes
 from qibo.transpiler.placer import (
     Random,
@@ -22,5 +27,6 @@ __all__ = [
     "StarConnectivityPlacer",
     "StarConnectivityRouter",
     "Subgraph",
+    "TGateRules",
     "Unroller",
 ]
