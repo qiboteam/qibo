@@ -2839,6 +2839,40 @@ Rearrange
     :member-order: bysource
 
 
+Remove final reset
+""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveFinalReset
+    :members:
+    :member-order: bysource
+
+
+Remove identity equivalent
+""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveIdentityEquivalent
+    :members:
+    :member-order: bysource
+
+
+Remove reset in zero state
+""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveResetInZeroState
+    :members:
+    :member-order: bysource
+
+
+Reset after measure simplification
+""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.ResetAfterMeasureSimplification
+    :members:
+    :member-order: bysource
+
+
+
+
 T-gate rules
 """"""""""""
 
