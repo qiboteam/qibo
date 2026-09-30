@@ -3,6 +3,10 @@ from qibo.transpiler.optimizer import (
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
+    RemoveFinalReset,
+    RemoveIdentityEquivalent,
+    RemoveResetInZeroState,
+    ResetAfterMeasureSimplification,
     TGateRules,
 )
 from qibo.transpiler.pipeline import Passes
@@ -23,6 +27,10 @@ __all__ = [
     "Preprocessing",
     "Random",
     "Rearrange",
+    "RemoveFinalReset",
+    "RemoveIdentityEquivalent",
+    "RemoveResetInZeroState",
+    "ResetAfterMeasureSimplification",
     "ReverseTraversal",
     "Sabre",
     "ShortestPaths",
