@@ -1,5 +1,6 @@
 from qibo.transpiler.optimizer import (
     InverseCancellation,
+    ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
     TGateRules,
@@ -17,6 +18,7 @@ from qibo.transpiler.unroller import NativeGates, Unroller
 __all__ = [
     "InverseCancellation",
     "NativeGates",
+    "ParametrizedGateFusion",
     "Passes",
     "Preprocessing",
     "Random",
