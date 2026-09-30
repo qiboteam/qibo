@@ -7,6 +7,7 @@ from qibo.gates.special import Barrier
 from qibo.models import Circuit
 from qibo.transpiler.optimizer import (
     InverseCancellation,
+    Optimize1qGatesDecomposition,
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
@@ -318,12 +319,8 @@ U_PAIRS = [
     (2, 3),
     (3, 2),
     (3, 3),
-    # the second gate undoes the first one, so the polar angle of the result is zero
-    ((0.7, 0.4, -1.3), (-0.7, 1.3, -0.4)),
     # the polar angle of the result is pi
     ((0.9, 0.3), (0.2, -0.9)),
-    # tiny polar angles that cancel
-    ((1e-9, 0.4, 0.5), (-1e-9, -0.5, -0.4)),
     # angles far outside of one period
     ((40.0, -30.0, 20.0), (-25.0, 10.0, 60.0)),
 ]
@@ -495,6 +492,72 @@ NOT_FUSED = {
         gates.RXX(0, 2, 0.2).controlled_by(1),
     ],
 }
+
+
+# Pairs of U3 gates where the second gate undoes the first one, so the merged gate is
+# the identity, and a pair with tiny polar angles that cancel
+U_IDENTITY_PAIRS = [
+    ((0.7, 0.4, -1.3), (-0.7, 1.3, -0.4)),
+    ((1e-9, 0.4, 0.5), (-1e-9, -0.5, -0.4)),
+]
+
+
+@pytest.mark.parametrize("controls", [(), (1,), (1, 2)])
+@pytest.mark.parametrize("first,second", U_IDENTITY_PAIRS)
+def test_parametrized_gate_fusion_identity_pair(backend, first, second, controls):
+    circuit = Circuit(1 + len(controls))
+    for angles in (first, second):
+        circuit.add(gates.U3(0, *angles).controlled_by(*controls))
+    fused = ParametrizedGateFusion()(circuit, backend=backend)
+
+    # a polar angle of zero with a vanishing phase gives an exact U1 gate
+    assert [gate.name for gate in fused.queue] == [
+        "cu1" if len(controls) == 1 else "u1"
+    ]
+    assert fused.queue[0].control_qubits == controls
+    backend.assert_allclose(
+        fused.unitary(backend), circuit.unitary(backend), atol=1e-12
+    )
+
+
+@pytest.mark.parametrize("controls", [(), (1,), (1, 2)])
+def test_parametrized_gate_fusion_u2_result(backend, controls):
+    # the polar angles add up to pi / 2 because lambda_2 + phi_1 = 0
+    circuit = Circuit(1 + len(controls))
+    circuit.add(gates.U3(0, np.pi / 4, 0.2, 0.3).controlled_by(*controls))
+    circuit.add(gates.U3(0, np.pi / 4, 0.5, -0.2).controlled_by(*controls))
+    fused = ParametrizedGateFusion()(circuit, backend=backend)
+
+    assert fused.ngates == 1
+    assert fused.queue[0].name == ("cu2" if len(controls) == 1 else "u2")
+    assert fused.queue[0].control_qubits == controls
+    backend.assert_allclose(
+        fused.unitary(backend), circuit.unitary(backend), atol=1e-12
+    )
+
+
+@pytest.mark.parametrize("controls", [(), (1,)])
+@pytest.mark.parametrize("up_to_global_phase", [False, True])
+def test_parametrized_gate_fusion_u1_result(backend, up_to_global_phase, controls):
+    # the polar angles cancel because lambda_2 + phi_1 = pi
+    circuit = Circuit(1 + len(controls))
+    circuit.add(gates.U3(0, 0.5, 0.2, 0.3).controlled_by(*controls))
+    circuit.add(gates.U3(0, 0.5, 0.4, np.pi - 0.2).controlled_by(*controls))
+    fused = ParametrizedGateFusion(up_to_global_phase=up_to_global_phase)(
+        circuit, backend=backend
+    )
+
+    assert fused.ngates == 1
+    original = backend.to_numpy(circuit.unitary(backend))
+    result = backend.to_numpy(fused.unitary(backend))
+    if up_to_global_phase and not controls:
+        # U1 differs from the U3 gate with a polar angle of zero by a global phase
+        assert fused.queue[0].name == "u1"
+        assert np.isclose(np.abs(np.trace(original.conj().T @ result)), 2)
+        assert not np.allclose(original, result)
+    else:
+        assert fused.queue[0].name == ("cu3" if len(controls) == 1 else "u3")
+        np.testing.assert_allclose(result, original, atol=1e-12)
 
 
 @pytest.mark.parametrize("pair", NOT_FUSED.values(), ids=NOT_FUSED.keys())
@@ -768,3 +831,297 @@ def test_reset_passes_pipeline(backend, star_connectivity):
     )
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["cx"]
+
+
+BASES = {
+    "U3": ["u3", "cx"],
+    "U321": ["u1", "u2", "u3", "cx"],
+    "ZYZ": ["rz", "ry", "cx"],
+    "ZXZ": ["rz", "rx", "cx"],
+    "XZX": ["rx", "rz", "cx"],
+    "XYX": ["rx", "ry", "cx"],
+    "ZSX": ["rz", "sx", "cx"],
+    "ZSXX": ["rz", "sx", "x", "cx"],
+}
+
+
+@pytest.mark.parametrize("basis", BASES.values(), ids=BASES.keys())
+def test_optimize_1q_gates_decomposition_bases(backend, basis):
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.T(0))
+    circuit.add(gates.RX(0, 0.3))
+    circuit.add(gates.U3(0, 0.4, 0.5, 0.6))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.S(1))
+    circuit.add(gates.SX(1))
+    circuit.add(gates.Y(1))
+    circuit.add(gates.RZ(0, 0.2))
+    optimized = Optimize1qGatesDecomposition(basis)(circuit, backend=backend)
+    assert {gate.name for gate in optimized.queue} <= set(basis)
+
+    original = backend.to_numpy(circuit.unitary(backend))
+    result = backend.to_numpy(optimized.unitary(backend))
+    assert np.isclose(np.abs(np.trace(original.conj().T @ result)), 4)
+
+
+@pytest.mark.parametrize("basis", [None, *BASES.values()])
+def test_optimize_1q_gates_decomposition_random(backend, basis):
+    circuit = Circuit(2)
+    for qubit in [0, 1, 1, 0, 0, 1, 0, 1, 1, 0]:
+        circuit.add(gates.U3(qubit, *backend.random_uniform(-7, 7, 3)))
+        circuit.add(gates.RX(qubit, float(backend.random_uniform(-7, 7, 1)[0])))
+        circuit.add(gates.H(qubit))
+    optimized = Optimize1qGatesDecomposition(basis)(circuit, backend=backend)
+    assert optimized.ngates <= circuit.ngates
+
+    original = backend.to_numpy(circuit.unitary(backend))
+    result = backend.to_numpy(optimized.unitary(backend))
+    assert np.isclose(np.abs(np.trace(original.conj().T @ result)), 4)
+
+
+@pytest.mark.parametrize(
+    "basis,theta,names",
+    [
+        ("ZSX", 0.0, ["rz"]),
+        ("ZSX", np.pi / 2, ["rz", "sx", "rz"]),
+        ("ZSX", 0.7, ["rz", "sx", "rz", "sx", "rz"]),
+        ("ZSXX", np.pi, ["rz", "x", "rz"]),
+        ("ZSXX", 0.7, ["rz", "sx", "rz", "sx", "rz"]),
+        ("U321", 0.0, ["u1"]),
+        ("U321", np.pi / 2, ["u2"]),
+        ("U321", 0.7, ["u3"]),
+    ],
+)
+def test_optimize_1q_gates_decomposition_special_angles(backend, basis, theta, names):
+    circuit = Circuit(1)
+    circuit.add(gates.U3(0, theta, 0.4, 0.9))
+    circuit.add(gates.RZ(0, 0.1))
+    optimized = Optimize1qGatesDecomposition(
+        [name for name in BASES[basis] if name != "cx"]
+    )(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == names
+
+
+def test_optimize_1q_gates_decomposition_identity(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(0))
+    for basis in (None, *BASES.values()):
+        for up_to_global_phase in (True, False):
+            optimized = Optimize1qGatesDecomposition(
+                basis, up_to_global_phase=up_to_global_phase
+            )(circuit, backend=backend)
+            assert optimized.ngates == 0
+
+
+def test_optimize_1q_gates_decomposition_only_replaces_if_needed(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.RZ(0, 0.1))
+    circuit.add(gates.SX(0))
+    circuit.add(gates.RZ(0, 0.3))
+
+    # already in the basis and not improvable
+    optimized = Optimize1qGatesDecomposition(["rz", "sx"])(circuit, backend=backend)
+    assert all(new is old for new, old in zip(optimized.queue, circuit.queue))
+
+    # out of the basis
+    optimized = Optimize1qGatesDecomposition(["u3"])(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["u3"]
+
+    # without a basis, all gates count as in the basis
+    optimized = Optimize1qGatesDecomposition()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["u2"]
+
+    circuit = Circuit(1)
+    circuit.add(gates.RZ(0, 0.1))
+    circuit.add(gates.RZ(0, 0.3))
+    optimized = Optimize1qGatesDecomposition(["rz", "sx"])(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["rz"]
+    assert np.isclose(optimized.queue[0].parameters[0], 0.4)
+
+
+def test_optimize_1q_gates_decomposition_global_phase(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+
+    # H has determinant -1, so it is not a product of rotations
+    exact = Optimize1qGatesDecomposition(["rz", "ry"], up_to_global_phase=False)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in exact.queue] == ["h"]
+    optimized = Optimize1qGatesDecomposition(["rz", "ry"])(circuit, backend=backend)
+    assert {gate.name for gate in optimized.queue} == {"rz", "ry"}
+
+    # rotations have determinant one, so the result is exact
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, 0.3))
+    circuit.add(gates.RY(0, 0.4))
+    circuit.add(gates.RZ(0, 0.5))
+    circuit.add(gates.RX(0, 0.6))
+    exact = Optimize1qGatesDecomposition(["u3"], up_to_global_phase=False)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in exact.queue] == ["u3"]
+    backend.assert_allclose(
+        exact.unitary(backend), circuit.unitary(backend), atol=1e-12
+    )
+
+
+def test_optimize_1q_gates_decomposition_unusable_basis(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    circuit.add(gates.T(0))
+    optimized = Optimize1qGatesDecomposition(["cz", "gpi2"])(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["h", "t"]
+
+
+def test_optimize_1q_gates_decomposition_stops_at_other_gates(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.T(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.H(0))
+    circuit.add(gates.RX(0, sympy.Symbol("x")))
+    circuit.add(gates.T(0))
+    circuit.add(gates.H(0).controlled_by(1))
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0))
+    circuit.add(gates.T(0))
+    circuit.add(gates.H(0))
+    optimized = Optimize1qGatesDecomposition(["u3", "cx"])(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        ("u3", (0,)),
+        ("cx", (0, 1)),
+        ("u3", (0,)),
+        ("rx", (0,)),
+        ("u3", (0,)),
+        ("h", (1, 0)),
+        ("u3", (0,)),
+        ("measure", (0,)),
+        ("u3", (0,)),
+    ]
+
+
+def test_optimize_1q_gates_decomposition_errors(backend):
+    with pytest.raises(ValueError):
+        Optimize1qGatesDecomposition(atol=-1e-3)
+
+
+def test_optimize_1q_gates_decomposition_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 2))
+    pipeline = Passes(
+        [Optimize1qGatesDecomposition(["rz", "sx", "cx"])],
+        connectivity=star_connectivity(),
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert [gate.name for gate in transpiled.queue] == ["cx"]
+
+
+@pytest.mark.parametrize(
+    "basis,gate",
+    [
+        (["rz", "ry"], gates.RZ),
+        (["rz", "rx"], gates.RZ),
+        (["rx", "ry"], gates.RX),
+        (["rx", "rz"], gates.RX),
+    ],
+)
+def test_optimize_1q_gates_decomposition_merges_rotations(backend, basis, gate):
+    circuit = Circuit(1)
+    circuit.add(gate(0, 0.1))
+    circuit.add(gate(0, 0.3))
+    optimized = Optimize1qGatesDecomposition(basis)(circuit, backend=backend)
+    assert [type(new) for new in optimized.queue] == [gate]
+    assert np.isclose(optimized.queue[0].parameters[0], 0.4)
+
+
+@pytest.mark.parametrize(
+    "special,density_matrix",
+    [
+        (lambda: Barrier(0), False),
+        (lambda: gates.Align(0), False),
+        (lambda: gates.PauliNoiseChannel(0, [("X", 0.1)]), True),
+    ],
+    ids=["barrier", "align", "channel"],
+)
+def test_optimize_1q_gates_decomposition_special_gates(
+    backend, special, density_matrix
+):
+    # the special gate only stops the runs on its own qubit, so the gates on the
+    # second qubit are merged across it
+    circuit = Circuit(2, density_matrix=density_matrix)
+    circuit.add(gates.H(1))
+    circuit.add(gates.H(0))
+    circuit.add(gates.T(0))
+    circuit.add(special())
+    circuit.add(gates.H(0))
+    circuit.add(gates.T(0))
+    circuit.add(gates.T(1))
+    optimized = Optimize1qGatesDecomposition(["u3", "cx"])(circuit, backend=backend)
+
+    assert [(type(gate), gate.qubits) for gate in optimized.queue] == [
+        (gates.U3, (1,)),
+        (gates.U3, (0,)),
+        (type(circuit.queue[3]), (0,)),
+        (gates.U3, (0,)),
+    ]
+    assert optimized.queue[2] is circuit.queue[3]
+    assert optimized.density_matrix == density_matrix
+
+
+def test_optimize_1q_gates_decomposition_keeps_order(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.X(2))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.T(0))
+    circuit.add(gates.Y(1))
+    circuit.add(gates.H(1))
+    circuit.add(gates.Z(2))
+    optimized = Optimize1qGatesDecomposition(["u3", "cx"])(circuit, backend=backend)
+
+    # a run stays at the place of its first gate
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        ("u3", (2,)),
+        ("u3", (0,)),
+        ("cx", (1, 2)),
+        ("u3", (1,)),
+        ("u3", (2,)),
+    ]
+
+
+def test_optimize_1q_gates_decomposition_repeated_gate(backend):
+    # the same gate object added several times
+    gate = gates.H(0)
+    circuit = Circuit(2)
+    circuit.add(gate)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gate)
+    optimized = Optimize1qGatesDecomposition(["u3", "cx"])(circuit, backend=backend)
+
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        ("u3", (0,)),
+        ("cx", (0, 1)),
+        ("u3", (0,)),
+    ]
+    original = backend.to_numpy(circuit.unitary(backend))
+    result = backend.to_numpy(optimized.unitary(backend))
+    assert np.isclose(np.abs(np.trace(original.conj().T @ result)), 4)
+
+
+def test_optimize_1q_gates_decomposition_circuit_unchanged(backend):
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    circuit.add(gates.T(0))
+    circuit.add(gates.CNOT(0, 1))
+    queue = list(circuit.queue)
+    optimized = Optimize1qGatesDecomposition(["u3", "cx"])(circuit, backend=backend)
+
+    assert list(circuit.queue) == queue
+    assert all(isinstance(gate, gates.FusedGate) is False for gate in circuit.queue)
+    assert optimized.density_matrix
+    assert [gate.name for gate in optimized.queue] == ["u3", "cx"]
