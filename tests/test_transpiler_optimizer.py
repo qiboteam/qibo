@@ -3,7 +3,12 @@ import pytest
 from qibo import gates
 from qibo.gates.special import Barrier
 from qibo.models import Circuit
-from qibo.transpiler.optimizer import InverseCancellation, Preprocessing, Rearrange
+from qibo.transpiler.optimizer import (
+    InverseCancellation,
+    Preprocessing,
+    Rearrange,
+    TGateRules,
+)
 from qibo.transpiler.pipeline import Passes
 
 
@@ -155,3 +160,48 @@ def test_inverse_cancellation_pipeline(backend, star_connectivity):
     pipeline = Passes([InverseCancellation()], connectivity=star_connectivity())
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["cx"]
+
+
+@pytest.mark.parametrize("power", range(20))
+def test_t_gate_rules_powers(backend, power):
+    circuit = Circuit(1)
+    circuit.add(gates.T(0) for _ in range(power))
+    new = TGateRules()(circuit)
+
+    backend.assert_allclose(new.unitary(backend), circuit.unitary(backend), atol=1e-12)
+    max_gates = [0, 1, 1, 2, 1, 2, 1, 1]
+    assert new.ngates == max_gates[power % 8]
+
+
+def test_t_gate_rules_separated_runs(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.T(0))
+    circuit.add(gates.T(1))
+    circuit.add(gates.T(0))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.T(0))
+    circuit.add(gates.T(0).controlled_by(1))
+    circuit.add(gates.T(0))
+    circuit.add(gates.M(0))
+    circuit.add(gates.T(0))
+    new = TGateRules()(circuit)
+
+    assert [type(gate) for gate in new.queue] == [
+        gates.S,
+        gates.CNOT,
+        gates.T,
+        gates.T,
+        gates.T,
+        gates.T,
+        gates.M,
+        gates.T,
+    ]
+    assert new.queue[4].control_qubits == (1,)
+
+    unitary_circuit = Circuit(3)
+    unitary_circuit.add(gate for gate in circuit.queue if not isinstance(gate, gates.M))
+    unitary_new = Circuit(3)
+    unitary_new.add(gate for gate in new.queue if not isinstance(gate, gates.M))
+    backend.assert_allclose(
+        unitary_new.unitary(backend), unitary_circuit.unitary(backend), atol=1e-12
+    )
