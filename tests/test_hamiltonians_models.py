@@ -222,10 +222,10 @@ def test_fermi_hubbard(backend, nsites, dense, closed_boundary):
     target = 0
     if nsites == 2:
         target += (t / 2) * (
-            _multikron([X, I, X, I], backend=backend)
-            + _multikron([Y, I, Y, I], backend=backend)
-            + _multikron([I, X, I, X], backend=backend)
-            + _multikron([I, Y, I, Y], backend=backend)
+            _multikron([X, Z, X, I], backend=backend)
+            + _multikron([Y, Z, Y, I], backend=backend)
+            + _multikron([I, X, Z, X], backend=backend)
+            + _multikron([I, Y, Z, Y], backend=backend)
         )
         target += (U / 4) * (
             nsites * backend.identity(4**nsites)
@@ -238,21 +238,21 @@ def test_fermi_hubbard(backend, nsites, dense, closed_boundary):
         )
     else:
         target = (t / 2) * (
-            _multikron([X, I, X, I, I, I], backend=backend)
-            + _multikron([Y, I, Y, I, I, I], backend=backend)
-            + _multikron([I, X, I, X, I, I], backend=backend)
-            + _multikron([I, Y, I, Y, I, I], backend=backend)
-            + _multikron([I, I, X, I, X, I], backend=backend)
-            + _multikron([I, I, Y, I, Y, I], backend=backend)
-            + _multikron([I, I, I, X, I, X], backend=backend)
-            + _multikron([I, I, I, Y, I, Y], backend=backend)
+            _multikron([X, Z, X, I, I, I], backend=backend)
+            + _multikron([Y, Z, Y, I, I, I], backend=backend)
+            + _multikron([I, X, Z, X, I, I], backend=backend)
+            + _multikron([I, Y, Z, Y, I, I], backend=backend)
+            + _multikron([I, I, X, Z, X, I], backend=backend)
+            + _multikron([I, I, Y, Z, Y, I], backend=backend)
+            + _multikron([I, I, I, X, Z, X], backend=backend)
+            + _multikron([I, I, I, Y, Z, Y], backend=backend)
         )
         if closed_boundary:
             target += (t / 2) * (
-                _multikron([X, I, I, I, X, I], backend=backend)
-                + _multikron([Y, I, I, I, Y, I], backend=backend)
-                + _multikron([I, X, I, I, I, X], backend=backend)
-                + _multikron([I, Y, I, I, I, Y], backend=backend)
+                _multikron([X, Z, Z, Z, X, I], backend=backend)
+                + _multikron([Y, Z, Z, Z, Y, I], backend=backend)
+                + _multikron([I, X, Z, Z, Z, X], backend=backend)
+                + _multikron([I, Y, Z, Z, Z, Y], backend=backend)
             )
         target += (U / 4) * (
             nsites * backend.identity(4**nsites)
@@ -272,6 +272,168 @@ def test_fermi_hubbard(backend, nsites, dense, closed_boundary):
     )
 
     backend.assert_allclose(hamiltonian.matrix, target)
+
+
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("lattice", [(1, 3), (2, 2), (3, 1)])
+def test_fermi_hubbard_2d_dense_symbolic(backend, lattice, closed_boundary):
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "closed_boundary": closed_boundary,
+        "backend": backend,
+    }
+    dense = FermiHubbard(lattice, dense=True, **kwargs)
+    symbolic = FermiHubbard(lattice, dense=False, **kwargs)
+
+    assert dense.nqubits == 2 * lattice[0] * lattice[1]
+    backend.assert_allclose(dense.matrix, symbolic.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("labelling", ["row_major", "snake"])
+@pytest.mark.parametrize("lattice", [(1, 3), (2, 2), (3, 1)])
+def test_fermi_hubbard_2d_free_fermions(backend, lattice, labelling):
+    """At :math:`U = 0`, the ground-state energy of the open lattice must be equal to
+    the sum, over both spin species, of the negative single-particle energies."""
+    nrows, ncols = lattice
+    t = -1.3
+
+    labels = [
+        [
+            row * ncols
+            + (col if labelling == "row_major" or row % 2 == 0 else ncols - 1 - col)
+            for col in range(ncols)
+        ]
+        for row in range(nrows)
+    ]
+    hopping = backend.zeros((nrows * ncols, nrows * ncols), dtype=backend.float64)
+    for row in range(nrows):
+        for col in range(ncols):
+            if col < ncols - 1:
+                a, b = labels[row][col], labels[row][col + 1]
+                hopping[a, b] = hopping[b, a] = t
+            if row < nrows - 1:
+                a, b = labels[row][col], labels[row + 1][col]
+                hopping[a, b] = hopping[b, a] = t
+    levels = backend.eigvalsh(hopping)
+    target = 2 * backend.sum(levels[levels < 0])
+
+    hamiltonian = FermiHubbard(
+        lattice,
+        hopping_strength=t,
+        interaction_strength=0.0,
+        closed_boundary=False,
+        labelling=labelling,
+        backend=backend,
+    )
+    energies = hamiltonian.eigenvalues()
+
+    backend.assert_allclose(backend.min(energies), target, atol=1e-8)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize(
+    "labelling, pairs",
+    [
+        # bonds 0-1, 2-3, 0-2, and 1-3
+        (
+            "row_major",
+            [(0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7)],
+        ),
+        # bonds 0-1, 2-3, 0-3, and 1-2
+        (
+            "snake",
+            [(0, 2), (1, 3), (4, 6), (5, 7), (0, 6), (1, 7), (2, 4), (3, 5)],
+        ),
+    ],
+)
+def test_fermi_hubbard_2d_labelling(backend, labelling, pairs, dense):
+    """Qubit pairs connected by hopping in a :math:`2 \\times 2` lattice, for which
+    sites are labeled as ``[[0, 1], [2, 3]]`` (row major) or ``[[0, 1], [3, 2]]`` (snake).
+    Even (odd) qubits encode spin up (down)."""
+    t = -1.5
+    I, X, Y, Z = (
+        backend.matrices.I(),
+        backend.matrices.X,
+        backend.matrices.Y,
+        backend.matrices.Z,
+    )
+
+    target = 0
+    for qubit_a, qubit_b in pairs:
+        for pauli in (X, Y):
+            base_string = [I] * 8
+            base_string[qubit_a] = pauli
+            base_string[qubit_b] = pauli
+            for qubit in range(qubit_a + 1, qubit_b):
+                base_string[qubit] = Z
+            target += (t / 2) * _multikron(base_string, backend=backend)
+
+    hamiltonian = FermiHubbard(
+        (2, 2),
+        hopping_strength=t,
+        interaction_strength=0.0,
+        dense=dense,
+        closed_boundary=False,
+        labelling=labelling,
+        backend=backend,
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target, atol=1e-10)
+
+
+def test_fermi_hubbard_2d_labelling_spectrum(backend):
+    """Relabeling sites permutes fermionic modes, and it must not change the spectrum."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "closed_boundary": False,
+        "backend": backend,
+    }
+    row_major = FermiHubbard((2, 2), labelling="row_major", **kwargs)
+    snake = FermiHubbard((2, 2), labelling="snake", **kwargs)
+
+    backend.assert_allclose(snake.eigenvalues(), row_major.eigenvalues(), atol=1e-10)
+
+
+@pytest.mark.parametrize("labelling", ["row_major", "snake"])
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nsites", [2, 3, 4])
+def test_fermi_hubbard_chain_lattice(
+    backend, nsites, closed_boundary, dense, labelling
+):
+    """A chain with :math:`n` sites and a :math:`(1, n)` lattice are the same model."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "closed_boundary": closed_boundary,
+        "dense": dense,
+        "labelling": labelling,
+        "backend": backend,
+    }
+    chain = FermiHubbard(nsites, **kwargs)
+    lattice = FermiHubbard((1, nsites), **kwargs)
+
+    backend.assert_allclose(lattice.matrix, chain.matrix)
+
+
+@pytest.mark.parametrize("nsites", [(2,), (2, 2, 2), "2", 2.0])
+def test_fermi_hubbard_2d_type_error(backend, nsites):
+    with pytest.raises(TypeError):
+        FermiHubbard(nsites, backend=backend)
+
+
+@pytest.mark.parametrize("nsites", [(0, 2), (2, 0), (-1, 2)])
+def test_fermi_hubbard_2d_value_error(backend, nsites):
+    with pytest.raises(ValueError):
+        FermiHubbard(nsites, backend=backend)
+
+
+@pytest.mark.parametrize("labelling", ["column_major", "Snake", 1])
+def test_fermi_hubbard_2d_labelling_error(backend, labelling):
+    with pytest.raises(ValueError):
+        FermiHubbard((2, 2), labelling=labelling, backend=backend)
 
 
 @pytest.mark.parametrize("dense", [False, True])

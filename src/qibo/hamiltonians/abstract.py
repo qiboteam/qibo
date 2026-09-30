@@ -96,8 +96,9 @@ class AbstractHamiltonian:
         """Compute the expectation value starting from a quantum state.
 
         Args:
-            state (ndarray): the quantum state.
-            normalize (bool): whether to normalize the input state. Defaults to ``False``.
+            state (ArrayLike): the quantum state.
+            normalize (bool, optional): whether to normalize the input state.
+                Defaults to ``False``.
 
         Returns:
             float: The expectation value.
