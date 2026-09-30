@@ -3147,6 +3147,22 @@ class Backend:
         if isinstance(target, (CircuitResult, QuantumState)):
             target = target.state()
 
+        # a plain list/tuple of backend-native scalars (e.g. built by
+        # appending single-shot results across several executions) isn't
+        # implicitly convertible by cupy, unlike numpy
+        if (
+            isinstance(value, (list, tuple))
+            and len(value) > 0
+            and hasattr(value[0], "dtype")
+        ):
+            value = self.cast(value, dtype=value[0].dtype)
+        if (
+            isinstance(target, (list, tuple))
+            and len(target) > 0
+            and hasattr(target[0], "dtype")
+        ):
+            target = self.cast(target, dtype=target[0].dtype)
+
         self.engine.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     def assert_circuitclose(
