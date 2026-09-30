@@ -145,21 +145,12 @@ class Circuit:
     Args:
         nqubits (int | list, optional): Number of qubits in the circuit or a list of wire names.
         wire_names (list, optional): List of wire names
-        init_kwargs (dict): a dictionary with the following keys
-
-            - *nqubits*
-            - *accelerators*
-            - *density_matrix*
-            - *wire_names*.
-
         queue (_Queue): List that holds the queue of gates of a circuit.
         parametrized_gates (_ParametrizedGates): List of parametric gates.
         trainable_gates (_ParametrizedGates): List of trainable gates.
         measurements (list): List of non-collapsible measurements.
         _final_state : Final result after full simulation of the circuit.
         compiled (CompiledExecutor): Circuit executor. Defaults to ``None``.
-        repeated_execution (bool): If `True`, the circuit would be re-executed when sampling.
-            Defaults to ``False``.
         density_matrix (bool, optional): If `True`, the circuit would evolve density matrices.
             If ``False``, defaults to statevector simulation.
             Defaults to ``False``.
@@ -318,6 +309,12 @@ class Circuit:
 
     @property
     def repeated_execution(self) -> bool:
+        """Indicates if the circuit needs to be re-executed for each shot.
+
+        Returns ``True`` if the circuit has collapsing measurements or noise
+        channels in statevector simulation. This property is read-only. 
+        To force re-execution, add a measurement with ``collapse=True``.
+        """
         return self.has_collapse or (
             self.has_unitary_channel and not self.density_matrix
         )
