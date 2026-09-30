@@ -12,7 +12,7 @@ class Preprocessing(Optimizer):
     """Pad the circuit with unused qubits to match the number of physical qubits.
 
     Args:
-        connectivity (:class:`networkx.Graph`): Hardware connectivity.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity as a graph.
     """
 
     def __init__(self, connectivity: nx.Graph | None = None):
@@ -197,5 +197,113 @@ class InverseCancellation(Optimizer):
 
         new = Circuit(**circuit.init_kwargs)
         new.add([gate for gate in kept if gate is not None])
+
+        return new
+
+
+class TGateRules(Optimizer):
+    """Replaces runs of consecutive :class:`qibo.gates.gates.T` gates by shorter equivalents.
+
+    The :math:`T` gate is the diagonal matrix :math:`\\mathrm{diag}(1, e^{i \\pi / 4})`,
+    so :math:`k` consecutive :math:`T` gates on the same qubit give
+    :math:`\\mathrm{diag}(1, e^{i k \\pi / 4})`. This only depends on :math:`k \bmod 8`,
+    hence eight rules are enough to simplify any number of consecutive :math:`T`
+    gates, using the Clifford gates :math:`S = T^2` and :math:`Z = T^4`:
+
+    .. list-table::
+        :header-rows: 1
+
+        * - :math:`k \bmod 8`
+          - Replacement
+        * - 0
+          - identity (no gate)
+        * - 1
+          - :math:`T`
+        * - 2
+          - :math:`S`
+        * - 3
+          - :math:`S T`
+        * - 4
+          - :math:`Z`
+        * - 5
+          - :math:`Z T`
+        * - 6
+          - :math:`S^\\dagger`
+        * - 7
+          - :math:`T^\\dagger`
+
+    All rules are exact, i.e. they hold without any global phase, so they are also
+    correct inside larger circuits. Only :math:`T` gates without control qubits are
+    replaced. A run of :math:`T` gates on a qubit ends as soon as any other gate,
+    including a measurement or a barrier, acts on that qubit; gates acting on other
+    qubits do not end it.
+
+    Example:
+
+        Five :math:`T` gates on the first qubit become :math:`Z T`. On the second
+        qubit, the controlled-NOT (CNOT) gate ends the run, so the first :math:`T`
+        gate stays and the two :math:`T` gates after the CNOT become an :math:`S` gate.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import TGateRules
+
+            circuit = Circuit(2)
+            circuit.add(gates.T(0) for _ in range(5))
+            circuit.add(gates.T(1))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.T(1))
+            circuit.add(gates.T(1))
+
+            circuit.draw()
+            print()
+            TGateRules()(circuit).draw()
+
+        .. testoutput::
+
+            0: ─T─T─T─T─T─o─────
+            1: ─T─────────X─T─T─
+
+            0: ─Z─T─o───
+            1: ─T───X─S─
+    """
+
+    # Gates replacing ``T ** k`` for ``k = 0, ..., 7``, in the order they are applied.
+    _RULES = (
+        (),
+        (gates.T,),
+        (gates.S,),
+        (gates.S, gates.T),
+        (gates.Z,),
+        (gates.Z, gates.T),
+        (gates.SDG,),
+        (gates.TDG,),
+    )
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Replace runs of consecutive :math:`T` gates using the rules for powers of :math:`T`.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the runs of :math:`T`
+            gates replaced.
+        """
+        new = Circuit(**circuit.init_kwargs)
+        # ``powers`` maps each qubit to the number of consecutive T gates pending on it.
+        # The final ``None`` flushes the runs still pending at the end of the circuit.
+        powers = {}
+        for gate in [*circuit.queue, None]:
+            if isinstance(gate, gates.T) and not gate.control_qubits:
+                powers[gate.qubits[0]] = powers.get(gate.qubits[0], 0) + 1
+                continue
+
+            for qubit in list(powers) if gate is None else gate.qubits:
+                new.add(rule(qubit) for rule in self._RULES[powers.pop(qubit, 0) % 8])
+
+            if gate is not None:
+                new.add(gate)
 
         return new
