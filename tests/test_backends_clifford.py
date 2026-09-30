@@ -312,6 +312,7 @@ def test_bitflip_noise(backend, seed):
     circuit = random_clifford(5, seed=seed, backend=backend)
     circuit_copy = circuit.copy(deep=True)
     qubits = backend.random_choice(range(3), size=2, replace=False, dtype=int)
+    qubits = [int(qubit) for qubit in qubits]
     circuit.add(gates.M(*qubits, p0=0.1, p1=0.5))
     circuit_copy.add(gates.M(*qubits, p0=0.1, p1=0.5))
     numpy_res = numpy_bkd.execute_circuit(circuit_copy)
