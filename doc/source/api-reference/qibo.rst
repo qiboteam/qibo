@@ -2815,6 +2815,14 @@ Inverse cancellation
     :member-order: bysource
 
 
+Parametrized gate fusion
+""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.ParametrizedGateFusion
+    :members:
+    :member-order: bysource
+
+
 Preprocessing
 """""""""""""
 
