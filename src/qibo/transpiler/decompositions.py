@@ -492,6 +492,28 @@ def _decomposition_generalized_rbs(gate):
     theta = gate.init_kwargs["theta"]
     phi = gate.init_kwargs["phi"]
 
+    # If one register is empty, the gate rotates between the all-zeros and
+    # all-ones states of the other register. A single qubit of that register
+    # is borrowed to play the role of the empty one and the resulting
+    # :math:`|00\rangle`, :math:`|11\rangle` pair is mapped to the
+    # Hamming-weight-1 pair with a pair of X gates.
+    flipped_qubit = None
+
+    if len(ins) + len(outs) == 1:
+        list_gates = [gates.RY(0, 2 * theta)]
+        if phi != 0.0:
+            list_gates.append(gates.RZ(0, -2 * phi))
+        if len(outs) == 0:
+            list_gates = [gates.X(0)] + list_gates + [gates.X(0)]
+        return list_gates
+
+    if len(ins) == 0:
+        ins, outs = outs[:1], outs[1:]
+        flipped_qubit = ins[-1]
+    elif len(outs) == 0:
+        ins, outs = ins[:-1], ins[-1:]
+        flipped_qubit = outs[0]
+
     rotation_controls = ins[:-1] + outs
 
     list_gates = []
@@ -503,11 +525,15 @@ def _decomposition_generalized_rbs(gate):
         list_gates.append(gates.X(outs[0]))
         list_gates.append(gates.FanOut(outs[0], *outs[1:][::-1]))
         list_gates.append(gates.X(outs[0]))
+    if flipped_qubit is not None:
+        list_gates.append(gates.X(flipped_qubit))
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
     list_gates.append(gates.RY(ins[-1], -2 * theta).controlled_by(*rotation_controls))
     if phi != 0.0:
         list_gates.append(gates.RZ(ins[-1], 2 * phi).controlled_by(*rotation_controls))
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
+    if flipped_qubit is not None:
+        list_gates.append(gates.X(flipped_qubit))
     if len(outs) > 1:
         list_gates.append(gates.X(outs[0]))
         list_gates.append(gates.FanOut(outs[0], *outs[1:][::-1]))
