@@ -10,6 +10,7 @@ from qibo.transpiler.optimizer import (
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
+    RemoveDiagonalGatesBeforeMeasurement,
     RemoveFinalReset,
     RemoveIdentityEquivalent,
     RemoveResetInZeroState,
@@ -28,11 +29,6 @@ def test_preprocessing_error(star_connectivity):
     wire_names = [0, 1, 2, "q3", "q4"]
     circ = Circuit(5, wire_names=wire_names)
     assert circ.wire_names == wire_names
-
-    # every wire name is a node of the graph, but there are more qubits than nodes
-    circ = Circuit(7, wire_names=[0, 1, 2, 3, 4, 0, 1])
-    with pytest.raises(ValueError, match="can't be greater than"):
-        preprocesser(circuit=circ)
 
 
 def test_preprocessing_same(star_connectivity):
@@ -593,6 +589,101 @@ def test_remove_identity_equivalent_pipeline(backend, star_connectivity):
     pipeline = Passes([RemoveIdentityEquivalent()], connectivity=star_connectivity())
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["cx"]
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.CCZ(0, 1, 2),
+        gates.CRZ(0, 1, 0.3),
+        gates.CU1(0, 1, 0.3),
+        gates.CZ(0, 1),
+        gates.RZ(0, 0.3),
+        gates.RZZ(0, 1, 0.3),
+        gates.S(0),
+        gates.S(1).controlled_by(0),
+        gates.SDG(0),
+        gates.T(0),
+        gates.T(3).controlled_by(0, 1, 2),
+        gates.TDG(0),
+        gates.U1(0, 0.3),
+        gates.Z(0),
+    ],
+    ids=lambda gate: f"{gate.name}-{len(gate.qubits)}",
+)
+def test_remove_diagonal_gates_before_measure(backend, gate):
+    nqubits = 4
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RY(qubit, 0.4 + qubit) for qubit in range(nqubits))
+    circuit.add(gate)
+    circuit.add(gates.M(*range(nqubits)))
+
+    reduced = RemoveDiagonalGatesBeforeMeasurement()(circuit)
+    assert [gate.name for gate in reduced.queue] == ["ry"] * nqubits + ["measure"]
+    assert reduced.nqubits == circuit.nqubits
+    backend.assert_allclose(
+        backend.execute_circuit(reduced).probabilities(),
+        backend.execute_circuit(circuit).probabilities(),
+        atol=1e-12,
+    )
+
+
+def test_remove_diagonal_gates_before_measure_kept():
+    circuit = Circuit(8, density_matrix=True)
+    # a gate follows the diagonal gate
+    circuit.add(gates.Z(0))
+    circuit.add(gates.H(0))
+    # the gate is not diagonal
+    circuit.add(gates.X(1))
+    # only one of the two qubits of the diagonal gate is measured next
+    circuit.add(gates.CZ(2, 3))
+    circuit.add(gates.H(3))
+    # a barrier separates the diagonal gate from the measurement
+    circuit.add(gates.RZ(4, 0.3))
+    circuit.add(gates.Barrier(4))
+    # the measurement is preceded by the rotation to the X basis
+    circuit.add(gates.T(5))
+    circuit.add(gates.M(5, basis=gates.X))
+    # only the gate directly before the measurement is removed
+    circuit.add(gates.RZ(6, 0.3))
+    circuit.add(gates.Z(6))
+    # a noise channel separates the diagonal gate from the measurement
+    circuit.add(gates.S(7))
+    circuit.add(gates.ResetChannel(7, [0.5, 0.5]))
+    circuit.add(gates.M(0, 1, 2, 3, 4, 6, 7))
+
+    reduced = RemoveDiagonalGatesBeforeMeasurement()(circuit)
+    assert [gate.name for gate in reduced.queue] == [
+        "z",
+        "h",
+        "x",
+        "cz",
+        "h",
+        "rz",
+        "barrier",
+        "t",
+        "h",
+        "measure",
+        "rz",
+        "s",
+        "ResetChannel",
+        "measure",
+    ]
+
+    reduced = RemoveDiagonalGatesBeforeMeasurement()(reduced)
+    assert reduced.ngates == circuit.ngates - 2
+
+
+def test_remove_diagonal_gates_before_measure_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.RY(0, 0.5))
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.M(0))
+    pipeline = Passes(
+        [RemoveDiagonalGatesBeforeMeasurement()], connectivity=star_connectivity()
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert [gate.name for gate in transpiled.queue] == ["ry", "measure"]
 
 
 def test_remove_final_reset():

@@ -2839,6 +2839,14 @@ Rearrange
     :member-order: bysource
 
 
+Remove diagonal gates before measurements
+"""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement
+    :members:
+    :member-order: bysource
+
+
 Remove final reset
 """"""""""""""""""
 
