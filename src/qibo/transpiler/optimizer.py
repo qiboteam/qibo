@@ -1,3 +1,5 @@
+import math
+
 import networkx as nx
 
 from qibo import gates
@@ -7,71 +9,52 @@ from qibo.gates.abstract import SpecialGate
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
 
-
-class Preprocessing(Optimizer):
-    """Pad the circuit with unused qubits to match the number of physical qubits.
-
-    Args:
-        connectivity (:class:`networkx.Graph`): Hardware connectivity as a graph.
-    """
-
-    def __init__(self, connectivity: nx.Graph | None = None):
-        self.connectivity = connectivity
-
-    def __call__(self, circuit: Circuit) -> Circuit:
-        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
-            default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
-            log.warning(
-                f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {default_wire_names}."
-            )
-            circuit.wire_names = default_wire_names
-
-        physical_qubits = self.connectivity.number_of_nodes()
-        logical_qubits = circuit.nqubits
-        if logical_qubits > physical_qubits:
-            raise_error(
-                ValueError,
-                f"The number of qubits in the circuit ({logical_qubits}) "
-                + f"can't be greater than the number of physical qubits ({physical_qubits}).",
-            )
-        if logical_qubits == physical_qubits:
-            return circuit
-
-        new_wire_names = circuit.wire_names + list(
-            self.connectivity.nodes - circuit.wire_names
-        )
-
-        new_circuit = Circuit(nqubits=physical_qubits, wire_names=new_wire_names)
-        for gate in circuit.queue:
-            new_circuit.add(gate)
-
-        return new_circuit
+# Gates of :class:`qibo.transpiler.optimizer.ParametrizedGateFusion` that are merged
+# by composing their angles as the angles of a :class:`qibo.gates.U3` gate.
+_EULER_GATES = (gates.U1, gates.U2, gates.U3, gates.CU1, gates.CU2, gates.CU3)
 
 
-class Rearrange(Optimizer):
-    """Rearranges gates using ``qibo``'s fusion algorithm.
-    May reduce number of :class:`qibo.gates.SWAP` when fixing for connectivity
-    but this has not been tested.
+# Fusion rules of :class:`qibo.transpiler.optimizer.ParametrizedGateFusion`.
+# Each gate class maps to a tuple ``(added, equal, reversal)``, where ``added`` holds
+# the indices of the parameters that add up when two gates of the class are applied in
+# sequence, ``equal`` holds the indices of the parameters that must coincide for the
+# fusion to be exact, and ``reversal`` describes what happens when the second gate
+# lists the same qubits in reversed order: ``1`` means the gate does not change,
+# ``-1`` means it is the same gate with the sign of the added parameters flipped, and
+# ``None`` means that the reversed gate is a different gate, so it cannot be fused.
+_FUSION_RULES = {
+    gates.RX: ((0,), (), None),
+    gates.RY: ((0,), (), None),
+    gates.RZ: ((0,), (), None),
+    gates.U1: ((0,), (), None),
+    gates.PRX: ((0,), (1,), None),
+    gates.U1q: ((0,), (1,), None),
+    gates.CRX: ((0,), (), None),
+    gates.CRY: ((0,), (), None),
+    gates.CRZ: ((0,), (), None),
+    gates.CU1: ((0,), (), None),
+    gates.RXX: ((0,), (), 1),
+    gates.RYY: ((0,), (), 1),
+    gates.RZZ: ((0,), (), 1),
+    gates.RZX: ((0,), (), None),
+    gates.RXXYY: ((0,), (), 1),
+    gates.RBS: ((0,), (), -1),
+    gates.GIVENS: ((0,), (), -1),
+    gates.fSim: ((0, 1), (), 1),
+}
 
-    Args:
-        max_qubits (int, optional): Maximum number of qubits to fuse.
-            Defaults to :math:`1`.
-    """
 
-    def __init__(self, max_qubits: int = 1):
-        self.max_qubits = max_qubits
-
-    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
-        backend = _check_backend(backend)
-        fused_circuit = circuit.fuse(max_qubits=self.max_qubits)
-        new = circuit.__class__(nqubits=circuit.nqubits, wire_names=circuit.wire_names)
-        for fgate in fused_circuit.queue:
-            if isinstance(fgate, gates.FusedGate):
-                new.add(gates.Unitary(fgate.matrix(backend), *fgate.qubits))
-            else:
-                new.add(fgate)
-
-        return new
+# Gates replacing ``T ** k`` for ``k = 0, ..., 7``, in the order they are applied.
+_T_RULES = (
+    (),
+    (gates.T,),
+    (gates.S,),
+    (gates.S, gates.T),
+    (gates.Z,),
+    (gates.Z, gates.T),
+    (gates.SDG,),
+    (gates.TDG,),
+)
 
 
 class InverseCancellation(Optimizer):
@@ -201,6 +184,346 @@ class InverseCancellation(Optimizer):
         return new
 
 
+class ParametrizedGateFusion(Optimizer):
+    """Merges consecutive rotation gates of the same kind into a single gate.
+
+    Two gates are merged when no other gate acts on their qubits in between and both
+    are of the same gate class acting on the same qubits with the same control qubits.
+    The merged gate has the sum of the rotation angles, for example a
+    :class:`qibo.gates.RY` gate with angle :math:`\\alpha` followed by a
+    :class:`qibo.gates.RY` gate with angle :math:`\\beta` on the same qubit becomes one
+    :class:`qibo.gates.RY` gate with angle :math:`\\alpha + \\beta`. Runs of more than
+    two gates are merged completely. The merge is exact, including the global phase.
+
+    The following gates are merged this way:
+
+    * the single-qubit rotations :class:`qibo.gates.RX`, :class:`qibo.gates.RY`,
+      :class:`qibo.gates.RZ` and :class:`qibo.gates.U1`;
+    * the controlled rotations :class:`qibo.gates.CRX`, :class:`qibo.gates.CRY`,
+      :class:`qibo.gates.CRZ` and :class:`qibo.gates.CU1`;
+    * the two-qubit rotations :class:`qibo.gates.RXX`, :class:`qibo.gates.RYY`,
+      :class:`qibo.gates.RZZ`, :class:`qibo.gates.RZX`, :class:`qibo.gates.RXXYY`,
+      :class:`qibo.gates.RBS` and :class:`qibo.gates.GIVENS`;
+    * :class:`qibo.gates.fSim`, where both the swap angle and the phase add up;
+    * :class:`qibo.gates.PRX` and :class:`qibo.gates.U1q`, where the rotation angle
+      adds up as long as the phase angle of both gates is the same up to ``atol``.
+
+    Any of these gates can also be controlled on further qubits with
+    ``controlled_by``, as long as both gates have the same control qubits. Gates that
+    are symmetric under exchanging their two qubits (such as
+    :class:`qibo.gates.RZZ`) are also merged when their qubits are listed in a
+    different order, and so are :class:`qibo.gates.RBS` and
+    :class:`qibo.gates.GIVENS`, whose angle changes sign when the qubits are
+    exchanged.
+
+    The general single-qubit gates :class:`qibo.gates.U2` and :class:`qibo.gates.U3`,
+    and their controlled versions :class:`qibo.gates.CU2` and :class:`qibo.gates.CU3`,
+    are merged in any combination into a single :class:`qibo.gates.U3` gate, whose
+    angles are not the sum of the angles of the two gates. A U3 gate with angles
+    :math:`\\theta`, :math:`\\phi` and :math:`\\lambda` applies a rotation around the
+    Z axis by :math:`\\lambda`, then a rotation around the Y axis by :math:`\\theta`
+    and finally a rotation around the Z axis by :math:`\\phi`. A U2 gate is the U3 gate
+    with :math:`\\theta = \\pi / 2`. For a first gate with angles
+    :math:`(\\theta_1, \\phi_1, \\lambda_1)` and a second gate with angles
+    :math:`(\\theta_2, \\phi_2, \\lambda_2)`, let :math:`h = (\\lambda_2 + \\phi_1) / 2`
+    and let :math:`\\alpha` and :math:`\\beta` be the complex numbers
+
+    .. math::
+        \\alpha = \\cos h \\, \\cos\\frac{\\theta_1 + \\theta_2}{2}
+            - i \\sin h \\, \\cos\\frac{\\theta_2 - \\theta_1}{2}, \\qquad
+        \\beta = \\cos h \\, \\sin\\frac{\\theta_1 + \\theta_2}{2}
+            - i \\sin h \\, \\sin\\frac{\\theta_2 - \\theta_1}{2}.
+
+    Then the merged gate is the U3 gate with angles
+
+    .. math::
+        \\theta' = 2 \\, \\mathrm{atan2}(|\\beta|, |\\alpha|), \\qquad
+        \\phi' = \\phi_2 + \\arg\\beta - \\arg\\alpha, \\qquad
+        \\lambda' = \\lambda_1 - \\arg\\alpha - \\arg\\beta,
+
+    where :math:`|z|` and :math:`\\arg z` are the modulus and the phase angle of the
+    complex number :math:`z`, and :math:`\\mathrm{atan2}` is the two-argument
+    arctangent. This merge is exact, including the global phase, for gates without
+    control qubits and for controlled gates alike.
+
+    The phase gate :class:`qibo.gates.U1` and its controlled version
+    :class:`qibo.gates.CU1` differ from the U3 gate with :math:`\\theta = 0` and
+    :math:`\\phi = 0` by the global phase :math:`e^{i \\lambda / 2}`. Therefore
+    merging one of them with a U2 or U3 gate, which gives a U2 gate for a U2 gate and
+    a U3 gate for a U3 gate, changes the global phase of the circuit. This is only
+    done if ``up_to_global_phase`` is ``True`` and the gates have no control qubits,
+    because for controlled gates the global phase becomes a relative phase.
+
+    All other gates, such as :class:`qibo.gates.GPI2` or :class:`qibo.gates.U1q` and
+    :class:`qibo.gates.PRX` with different phase angles, are left untouched, because
+    the product of two of them is not a single gate of the same kind with added
+    parameters, or, for :class:`qibo.gates.MS`, could leave the range of allowed
+    angles.
+
+    Only gates with the same ``trainable`` flag are merged, and gates with sympy
+    parameters are skipped. The merged gate is a new gate, and the input circuit is not
+    modified. The merged gate holds fewer parameters than the two gates it replaces, so
+    the list of parameters of the returned circuit is shorter than the one of the input
+    circuit. Merging is done for the current parameter values, so a later
+    ``set_parameters`` call on the returned circuit does not update the angles of the
+    original gates independently.
+
+    Args:
+        atol (float, optional): Tolerance for deciding that the phase angles of two
+            :class:`qibo.gates.PRX` or :class:`qibo.gates.U1q` gates are the same, and
+            that the global phase changed by a merge is zero. Defaults to
+            :math:`10^{-12}`.
+        up_to_global_phase (bool, optional): If ``True``, gates without control
+            qubits are also merged when this changes the global phase of the circuit,
+            which happens when a :class:`qibo.gates.U1` gate is merged with a
+            :class:`qibo.gates.U2` or :class:`qibo.gates.U3` gate. Defaults to
+            ``False``.
+
+    Example:
+
+        The two :class:`qibo.gates.RY` gates on the first qubit are merged. The two
+        :class:`qibo.gates.RBS` gates act on the same qubits in reversed order, so the
+        angle of the second one enters with the opposite sign. The two
+        :class:`qibo.gates.RZ` gates on the first qubit are not merged, because the
+        CNOT gate acts on that qubit in between.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import ParametrizedGateFusion
+
+            circuit = Circuit(3)
+            circuit.add(gates.RY(0, 0.1))
+            circuit.add(gates.RY(0, 0.2))
+            circuit.add(gates.RBS(1, 2, 0.3))
+            circuit.add(gates.RBS(2, 1, 0.4))
+            circuit.add(gates.RZ(0, 0.5))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.RZ(0, 0.6))
+
+            fused = ParametrizedGateFusion()(circuit)
+            for gate in fused.queue:
+                print(gate.name, gate.qubits, [round(p, 3) for p in gate.parameters])
+
+        .. testoutput::
+
+            ry (0,) [0.3]
+            rbs (1, 2) [-0.1]
+            rz (0,) [0.5]
+            cx (0, 1) []
+            rz (0,) [0.6]
+
+        A :class:`qibo.gates.U3` gate followed by a :class:`qibo.gates.U2` gate gives
+        one :class:`qibo.gates.U3` gate, which has the same matrix as the two gates.
+
+        .. testcode::
+
+            import numpy as np
+
+            circuit = Circuit(1)
+            circuit.add(gates.U3(0, 0.3, 0.2, 0.1))
+            circuit.add(gates.U2(0, 0.4, 0.5))
+
+            fused = ParametrizedGateFusion()(circuit)
+            gate = fused.queue[0]
+            print(gate.name, [round(float(p), 3) for p in gate.parameters])
+            print(np.allclose(fused.unitary(), circuit.unitary()))
+
+        .. testoutput::
+
+            u3 [1.799, 0.597, 0.823]
+            True
+    """
+
+    def __init__(self, atol: float = 1e-12, up_to_global_phase: bool = False):
+        if atol < 0:
+            raise_error(ValueError, f"``atol`` must be non-negative, but got {atol}.")
+        self.atol = atol
+        self.up_to_global_phase = up_to_global_phase
+
+    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+        """Merge consecutive rotation gates of the same kind.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
+                compute the angles of the merged gates. If ``None``, defaults to the
+                global backend. Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the merged gates.
+        """
+        backend = _check_backend(backend)
+
+        # ``kept`` holds the surviving gates in order and ``stacks`` holds, for each
+        # qubit, the positions in ``kept`` of the surviving gates acting on it.
+        # The last position is the latest gate.
+        kept = []
+        stacks = {qubit: [] for qubit in range(circuit.nqubits)}
+        for gate in circuit.queue:
+            latest = {
+                stacks[qubit][-1] if stacks[qubit] else None for qubit in gate.qubits
+            }
+            index = latest.pop() if len(latest) == 1 else None
+            partner = None if index is None else kept[index]
+
+            rule = _FUSION_RULES.get(type(gate))
+            same_class = rule is not None and type(partner) is type(gate)
+            both_euler = type(gate) in _EULER_GATES and type(partner) in _EULER_GATES
+            compatible = (
+                (same_class or both_euler)
+                and set(partner.qubits) == set(gate.qubits)
+                and partner.control_qubits == gate.control_qubits
+                and partner.trainable == gate.trainable
+                and not partner.symbolic_parameters
+                and not gate.symbolic_parameters
+            )
+
+            merged = None
+            if compatible and same_class:
+                added, equal, reversal = rule
+                sign = 1 if partner.qubits == gate.qubits else reversal
+                if sign is not None and all(
+                    backend.abs(partner.parameters[i] - gate.parameters[i]) <= self.atol
+                    for i in equal
+                ):
+                    merged = partner.on_qubits(
+                        {qubit: qubit for qubit in partner.qubits}
+                    )
+                    merged.parameters = tuple(
+                        (
+                            partner.parameters[i] + sign * gate.parameters[i]
+                            if i in added
+                            else partner.parameters[i]
+                        )
+                        for i in range(len(partner.parameters))
+                    )
+            elif compatible:
+                # Different classes among U1, U2 and U3 (or their controlled versions).
+                # U1(lam) is U3(0, 0, lam) and U2(phi, lam) is U3(pi / 2, phi, lam),
+                # up to the global phase of U1 given in ``_EULER_GATES``.
+                angles = []
+                for parameters in (partner.parameters, gate.parameters):
+                    padding = {1: (0.0, 0.0), 2: (math.pi / 2,), 3: ()}[len(parameters)]
+                    angles.append(padding + tuple(parameters))
+                (theta1, phi1, lam1), (theta2, phi2, lam2) = angles
+
+                half = (lam2 + phi1) / 2
+                plus, minus = (theta1 + theta2) / 2, (theta2 - theta1) / 2
+                alpha_re = backend.cos(half) * backend.cos(plus)
+                alpha_im = -backend.sin(half) * backend.cos(minus)
+                beta_re = backend.cos(half) * backend.sin(plus)
+                beta_im = -backend.sin(half) * backend.sin(minus)
+                arg_alpha = backend.arctan2(alpha_im, alpha_re)
+                arg_beta = backend.arctan2(beta_im, beta_re)
+                theta = 2 * backend.arctan2(
+                    backend.sqrt(beta_re**2 + beta_im**2),
+                    backend.sqrt(alpha_re**2 + alpha_im**2),
+                )
+                phi = phi2 + arg_beta - arg_alpha
+                lam = lam1 - arg_alpha - arg_beta
+
+                # The merge changes the global phase by half the sum of the U1 angles,
+                # and this phase is zero when the sine of a quarter of that sum is.
+                phase = sum(
+                    p[0] for p in (partner.parameters, gate.parameters) if len(p) == 1
+                )
+                exact = backend.abs(backend.sin(phase / 4)) <= self.atol
+                if exact or (self.up_to_global_phase and not gate.control_qubits):
+                    if {len(partner.parameters), len(gate.parameters)} == {1, 2}:
+                        merged = gates.U2(
+                            *gate.target_qubits, phi, lam, trainable=gate.trainable
+                        )
+                    else:
+                        merged = gates.U3(
+                            *gate.target_qubits,
+                            theta,
+                            phi,
+                            lam,
+                            trainable=gate.trainable,
+                        )
+                    if gate.control_qubits:
+                        merged = merged.controlled_by(*gate.control_qubits)
+
+            if merged is None:
+                kept.append(gate)
+                for qubit in gate.qubits:
+                    stacks[qubit].append(len(kept) - 1)
+            else:
+                kept[index] = merged
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(kept)
+
+        return new
+
+
+class Preprocessing(Optimizer):
+    """Pad the circuit with unused qubits to match the number of physical qubits.
+
+    Args:
+        connectivity (:class:`networkx.Graph`): Hardware connectivity as a graph.
+    """
+
+    def __init__(self, connectivity: nx.Graph | None = None):
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
+            default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
+            log.warning(
+                f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {default_wire_names}."
+            )
+            circuit.wire_names = default_wire_names
+
+        physical_qubits = self.connectivity.number_of_nodes()
+        logical_qubits = circuit.nqubits
+        if logical_qubits > physical_qubits:
+            raise_error(
+                ValueError,
+                f"The number of qubits in the circuit ({logical_qubits}) "
+                + f"can't be greater than the number of physical qubits ({physical_qubits}).",
+            )
+        if logical_qubits == physical_qubits:
+            return circuit
+
+        new_wire_names = circuit.wire_names + list(
+            self.connectivity.nodes - circuit.wire_names
+        )
+
+        new_circuit = Circuit(nqubits=physical_qubits, wire_names=new_wire_names)
+        for gate in circuit.queue:
+            new_circuit.add(gate)
+
+        return new_circuit
+
+
+class Rearrange(Optimizer):
+    """Rearranges gates using ``qibo``'s fusion algorithm.
+    May reduce number of :class:`qibo.gates.SWAP` when fixing for connectivity
+    but this has not been tested.
+
+    Args:
+        max_qubits (int, optional): Maximum number of qubits to fuse.
+            Defaults to :math:`1`.
+    """
+
+    def __init__(self, max_qubits: int = 1):
+        self.max_qubits = max_qubits
+
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
+        backend = _check_backend(backend)
+        fused_circuit = circuit.fuse(max_qubits=self.max_qubits)
+        new = circuit.__class__(nqubits=circuit.nqubits, wire_names=circuit.wire_names)
+        for fgate in fused_circuit.queue:
+            if isinstance(fgate, gates.FusedGate):
+                new.add(gates.Unitary(fgate.matrix(backend), *fgate.qubits))
+            else:
+                new.add(fgate)
+
+        return new
+
+
 class TGateRules(Optimizer):
     """Replaces runs of consecutive :class:`qibo.gates.gates.T` gates by shorter equivalents.
 
@@ -269,18 +592,6 @@ class TGateRules(Optimizer):
             1: ─T───X─S─
     """
 
-    # Gates replacing ``T ** k`` for ``k = 0, ..., 7``, in the order they are applied.
-    _RULES = (
-        (),
-        (gates.T,),
-        (gates.S,),
-        (gates.S, gates.T),
-        (gates.Z,),
-        (gates.Z, gates.T),
-        (gates.SDG,),
-        (gates.TDG,),
-    )
-
     def __call__(self, circuit: Circuit) -> Circuit:
         """Replace runs of consecutive :math:`T` gates using the rules for powers of :math:`T`.
 
@@ -301,7 +612,7 @@ class TGateRules(Optimizer):
                 continue
 
             for qubit in list(powers) if gate is None else gate.qubits:
-                new.add(rule(qubit) for rule in self._RULES[powers.pop(qubit, 0) % 8])
+                new.add(rule(qubit) for rule in self._T_RULES[powers.pop(qubit, 0) % 8])
 
             if gate is not None:
                 new.add(gate)
