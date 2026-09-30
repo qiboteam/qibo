@@ -312,7 +312,7 @@ class Circuit:
         """Indicates if the circuit needs to be re-executed for each shot.
 
         Returns ``True`` if the circuit has collapsing measurements or noise
-        channels in statevector simulation. This property is read-only. 
+        channels in statevector simulation. This property is read-only.
         To force re-execution, add a measurement with ``collapse=True``.
         """
         return self.has_collapse or (
