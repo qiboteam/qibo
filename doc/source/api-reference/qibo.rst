@@ -2842,7 +2842,7 @@ Rearrange
 Remove diagonal gates before measurements
 """""""""""""""""""""""""""""""""""""""""
 
-.. autoclass:: qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasure
+.. autoclass:: qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement
     :members:
     :member-order: bysource
 

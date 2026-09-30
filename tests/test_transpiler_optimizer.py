@@ -3,7 +3,7 @@ import pytest
 import sympy
 from qiskit.transpiler import PassManager
 from qiskit.transpiler.passes import (
-    RemoveDiagonalGatesBeforeMeasure as QiskitRemoveDiagonalGatesBeforeMeasure,
+    RemoveDiagonalGatesBeforeMeasure as QiskitRemoveDiagonalGatesBeforeMeasurement,
 )
 
 from qibo import gates
@@ -14,7 +14,6 @@ from qibo.transpiler.optimizer import (
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
-    RemoveDiagonalGatesBeforeMeasure,
     RemoveFinalReset,
     RemoveIdentityEquivalent,
     RemoveResetInZeroState,
@@ -623,7 +622,7 @@ def test_remove_diagonal_gates_before_measure(backend, gate):
     circuit.add(gate)
     circuit.add(gates.M(*range(nqubits)))
 
-    reduced = RemoveDiagonalGatesBeforeMeasure()(circuit)
+    reduced = RemoveDiagonalGatesBeforeMeasurement()(circuit)
     assert [gate.name for gate in reduced.queue] == ["ry"] * nqubits + ["measure"]
     assert reduced.nqubits == circuit.nqubits
     backend.assert_allclose(
@@ -657,7 +656,7 @@ def test_remove_diagonal_gates_before_measure_kept():
     circuit.add(gates.ResetChannel(7, [0.5, 0.5]))
     circuit.add(gates.M(0, 1, 2, 3, 4, 6, 7))
 
-    reduced = RemoveDiagonalGatesBeforeMeasure()(circuit)
+    reduced = RemoveDiagonalGatesBeforeMeasurement()(circuit)
     assert [gate.name for gate in reduced.queue] == [
         "z",
         "h",
@@ -675,7 +674,7 @@ def test_remove_diagonal_gates_before_measure_kept():
         "measure",
     ]
 
-    reduced = RemoveDiagonalGatesBeforeMeasure()(reduced)
+    reduced = RemoveDiagonalGatesBeforeMeasurement()(reduced)
     assert reduced.ngates == circuit.ngates - 2
 
 
@@ -685,7 +684,7 @@ def test_remove_diagonal_gates_before_measure_pipeline(backend, star_connectivit
     circuit.add(gates.RZ(0, 0.3))
     circuit.add(gates.M(0))
     pipeline = Passes(
-        [RemoveDiagonalGatesBeforeMeasure()], connectivity=star_connectivity()
+        [RemoveDiagonalGatesBeforeMeasurement()], connectivity=star_connectivity()
     )
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["ry", "measure"]
@@ -704,9 +703,9 @@ def test_remove_diagonal_gates_before_measure_qiskit():
     circuit.add(gates.S(1))
     circuit.add(gates.M(0, 1, 2, 3))
 
-    expected = QiskitPasses(PassManager([QiskitRemoveDiagonalGatesBeforeMeasure()]))
+    expected = QiskitPasses(PassManager([QiskitRemoveDiagonalGatesBeforeMeasurement()]))
     expected = expected(circuit)
-    reduced = RemoveDiagonalGatesBeforeMeasure()(circuit)
+    reduced = RemoveDiagonalGatesBeforeMeasurement()(circuit)
     assert reduced.ngates < circuit.ngates
     assert sorted(gate.name for gate in reduced.queue) == sorted(
         gate.name for gate in expected.queue
