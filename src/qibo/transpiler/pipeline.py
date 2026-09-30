@@ -2,7 +2,7 @@ from inspect import signature
 
 import networkx as nx
 
-from qibo.backends import _check_backend, Backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import (
@@ -82,7 +82,7 @@ class Passes:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final 
+            (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final
             {logical: physical} qubit mapping.
         """
         backend = _check_backend(backend)
