@@ -2831,6 +2831,14 @@ Rearrange
     :member-order: bysource
 
 
+T-gate rules
+""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.TGateRules
+    :members:
+    :member-order: bysource
+
+
 Pipeline
 ^^^^^^^^
 
