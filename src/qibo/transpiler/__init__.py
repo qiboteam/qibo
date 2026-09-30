@@ -24,6 +24,7 @@ from qibo.transpiler.unroller import NativeGates, Unroller
 __all__ = [
     "InverseCancellation",
     "NativeGates",
+    "Optimize1qGatesDecomposition",
     "ParametrizedGateFusion",
     "Passes",
     "Preprocessing",
