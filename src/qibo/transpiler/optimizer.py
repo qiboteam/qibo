@@ -7,6 +7,18 @@ from qibo.gates.abstract import SpecialGate
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
 
+# Gates replacing ``T ** k`` for ``k = 0, ..., 7``, in the order they are applied.
+_T_RULES = (
+    (),
+    (gates.T,),
+    (gates.S,),
+    (gates.S, gates.T),
+    (gates.Z,),
+    (gates.Z, gates.T),
+    (gates.SDG,),
+    (gates.TDG,),
+)
+
 
 class Preprocessing(Optimizer):
     """Pad the circuit with unused qubits to match the number of physical qubits.
@@ -269,18 +281,6 @@ class TGateRules(Optimizer):
             1: ─T───X─S─
     """
 
-    # Gates replacing ``T ** k`` for ``k = 0, ..., 7``, in the order they are applied.
-    _RULES = (
-        (),
-        (gates.T,),
-        (gates.S,),
-        (gates.S, gates.T),
-        (gates.Z,),
-        (gates.Z, gates.T),
-        (gates.SDG,),
-        (gates.TDG,),
-    )
-
     def __call__(self, circuit: Circuit) -> Circuit:
         """Replace runs of consecutive :math:`T` gates using the rules for powers of :math:`T`.
 
@@ -301,7 +301,7 @@ class TGateRules(Optimizer):
                 continue
 
             for qubit in list(powers) if gate is None else gate.qubits:
-                new.add(rule(qubit) for rule in self._RULES[powers.pop(qubit, 0) % 8])
+                new.add(rule(qubit) for rule in _T_RULES[powers.pop(qubit, 0) % 8])
 
             if gate is not None:
                 new.add(gate)
