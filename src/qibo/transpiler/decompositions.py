@@ -2,6 +2,7 @@ import cmath
 import math
 
 from qibo import gates
+from qibo.backends import Backend
 from qibo.config import raise_error
 from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
@@ -20,7 +21,7 @@ class GateDecompositions:
         """Register a decomposition for a gate."""
         self.decompositions[gate] = decomposition
 
-    def _check_instance(self, gate, backend=None):
+    def _check_instance(self, gate, backend: Backend = None):
         special_gates = (
             gates.FusedGate,
             gates.Unitary,
@@ -40,7 +41,7 @@ class GateDecompositions:
 
         return decomposition
 
-    def count_2q(self, gate, backend):
+    def count_2q(self, gate, backend: Backend):
         """Count the number of two-qubit gates in the decomposition of the given gate."""
         decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) > 1))
@@ -50,7 +51,7 @@ class GateDecompositions:
         decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) == 1))
 
-    def __call__(self, gate, backend=None):
+    def __call__(self, gate, backend: Backend = None):
         """Decompose a gate."""
         decomposition = self._check_instance(gate, backend)
         return [g.on_qubits(dict(enumerate(gate.qubits))) for g in decomposition]
