@@ -8,6 +8,7 @@ from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import SpecialGate
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
+from qibo.transpiler.decompositions import u3_dec
 
 # Gates of :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement`, whose
 # matrices are diagonal in the computational basis. A gate stays diagonal when more
@@ -26,6 +27,19 @@ _DIAGONAL_GATES = (
     gates.U1,
     gates.Z,
 )
+
+# Euler bases of :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`. Each
+# name maps to the names of the gates that the basis needs.
+_EULER_BASES = {
+    "U3": ("u3",),
+    "U321": ("u1", "u2", "u3"),
+    "ZYZ": ("rz", "ry"),
+    "ZXZ": ("rz", "rx"),
+    "XZX": ("rx", "rz"),
+    "XYX": ("rx", "ry"),
+    "ZSX": ("rz", "sx"),
+    "ZSXX": ("rz", "sx", "x"),
+}
 
 # Gates of :class:`qibo.transpiler.optimizer.ParametrizedGateFusion` that are merged
 # by composing their angles as the angles of a :class:`qibo.gates.U3` gate.
@@ -202,6 +216,270 @@ class InverseCancellation(Optimizer):
         return new
 
 
+class Optimize1qGatesDecomposition(Optimizer):
+    """Rewrites runs of consecutive single-qubit gates with as few gates as possible.
+
+    A run is a sequence of single-qubit gates without control qubits on one qubit
+    with no other gate on that qubit in between. The matrix of the run is decomposed
+    in every Euler basis allowed by ``basis`` and the shortest result is kept. The
+    Euler bases are:
+
+    * ``"U3"``: one :class:`qibo.gates.U3` gate;
+    * ``"U321"``: one :class:`qibo.gates.U1`, :class:`qibo.gates.U2` or
+      :class:`qibo.gates.U3` gate, the simplest one;
+    * ``"ZYZ"``, ``"ZXZ"``, ``"XYX"``, ``"XZX"``: three rotations around the named
+      axes, with :class:`qibo.gates.RX`, :class:`qibo.gates.RY` and
+      :class:`qibo.gates.RZ` gates;
+    * ``"ZSX"``: :class:`qibo.gates.RZ` gates separated by :class:`qibo.gates.SX`
+      gates, where SX is the square root of the Pauli X gate;
+    * ``"ZSXX"``: as ``"ZSX"``, with a :class:`qibo.gates.X` gate replacing two SX
+      gates when possible.
+
+    Rotations by a multiple of :math:`2 \\pi` are left out, so runs equal to the
+    identity are removed. A run is replaced if it contains a gate whose name is not
+    in ``basis``, or if the new sequence is shorter. Gates with sympy parameters end
+    a run. If ``basis`` contains no Euler basis, the circuit is returned unchanged.
+    The input circuit is not modified.
+
+    Args:
+        basis (list[str], optional): Names of the gates the circuit may contain, for
+            example ``["rz", "sx", "cx"]``. Only Euler bases whose gates are all in
+            this list are used. If ``None``, all Euler bases are used and every gate
+            counts as in the basis. Defaults to ``None``.
+        atol (float, optional): Tolerance to decide that an angle is zero, that
+            :math:`\\theta` (the Y rotation angle of the equivalent
+            :class:`qibo.gates.U3` gate) is :math:`\\pi / 2` or :math:`\\pi`, and
+            that two matrices are equal (Frobenius norm of their difference).
+            Defaults to :math:`10^{-12}`.
+        up_to_global_phase (bool, optional): If ``False``, a run is replaced only when
+            the new sequence has exactly the same matrix. Defaults to ``True``.
+
+    Example:
+        The Hadamard, phase and Pauli X gates on the first qubit become an
+        :class:`qibo.gates.RZ` gate and an :class:`qibo.gates.SX` gate, and the two
+        Pauli X gates on the second qubit cancel.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Optimize1qGatesDecomposition
+
+            circuit = Circuit(2)
+            circuit.add(gates.H(0))
+            circuit.add(gates.S(0))
+            circuit.add(gates.X(0))
+            circuit.add(gates.X(1))
+            circuit.add(gates.X(1))
+            circuit.add(gates.CNOT(0, 1))
+
+            optimized = Optimize1qGatesDecomposition(basis=["rz", "sx", "cx"])(circuit)
+            for gate in optimized.queue:
+                print(gate.name, gate.qubits)
+
+        .. testoutput::
+
+            rz (0,)
+            sx (0,)
+            cx (0, 1)
+    """
+
+    def __init__(
+        self,
+        basis: list[str] | None = None,
+        atol: float = 1e-12,
+        up_to_global_phase: bool = True,
+    ):
+        if atol < 0:
+            raise_error(ValueError, f"``atol`` must be non-negative, but got {atol}.")
+        self.basis = None if basis is None else set(basis)
+        self.atol = atol
+        self.up_to_global_phase = up_to_global_phase
+
+        self.euler_bases = [
+            name
+            for name, names in _EULER_BASES.items()
+            if self.basis is None or set(names) <= self.basis
+        ]
+        # The first basis of each pair gives a result that is never shorter than the
+        # second one, so it is enough to run the second one.
+        for redundant, kept in (("U3", "U321"), ("ZSX", "ZSXX")):
+            if redundant in self.euler_bases and kept in self.euler_bases:
+                self.euler_bases.remove(redundant)
+
+    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+        """Rewrite runs of consecutive single-qubit gates.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
+                build the gate matrices and compute the angles of the new gates.
+                If ``None``, defaults to the global backend. Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the rewritten runs.
+        """
+        backend = _check_backend(backend)
+        identity = backend.matrices.I(2)
+        hadamard = gates.H(0).matrix(backend)
+
+        # Each item is a pair ``(is_run, gates)``. The runs are given by ``circuit.fuse``,
+        # the algorithm of :class:`qibo.transpiler.optimizer.Rearrange`, unless the
+        # circuit has gates that it would absorb into a run (sympy parameters, noise
+        # channels and alignments), gates that it treats as acting on all qubits
+        # (special gates), or a gate instance repeated in the queue. Then the runs are
+        # built by hand, as lists that keep growing while the gates that come after
+        # them on their qubit are single-qubit gates, with ``open_runs`` holding the
+        # run that can still grow for each qubit.
+        uncombinable = (gates.M, gates.Align, gates.Channel, SpecialGate)
+        items = []
+        position = {id(gate): index for index, gate in enumerate(circuit.queue)}
+        if (
+            len(position) == len(circuit.queue)
+            and not circuit.accelerators
+            and not any(
+                isinstance(gate, uncombinable[1:]) or gate.symbolic_parameters
+                for gate in circuit.queue
+            )
+        ):
+            for gate in circuit.fuse(max_qubits=1).queue:
+                if isinstance(gate, gates.FusedGate):
+                    items.append((True, gate.gates))
+                else:
+                    is_run = len(gate.qubits) == 1 and not isinstance(gate, gates.M)
+                    items.append((is_run, [gate]))
+            # keep the order of the input circuit, where a run is at its first gate
+            items.sort(key=lambda item: position[id(item[1][0])])
+        else:
+            open_runs = {}
+            for gate in circuit.queue:
+                if (
+                    isinstance(gate, uncombinable)
+                    or len(gate.qubits) != 1
+                    or gate.symbolic_parameters
+                ):
+                    for qubit in gate.qubits:
+                        open_runs.pop(qubit, None)
+                    items.append((False, [gate]))
+                    continue
+
+                run = open_runs.get(gate.qubits[0])
+                if run is None:
+                    run = [gate]
+                    open_runs[gate.qubits[0]] = run
+                    items.append((True, run))
+                else:
+                    run.append(gate)
+
+        new = Circuit(**circuit.init_kwargs)
+        for is_run, run in items:
+            if not is_run or not self.euler_bases:
+                new.add(run)
+                continue
+
+            (qubit,) = run[0].qubits
+            matrix = identity
+            for gate in run:
+                matrix = gate.matrix(backend) @ matrix
+            theta, phi, lam = u3_dec(gates.Unitary(matrix, qubit), backend)[
+                0
+            ].parameters
+            # Angles of the Euler decomposition of the matrix conjugated with the
+            # Hadamard gate, which swaps the X and Z axes, for the bases starting
+            # with a rotation around the X axis.
+            theta_x, phi_x, lam_x = u3_dec(
+                gates.Unitary(hadamard @ matrix @ hadamard, qubit), backend
+            )[0].parameters
+
+            best = None
+            for name in self.euler_bases:
+                # Each step is a gate class followed by its parameters.
+                if name == "U3":
+                    identity_angles = backend.abs(theta) <= self.atol and (
+                        abs(math.remainder(phi + lam, 2 * math.pi)) <= self.atol
+                    )
+                    steps = [] if identity_angles else [(gates.U3, theta, phi, lam)]
+                elif name == "U321" and backend.abs(theta) <= self.atol:
+                    steps = [(gates.U1, phi + lam)]
+                elif name == "U321" and backend.abs(theta - math.pi / 2) <= self.atol:
+                    steps = [(gates.U2, phi, lam)]
+                elif name == "U321":
+                    steps = [(gates.U3, theta, phi, lam)]
+                elif name in ("ZYZ", "ZXZ") and backend.abs(theta) <= self.atol:
+                    steps = [(gates.RZ, phi + lam)]
+                elif name in ("XYX", "XZX") and backend.abs(theta_x) <= self.atol:
+                    steps = [(gates.RX, phi_x + lam_x)]
+                elif name == "ZYZ":
+                    steps = [(gates.RZ, lam), (gates.RY, theta), (gates.RZ, phi)]
+                elif name == "ZXZ":
+                    steps = [
+                        (gates.RZ, lam - math.pi / 2),
+                        (gates.RX, theta),
+                        (gates.RZ, phi + math.pi / 2),
+                    ]
+                elif name == "XYX":
+                    steps = [
+                        (gates.RX, lam_x),
+                        (gates.RY, -theta_x),
+                        (gates.RX, phi_x),
+                    ]
+                elif name == "XZX":
+                    steps = [
+                        (gates.RX, lam_x - math.pi / 2),
+                        (gates.RZ, theta_x),
+                        (gates.RX, phi_x + math.pi / 2),
+                    ]
+                elif backend.abs(theta) <= self.atol:
+                    # ZSX and ZSXX bases, with theta equal to zero.
+                    steps = [(gates.RZ, phi + lam)]
+                elif name == "ZSXX" and backend.abs(theta - math.pi) <= self.atol:
+                    steps = [(gates.RZ, lam + math.pi), (gates.X,), (gates.RZ, phi)]
+                elif backend.abs(theta - math.pi / 2) <= self.atol:
+                    steps = [
+                        (gates.RZ, lam - math.pi / 2),
+                        (gates.SX,),
+                        (gates.RZ, phi + math.pi / 2),
+                    ]
+                else:
+                    steps = [
+                        (gates.RZ, lam),
+                        (gates.SX,),
+                        (gates.RZ, theta + math.pi),
+                        (gates.SX,),
+                        (gates.RZ, phi + math.pi),
+                    ]
+
+                # Rotations by a multiple of 2 pi are left out.
+                sequence = [
+                    step[0](qubit, *step[1:])
+                    for step in steps
+                    if len(step) != 2
+                    or abs(math.remainder(step[1], 2 * math.pi)) > self.atol
+                ]
+                if best is not None and len(sequence) >= len(best):
+                    continue
+
+                product = identity
+                for gate in sequence:
+                    product = gate.matrix(backend) @ product
+                if (
+                    self.up_to_global_phase
+                    or backend.matrix_norm(product - matrix, order="fro") <= self.atol
+                ):
+                    best = sequence
+
+            if best is not None and (
+                len(best) < len(run)
+                or (
+                    self.basis is not None
+                    and any(gate.name not in self.basis for gate in run)
+                )
+            ):
+                run = best
+            new.add(run)
+
+        return new
+
+
 class ParametrizedGateFusion(Optimizer):
     """Merges consecutive rotation gates of the same kind into a single gate.
 
@@ -236,8 +514,8 @@ class ParametrizedGateFusion(Optimizer):
 
     The general single-qubit gates :class:`qibo.gates.U2` and :class:`qibo.gates.U3`,
     and their controlled versions :class:`qibo.gates.CU2` and :class:`qibo.gates.CU3`,
-    are merged in any combination into a single :class:`qibo.gates.U3` gate, whose
-    angles are not the sum of the angles of the two gates. A U3 gate with angles
+    are merged in any combination into a single gate, whose angles are not the sum of
+    the angles of the two gates. A U3 gate with angles
     :math:`\\theta`, :math:`\\phi` and :math:`\\lambda` applies a rotation around the
     Z axis by :math:`\\lambda`, then a rotation around the Y axis by :math:`\\theta`
     and finally a rotation around the Z axis by :math:`\\phi`. A U2 gate is the U3 gate
@@ -252,7 +530,7 @@ class ParametrizedGateFusion(Optimizer):
         \\beta = \\cos h \\, \\sin\\frac{\\theta_1 + \\theta_2}{2}
             - i \\sin h \\, \\sin\\frac{\\theta_2 - \\theta_1}{2}.
 
-    Then the merged gate is the U3 gate with angles
+    Then the merged gate has the angles
 
     .. math::
         \\theta' = 2 \\, \\mathrm{atan2}(|\\beta|, |\\alpha|), \\qquad
@@ -261,16 +539,20 @@ class ParametrizedGateFusion(Optimizer):
 
     where :math:`|z|` and :math:`\\arg z` are the modulus and the phase angle of the
     complex number :math:`z`, and :math:`\\mathrm{atan2}` is the two-argument
-    arctangent. This merge is exact, including the global phase, for gates without
-    control qubits and for controlled gates alike.
+    arctangent. The merged gate is a :class:`qibo.gates.U2` gate with angles
+    :math:`\\phi'` and :math:`\\lambda'` if :math:`\\theta' = \\pi / 2`, and a
+    :class:`qibo.gates.U3` gate otherwise. This merge is exact, including the global
+    phase, for gates without control qubits and for controlled gates alike.
 
     The phase gate :class:`qibo.gates.U1` and its controlled version
     :class:`qibo.gates.CU1` differ from the U3 gate with :math:`\\theta = 0` and
     :math:`\\phi = 0` by the global phase :math:`e^{i \\lambda / 2}`. Therefore
-    merging one of them with a U2 or U3 gate, which gives a U2 gate for a U2 gate and
-    a U3 gate for a U3 gate, changes the global phase of the circuit. This is only
-    done if ``up_to_global_phase`` is ``True`` and the gates have no control qubits,
-    because for controlled gates the global phase becomes a relative phase.
+    merging one of them with a U2 or U3 gate changes the global phase of the circuit.
+    This is only done if ``up_to_global_phase`` is ``True`` and the gates have no
+    control qubits, because for controlled gates the global phase becomes a relative
+    phase. For the same reason, a merged U3 gate with :math:`\\theta' = 0` becomes the
+    :class:`qibo.gates.U1` gate with angle :math:`\\phi' + \\lambda'` only if
+    ``up_to_global_phase`` is ``True`` and the gates have no control qubits.
 
     All other gates, such as :class:`qibo.gates.GPI2` or :class:`qibo.gates.U1q` and
     :class:`qibo.gates.PRX` with different phase angles, are left untouched, because
@@ -448,9 +730,21 @@ class ParametrizedGateFusion(Optimizer):
                 )
                 exact = backend.abs(backend.sin(phase / 4)) <= self.atol
                 if exact or (self.up_to_global_phase and not gate.control_qubits):
-                    if {len(partner.parameters), len(gate.parameters)} == {1, 2}:
+                    # U2(phi, lam) is U3(pi / 2, phi, lam), while U3(0, phi, lam) is
+                    # U1(phi + lam) up to the global phase exp(i (phi + lam) / 2).
+                    u1_exact = (
+                        backend.abs(backend.sin((phi + lam) / 4)) <= self.atol and exact
+                    ) or (self.up_to_global_phase and not gate.control_qubits)
+                    if {len(partner.parameters), len(gate.parameters)} == {
+                        1,
+                        2,
+                    } or backend.abs(theta - math.pi / 2) <= self.atol:
                         merged = gates.U2(
                             *gate.target_qubits, phi, lam, trainable=gate.trainable
+                        )
+                    elif backend.abs(theta) <= self.atol and u1_exact:
+                        merged = gates.U1(
+                            *gate.target_qubits, phi + lam, trainable=gate.trainable
                         )
                     else:
                         merged = gates.U3(
