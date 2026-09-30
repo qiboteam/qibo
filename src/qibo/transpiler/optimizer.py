@@ -612,7 +612,7 @@ class TGateRules(Optimizer):
                 continue
 
             for qubit in list(powers) if gate is None else gate.qubits:
-                new.add(rule(qubit) for rule in self._T_RULES[powers.pop(qubit, 0) % 8])
+                new.add(rule(qubit) for rule in _T_RULES[powers.pop(qubit, 0) % 8])
 
             if gate is not None:
                 new.add(gate)
