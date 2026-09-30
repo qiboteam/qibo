@@ -4,7 +4,7 @@ import networkx as nx
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import log, raise_error
+from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import SpecialGate
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
@@ -520,6 +520,306 @@ class Rearrange(Optimizer):
                 new.add(gates.Unitary(fgate.matrix(backend), *fgate.qubits))
             else:
                 new.add(fgate)
+
+        return new
+
+
+class RemoveFinalReset(Optimizer):
+    """Removes the resets at the end of a circuit.
+
+    A reset is the single-qubit :class:`qibo.gates.ResetChannel` that sends the
+    qubit to the :math:`|0\\rangle` state with probability one, that is with
+    :math:`p_0 = 1` and :math:`p_1 = 0`. A reset is removed when no other operation
+    (gate, measurement or barrier) acts on its qubit afterwards. Resets that are
+    only followed by other final resets are removed as well.
+
+    Such a reset does not change the outcome of any measurement made before it,
+    nor the state of the other qubits, but it does change the state of its own qubit
+    in the final state returned by the circuit execution.
+
+    Example:
+
+        The last reset is removed, while the first one is kept because the
+        Hadamard gate acts on the qubit after it.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import RemoveFinalReset
+
+            circuit = Circuit(1, density_matrix=True)
+            circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+            circuit.add(gates.H(0))
+            circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+
+            print(RemoveFinalReset()(circuit).ngates)
+
+        .. testoutput::
+
+            2
+    """
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Remove the resets that are not followed by any operation on their qubit.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit without the final resets.
+        """
+        used = set()
+        kept = []
+        for gate in reversed(circuit.queue):
+            if (
+                isinstance(gate, gates.ResetChannel)
+                and abs(1 - gate.init_kwargs["p_0"]) <= PRECISION_TOL
+                and abs(gate.init_kwargs["p_1"]) <= PRECISION_TOL
+                and not used.intersection(gate.qubits)
+            ):
+                continue
+            used.update(gate.qubits)
+            kept.append(gate)
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(kept[::-1])
+
+        return new
+
+
+class RemoveIdentityEquivalent(Optimizer):
+    """Removes gates whose action is equivalent to the identity.
+
+    A gate :math:`U`, acting on :math:`n` qubits in total (targets and controls),
+    is removed when its average gate fidelity with the identity,
+
+    .. math::
+        F(U) = \\frac{|\\text{Tr}(U)|^2 + D}{D \\, (D + 1)},
+
+    satisfies :math:`1 - F(U) \\leq \\epsilon`. Here :math:`D = 2^n` is the
+    dimension of the Hilbert space, :math:`\\text{Tr}` is the matrix trace and
+    :math:`\\epsilon` is the tolerance. Since :math:`|\\text{Tr}(U)|` does not
+    depend on a global phase, an uncontrolled gate that equals the identity up to
+    a phase, e.g. a rotation around the Z axis by :math:`2\\pi`, is removed. For a
+    gate built with ``controlled_by`` that phase is a relative phase between the
+    control states, so the gate is removed only if its target matrix is the identity.
+
+    Measurements, alignments, barriers, noise channels and fused gates are never
+    removed. Gates are evaluated at their current parameter values, so a removed
+    parametrized gate is not tracked by the returned circuit anymore.
+
+    Args:
+        approximation_degree (float, optional): Value in :math:`[0, 1]` that sets the
+            tolerance as :math:`\\epsilon = 1 -` ``approximation_degree``. With the
+            default value only gates equal to the identity up to numerical precision
+            (:math:`\\epsilon = 10^{-14}`) are removed. Defaults to :math:`1.0`.
+
+    Example:
+
+        The rotation by :math:`10^{-3}` radians differs from the identity by an
+        infidelity of about :math:`1.7 \\times 10^{-7}`, so it is removed only when
+        the tolerance allows it. The identity gate and the rotation by
+        :math:`2\\pi` (minus the identity) are removed in both cases.
+
+        .. testcode::
+
+            from math import pi
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import RemoveIdentityEquivalent
+
+            circuit = Circuit(2)
+            circuit.add(gates.I(0))
+            circuit.add(gates.RZ(0, 2 * pi))
+            circuit.add(gates.RX(1, 1e-3))
+            circuit.add(gates.CNOT(0, 1))
+
+            print(RemoveIdentityEquivalent()(circuit).ngates)
+            print(RemoveIdentityEquivalent(approximation_degree=1 - 1e-6)(circuit).ngates)
+
+        .. testoutput::
+
+            2
+            1
+    """
+
+    def __init__(self, approximation_degree: float = 1.0):
+        if not 0.0 <= approximation_degree <= 1.0:
+            raise_error(
+                ValueError,
+                f"``approximation_degree`` must be in [0, 1], but got {approximation_degree}.",
+            )
+        self.approximation_degree = approximation_degree
+
+    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+        """Remove the gates that are equivalent to the identity.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
+                build the gate matrices. If ``None``, defaults to the global backend.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit without the removed gates.
+        """
+        backend = _check_backend(backend)
+
+        tolerance = max(1 - self.approximation_degree, 1e-14)
+        unremovable = (gates.M, gates.Align, gates.Channel, SpecialGate)
+
+        kept = []
+        for gate in circuit.queue:
+            removable = False
+            if not isinstance(gate, unremovable + (gates.FusedGate,)):
+                matrix = gate.matrix(backend)
+                target_dim = matrix.shape[0]
+                control_dim = 2 ** len(gate.control_qubits)
+                dim = target_dim * control_dim
+                # the controlled gate acts as the identity when a control is off
+                trace = (control_dim - 1) * target_dim + backend.trace(matrix)
+                fidelity = (backend.abs(trace) ** 2 + dim) / (dim * (dim + 1))
+                removable = bool(1 - fidelity <= tolerance)
+            if not removable:
+                kept.append(gate)
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(kept)
+
+        return new
+
+
+class RemoveResetInZeroState(Optimizer):
+    """Removes the resets acting on qubits that are still in the zero state.
+
+    A reset is the single-qubit :class:`qibo.gates.ResetChannel` that sends the
+    qubit to the :math:`|0\\rangle` state with probability one, that is with
+    :math:`p_0 = 1` and :math:`p_1 = 0`. A qubit is known to be in the
+    :math:`|0\\rangle` state only until the first operation (gate, measurement or
+    barrier) acts on it, so only the resets that precede every other operation on
+    their qubit are removed. Consecutive resets at the start of a qubit are all
+    removed.
+
+    Example:
+
+        The reset at the start of the circuit is removed, while the one after the
+        Hadamard gate is kept.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import RemoveResetInZeroState
+
+            circuit = Circuit(1, density_matrix=True)
+            circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+            circuit.add(gates.H(0))
+            circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+
+            print(RemoveResetInZeroState()(circuit).ngates)
+
+        .. testoutput::
+
+            2
+    """
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Remove the resets acting on qubits that no operation has touched yet.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit without the removed resets.
+        """
+        touched = set()
+        kept = []
+        for gate in circuit.queue:
+            if (
+                isinstance(gate, gates.ResetChannel)
+                and abs(1 - gate.init_kwargs["p_0"]) <= PRECISION_TOL
+                and abs(gate.init_kwargs["p_1"]) <= PRECISION_TOL
+                and not touched.intersection(gate.qubits)
+            ):
+                continue
+            touched.update(gate.qubits)
+            kept.append(gate)
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(kept)
+
+        return new
+
+
+class ResetAfterMeasureSimplification(Optimizer):
+    """Replaces a reset that follows a measurement by a gate conditioned on its outcome.
+
+    A reset is the single-qubit :class:`qibo.gates.ResetChannel` that sends the
+    qubit to the :math:`|0\\rangle` state with probability one, that is with
+    :math:`p_0 = 1` and :math:`p_1 = 0`. When a reset directly follows a measurement
+    of the same qubit, with no other operation on that qubit in between, the measurement
+    has already collapsed the qubit to the state :math:`|m\\rangle`, where :math:`m`
+    is the measured bit. The reset is then equivalent to a Pauli-X gate applied
+    only if :math:`m = 1`. The pass replaces it by a :class:`qibo.gates.U3` gate
+    with angles :math:`\\theta = \\lambda = \\pi m` and :math:`\\phi = 0`, which is the
+    identity for :math:`m = 0` and exactly the Pauli-X gate for :math:`m = 1`, with
+    :math:`m` given by the ``symbols`` of the measurement result, see
+    :ref:`collapse-examples`.
+
+    Measurements followed by a gate on the same qubit are collapsing measurements
+    in ``qibo``, so every measurement that precedes a reset is handled.
+
+    Example:
+
+        The reset is replaced by a conditional gate, and the circuit ends in the
+        zero state for both measurement outcomes.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import ResetAfterMeasureSimplification
+
+            circuit = Circuit(1, density_matrix=True)
+            circuit.add(gates.H(0))
+            circuit.add(gates.M(0))
+            circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+
+            simplified = ResetAfterMeasureSimplification()(circuit)
+            print([gate.name for gate in simplified.queue])
+
+        .. testoutput::
+
+            ['h', 'measure', 'u3']
+    """
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Replace the resets that follow a measurement by conditional gates.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the replaced resets.
+        """
+        kept = []
+        # position in ``kept`` of the latest operation on each qubit
+        latest = {}
+        for gate in circuit.queue:
+            if (
+                isinstance(gate, gates.ResetChannel)
+                and abs(1 - gate.init_kwargs["p_0"]) <= PRECISION_TOL
+                and abs(gate.init_kwargs["p_1"]) <= PRECISION_TOL
+            ):
+                (qubit,) = gate.qubits
+                previous = kept[latest[qubit]] if qubit in latest else None
+                if isinstance(previous, gates.M):
+                    index = sorted(previous.target_qubits).index(qubit)
+                    angle = math.pi * previous.result.symbols[index]
+                    gate = gates.U3(qubit, theta=angle, phi=0.0, lam=angle)
+            kept.append(gate)
+            latest.update({qubit: len(kept) - 1 for qubit in gate.qubits})
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(kept)
 
         return new
 

@@ -10,6 +10,10 @@ from qibo.transpiler.optimizer import (
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
+    RemoveFinalReset,
+    RemoveIdentityEquivalent,
+    RemoveResetInZeroState,
+    ResetAfterMeasureSimplification,
     TGateRules,
 )
 from qibo.transpiler.pipeline import Passes
@@ -547,3 +551,129 @@ def test_parametrized_gate_fusion_pipeline(backend, star_connectivity):
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["ry", "cx"]
     backend.assert_allclose(transpiled.queue[0].parameters, (0.3,))
+
+
+def test_remove_identity_equivalent(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.I(0))
+    circuit.add(gates.RX(0, 0.0))
+    circuit.add(gates.RZ(1, 2 * np.pi))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(0, 1))
+    reduced = RemoveIdentityEquivalent()(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["cx", "measure"]
+    assert reduced.nqubits == circuit.nqubits
+
+
+def test_remove_identity_equivalent_approximation_degree(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, 1e-3))
+    assert RemoveIdentityEquivalent()(circuit, backend=backend).ngates == 1
+    reduced = RemoveIdentityEquivalent(approximation_degree=1 - 1e-6)(
+        circuit, backend=backend
+    )
+    assert reduced.ngates == 0
+
+    with pytest.raises(ValueError):
+        RemoveIdentityEquivalent(approximation_degree=1.5)
+
+
+def test_remove_identity_equivalent_controlled(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.CRZ(0, 1, 2 * np.pi))
+    circuit.add(gates.CRX(0, 1, 0.0))
+    reduced = RemoveIdentityEquivalent()(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["crz"]
+
+
+def test_remove_identity_equivalent_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.RX(0, 0.0))
+    circuit.add(gates.CNOT(0, 2))
+    pipeline = Passes([RemoveIdentityEquivalent()], connectivity=star_connectivity())
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert [gate.name for gate in transpiled.queue] == ["cx"]
+
+
+def test_remove_final_reset():
+    circuit = Circuit(3, density_matrix=True)
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    circuit.add(gates.H(0))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    circuit.add(gates.ResetChannel(1, [1.0, 0.0]))
+    circuit.add(gates.Barrier(1))
+    circuit.add(gates.ResetChannel(2, [0.5, 0.0]))
+    circuit.add(gates.M(2))
+    reduced = RemoveFinalReset()(circuit)
+    assert [gate.name for gate in reduced.queue] == [
+        "ResetChannel",
+        "h",
+        "ResetChannel",
+        "barrier",
+        "ResetChannel",
+        "measure",
+    ]
+    assert reduced.nqubits == circuit.nqubits
+
+
+def test_remove_reset_in_zero_state():
+    circuit = Circuit(3, density_matrix=True)
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    circuit.add(gates.H(0))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    circuit.add(gates.ResetChannel(1, [1.0, 0.0]))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.ResetChannel(2, [1.0, 0.0]))
+    circuit.add(gates.ResetChannel(1, [0.5, 0.5]))
+    reduced = RemoveResetInZeroState()(circuit)
+    assert [gate.name for gate in reduced.queue] == [
+        "h",
+        "ResetChannel",
+        "cx",
+        "ResetChannel",
+        "ResetChannel",
+    ]
+
+
+def test_reset_after_measure_simplification(backend):
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.X(1))
+    circuit.add(gates.M(1, 0))
+    circuit.add(gates.ResetChannel(1, [1.0, 0.0]))
+    circuit.add(gates.ResetChannel(1, [1.0, 0.0]))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    simplified = ResetAfterMeasureSimplification()(circuit)
+    assert [gate.name for gate in simplified.queue] == [
+        "x",
+        "measure",
+        "u3",
+        "ResetChannel",
+        "u3",
+    ]
+
+    target = np.zeros((4, 4))
+    target[0, 0] = 1.0
+    for transpiled in (circuit, simplified):
+        state = backend.execute_circuit(transpiled).state()
+        backend.assert_allclose(state, target, atol=1e-8)
+
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    unchanged = ResetAfterMeasureSimplification()(circuit)
+    assert [gate.name for gate in unchanged.queue] == ["h", "ResetChannel"]
+
+
+def test_reset_passes_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.ResetChannel(2, [1.0, 0.0]))
+    pipeline = Passes(
+        [RemoveResetInZeroState(), RemoveFinalReset()],
+        connectivity=star_connectivity(),
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert [gate.name for gate in transpiled.queue] == ["cx"]
