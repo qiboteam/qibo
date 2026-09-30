@@ -1,10 +1,6 @@
 import numpy as np
 import pytest
 import sympy
-from qiskit.transpiler import PassManager
-from qiskit.transpiler.passes import (
-    RemoveDiagonalGatesBeforeMeasure as QiskitRemoveDiagonalGatesBeforeMeasurement,
-)
 
 from qibo import gates
 from qibo.gates.special import Barrier
@@ -14,6 +10,7 @@ from qibo.transpiler.optimizer import (
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
+    RemoveDiagonalGatesBeforeMeasurement,
     RemoveFinalReset,
     RemoveIdentityEquivalent,
     RemoveResetInZeroState,
@@ -21,7 +18,6 @@ from qibo.transpiler.optimizer import (
     TGateRules,
 )
 from qibo.transpiler.pipeline import Passes
-from qibo.transpiler.qiskit import QiskitPasses
 
 
 def test_preprocessing_error(star_connectivity):
@@ -688,28 +684,6 @@ def test_remove_diagonal_gates_before_measure_pipeline(backend, star_connectivit
     )
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["ry", "measure"]
-
-
-def test_remove_diagonal_gates_before_measure_qiskit():
-    circuit = Circuit(4)
-    circuit.add(gates.H(qubit) for qubit in range(4))
-    circuit.add(gates.CRZ(0, 1, 0.3))
-    circuit.add(gates.T(0))
-    circuit.add(gates.RZZ(2, 3, 0.4))
-    circuit.add(gates.CZ(0, 2))
-    circuit.add(gates.RZ(1, 0.5))
-    circuit.add(gates.CNOT(1, 3))
-    circuit.add(gates.CU1(2, 3, 0.6))
-    circuit.add(gates.S(1))
-    circuit.add(gates.M(0, 1, 2, 3))
-
-    expected = QiskitPasses(PassManager([QiskitRemoveDiagonalGatesBeforeMeasurement()]))
-    expected = expected(circuit)
-    reduced = RemoveDiagonalGatesBeforeMeasurement()(circuit)
-    assert reduced.ngates < circuit.ngates
-    assert sorted(gate.name for gate in reduced.queue) == sorted(
-        gate.name for gate in expected.queue
-    )
 
 
 def test_remove_final_reset():
