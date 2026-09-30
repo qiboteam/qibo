@@ -1,5 +1,6 @@
 from qibo.transpiler.optimizer import (
     InverseCancellation,
+    Optimize1qGatesDecomposition,
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
