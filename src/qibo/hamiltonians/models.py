@@ -11,33 +11,56 @@ from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 
 
 def FermiHubbard(
-    nsites: int,
+    nsites: int | tuple[int, int],
     hopping_strength: float = -1.0,
     interaction_strength: float = 0.5,
     dense: bool = True,
     closed_boundary: bool = True,
+    labelling: str = "snake",
     backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
-    """Jordan-Wigner-transformed Fermi-Hubbard model for an one-dimensional spin chain.
+    """Jordan-Wigner-transformed Fermi-Hubbard model on a one-dimensional chain
+    or on a two-dimensional rectangular lattice.
 
     In second quantization, the Hamiltonian is defined as
 
     .. math::
-        H_{\\textrm{FH}} = t \\, \\sum_{j,\\,\\sigma} \\, \\left(
-            a_{j,\\sigma}^{\\dagger} \\, a_{j+1,\\sigma}
-            + a_{j+1,\\sigma}^{\\dagger} \\, a_{j,\\sigma}
+        H_{\\textrm{FH}} = t \\, \\sum_{\\langle j, \\, k \\rangle, \\, \\sigma} \\, \\left(
+            a_{j,\\sigma}^{\\dagger} \\, a_{k,\\sigma}
+            + a_{k,\\sigma}^{\\dagger} \\, a_{j,\\sigma}
             \\right)
             + U \\, \\sum_{j} \\, n_{j,\\uparrow} \\, n_{j,\\downarrow} \\, ,
 
-    where :math:`a_{j,\\sigma}` (:math:`a_{j,\\dagger}^{\\dagger}`) is the annihilation (creation)
-    operator for spin :math:`\\sigma \\in \\{\\uparrow, \\, \\downarrow \\}` at site :math:`j`,
-    :math:`n_{j,\\sigma} = a_{j,\\sigma}^{\\dagger}\\,a_{j,\\sigma}` is the number operator for
-    spin :math:`\\sigma` at site :math:`j`, :math:`t` is the tunneling amplitude, and :math:`U`
-    is the Coulomb potential.
+    where :math:`\\langle j, \\, k \\rangle` runs over all pairs of nearest-neighbor
+    lattice sites, :math:`a_{j,\\sigma}` (:math:`a_{j,\\sigma}^{\\dagger}`) is the
+    annihilation (creation) operator for spin :math:`\\sigma \\in \\{\\uparrow, \\, \\downarrow \\}`
+    at site :math:`j`, :math:`n_{j,\\sigma} = a_{j,\\sigma}^{\\dagger}\\,a_{j,\\sigma}` is the
+    number operator for spin :math:`\\sigma` at site :math:`j`, :math:`t` is the tunneling
+    amplitude, and :math:`U` is the Coulomb potential.
 
+    Lattice sites are labeled according to ``labelling``. For a lattice with :math:`n_{c}`
+    columns, site :math:`(r, \\, c)` has label :math:`j = r \\, n_{c} + c` in the
+    ``"row_major"`` scheme, in which every row is traversed from left to right. In the
+    ``"snake"`` scheme, the first row is traversed from left to right, the second row from
+    right to left, and so on. Thus, the label is the same as in the ``"row_major"`` scheme if
+    :math:`r` is even, and :math:`j = r \\, n_{c} + n_{c} - 1 - c` if :math:`r` is odd.
+    Qubits :math:`2j` and :math:`2j + 1` encode the spin-up and spin-down modes of site
+    :math:`j`, respectively. Both schemes are equivalent for chains and single-row lattices.
+
+    Every hopping term between qubits :math:`p < q` is multiplied by the Jordan-Wigner
+    string :math:`\\prod_{p < m < q} Z_{m}`, so that fermionic anticommutation is
+    correctly accounted for. A chain with :math:`n` sites, ``nsites=n``, is the
+    same model as a lattice with a single row, ``nsites=(1, n)``.
+
+    .. note::
+        For periodic boundaries, bonds that wrap around a dimension are implemented
+        as the same Jordan-Wigner-string hopping terms as the remaining bonds, without
+        the correction that depends on the parity of the total number of particles.
 
     Args:
-        nsites (int): total number of sites in the chain.
+        nsites (int or tuple[int, int]): if an ``int``, total number of sites in a
+            one-dimensional chain. If a ``tuple`` :math:`(n_{r}, \\, n_{c})`, number
+            of rows and columns of a two-dimensional lattice.
         hopping_strength (float or int, optional): tunneling amplitude. Defaults to :math:`-1.0`.
         interaction_strength (float or int, optional): Coulomb potential.
             Defaults to :math:`0.5`.
@@ -46,8 +69,10 @@ def FermiHubbard(
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
             Defaults to ``True``.
         closed_boundary (bool, optional): If ``True``, returns Fermi-Hubbard model with periodic
-            boundary condition. If ``False``, returns Hamiltonian with open boundaries.
-            Defaults to ``True``.
+            boundary condition along every dimension with more than two sites. If ``False``,
+            returns Hamiltonian with open boundaries. Defaults to ``True``.
+        labelling (str, optional): scheme used to label the lattice sites, either ``"snake"``
+            or ``"row_major"``. Defaults to ``"snake"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -58,7 +83,64 @@ def FermiHubbard(
     """
     backend = _check_backend(backend)
 
-    nqubits = 2 * nsites
+    if isinstance(nsites, (int, np.integer)):
+        nrows, ncols = 1, int(nsites)
+    elif isinstance(nsites, tuple) and len(nsites) == 2:
+        nrows, ncols = nsites
+    else:
+        raise_error(
+            TypeError,
+            "``nsites`` must be either an ``int`` or a ``tuple`` of two ``int``s, "
+            + f"but it is {nsites}.",
+        )
+
+    if nrows < 1 or ncols < 1:
+        raise_error(
+            ValueError,
+            f"Lattice dimensions must be positive, but they are {(nrows, ncols)}.",
+        )
+
+    if labelling not in ("row_major", "snake"):
+        raise_error(
+            ValueError,
+            f"``labelling`` must be either ``'row_major'`` or ``'snake'``, but it is {labelling}.",
+        )
+
+    nqubits = 2 * nrows * ncols
+
+    # in the snake scheme, rows are traversed in alternating directions
+    labels = [
+        [
+            row * ncols
+            + (col if labelling == "row_major" or row % 2 == 0 else ncols - 1 - col)
+            for col in range(ncols)
+        ]
+        for row in range(nrows)
+    ]
+
+    # nearest-neighbor bonds between sites
+    bonds = [
+        (labels[row][col], labels[row][col + 1])
+        for row in range(nrows)
+        for col in range(ncols - 1)
+    ]
+    bonds += [
+        (labels[row][col], labels[row + 1][col])
+        for row in range(nrows - 1)
+        for col in range(ncols)
+    ]
+    if closed_boundary and ncols > 2:
+        bonds += [(labels[row][0], labels[row][-1]) for row in range(nrows)]
+    if closed_boundary and nrows > 2:
+        bonds += [(labels[0][col], labels[-1][col]) for col in range(ncols)]
+
+    # pairs of qubits (spin-up with spin-up, spin-down with spin-down) connected by hopping,
+    # ordered such that the first qubit has the smallest label
+    hoppings = [
+        (2 * min(j, k) + spin, 2 * max(j, k) + spin)
+        for j, k in bonds
+        for spin in (0, 1)
+    ]
 
     if dense:
         I, X, Y, Z = (
@@ -83,33 +165,16 @@ def FermiHubbard(
             base_string[site + 1] = I
 
         # hopping terms
-        for site in range(nqubits - 2):
+        for qubit_a, qubit_b in hoppings:
             for pauli in (X, Y):
-                base_string[site] = pauli
-                base_string[site + 2] = pauli
+                base_string[qubit_a] = pauli
+                base_string[qubit_b] = pauli
+                for qubit in range(qubit_a + 1, qubit_b):
+                    base_string[qubit] = Z
                 term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
                 hamiltonian += term
                 del term
-            base_string[site] = I
-            base_string[site + 2] = I
-
-        if closed_boundary and nsites > 2:
-            for pauli in (X, Y):
-                base_string[0] = pauli
-                base_string[nqubits - 2] = pauli
-                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
-                hamiltonian += term
-                del term
-                base_string[0] = I
-                base_string[nqubits - 2] = I
-
-                base_string[1] = pauli
-                base_string[nqubits - 1] = pauli
-                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
-                hamiltonian += term
-                del term
-                base_string[1] = I
-                base_string[nqubits - 1] = I
+                base_string[qubit_a : qubit_b + 1] = [I] * (qubit_b - qubit_a + 1)
 
         return Hamiltonian(nqubits, hamiltonian, backend=backend)
 
@@ -127,15 +192,11 @@ def FermiHubbard(
     )
 
     # hopping terms
-    hamiltonian += (hopping_strength / 2) * sum(
-        (X(site) * X(site + 2) + Y(site) * Y(site + 2)) for site in range(nqubits - 2)
-    )
-    if closed_boundary and nsites > 2:
-        hamiltonian += (hopping_strength / 2) * (
-            X(nqubits - 2) * X(0) + Y(nqubits - 2) * Y(0)
-        )
-        hamiltonian += (hopping_strength / 2) * (
-            X(nqubits - 1) * X(1) + Y(nqubits - 1) * Y(1)
+    for qubit_a, qubit_b in hoppings:
+        string = [Z(qubit) for qubit in range(qubit_a + 1, qubit_b)]
+        hamiltonian += (hopping_strength / 2) * sum(
+            reduce(lambda x, y: x * y, [pauli(qubit_a), *string, pauli(qubit_b)])
+            for pauli in (X, Y)
         )
 
     hamiltonian = SymbolicHamiltonian(
