@@ -25,6 +25,11 @@ def test_preprocessing_error(star_connectivity):
     circ = Circuit(5, wire_names=wire_names)
     assert circ.wire_names == wire_names
 
+    # every wire name is a node of the graph, but there are more qubits than nodes
+    circ = Circuit(7, wire_names=[0, 1, 2, 3, 4, 0, 1])
+    with pytest.raises(ValueError, match="can't be greater than"):
+        preprocesser(circuit=circ)
+
 
 def test_preprocessing_same(star_connectivity):
     circ = Circuit(5)
