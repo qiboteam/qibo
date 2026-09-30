@@ -5,6 +5,7 @@ from qiskit.transpiler import PassManager, passes
 from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
+from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.asserts import assert_circuit_equivalence, assert_transpiling
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
@@ -186,6 +187,28 @@ def test_custom_passes_wrong_pass():
     circ = generate_random_circuit(nqubits=5, ngates=5)
     with pytest.raises(TranspilerPipelineError):
         custom_pipeline(circ)
+
+
+def test_custom_passes_optimizer_backend(backend):
+    class Recorder(Optimizer):
+        def __call__(self, circuit, backend=None):
+            self.backend = backend
+            return circuit
+
+    optimizer = Recorder()
+    Passes([optimizer], connectivity=None)(Circuit(1), backend=backend)
+    assert optimizer.backend is backend
+
+
+def test_custom_passes_optimizer_without_backend(backend):
+    class NoBackend(Optimizer):
+        def __call__(self, circuit):
+            self.called = True
+            return circuit
+
+    optimizer = NoBackend()
+    Passes([optimizer], connectivity=None)(Circuit(1), backend=backend)
+    assert optimizer.called
 
 
 def test_int_qubit_names(backend, star_connectivity):
