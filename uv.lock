@@ -2876,19 +2876,19 @@ analysis = [{ name = "ruff", specifier = ">=0.16.5,<0.17.0" }]
 cuda11 = [
     { name = "cupy-cuda11x", specifier = ">=13.1.0,<14.0.0" },
     { name = "cuquantum-python-cu11", specifier = ">=24.1.0,<25.0.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=backend_methods" },
 ]
 cuda12 = [
     { name = "cupy-cuda12x", specifier = ">=13.1.0,<14.0.0" },
     { name = "cuquantum-python-cu12", specifier = ">=24.1.0,<25.0.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=backend_methods" },
 ]
 dev = [{ name = "ipython", specifier = ">=8.34.0,<9.0.0" }]
 docs = [
     { name = "furo", specifier = ">=2022.12.7,<2023.0.0" },
     { name = "ipykernel", specifier = ">=6.29.4,<7.0.0" },
     { name = "nbsphinx", specifier = ">=0.8.12,<0.9.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=backend_methods" },
     { name = "qulacs", marker = "python_full_version < '3.13'", specifier = ">=0.6.4,<0.7.0" },
     { name = "recommonmark", specifier = ">=0.7.1,<0.8.0" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14.0" },
@@ -2904,7 +2904,7 @@ tests = [
     { name = "pytest-cov", specifier = ">=4.0.0,<5.0.0" },
     { name = "qbraid", extras = ["cudaq", "qir"], marker = "sys_platform != 'win32'", specifier = ">=0.10.0,<0.11.0" },
     { name = "qbraid", extras = ["qir"], marker = "sys_platform == 'win32'", specifier = ">=0.10.0,<0.11.0" },
-    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git" },
+    { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?rev=backend_methods" },
     { name = "qiskit", specifier = ">=2.2.3,<3.0.0" },
     { name = "qulacs", marker = "python_full_version < '3.13'", specifier = ">=0.6.4,<0.7.0" },
     { name = "stim", specifier = ">=1.15.0,<2.0.0" },
@@ -2913,7 +2913,7 @@ tests = [
 [[package]]
 name = "qibojit"
 version = "0.1.17"
-source = { git = "https://github.com/qiboteam/qibojit.git#bce72ee35ae287aada137cffb4893786a1c0c9cc" }
+source = { git = "https://github.com/qiboteam/qibojit.git?rev=backend_methods#74a74ad6d262a24dc4431b6e5a7a6ae6e538f0b4" }
 dependencies = [
     { name = "numba" },
     { name = "psutil" },
