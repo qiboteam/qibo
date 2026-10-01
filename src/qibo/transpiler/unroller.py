@@ -156,6 +156,12 @@ def translate_gate(
         gate.basis = []
         return gate
 
+    if gate.is_controlled_by and len(gate.control_qubits) > 1:
+        translated = []
+        for decomposed_gate in gate.decompose():
+            translated.extend(translate_gate(decomposed_gate, native_gates, backend))
+        return translated
+
     if len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates, backend)
 
