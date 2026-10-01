@@ -182,6 +182,14 @@ Quantum Signal Processing
 .. autofunction:: qibo.models.qsp.qsp_circuit
 
 
+Quantum Singular Value Transformation
+"""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.qsvt.qsvt_phases
+
+.. autofunction:: qibo.models.qsvt.qsvt_circuit
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 """""""""""""""""""""""""""""""""""""""""""""
 
