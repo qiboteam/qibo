@@ -152,5 +152,5 @@ def test_unroller_multi_controlled_gates(backend, gate):
     # The unroller drops the global phase.
     original = circuit.unitary(backend)
     final = unrolled.unitary(backend)
-    overlap = backend.vdot(original, final)
+    overlap = backend.sum(backend.conj(original) * final)
     backend.assert_allclose(final, original * overlap / backend.abs(overlap), atol=1e-8)
