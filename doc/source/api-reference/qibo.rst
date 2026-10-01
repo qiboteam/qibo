@@ -2837,6 +2837,14 @@ Inverse cancellation
     :member-order: bysource
 
 
+Optimize 1-qubit gates decomposition
+""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.Optimize1qGatesDecomposition
+    :members:
+    :member-order: bysource
+
+
 Parametrized gate fusion
 """"""""""""""""""""""""
 
