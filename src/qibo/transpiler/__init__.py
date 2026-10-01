@@ -1,3 +1,6 @@
+from qibo.transpiler.multicontrolled_decompositions import (
+    multi_controlled_decomposition,
+)
 from qibo.transpiler.optimizer import (
     InverseCancellation,
     Optimize1qGatesDecomposition,
@@ -43,4 +46,5 @@ __all__ = [
     "Subgraph",
     "TGateRules",
     "Unroller",
+    "multi_controlled_decomposition",
 ]
