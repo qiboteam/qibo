@@ -218,6 +218,47 @@ def test_dagger(backend, nqubits):
     backend.assert_allclose(backend.dagger(rand), backend.inv(rand))
 
 
+@pytest.mark.parametrize("size_1,size_2", [(3, 3), (5, 2)])
+def test_convolve(backend, size_1, size_2):
+    backend.set_seed(42)
+    array_1 = backend.random_normal(0, 1, size_1) + 1j * backend.random_normal(
+        0, 1, size_1
+    )
+    array_2 = backend.random_normal(0, 1, size_2) + 1j * backend.random_normal(
+        0, 1, size_2
+    )
+
+    target = np.convolve(backend.to_numpy(array_1), backend.to_numpy(array_2))
+
+    backend.assert_allclose(backend.convolve(array_1, array_2), target)
+
+
+@pytest.mark.parametrize("size", [4, 7])
+def test_fft_ifft(backend, size):
+    backend.set_seed(42)
+    array = backend.random_normal(0, 1, size) + 1j * backend.random_normal(0, 1, size)
+    array_numpy = backend.to_numpy(array)
+
+    backend.assert_allclose(backend.fft(array), np.fft.fft(array_numpy))
+    backend.assert_allclose(backend.ifft(array), np.fft.ifft(array_numpy))
+    backend.assert_allclose(backend.ifft(backend.fft(array)), array)
+
+
+@pytest.mark.parametrize("degree", [2, 4])
+def test_poly_roots(backend, degree):
+    backend.set_seed(42)
+    roots = backend.random_normal(0, 1, degree) + 1j * backend.random_normal(
+        0, 1, degree
+    )
+    roots_numpy = backend.to_numpy(roots)
+
+    coefficients = backend.poly(roots)
+    backend.assert_allclose(coefficients, np.poly(roots_numpy))
+
+    test = backend.to_numpy(backend.roots(coefficients))
+    backend.assert_allclose(np.sort_complex(test), np.sort_complex(roots_numpy))
+
+
 def test_set_backend_error():
     with pytest.raises(ValueError):
         set_backend("non-existing-backend")

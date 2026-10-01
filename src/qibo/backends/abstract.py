@@ -557,6 +557,20 @@ class Backend:
         """
         return self.engine.conj(array)
 
+    def convolve(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the discrete, linear convolution of two one-dimensional arrays.
+
+        Args:
+            array_1 (ArrayLike): first one-dimensional array.
+            array_2 (ArrayLike): second one-dimensional array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Discrete, linear convolution of ``array_1`` and ``array_2``.
+        """
+        return self.engine.convolve(array_1, array_2, **kwargs)
+
     def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         """Return the sparse version of ``array`` in coordinate format.
 
@@ -858,6 +872,20 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
+    def fft(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Compute the one-dimensional discrete Fourier transform (DFT)
+        of ``array`` with the fast Fourier transform (FFT) algorithm.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The transformed array.
+        """
+        return self.engine.fft.fft(array, **kwargs)
+
     def flatnonzero(self, array: ArrayLike) -> ArrayLike:
         """Return indices that are non-zero in the flattened version of ``array``.
 
@@ -956,6 +984,20 @@ class Backend:
             if sparse
             else self.engine.eye(dims, dtype=dtype, **kwargs)
         )
+
+    def ifft(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Compute the one-dimensional inverse discrete Fourier transform
+        of ``array`` with the inverse fast Fourier transform algorithm.
+
+        Args:
+            array (ArrayLike): input array.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: The inversely transformed array.
+        """
+        return self.engine.fft.ifft(array, **kwargs)
 
     def imag(self, array: ArrayLike) -> int | float | ArrayLike:
         """Return the element-wise imaginary part of a complex-valued ``array``.
@@ -1245,6 +1287,20 @@ class Backend:
             ArrayLike: The resulting array.
         """
         return self.engine.outer(array_1, array_2)
+
+    def poly(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the coefficients of the polynomial with the given roots.
+
+        Args:
+            array (ArrayLike): roots of the polynomial, or a square matrix
+                whose eigenvalues are the roots.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Polynomial coefficients, from the highest to the lowest degree.
+        """
+        return self.engine.poly(array, **kwargs)
 
     def prod(self, array: ArrayLike, **kwargs) -> ArrayLike:
         """Return the product of array elements.
@@ -1556,6 +1612,20 @@ class Backend:
             ArrayLike: The resulting array with rolled elements.
         """
         return self.engine.roll(array, shift, **kwargs)
+
+    def roots(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the roots of a polynomial given its coefficients.
+
+        Args:
+            array (ArrayLike): polynomial coefficients, from the highest to the
+                lowest degree.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Roots of the polynomial.
+        """
+        return self.engine.roots(array, **kwargs)
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         """Return element-wise evenly round ``array`` to the given number of ``decimals``.
