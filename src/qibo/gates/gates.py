@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.gates.abstract import Gate, ParametrizedGate
+from qibo.gates.abstract import Gate, ParametrizedGate, _numpy_backend
 from qibo.parameter import Parameter
 
 
@@ -173,8 +173,9 @@ class X(Gate):
                 multi_controlled_decomposition,
             )
 
+            backend = _numpy_backend()
             return multi_controlled_decomposition(
-                _check_backend(None).matrices.X, controls, target, use_toffolis
+                backend.matrices.X, controls, target, use_toffolis, backend
             )
 
         decomp_gates.extend(decomp_gates)

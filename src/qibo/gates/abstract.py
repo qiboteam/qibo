@@ -3,6 +3,7 @@
 import json
 from abc import abstractmethod
 from collections.abc import Iterable, Sequence
+from functools import cache
 from math import pi
 
 import sympy
@@ -256,11 +257,13 @@ class Gate:
                     multi_controlled_decomposition,
                 )
 
+                backend = _numpy_backend()
                 return multi_controlled_decomposition(
-                    self.matrix(),
+                    self.matrix(backend),
                     self.control_qubits,
                     self.target_qubits[0],
                     use_toffolis,
+                    backend,
                 )
 
             # Step 3: Decompose base gate without controls
@@ -766,3 +769,14 @@ class ParametrizedGate(Gate):
                 param = symbol.evaluate(param)
             params[i] = float(param)
         self.parameters = tuple(params)
+
+
+@cache
+def _numpy_backend():
+    """Cached Numpy backend, for computations that must not use the global backend.
+
+    The import is local due to circular imports.
+    """
+    from qibo.backends import NumpyBackend
+
+    return NumpyBackend()

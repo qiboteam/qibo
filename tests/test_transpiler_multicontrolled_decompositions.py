@@ -197,6 +197,50 @@ def test_use_toffolis(backend, name):
     )
 
 
+def _raise_global_backend_used(*args, **kwargs):
+    raise RuntimeError("The global backend must not be used.")
+
+
+DECOMPOSED_GATES = [
+    lambda: gates.X(5).controlled_by(0, 1, 2, 3, 4),
+    lambda: gates.RX(4, 0.3).controlled_by(0, 1, 2, 3),
+    lambda: gates.H(3).controlled_by(0, 1, 2),
+    lambda: gates.Unitary(np.exp(0.3j) * _ry(0.5), 3).controlled_by(0, 1, 2),
+]
+
+
+@pytest.mark.parametrize("use_toffolis", [True, False])
+@pytest.mark.parametrize("gate_class", DECOMPOSED_GATES)
+def test_decompose_does_not_use_global_backend(monkeypatch, gate_class, use_toffolis):
+    gate = gate_class()
+    monkeypatch.setattr("qibo.backends.get_backend", _raise_global_backend_used)
+    decomposition = gate.decompose(use_toffolis=use_toffolis)
+
+    assert len(decomposition) > 0
+    # Parameters are plain numbers, not arrays of any backend.
+    for decomposed_gate in decomposition:
+        assert all(
+            isinstance(parameter, (float, np.floating))
+            for parameter in decomposed_gate.parameters
+        )
+
+
+@pytest.mark.parametrize("gate_class", DECOMPOSED_GATES)
+def test_decompose_is_independent_of_global_backend(monkeypatch, backend, gate_class):
+    gate = gate_class()
+    expected = gate.decompose()
+
+    monkeypatch.setattr("qibo.backends.get_backend", lambda *args, **kwargs: backend)
+    decomposition = gate.decompose()
+
+    assert [type(g) for g in decomposition] == [type(g) for g in expected]
+    assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
+    for decomposed_gate, expected_gate in zip(decomposition, expected):
+        np.testing.assert_allclose(
+            decomposed_gate.parameters, expected_gate.parameters, atol=1e-12
+        )
+
+
 def test_decompose_does_not_modify_the_gate():
     gate = gates.X(4).controlled_by(0, 1, 2, 3)
     gate.decompose()
