@@ -1,8 +1,9 @@
 import math
+import sys
 from collections.abc import Callable
 
-import numpy as np
 from numpy.polynomial import Chebyshev, Polynomial
+from numpy.typing import ArrayLike
 from scipy.special import comb, erf, gammaln, jv
 from scipy.stats import binom
 
@@ -12,63 +13,218 @@ from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
 
-def fourier_qsp_analytic_extension_coefficients(
-    function: Callable,
-    epsilon: float,
-    backend: Backend = None,
-):
-    r"""Computes a Fourier series for a function using an analytic extension.
+def qsp_circuit(
+    oracle: Circuit, phases: ArrayLike, method: str | None = None
+) -> Circuit:
+    """Creates a quantum signal processing (QSP) circuit.
 
-    Implements Sec. III D of Ref. [1]. Let :math:`f` be a function, analytic on
-    :math:`[-\pi, \pi]`, with :math:`|f(\lambda)| \le 1` for
-    :math:`\lambda \in [-1, 1]`, which is the range of the eigenvalues of the
-    Hermitian operator :math:`H` to be transformed (the norm of :math:`H` is at
-    most one). Its periodic extension is not smooth in general, which would slow
-    down the convergence of the Fourier series (Gibbs phenomenon). Instead, the
-    series is computed for the analytic function
+    The circuit interleaves queries to ``oracle`` with rotations of an ancilla
+    qubit, placed at qubit :math:`0`. The remaining qubits are those of ``oracle``.
 
-    .. math::
-        g(\lambda) = f(\lambda) \, \frac{\mathrm{erf}[L (\lambda + \chi)] -
-        \mathrm{erf}[L (\lambda - \chi)]}{2} \, ,
-
-    where :math:`\mathrm{erf}` is the error function, that is a smoothed
-    version of :math:`f(\lambda)` times a step function of width
-    :math:`2 \chi`, with :math:`1 < \chi < \pi`. The step goes to zero at the
-    boundaries of the period, so that the Fourier coefficients converge
-    exponentially fast. The parameters are chosen as follows:
-
-    - :math:`\chi` is such that :math:`\max_{|\lambda| \le \chi} |f(\lambda)| =
-      1 + \epsilon / 3` (Eq. 15 of Ref. [1]), bounded by :math:`(1 + \pi) / 2`.
-    - :math:`L = \sqrt{\ln(3 / (2 \epsilon))} / (\chi - 1)` (Eq. 13 of Ref. [1]),
-      which guarantees :math:`|f - g| < \epsilon / 3` in :math:`[-1, 1]`. If
-      :math:`\chi` is close to :math:`\pi`, :math:`L` is increased so that
-      the step also decays at the boundaries of the period.
-
-    The coefficients are the discrete Fourier transform of :math:`g`, and the
-    truncation order :math:`q` is the smallest even integer for which the
-    truncated series approximates :math:`f` with error below :math:`\epsilon`
-    in :math:`[-1, 1]`, found by binary search as in Ref. [1]. The filter is
-    steep when :math:`f` exceeds one right outside of :math:`[-1, 1]` (such as
-    :math:`e^{-\beta (\lambda + 1)}`), so the number of samples needed
-    grows as :math:`\mathcal{O}(1 / \epsilon)`.
+    - ``method=None``: QSP of Ref. [1]. ``oracle`` implements a unitary
+      :math:`W`, which is queried :math:`N` times. The block of the circuit unitary
+      with the ancilla starting and ending in :math:`|0\\rangle` applies
+      :math:`A(\\theta) + i C(\\theta)` to each eigenphase :math:`\\theta` of
+      :math:`W`, where :math:`A` and :math:`C` are the trigonometric polynomials
+      encoded in ``phases``.
+    - ``method="fourier"``: Fourier-based QSP of Ref. [2]. ``oracle`` implements
+      :math:`e^{-i t H}` for a Hermitian operator :math:`H` and a time :math:`t`,
+      and is queried :math:`q` times under control. The same block of the circuit
+      unitary is :math:`\\tilde{g}(H t)`, where :math:`\\tilde{g}` is the Fourier
+      series encoded in ``phases``.
 
     Args:
-        function (Callable): function :math:`f`. It has to accept an array of
-            real numbers and return an array of (possibly complex) numbers.
+        oracle (:class:`qibo.models.circuit.Circuit`): circuit on :math:`n` qubits
+            that implements :math:`W` or :math:`e^{-i t H}`, depending on
+            ``method``. It has to be exact, including its global phase, since it
+            is applied under control.
+        phases (ArrayLike): output of :func:`qibo.models.qsp.qsp_phases` for the
+            same ``method``.
+        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
+            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
+        with the ancilla at qubit :math:`0`.
+
+    Example:
+        Apply :math:`(1 + W) / 2`, with :math:`W = X`, to :math:`|0\\rangle`. The
+        amplitudes with the ancilla in :math:`|0\\rangle` are those of
+        :math:`|+\\rangle / \\sqrt{2}`.
+
+        .. testcode::
+
+            from qibo import Circuit, gates, get_backend
+            from qibo.models.qsp import qsp_circuit, qsp_phases
+
+            backend = get_backend()
+
+            walk = Circuit(1)
+            walk.add(gates.X(0))
+
+            # cosine and sine series of (1 + exp(i theta)) / 2
+            phases = qsp_phases([0.5, 0.5], [0.5])
+            circuit = qsp_circuit(walk, phases)
+
+            target = Circuit(1)
+            target.add(gates.H(0))
+
+            state = circuit().state()[:2]
+            print(backend.allclose(state, target().state() / backend.sqrt(2), atol=1e-4))
+
+        .. testoutput::
+
+            True
+
+        Invert a rotation with the Fourier series :math:`\\tilde{g}(x) = e^{i x}`.
+        The amplitudes with the ancilla in :math:`|0\\rangle` are those of the
+        inverse rotation applied to :math:`|0\\rangle`.
+
+        .. testcode::
+
+            from qibo import Circuit, gates, get_backend
+            from qibo.models.qsp import qsp_circuit, qsp_phases
+
+            backend = get_backend()
+
+            evolution = Circuit(1)
+            evolution.add(gates.RX(0, 0.6))
+
+            # coefficients of exp(-i x), 1, and exp(i x)
+            phases = qsp_phases([0.0, 0.0, 1.0], method="fourier")
+            circuit = qsp_circuit(evolution, phases, method="fourier")
+
+            target = Circuit(1)
+            target.add(gates.RX(0, -0.6))
+
+            state = circuit().state()[:2]
+            print(backend.allclose(state, target().state(), atol=1e-6))
+
+        .. testoutput::
+
+            True
+
+    References:
+        1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
+        Signal Processing*, `Phys. Rev. Lett. 118, 010501 (2017)
+        <https://doi.org/10.1103/PhysRevLett.118.010501>`_.
+        2. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
+        processing*, `arXiv:2206.02826 <https://arxiv.org/abs/2206.02826>`_.
+    """
+    if method not in (None, "fourier"):
+        raise_error(ValueError, f"Unknown ``method`` {method}. Use None or 'fourier'.")
+
+    if method == "fourier":
+        return _fourier_qsp_circuit(oracle, phases)
+
+    return _qsp_circuit(oracle, phases)
+
+
+def qsp_phases(
+    coefficients: ArrayLike,
+    sine_coefficients: ArrayLike | None = None,
+    method: str | None = None,
+    extraction: str = "phase_sums",
+    backend: Backend = None,
+) -> ArrayLike:
+    """Computes the phases of a quantum signal processing (QSP) circuit.
+
+    - ``method=None``: QSP of Ref. [1]. Given the series
+      :math:`A(\\theta) = \\sum_{k = 0}^{N/2} a_{k} \\cos(k \\theta)` and
+      :math:`C(\\theta) = \\sum_{k = 1}^{N/2} c_{k} \\sin(k \\theta)`, with even
+      :math:`N`, it finds :math:`N` phases such that
+      :math:`\\langle + | V(\\theta) | + \\rangle = A(\\theta) + i C(\\theta)`. Here,
+      :math:`V(\\theta)` is the product of the :math:`N` single-qubit rotations of
+      angle :math:`\\theta` about the axes of the :math:`xy`-plane given by the
+      phases, and :math:`|+\\rangle` is the :math:`+1` eigenstate of the Pauli-
+      :math:`X` operator. Since :math:`V(0)` is the identity, the target has to
+      satisfy :math:`A(0) = 1`. It is rescaled if :math:`|A + i C| > 1`.
+    - ``method="fourier"``: Fourier-based QSP of Ref. [2]. Given the coefficients
+      :math:`c_{m}` of the Fourier series
+      :math:`\\tilde{g}(x) = \\sum_{m = -q/2}^{q/2} c_{m} \\, e^{i m x}`, with even
+      :math:`q`, it finds the angles of :math:`q + 1` single-qubit gates whose
+      product has :math:`\\tilde{g}(x)` as its upper-left matrix element. The series
+      is divided by :math:`\\max_{x} |\\tilde{g}(x)|` if it is larger than one.
+
+    Args:
+        coefficients (ArrayLike): if ``method=None``, cosine coefficients
+            :math:`(a_{0}, \\dots, a_{N/2})`. If ``method="fourier"``, Fourier
+            coefficients :math:`(c_{-q/2}, \\dots, c_{q/2})`.
+        sine_coefficients (ArrayLike, optional): sine coefficients
+            :math:`(c_{1}, \\dots, c_{N/2})`. Required if ``method=None`` and not
+            used otherwise. Defaults to ``None``.
+        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
+            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
+        extraction (str, optional): how the phases are extracted if
+            ``method=None``. ``"phase_sums"`` follows Ref. [3] and loses precision
+            for :math:`N \\gtrsim 30`, while ``"layer_stripping"`` removes one
+            rotation at a time and stays accurate for larger :math:`N`.
+            Defaults to ``"phase_sums"``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the calculation. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ArrayLike: phases for :func:`qibo.models.qsp.qsp_circuit` with the same
+        ``method``. An array of length :math:`N` if ``method=None``, or an array
+        of shape :math:`(q + 1, 4)` if ``method="fourier"``.
+
+    References:
+        1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
+        Signal Processing*, `Phys. Rev. Lett. 118, 010501 (2017)
+        <https://doi.org/10.1103/PhysRevLett.118.010501>`_.
+        2. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
+        processing*, `arXiv:2206.02826 <https://arxiv.org/abs/2206.02826>`_.
+        3. G. H. Low, T. J. Yoder, and I. L. Chuang, *The methodology of resonant
+        equiangular composite quantum gates*, `Phys. Rev. X 6, 041067 (2016)
+        <https://doi.org/10.1103/PhysRevX.6.041067>`_.
+    """
+    backend = _check_backend(backend)
+
+    if method not in (None, "fourier"):
+        raise_error(ValueError, f"Unknown ``method`` {method}. Use None or 'fourier'.")
+
+    if method == "fourier":
+        if sine_coefficients is not None:
+            raise_error(
+                ValueError, "``sine_coefficients`` is not used if ``method='fourier'``."
+            )
+
+        return _fourier_qsp_phases(coefficients, backend=backend)
+
+    if sine_coefficients is None:
+        raise_error(ValueError, "``sine_coefficients`` is required if ``method=None``.")
+
+    return _qsp_phases(
+        coefficients, sine_coefficients, extraction=extraction, backend=backend
+    )
+
+
+def _fourier_qsp_analytic_extension_coefficients(
+    function: Callable[[ArrayLike], ArrayLike],
+    epsilon: float,
+    backend: Backend = None,
+) -> tuple[ArrayLike, float, float]:
+    """Computes Fourier coefficients using an analytic extension.
+
+    Follows Sec. III D of Ref. [1]. The coefficients are those of ``function``
+    multiplied by a smooth step of width :math:`2 \\chi`, with
+    :math:`1 < \\chi < \\pi`, and the order :math:`q` is the smallest even one with
+    error below ``epsilon`` in :math:`[-1, 1]`.
+
+    Args:
+        function (Callable): function :math:`f` with :math:`|f| \\le 1` in
+            :math:`[-1, 1]`. It takes and returns backend arrays.
         epsilon (float): target error, between :math:`0` and :math:`1`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        tuple: coefficients :math:`(c_{-q/2}, \dots, c_{q/2})` of the Fourier
-        series :math:`\tilde{g}_{q}`, subnormalization
-        :math:`\alpha = 1 / \max(1, \max_{x} |\tilde{g}_{q}(x)|)`, and evolution
-        time :math:`t = 1`. Then, :math:`\alpha \, \tilde{g}_{q}(\lambda t)`
-        approximates :math:`\alpha f(\lambda)` with error :math:`\epsilon`, and
-        the coefficients can be given to
-        :func:`qibo.models.qsp.fourier_qsp_phases` (which rescales them by
-        :math:`\alpha`) with an oracle for :math:`e^{-i t H}`.
+        tuple: coefficients :math:`(c_{-q/2}, \\dots, c_{q/2})`, subnormalization
+        :math:`\\alpha`, and evolution time :math:`t = 1`, such that the Fourier
+        series at :math:`\\lambda t` approximates :math:`\\alpha f(\\lambda)` in
+        :math:`[-1, 1]`.
 
     References:
         1. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
@@ -79,9 +235,11 @@ def fourier_qsp_analytic_extension_coefficients(
     if not 0.0 < epsilon < 1.0:
         raise_error(ValueError, f"``epsilon`` must be in (0, 1), but is {epsilon}.")
 
-    def modulus(radius):
+    def modulus(radius: float) -> float:
         # maximum of |f| in [-radius, radius]
-        return np.abs(function(np.linspace(-radius, radius, 2**14))).max()
+        nodes = radius * (2 * backend.arange(2**14) / (2**14 - 1) - 1)
+
+        return backend.max(backend.abs(function(nodes)))
 
     limit = 1.0 + epsilon / 3
     upper = (1.0 + math.pi) / 2
@@ -101,132 +259,92 @@ def fourier_qsp_analytic_extension_coefficients(
     if chi - 1.0 < 1e-9:
         raise_error(ValueError, "``function`` grows too fast right outside [-1, 1].")
 
-    scale = math.sqrt(math.log(3 / (2 * epsilon)))
+    scale = float(backend.sqrt(backend.log(3 / (2 * epsilon))))
     steepness = max(scale / (chi - 1.0), scale / (math.pi - chi))
 
     # the erf step has a spectrum that decays as exp(-m^2 / (4 L^2))
-    nsamples = 2 ** math.ceil(math.log2(64 * steepness))
-    nsamples = max(nsamples, 2**12)
+    nsamples = max(2 ** int(backend.ceil(backend.log2(64 * steepness))), 2**12)
     if nsamples > 2**24:
         raise_error(
             RuntimeError,
             f"``epsilon`` = {epsilon} requires more than 2^24 samples.",
         )
 
-    xs = 2 * math.pi * np.arange(nsamples) / nsamples
-    xs = (xs + math.pi) % (2 * math.pi) - math.pi  # x in [-pi, pi)
-    target = np.asarray(function(xs), dtype=complex)
-    smooth = target * (erf(steepness * (xs + chi)) - erf(steepness * (xs - chi))) / 2
-    spectrum = np.fft.fft(smooth) / nsamples  # coefficient of e^{imx} at index m
+    xs = 2 * math.pi * backend.arange(nsamples) / nsamples
+    xs = backend.mod(xs + math.pi, 2 * math.pi) - math.pi  # x in [-pi, pi)
+    target = backend.cast(function(xs), dtype="complex128")
+    step = (
+        erf(backend.to_numpy(steepness * (xs + chi)))
+        - erf(backend.to_numpy(steepness * (xs - chi)))
+    ) / 2
+    smooth = target * backend.cast(step, dtype="float64")
+    # coefficient of e^{imx} at index m
+    spectrum = backend.fft(smooth) / nsamples
 
-    inside = np.abs(xs) <= 1.0
+    inside = backend.abs(xs) <= 1.0
 
-    def truncated_series(half):
+    def truncated_series(half: int) -> ArrayLike:
         # series with |m| <= half, evaluated on the grid with the inverse FFT
-        frequencies = np.arange(-half, half + 1) % nsamples
-        truncated = np.zeros(nsamples, dtype=complex)
+        frequencies = backend.mod(backend.arange(-half, half + 1), nsamples)
+        truncated = backend.zeros(nsamples, dtype="complex128")
         truncated[frequencies] = spectrum[frequencies]
-        return np.fft.ifft(truncated) * nsamples
+
+        return backend.ifft(truncated) * nsamples
 
     # smallest order q = 2 * half with error below epsilon, by binary search
     low, high = 1, nsamples // 4
-    error = np.abs(truncated_series(high) - target)[inside].max()
+    error = backend.max(backend.abs(truncated_series(high) - target)[inside])
     if error >= epsilon:
         raise_error(RuntimeError, "Fourier series did not reach the target error.")
     while low < high:
         middle = (low + high) // 2
-        error = np.abs(truncated_series(middle) - target)[inside].max()
+        error = backend.max(backend.abs(truncated_series(middle) - target)[inside])
         low, high = (low, middle) if error < epsilon else (middle + 1, high)
     half = low
 
-    coefficients = spectrum[np.arange(-half, half + 1) % nsamples]
-    alpha = 1.0 / max(1.0, np.abs(truncated_series(half)).max())
+    coefficients = spectrum[backend.mod(backend.arange(-half, half + 1), nsamples)]
+    alpha = 1.0 / max(1.0, float(backend.max(backend.abs(truncated_series(half)))))
 
-    return (
-        backend.cast(coefficients, dtype=coefficients.dtype),
-        float(alpha),
-        1.0,
-    )
+    return coefficients, float(alpha), 1.0
 
 
-def fourier_qsp_bounded_error_coefficients(
-    power_series,
+def _fourier_qsp_bounded_error_coefficients(
+    power_series: ArrayLike,
     delta: float,
     epsilon: float,
     backend: Backend = None,
-):
-    r"""Computes a Fourier series with bounded error from a power series.
+) -> tuple[ArrayLike, float, float]:
+    """Computes Fourier coefficients with bounded error from a power series.
 
-    Implements Sec. III C of Ref. [1], which is based on Lemma 37 of Ref. [2].
-    Let
-
-    .. math::
-        \tilde{f}(\lambda) = \sum_{l = 0}^{K} a_{l} \, \lambda^{l}
-
-    be a polynomial approximation of the target function :math:`f` on
-    :math:`[-1, 1]`, e.g. its truncated Taylor series, with
-    :math:`|f - \tilde{f}| \le \epsilon / (4 \alpha)` (see below for
-    :math:`\alpha`). Given :math:`\delta \in (0, \pi/2)`, this function computes
-    the coefficients :math:`c_{m}` of the Fourier series
-
-    .. math::
-        \tilde{g}_{q}(x) = \sum_{m = -q/2}^{q/2} c_{m} \, e^{i m x} \, ,
-        \quad q = 2 \left\lceil \frac{\pi}{2 \delta}
-        \ln\left( \frac{4 \|d\|_{1}}{\epsilon} \right) \right\rceil \, ,
-
-    such that :math:`|\tilde{g}_{q}(\lambda t) - \alpha \tilde{f}(\lambda)| \le
-    \epsilon` for all :math:`\lambda \in [-1, 1]`, with evolution time
-    :math:`t = \pi/2 - \delta`. Here, :math:`\|d\|_{1}` is the sum of the absolute
-    values of :math:`d_{l} = \alpha \, a_{l} / (1 - 2 \delta / \pi)^{l}`.
-    The series is built in two steps:
-
-    1. Since :math:`x = (2/\pi) \arcsin(\sin(\pi x / 2))`, each monomial
-       :math:`(2 x / \pi)^{l}` is written as a power series in
-       :math:`\sin(x)`, which converges on :math:`|x| \le \pi/2 - \delta`. The
-       series is truncated when its tail is below :math:`\epsilon / 4`.
-    2. Each power :math:`\sin^{k}(x)` is expanded in exponentials
-       :math:`e^{i m x}` with binomial coefficients, keeping :math:`|m| \le q / 2`.
-
-    The sum of the absolute values of the coefficients does not increase in
-    the process, :math:`\|c\|_{1} \le \|d\|_{1}`. Therefore, :math:`|\tilde{g}_{q}|
-    \le 1` for all :math:`x` if :math:`\|d\|_{1} \le 1`, which is guaranteed by
-    the subnormalization
-
-    .. math::
-        \alpha = \min\left(1, \Big[ \sum_{l = 0}^{K} |a_{l}| \,
-        (1 - 2 \delta / \pi)^{-l} \Big]^{-1}\right)
-
-    (Eq. 10 of Ref. [1]). The order :math:`q` is an upper bound that grows as
-    :math:`1 / \delta`, and the number of operations grows as
-    :math:`\mathcal{O}(1 / \delta^{3})`. In practice, the error is well below
-    :math:`\epsilon` and the highest frequencies have negligible coefficients.
+    Follows Sec. III C of Ref. [1], based on Lemma 37 of Ref. [2]. The power
+    series in :math:`\\lambda` is converted into a Fourier series in
+    :math:`e^{i x}`, with :math:`x = \\lambda t`, through the series of
+    :math:`\\arcsin`. The order :math:`q` is an upper bound, and the highest
+    frequencies may have negligible coefficients.
 
     Args:
-        power_series (ArrayLike): coefficients :math:`(a_{0}, \dots, a_{K})`.
-        delta (float): distance :math:`\delta`, between :math:`0` and
-            :math:`\pi / 2`, between the interval of convergence and the boundary
-            of the period. It sets the trade-off between the order :math:`q`
-            and the subnormalization :math:`\alpha`.
+        power_series (ArrayLike): coefficients :math:`(a_{0}, \\dots, a_{K})` of
+            an approximation of the target function in :math:`[-1, 1]`.
+        delta (float): distance :math:`\\delta`, between :math:`0` and
+            :math:`\\pi/2`, to the boundary of the period, with
+            :math:`t = \\pi/2 - \\delta`.
         epsilon (float): target error, between :math:`0` and :math:`1`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        tuple: coefficients :math:`(c_{-q/2}, \dots, c_{q/2})`, subnormalization
-        :math:`\alpha`, and evolution time :math:`t = \pi/2 - \delta`. The
-        coefficients can be given to
-        :func:`qibo.models.qsp.fourier_qsp_phases`, and the oracle has to
-        implement :math:`e^{-i t H}` for the returned :math:`t`. The resulting
-        block-encoding approximates :math:`\alpha f[H]`.
+        tuple: coefficients :math:`(c_{-q/2}, \\dots, c_{q/2})`, subnormalization
+        :math:`\\alpha`, and evolution time :math:`t`, such that the Fourier
+        series at :math:`\\lambda t` approximates :math:`\\alpha f(\\lambda)` in
+        :math:`[-1, 1]`.
 
     References:
         1. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
         processing*, `arXiv:2206.02826 <https://arxiv.org/abs/2206.02826>`_.
         2. J. van Apeldoorn, A. Gilyén, S. Gribling, and R. de Wolf, *Quantum
         SDP-Solvers: Better upper and lower bounds*, `Quantum 4, 230 (2020)
-        <https://doi.org/10.22331/q-2020-02-14-230>`_,
-        `arXiv:1705.01843 <https://arxiv.org/abs/1705.01843>`_.
+        <https://doi.org/10.22331/q-2020-02-14-230>`_.
     """
     backend = _check_backend(backend)
 
@@ -235,104 +353,74 @@ def fourier_qsp_bounded_error_coefficients(
     if not 0.0 < epsilon < 1.0:
         raise_error(ValueError, f"``epsilon`` must be in (0, 1), but is {epsilon}.")
 
-    power_series = np.asarray(backend.to_numpy(power_series), dtype=complex)
+    power_series = backend.cast(power_series, dtype="complex128")
 
     ratio = 1.0 - 2 * delta / math.pi  # (2 / pi) * (pi / 2 - delta)
-    orders = np.arange(len(power_series))
-    alpha = min(1.0, 1.0 / np.sum(np.abs(power_series) / ratio**orders))
+    orders = backend.arange(len(power_series))
+    alpha = min(
+        1.0, float(1.0 / backend.sum(backend.abs(power_series) / ratio**orders))
+    )
     scaled = alpha * power_series / ratio**orders  # coefficients d_l
-    norm = max(np.abs(scaled).sum(), np.finfo(float).tiny)
+    norm = max(float(backend.sum(backend.abs(scaled))), sys.float_info.min)
 
     # highest frequency M = q / 2 (at least one), and highest power L of sin(x)
-    logarithm = math.log(4 * norm / epsilon)
-    half = max(2 * math.ceil(logarithm / (2 * delta / math.pi)), 1)
-    npowers = max(math.ceil(logarithm / math.log(1 / math.cos(delta))), 1)
+    logarithm = float(backend.log(4 * norm / epsilon))
+    half = max(2 * int(backend.ceil(logarithm / (2 * delta / math.pi))), 1)
+    npowers = max(int(backend.ceil(logarithm / backend.log(1 / backend.cos(delta)))), 1)
 
     # power series of (2 arcsin(z) / pi)^k in z = sin(x), up to z^L
-    odd = np.arange(0, (npowers - 1) // 2 + 1)
-    arcsine = np.zeros(npowers + 1)
-    arcsine[1::2][: len(odd)] = (
-        np.exp(gammaln(2 * odd + 1) - 2 * gammaln(odd + 1) - odd * math.log(4))
+    odd = backend.arange(0, (npowers - 1) // 2 + 1)
+    log_gamma = gammaln(backend.to_numpy(2 * odd + 1)) - 2 * gammaln(
+        backend.to_numpy(odd + 1)
+    )
+    arcsine = backend.zeros(npowers + 1, dtype="float64")
+    arcsine[2 * odd + 1] = (
+        backend.exp(backend.cast(log_gamma, dtype="float64") - odd * backend.log(4.0))
         / (2 * odd + 1)
         * 2
         / math.pi
     )
 
     # weights of the powers of z = sin(x) in sum_l d_l (2 x / pi)^l
-    weights = np.zeros(npowers + 1, dtype=complex)
-    monomial = np.zeros(npowers + 1)
+    weights = backend.zeros(npowers + 1, dtype="complex128")
+    monomial = backend.zeros(npowers + 1, dtype="float64")
     monomial[0] = 1.0
     for coefficient in scaled:
-        weights += coefficient * monomial
-        monomial = np.convolve(monomial, arcsine)[: npowers + 1]
+        weights = weights + coefficient * monomial
+        monomial = backend.convolve(monomial, arcsine)[: npowers + 1]
 
     # sin(x)^l = i^{-l} sum_j binom(l, j) 2^{-l} (-1)^{l - j} e^{i (2j - l) x}
-    coefficients = np.zeros(2 * half + 1, dtype=complex)
-    for power in np.nonzero(weights)[0]:
-        lowest = max(0, math.ceil((power - half) / 2))
+    coefficients = backend.zeros(2 * half + 1, dtype="complex128")
+    for power in backend.nonzero(weights)[0]:
+        power = int(power)
+        lowest = max(0, -((half - power) // 2))
         highest = min(power, (power + half) // 2)
-        js = np.arange(lowest, highest + 1)
+        js = backend.arange(lowest, highest + 1)
+        probabilities = backend.cast(
+            binom.pmf(backend.to_numpy(js), power, 0.5), dtype="float64"
+        )
         coefficients[2 * js - power + half] += (
             weights[power]
             * (1j) ** (-power)
-            * (-1.0) ** (power - js)
-            * binom.pmf(js, power, 0.5)
+            * (1 - 2 * backend.mod(power - js, 2))
+            * probabilities
         )
 
-    return (
-        backend.cast(coefficients, dtype=coefficients.dtype),
-        float(alpha),
-        math.pi / 2 - delta,
-    )
+    return coefficients, float(alpha), math.pi / 2 - delta
 
 
-def fourier_qsp_circuit(evolution: Circuit, phases) -> Circuit:
-    r"""Creates the Fourier-based quantum signal processing (QSP) circuit of Fig. 1
-    in Ref. [1].
-
-    Let :math:`H` be a Hermitian operator on :math:`n` qubits and let ``evolution``
-    be the circuit that implements the time evolution :math:`e^{-i t H}`, for a
-    fixed time :math:`t`. The circuit returned by this function calls the
-    real-time evolution oracle
-
-    .. math::
-        O = \mathbb{1} \otimes |0\rangle\langle 0| + e^{-i t H} \otimes
-        |1\rangle\langle 1|
-
-    (or its inverse :math:`O^{\dagger}`) once per pulse, controlled by a single
-    ancilla qubit, and interleaves it with single-qubit rotations of the ancilla,
-    :math:`q` times in total. If :math:`\tilde{g}_{q}(x) = \sum_{m = -q/2}^{q/2}
-    c_{m} \, e^{i m x}` is the Fourier series that ``phases`` was computed from
-    (see :func:`qibo.models.qsp.fourier_qsp_phases`), then, for
-    :math:`|0\rangle` being the ground state of the ancilla,
-
-    .. math::
-        \langle 0 | V_{\Phi} | 0 \rangle = \sum_{\lambda} \tilde{g}_{q}(\lambda t)
-        \, |\lambda\rangle\langle\lambda| \, ,
-
-    where :math:`V_{\Phi}` is the unitary implemented by the circuit and
-    :math:`\lambda` and :math:`|\lambda\rangle` are the eigenvalues and eigenvectors
-    of :math:`H`. That is, :math:`V_{\Phi}` is a block-encoding of the operator
-    Fourier series :math:`\tilde{g}_{q}(H t)`, which is obtained after
-    post-selecting the ancilla on :math:`|0\rangle`. Unlike the QSP circuit
-    of :func:`qibo.models.qsp.qsp_circuit`, no qubitization of :math:`H` is
-    required.
+def _fourier_qsp_circuit(evolution: Circuit, phases: ArrayLike) -> Circuit:
+    """Creates the Fourier-based QSP circuit of Ref. [1].
 
     Args:
-        evolution (:class:`qibo.models.circuit.Circuit`): circuit that implements the
-            unitary :math:`e^{-i t H}` on :math:`n` qubits. The circuit has to be
-            exact, including its global phase, since it is applied under control.
-        phases (ArrayLike): pulse angles :math:`\Phi`, as an array of shape
-            :math:`(q + 1, 4)` with :math:`q` even. Row :math:`k` contains the
-            angles :math:`(\zeta_{k}, \eta_{k}, \varphi_{k}, \kappa_{k})` of the
-            :math:`k`-th pulse, e.g. the output of
-            :func:`qibo.models.qsp.fourier_qsp_phases`.
+        evolution (:class:`qibo.models.circuit.Circuit`): circuit that implements
+            :math:`e^{-i t H}` on :math:`n` qubits.
+        phases (ArrayLike): array of shape :math:`(q + 1, 4)`, with even
+            :math:`q`, of pulse angles.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits.
-        Qubit :math:`0` is the ancilla and the remaining qubits are those of
-        ``evolution``, in the same order. It queries ``evolution`` (or its
-        inverse) :math:`q` times.
+        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
+        with the ancilla at qubit :math:`0`.
 
     References:
         1. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
@@ -369,69 +457,24 @@ def fourier_qsp_circuit(evolution: Circuit, phases) -> Circuit:
     return circuit
 
 
-def fourier_qsp_phases(coefficients, backend: Backend = None):
-    r"""Computes the pulse angles that synthesize a Fourier series with QSP.
+def _fourier_qsp_phases(coefficients: ArrayLike, backend: Backend = None) -> ArrayLike:
+    """Computes the pulse angles of the Fourier-based QSP circuit of Ref. [1].
 
-    Given the (complex) coefficients :math:`c_{m}` of the Fourier series
-
-    .. math::
-        \tilde{g}_{q}(x) = \sum_{m = -q/2}^{q/2} c_{m} \, e^{i m x} \, ,
-
-    where :math:`q` is even, this function computes the angles
-    :math:`\Phi = (\xi_{0}, \dots, \xi_{q})`, with
-    :math:`\xi_{k} = (\zeta_{k}, \eta_{k}, \varphi_{k}, \kappa_{k})`, such that
-    the product of single-qubit gates
-
-    .. math::
-        \mathcal{R}(x, \Phi) = R_{q}(x) \cdots R_{1}(x) \, R_{0}(x) \, ,
-        \quad R_{k}(x) = e^{i (\zeta_{k} + \eta_{k}) Z / 2} \,
-        e^{-i \varphi_{k} Y} \, e^{i (\zeta_{k} - \eta_{k}) Z / 2} \,
-        e^{i \omega_{k} x Z} \, e^{-i \kappa_{k} Y} \, ,
-
-    with :math:`\omega_{0} = 0`, :math:`\omega_{k} = 1/2` for odd :math:`k`, and
-    :math:`\omega_{k} = -1/2` for even :math:`k > 0`, has
-    :math:`\tilde{g}_{q}(x)` as its upper-left matrix element for all
-    :math:`x \in [-\pi, \pi]`. Here, :math:`Y` and :math:`Z` are Pauli operators
-    (Theorem 1 of Ref. [1]). Such an
-    element can be obtained if and only if :math:`|\tilde{g}_{q}(x)| \le 1` for
-    all :math:`x`. If this is not the case for the given coefficients, they are
-    divided by :math:`\max_{x} |\tilde{g}_{q}(x)|`.
-
-    The angles are computed in two steps, both taking polynomial time in
-    :math:`q`:
-
-    1. The complementary Fourier series :math:`\tilde{h}_{q}` of the same order,
-       with :math:`|\tilde{g}_{q}|^{2} + |\tilde{h}_{q}|^{2} = 1`, is the
-       spectral factor of the Laurent polynomial :math:`1 - |\tilde{g}_{q}|^{2}`
-       whose roots lie outside of the unit disk (Lemma 4 of Ref. [1]). It is
-       computed with the fast Fourier transform from the cepstrum of the
-       polynomial, which gives the same factor as the root-based construction
-       of Ref. [1] but stays accurate for large :math:`q`. This defines the special unitary matrix
-       :math:`[[\tilde{g}_{q}, \tilde{h}_{q}], [-\tilde{h}_{q}^{*}, \tilde{g}_{q}^{*}]]`,
-       where :math:`*` is complex conjugation.
-    2. Gates are removed one by one from the left of this matrix, from
-       :math:`R_{q}` to :math:`R_{1}`, by choosing :math:`\zeta_{k} = \eta_{k}`
-       and :math:`\varphi_{k}` such that the highest and lowest frequencies
-       vanish, with :math:`\kappa_{k} = \pi/4`. The remaining constant matrix
-       gives :math:`\xi_{0}` (Theorem 1 of Ref. [1]).
-
-    The angles are accurate to about :math:`10^{-13}` for the orders tested
-    (up to :math:`q \sim 200`). If :math:`|\tilde{g}_{q}|` reaches one, the
-    series is slightly rescaled to keep the complementary series well defined.
+    The complementary Fourier series is computed as the spectral factor of
+    :math:`1 - |\\tilde{g}|^{2}` with the cepstrum, and the pulses are then
+    removed one at a time from the special unitary matrix that has
+    :math:`\\tilde{g}` as its upper-left element.
 
     Args:
-        coefficients (ArrayLike): coefficients
-            :math:`(c_{-q/2}, \dots, c_{q/2})` of the Fourier series, which is a
-            sequence of odd length :math:`q + 1 \ge 3`, e.g. the output of
-            :func:`qibo.models.qsp.fourier_qsp_bounded_error_coefficients`
-            or :func:`qibo.models.qsp.fourier_qsp_analytic_extension_coefficients`.
+        coefficients (ArrayLike): Fourier coefficients
+            :math:`(c_{-q/2}, \\dots, c_{q/2})`, with even :math:`q \\ge 2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        ArrayLike: array of shape :math:`(q + 1, 4)` whose :math:`k`-th row
-        contains :math:`(\zeta_{k}, \eta_{k}, \varphi_{k}, \kappa_{k})`.
+        ArrayLike: array of shape :math:`(q + 1, 4)` whose :math:`k`-th row contains
+        the angles :math:`(\\zeta_{k}, \\eta_{k}, \\varphi_{k}, \\kappa_{k})`.
 
     References:
         1. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
@@ -439,7 +482,7 @@ def fourier_qsp_phases(coefficients, backend: Backend = None):
     """
     backend = _check_backend(backend)
 
-    coefficients = np.asarray(backend.to_numpy(coefficients), dtype=complex)
+    coefficients = backend.cast(coefficients, dtype="complex128")
 
     degree = len(coefficients) - 1  # q in the paper
     if degree < 2 or degree % 2 != 0:
@@ -450,15 +493,17 @@ def fourier_qsp_phases(coefficients, backend: Backend = None):
         )
 
     half = degree // 2
-    frequencies = np.arange(-half, half + 1)
+    frequencies = backend.arange(-half, half + 1)
 
     # The series is evaluated on a dense grid of the unit circle, z = e^{ix}.
-    nsamples = 2 ** max(12, math.ceil(math.log2(128 * (degree + 1))))
-    spectrum = np.zeros(nsamples, dtype=complex)
+    nsamples = 2 ** max(12, int(backend.ceil(backend.log2(128 * (degree + 1)))))
+    indices = backend.mod(frequencies, nsamples)
+    spectrum = backend.zeros(nsamples, dtype="complex128")
 
     # Normalize the series so that its modulus is bounded by one.
-    spectrum[frequencies % nsamples] = coefficients
-    modulus = np.abs(np.fft.ifft(spectrum) * nsamples).max()
+    spectrum[indices] = coefficients
+    series = backend.ifft(spectrum) * nsamples
+    modulus = float(backend.max(backend.abs(series)))
     coefficients = coefficients / max(modulus, 1.0)
 
     # Complementary series: the Laurent polynomial 1 - |g|^2 = |h|^2 on the unit
@@ -470,20 +515,20 @@ def fourier_qsp_phases(coefficients, backend: Backend = None):
     # analytic in the unit disk and has no roots inside. A margin, which is
     # increased until the cepstrum decays fast, keeps 1 - |g|^2 away from zero
     # when |g| touches one.
-    for margin in 10.0 ** np.arange(-14, -1):
-        spectrum[:] = 0.0
-        spectrum[frequencies % nsamples] = coefficients * (1 - margin)
-        residual = 1 - np.abs(np.fft.ifft(spectrum) * nsamples) ** 2
-        if residual.min() <= 0.0:
+    for margin in 10.0 ** backend.arange(-14, -1):
+        spectrum = backend.zeros(nsamples, dtype="complex128")
+        spectrum[indices] = coefficients * (1 - margin)
+        residual = 1 - backend.abs(backend.ifft(spectrum) * nsamples) ** 2
+        if backend.min(residual) <= 0.0:
             continue
 
-        cepstrum = np.fft.fft(np.log(residual)) / nsamples
-        causal = np.zeros(nsamples, dtype=complex)
+        cepstrum = backend.fft(backend.log(residual)) / nsamples
+        causal = backend.zeros(nsamples, dtype="complex128")
         causal[0] = cepstrum[0] / 2
         causal[1 : nsamples // 2] = cepstrum[1 : nsamples // 2]
         causal[nsamples // 2] = cepstrum[nsamples // 2] / 2
-        series = np.fft.fft(np.exp(nsamples * np.fft.ifft(causal))) / nsamples
-        if np.abs(series[degree + 1 : nsamples // 2]).max() < 1e-12:
+        series = backend.fft(backend.exp(backend.ifft(causal) * nsamples)) / nsamples
+        if backend.max(backend.abs(series[degree + 1 : nsamples // 2])) < 1e-12:
             break
     else:
         raise_error(RuntimeError, "Complementary Fourier series not found.")
@@ -493,18 +538,22 @@ def fourier_qsp_phases(coefficients, backend: Backend = None):
 
     # Coefficients of the SU(2) matrix [[g, h], [-h^*, g^*]] for each frequency, in
     # powers of w = e^{ix/2}: the coefficient of w^{-q + 2j} is ``matrix[j]``.
-    matrix = np.zeros((degree + 1, 2, 2), dtype=complex)
+    matrix = backend.zeros((degree + 1, 2, 2), dtype="complex128")
     matrix[:, 0, 0] = coefficients
     matrix[:, 0, 1] = complement
-    matrix[:, 1, 0] = -np.conj(complement[::-1])
-    matrix[:, 1, 1] = np.conj(coefficients[::-1])
+    matrix[:, 1, 0] = -backend.conj(backend.flip(complement))
+    matrix[:, 1, 1] = backend.conj(backend.flip(coefficients))
 
     kappa = math.pi / 4
-    kappa_inverse = np.array(
-        [[math.cos(kappa), math.sin(kappa)], [-math.sin(kappa), math.cos(kappa)]]
+    kappa_inverse = backend.cast(
+        [
+            [backend.cos(kappa), backend.sin(kappa)],
+            [-backend.sin(kappa), backend.cos(kappa)],
+        ],
+        dtype="complex128",
     )
 
-    angles = np.zeros((degree + 1, 4))
+    angles = backend.zeros((degree + 1, 4), dtype="float64")
     for step in range(degree, 0, -1):
         # The iterate of pulse ``step`` is diag(w^{sign}, w^{-sign}). Its inverse
         # raises the frequencies of one row and lowers those of the other. Degree
@@ -513,96 +562,68 @@ def fourier_qsp_phases(coefficients, backend: Backend = None):
         # the pulse up to a phase that is set by ``eta = zeta``.
         sign = 1 if step % 2 == 1 else -1
         highest = matrix[step] if sign == -1 else matrix[0]
-        null_vector = np.conj(np.linalg.svd(highest)[0][:, 1])  # u @ highest = 0
+        # row vector that satisfies ``null_vector @ highest = 0``
+        null_vector = backend.conj(
+            backend.singular_value_decomposition(highest)[0][:, 1]
+        )
 
-        zeta = (np.angle(null_vector[1]) - np.angle(null_vector[0])) / 2
-        varphi = math.atan2(np.abs(null_vector[1]), np.abs(null_vector[0]))
-        pulse_inverse = np.array(
+        zeta = (backend.angle(null_vector[1]) - backend.angle(null_vector[0])) / 2
+        varphi = backend.arctan2(
+            backend.abs(null_vector[1]), backend.abs(null_vector[0])
+        )
+        pulse_inverse = backend.cast(
             [
                 [
-                    math.cos(varphi) * np.exp(-1j * zeta),
-                    math.sin(varphi) * np.exp(1j * zeta),
+                    backend.cos(varphi) * backend.exp(-1j * zeta),
+                    backend.sin(varphi) * backend.exp(1j * zeta),
                 ],
                 [
-                    -math.sin(varphi) * np.exp(-1j * zeta),
-                    math.cos(varphi) * np.exp(1j * zeta),
+                    -backend.sin(varphi) * backend.exp(-1j * zeta),
+                    backend.cos(varphi) * backend.exp(1j * zeta),
                 ],
-            ]
+            ],
+            dtype="complex128",
         )
 
-        rotated = pulse_inverse @ matrix
-        matrix = np.stack(
-            (
-                rotated[:step, 0] if sign == -1 else rotated[1:, 0],
-                rotated[1:, 1] if sign == -1 else rotated[:step, 1],
-            ),
-            axis=1,
-        )
-        matrix = kappa_inverse @ matrix
+        rotated = backend.matmul(pulse_inverse, matrix)
+        lowered = backend.zeros((step, 2, 2), dtype="complex128")
+        lowered[:, 0] = rotated[:step, 0] if sign == -1 else rotated[1:, 0]
+        lowered[:, 1] = rotated[1:, 1] if sign == -1 else rotated[:step, 1]
+        matrix = backend.matmul(kappa_inverse, lowered)
 
-        angles[step] = [zeta, zeta, varphi, kappa]
+        angles[step] = backend.cast([zeta, zeta, varphi, kappa], dtype="float64")
 
     # The constant matrix that is left is the first pulse, without iterate.
     constant = matrix[0]
-    angles[0] = [
-        np.angle(constant[0, 0]),
-        np.angle(-constant[0, 1]),
-        math.atan2(np.abs(constant[0, 1]), np.abs(constant[0, 0])),
-        0.0,
-    ]
+    angles[0] = backend.cast(
+        [
+            backend.angle(constant[0, 0]),
+            backend.angle(-constant[0, 1]),
+            backend.arctan2(backend.abs(constant[0, 1]), backend.abs(constant[0, 0])),
+            0.0,
+        ],
+        dtype="float64",
+    )
 
-    return backend.cast(angles, dtype=angles.dtype)
+    return angles
 
 
-def qsp_circuit(walk: Circuit, phases) -> Circuit:
-    """Creates the quantum signal processing (QSP) circuit of Fig. 1 in Ref. [1].
-
-    Let :math:`W` be the unitary implemented by ``walk``, with eigenstates
-    :math:`W \\, |u_{\\lambda}\\rangle = e^{i \\theta_{\\lambda}} \\, |u_{\\lambda}\\rangle`.
-    Each signal unitary
-
-    .. math::
-        U_{\\phi} = e^{-i \\phi Z / 2} \\, H \\,
-        (|0\\rangle\\langle 0| \\otimes \\mathbb{1} + |1\\rangle\\langle 1| \\otimes W)
-        \\, H \\, e^{i \\phi Z / 2}
-
-    acts on a single ancilla qubit, placed at position :math:`0`, and reduces on
-    :math:`|u_{\\lambda}\\rangle` to a single-qubit rotation
-    :math:`R_{\\phi}(\\theta_{\\lambda})` up to the global phase
-    :math:`e^{i \\theta_{\\lambda} / 2}`. Here, :math:`Z` is the Pauli-:math:`Z`
-    operator and :math:`H` is the Hadamard gate. Alternating :math:`U_{\\phi}`
-    and :math:`U_{\\phi + \\pi}^{\\dagger}` cancels this global phase, which is
-    possible because the number of phases is even.
-
-    The circuit is preceded and followed by a Hadamard gate on the ancilla. Thus,
-    the probability amplitude of measuring the ancilla in :math:`|0\\rangle`
-    transforms the eigenphases of :math:`W` according to the polynomial encoded
-    in ``phases`` (see :func:`qibo.models.qsp.qsp_phases`).
-
-    For Hamiltonian simulation, :math:`W` is a quantum walk built from the
-    Hamiltonian, e.g. the qubitization walk of Ref. [2].
+def _qsp_circuit(walk: Circuit, phases: ArrayLike) -> Circuit:
+    """Creates the QSP circuit of Ref. [1].
 
     Args:
         walk (:class:`qibo.models.circuit.Circuit`): circuit that implements the
             unitary :math:`W` on :math:`n` qubits.
-        phases (ArrayLike): even-length sequence of phases
-            :math:`(\\phi_{1}, \\dots, \\phi_{N})`, e.g. the output of
-            :func:`qibo.models.qsp.qsp_phases`.
+        phases (ArrayLike): even number :math:`N` of phases.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits.
-        Qubit :math:`0` is the ancilla and the remaining qubits are those of
-        ``walk``, in the same order. The circuit calls ``walk`` (or its inverse)
-        once per phase.
+        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
+        with the ancilla at qubit :math:`0`.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
         Signal Processing*, `Phys. Rev. Lett. 118, 010501 (2017)
-        <https://doi.org/10.1103/PhysRevLett.118.010501>`_,
-        `arXiv:1606.02685 <https://arxiv.org/abs/1606.02685>`_.
-        2. G. H. Low and I. L. Chuang, *Hamiltonian Simulation by Qubitization*,
-        `Quantum 3, 163 (2019) <https://doi.org/10.22331/q-2019-07-12-163>`_,
-        `arXiv:1610.06546 <https://arxiv.org/abs/1610.06546>`_.
+        <https://doi.org/10.1103/PhysRevLett.118.010501>`_.
     """
     phases = [float(phase) for phase in phases]
 
@@ -638,59 +659,33 @@ def qsp_circuit(walk: Circuit, phases) -> Circuit:
     return circuit
 
 
-def qsp_hamiltonian_simulation_phases(
+def _qsp_hamiltonian_simulation_phases(
     tau: float,
     epsilon: float,
-    method: str = "phase_sums",
+    extraction: str = "phase_sums",
     backend: Backend = None,
-):
-    """Computes the QSP phases for Hamiltonian simulation.
+) -> ArrayLike:
+    """Computes the QSP phases that approximate :math:`e^{-i \\tau \\sin(\\theta)}`.
 
-    Following Ref. [1], the target function
-    :math:`h(\\theta) = -\\tau \\sin(\\theta)` is approximated by the truncated
-    Jacobi-Anger expansion
-
-    .. math::
-        e^{-i \\tau \\sin(\\theta)} \\approx
-        \\sum_{k = 0}^{N / 2} \\alpha_{k} \\cos(k \\theta)
-        + i \\sum_{k = 1}^{N / 2} \\beta_{k} \\sin(k \\theta) \\, ,
-
-    where :math:`\\alpha_{0} = J_{0}(\\tau)`, :math:`\\alpha_{k} = 2 J_{k}(\\tau)`
-    for even :math:`k > 0` and :math:`\\beta_{k} = -2 J_{k}(\\tau)` for odd
-    :math:`k`, with :math:`J_{k}` being the Bessel function of the first kind
-    (all other coefficients vanish). The smallest even degree :math:`N` for
-    which the truncation error is at most ``epsilon`` is selected.
-    The phases are computed with :func:`qibo.models.qsp.qsp_phases` (Ref. [2]).
-    Applied to a quantum walk :math:`W` with eigenphases
-    :math:`\\sin(\\theta_{\\lambda}) = \\lambda / \\alpha`, where :math:`\\lambda`
-    are the eigenvalues of a Hamiltonian and :math:`\\alpha` is a
-    normalization factor, the resulting QSP circuit approximates
-    :math:`e^{-i t H}` with :math:`\\tau = \\alpha t`.
+    The target is approximated by the Jacobi-Anger expansion, truncated at the
+    smallest even degree with error below ``epsilon`` (Ref. [1]).
 
     Args:
-        tau (float): simulation length :math:`\\tau = t \\, \\alpha`, with
-            :math:`t` being the evolution time.
-        epsilon (float): target error of the Jacobi-Anger truncation.
-        method (str, optional): method to compute the phases, see
-            :func:`qibo.models.qsp.qsp_phases`. Use ``"layer_stripping"`` for
-            degrees above about :math:`26`. Defaults to ``"phase_sums"``.
+        tau (float): simulation length :math:`\\tau`.
+        epsilon (float): target error.
+        extraction (str, optional): how the phases are extracted, see
+            :func:`qibo.models.qsp.qsp_phases`. Defaults to ``"phase_sums"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        ArrayLike: phases :math:`(\\phi_{1}, \\dots, \\phi_{N})` to be given to
-        :func:`qibo.models.qsp.qsp_circuit`.
+        ArrayLike: phases for :func:`qibo.models.qsp.qsp_circuit`.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
         Signal Processing*, `Phys. Rev. Lett. 118, 010501 (2017)
-        <https://doi.org/10.1103/PhysRevLett.118.010501>`_,
-        `arXiv:1606.02685 <https://arxiv.org/abs/1606.02685>`_.
-        2. G. H. Low, T. J. Yoder, and I. L. Chuang, *The methodology of resonant
-        equiangular composite quantum gates*, `Phys. Rev. X 6, 041067 (2016)
-        <https://doi.org/10.1103/PhysRevX.6.041067>`_,
-        `arXiv:1603.03996 <https://arxiv.org/abs/1603.03996>`_.
+        <https://doi.org/10.1103/PhysRevLett.118.010501>`_.
     """
     backend = _check_backend(backend)
 
@@ -701,109 +696,62 @@ def qsp_hamiltonian_simulation_phases(
     # terms is enough to bound the tail of the series
     degree = 1
     while True:
-        tail = 2 * np.abs(jv(np.arange(degree + 1, degree + 65), tau)).sum()
+        window = backend.to_numpy(backend.arange(degree + 1, degree + 65))
+        tail = 2 * backend.sum(
+            backend.abs(backend.cast(jv(window, tau), dtype="float64"))
+        )
         if tail <= epsilon:
             break
         degree += 1
 
-    orders = np.arange(degree + 1)
-    bessel = jv(orders, tau)
+    orders = backend.arange(degree + 1)
+    bessel = backend.cast(jv(backend.to_numpy(orders), tau), dtype="float64")
 
-    cosine = np.where(orders % 2 == 0, 2 * bessel, 0.0)
+    cosine = backend.where(backend.mod(orders, 2) == 0, 2 * bessel, 0.0)
     cosine[0] = bessel[0]
-    sine = np.where(orders % 2 == 1, -2 * bessel, 0.0)[1:]
+    sine = backend.where(backend.mod(orders, 2) == 1, -2 * bessel, 0.0)[1:]
 
-    return qsp_phases(cosine, sine, method=method, backend=backend)
+    return _qsp_phases(cosine, sine, extraction=extraction, backend=backend)
 
 
-def qsp_phases(
-    cosine_coefficients,
-    sine_coefficients,
-    method: str = "phase_sums",
+def _qsp_phases(
+    cosine_coefficients: ArrayLike,
+    sine_coefficients: ArrayLike,
+    extraction: str = "phase_sums",
     backend: Backend = None,
-):
-    r"""Computes the QSP phases that approximate a target Fourier series.
+) -> ArrayLike:
+    """Computes the phases of the QSP circuit of Ref. [1].
 
-    Given the real coefficients :math:`a_{k}` and :math:`c_{k}` of
-
-    .. math::
-        A(\theta) = \sum_{k = 0}^{N / 2} a_{k} \cos(k \theta) \, , \quad
-        C(\theta) = \sum_{k = 1}^{N / 2} c_{k} \sin(k \theta) \, ,
-
-    where :math:`N` is even, this function returns phases
-    :math:`(\phi_{1}, \dots, \phi_{N})` such that the product of single-qubit
-    rotations
-
-    .. math::
-        V(\theta) = R_{\phi_{N}}(\theta) \cdots R_{\phi_{1}}(\theta) \, ,
-        \quad R_{\phi}(\theta) = e^{-i (\theta / 2)
-        (X \cos(\phi) + Y \sin(\phi))} \, ,
-
-    satisfies :math:`\langle + | V(\theta) | + \rangle = A(\theta) + i C(\theta)`
-    up to a small rescaling of the target that guarantees
-    :math:`A^{2} + C^{2} \le 1`. Here, :math:`X` and :math:`Y` are Pauli
-    operators and :math:`|+\rangle` is the :math:`+1` eigenstate of :math:`X`.
-    When :math:`A + i C` approximates a unimodular function
-    :math:`e^{i h(\theta)}` with error :math:`\epsilon`, the resulting
-    unitary approximates it with error at most :math:`8 \epsilon` (Theorem 2
-    of Ref. [1]).
-
-    The phases are obtained in three steps:
-
-    1. :math:`A` and :math:`C` are divided by :math:`1 + \epsilon`, with
-       :math:`\epsilon` being the amount by which their modulus exceeds one.
-       This makes :math:`1 - A^{2} - C^{2}` strictly positive.
-    2. The trigonometric polynomials :math:`B` and :math:`D` with
-       :math:`A^{2} + B^{2} + C^{2} + D^{2} = 1` are found through the
-       Fejér-Riesz factorization of :math:`1 - A^{2} - C^{2}`, which is
-       equivalent to the polynomial sum of squares of Ref. [2]. Then, :math:`A` and
-       :math:`B` are rotated by the angle :math:`\delta`, with
-       :math:`\cos(\delta) = A(0)`, so that :math:`A(0) = 1`.
-    3. The phases are extracted from :math:`V = A \mathbb{1} + i B Z + i C X + i D Y`
-       following Lemma 1 of Ref. [2] (``method="phase_sums"``). The
-       :math:`N + 1` phase sums :math:`\Phi_{j}` are the coefficients of :math:`V`
-       in the homogeneous basis :math:`\cos^{N - j}(\theta / 2)
-       \sin^{j}(\theta / 2)`, and the phases follow from
-       :math:`e^{i \phi_{N}} = \sum_{j \, \mathrm{odd}} \Phi_{j} /
-       \sum_{j \, \mathrm{even}} \Phi_{j}`, after which :math:`\Phi` is reduced
-       to the sums of a product of :math:`N - 1` rotations, recursively.
-       Since it works in a monomial basis, this method loses precision as
-       :math:`N` grows (about :math:`10^{-9}` error at :math:`N = 18` and
-       :math:`10^{-7}` at :math:`N = 26`, and it fails for :math:`N \gtrsim 30`
-       in double precision). ``method="layer_stripping"`` instead removes the
-       rotations one at a time from the highest-degree term of the Laurent
-       expansion of :math:`V` in :math:`e^{i \theta / 2}`, which stays accurate
-       for larger :math:`N`.
+    The complementary polynomials are computed with the Fejér-Riesz
+    factorization, and the phases are extracted as in
+    :func:`qibo.models.qsp.qsp_phases`.
 
     Args:
-        cosine_coefficients (ArrayLike): coefficients :math:`(a_{0}, \dots, a_{N/2})`.
-        sine_coefficients (ArrayLike): coefficients :math:`(c_{1}, \dots, c_{N/2})`.
-        method (str, optional): either ``"phase_sums"`` (Lemma 1 of Ref. [2]) or
-            ``"layer_stripping"``. Defaults to ``"phase_sums"``.
+        cosine_coefficients (ArrayLike): cosine coefficients
+            :math:`(a_{0}, \\dots, a_{N/2})`.
+        sine_coefficients (ArrayLike): sine coefficients
+            :math:`(c_{1}, \\dots, c_{N/2})`.
+        extraction (str, optional): ``"phase_sums"`` or ``"layer_stripping"``.
+            Defaults to ``"phase_sums"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        ArrayLike: phases :math:`(\phi_{1}, \dots, \phi_{N})`.
+        ArrayLike: array of :math:`N` phases.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
         Signal Processing*, `Phys. Rev. Lett. 118, 010501 (2017)
-        <https://doi.org/10.1103/PhysRevLett.118.010501>`_,
-        `arXiv:1606.02685 <https://arxiv.org/abs/1606.02685>`_.
-        2. G. H. Low, T. J. Yoder, and I. L. Chuang, *The methodology of resonant
-        equiangular composite quantum gates*, `Phys. Rev. X 6, 041067 (2016)
-        <https://doi.org/10.1103/PhysRevX.6.041067>`_,
-        `arXiv:1603.03996 <https://arxiv.org/abs/1603.03996>`_.
+        <https://doi.org/10.1103/PhysRevLett.118.010501>`_.
     """
     backend = _check_backend(backend)
 
-    if method not in ("phase_sums", "layer_stripping"):
-        raise_error(ValueError, f"Unknown ``method`` {method}.")
+    if extraction not in ("phase_sums", "layer_stripping"):
+        raise_error(ValueError, f"Unknown ``extraction`` {extraction}.")
 
-    cosine = np.asarray(backend.to_numpy(cosine_coefficients), dtype=float)
-    sine = np.asarray(backend.to_numpy(sine_coefficients), dtype=float)
+    cosine = backend.cast(cosine_coefficients, dtype="float64")
+    sine = backend.cast(sine_coefficients, dtype="float64")
 
     half = len(sine)
     if half == 0 or len(cosine) != half + 1:
@@ -814,22 +762,26 @@ def qsp_phases(
         )
 
     degree = 2 * half  # N in the paper
-    thetas = np.linspace(0.0, 2 * math.pi, 8 * degree + 8, endpoint=False)
-    orders = np.arange(1, half + 1)
+    nsamples = 8 * degree + 8
+    thetas = 2 * math.pi * backend.arange(nsamples) / nsamples
+    orders = backend.arange(1, half + 1)
 
     # Step 1: rescale the target so that A^2 + C^2 < 1 everywhere. The margin
     # is increased until the Fejer-Riesz roots are safely away from the unit circle.
-    modulus = np.abs(
-        cosine[0]
-        + np.cos(np.outer(thetas, orders)) @ cosine[1:]
-        + 1j * (np.sin(np.outer(thetas, orders)) @ sine)
-    ).max()
+    angles = backend.outer(thetas, orders)
+    modulus = backend.max(
+        backend.abs(
+            cosine[0]
+            + backend.matmul(backend.cos(angles), cosine[1:])
+            + 1j * backend.matmul(backend.sin(angles), sine)
+        )
+    )
     cosine, sine = cosine / max(modulus, 1.0), sine / max(modulus, 1.0)
 
-    for margin in 10.0 ** np.arange(-14, -3):
+    for margin in 10.0 ** backend.arange(-14, -3):
         # Laurent coefficients in z = e^{i theta}, for exponents -N/2, ..., N/2.
-        laurent_a = np.zeros(degree + 1, dtype=complex)
-        laurent_c = np.zeros(degree + 1, dtype=complex)
+        laurent_a = backend.zeros(degree + 1, dtype="complex128")
+        laurent_c = backend.zeros(degree + 1, dtype="complex128")
         laurent_a[half] = cosine[0]
         laurent_a[half + orders] = cosine[1:] / 2
         laurent_a[half - orders] = cosine[1:] / 2
@@ -838,34 +790,41 @@ def qsp_phases(
         laurent_a, laurent_c = (1 - margin) * laurent_a, (1 - margin) * laurent_c
 
         # Step 2: Fejer-Riesz factorization 1 - A^2 - C^2 = |Q(z)|^2 with real Q.
-        laurent_f = -np.convolve(laurent_a, laurent_a) - np.convolve(
+        laurent_f = -backend.convolve(laurent_a, laurent_a) - backend.convolve(
             laurent_c, laurent_c
         )
         laurent_f[degree] += 1.0
-        roots = np.roots(laurent_f.real)
-        distance = np.abs(np.abs(roots) - 1.0).min()
-        if distance > 1e-6 and np.sum(np.abs(roots) < 1.0) == degree:
+        roots = backend.cast(backend.roots(backend.real(laurent_f)), dtype="complex128")
+        distance = backend.min(backend.abs(backend.abs(roots) - 1.0))
+        if distance > 1e-6 and backend.sum(backend.abs(roots) < 1.0) == degree:
             break
     else:
         raise_error(RuntimeError, "Fejer-Riesz factorization failed.")
 
-    roots = roots[np.abs(roots) < 1.0]
-    reference = np.exp(0.5j)
-    target = (np.polyval(laurent_f.real, reference) / reference**degree).real
-    factor = math.sqrt(target) / np.abs(np.prod(reference - roots))
-    poly_q = (factor * np.poly(roots).real)[::-1]  # ascending powers of z
+    roots = roots[backend.abs(roots) < 1.0]
+    reference = backend.exp(0.5j)
+    exponents = backend.arange(2 * degree, -1, -1)
+    target = backend.real(
+        backend.sum(backend.real(laurent_f) * reference**exponents) / reference**degree
+    )
+    factor = backend.sqrt(target) / backend.abs(backend.prod(reference - roots))
+    poly_q = backend.flip(
+        factor * backend.real(backend.poly(roots))
+    )  # ascending powers
 
-    laurent_b = (poly_q + poly_q[::-1]) / 2
-    laurent_d = (poly_q - poly_q[::-1]) / 2j
+    laurent_b = (poly_q + backend.flip(poly_q)) / 2
+    laurent_d = (poly_q - backend.flip(poly_q)) / 2j
 
     # Rotate (A, B) by delta so that the new A equals one at theta = 0.
-    delta = math.atan2(laurent_b.sum().real, laurent_a.sum().real)
+    delta = backend.arctan2(
+        backend.real(backend.sum(laurent_b)), backend.real(backend.sum(laurent_a))
+    )
     laurent_a, laurent_b = (
-        laurent_a * math.cos(delta) + laurent_b * math.sin(delta),
-        laurent_b * math.cos(delta) - laurent_a * math.sin(delta),
+        laurent_a * backend.cos(delta) + laurent_b * backend.sin(delta),
+        laurent_b * backend.cos(delta) - laurent_a * backend.sin(delta),
     )
 
-    if method == "phase_sums":
+    if extraction == "phase_sums":
         # Step 3: Lemma 1 of Ref. [2]. The Fourier series of A, B, C, and D are
         # written as polynomials in x = cos(theta / 2) and y = sin(theta / 2), such
         # that V = A + i B Z + i x C X + i x D Y, with A, B even in x and C, D odd
@@ -876,49 +835,90 @@ def qsp_phases(
         # = x * 2 y * U_{k-1}(cos(theta)), with U_{k-1} = T_k' / k
 
         poly_a, poly_b = (
-            Chebyshev(np.r_[laurent[half].real, 2 * laurent[half + orders].real])
-            .convert(kind=Polynomial)(to_x)
-            .coef
+            backend.cast(
+                Chebyshev(
+                    backend.to_numpy(
+                        backend.concatenate(
+                            (
+                                backend.real(laurent[half : half + 1]),
+                                2 * backend.real(laurent[half + orders]),
+                            )
+                        )
+                    )
+                )
+                .convert(kind=Polynomial)(to_x)
+                .coef,
+                dtype="float64",
+            )
             for laurent in (laurent_a, laurent_b)
         )
         poly_c, poly_d = (
-            (
-                Polynomial([0.0, 1.0])
-                * Chebyshev(np.r_[0.0, 4 * (1j * laurent[half + orders]).real / orders])
-                .deriv()
-                .convert(kind=Polynomial)(to_y)
-            ).coef
+            backend.cast(
+                (
+                    Polynomial([0.0, 1.0])
+                    * Chebyshev(
+                        backend.to_numpy(
+                            backend.concatenate(
+                                (
+                                    backend.zeros(1, dtype="float64"),
+                                    4
+                                    * backend.real(1j * laurent[half + orders])
+                                    / orders,
+                                )
+                            )
+                        )
+                    )
+                    .deriv()
+                    .convert(kind=Polynomial)(to_y)
+                ).coef,
+                dtype="float64",
+            )
             for laurent in (laurent_c, laurent_d)
         )
         poly_a, poly_b, poly_c, poly_d = (
-            np.pad(coef, (0, degree + 1 - len(coef)))
+            backend.concatenate(
+                (coef, backend.zeros(degree + 1 - len(coef), dtype="float64"))
+            )
             for coef in (poly_a, poly_b, poly_c, poly_d)
         )
 
-        sums = np.zeros(degree + 1, dtype=complex)
+        sums = backend.zeros(degree + 1, dtype="complex128")
         for j in range(degree + 1):
             if j % 2 == 0:
-                n = np.arange(0, degree + 1, 2)
-                weights = comb((degree - n) // 2, j // 2)
-                sums[j] = (1j) ** j * np.sum((poly_a[n] + 1j * poly_b[n]) * weights)
+                n = backend.arange(0, degree + 1, 2)
+                weights = backend.cast(
+                    comb(backend.to_numpy((degree - n) // 2), j // 2), dtype="float64"
+                )
+                sums[j] = (1j) ** j * backend.sum(
+                    (poly_a[n] + 1j * poly_b[n]) * weights
+                )
             else:
-                n = np.arange(1, degree + 1, 2)
-                weights = comb((degree - n - 1) // 2, (j - n) // 2)
-                sums[j] = (1j) ** j * np.sum((1j * poly_c[n] - poly_d[n]) * weights)
+                n = backend.arange(1, degree + 1, 2)
+                weights = backend.cast(
+                    comb(
+                        backend.to_numpy((degree - n - 1) // 2),
+                        backend.to_numpy((j - n) // 2),
+                    ),
+                    dtype="float64",
+                )
+                sums[j] = (1j) ** j * backend.sum(
+                    (1j * poly_c[n] - poly_d[n]) * weights
+                )
 
-        phases = np.zeros(degree)
+        phases = backend.zeros(degree, dtype="float64")
         for step in range(degree, 0, -1):
-            odd, even = sums[1 : step + 1 : 2].sum(), sums[0 : step + 1 : 2].sum()
-            phases[step - 1] = np.angle(odd / even)
+            odd = backend.sum(sums[1 : step + 1 : 2])
+            even = backend.sum(sums[0 : step + 1 : 2])
+            phases[step - 1] = backend.angle(odd / even)
 
-            lower = np.zeros(step, dtype=complex)
+            lower = backend.zeros(step, dtype="complex128")
             for j in range(step):
-                signs = np.where(
-                    (j + np.arange(j + 1)) % 2 == 1,
-                    -np.exp(-1j * phases[step - 1] * (-1) ** j),
+                signs = backend.where(
+                    (j + backend.arange(j + 1)) % 2 == 1,
+                    -backend.exp(-1j * phases[step - 1] * (-1) ** j),
                     1.0,
                 )
-                lower[j] = np.sum(sums[: j + 1] * signs)
+                lower[j] = backend.sum(sums[: j + 1] * signs)
             sums = lower
     else:
         # Step 3: layer stripping. ``coefficients[j]`` multiplies w^{2j - d}, where
@@ -926,13 +926,14 @@ def qsp_phases(
         # R_phi = w P_minus + w^{-1} P_plus, where P_plus and P_minus project onto
         # the eigenspaces of cos(phi) X + sin(phi) Y, and the highest-degree
         # coefficient of V must be supported on the range of P_minus.
-        paulis = np.array(
+        paulis = backend.cast(
             [
                 [[1, 0], [0, 1]],
                 [[1, 0], [0, -1]],
                 [[0, 1], [1, 0]],
                 [[0, -1j], [1j, 0]],
-            ]
+            ],
+            dtype="complex128",
         )
         coefficients = (
             laurent_a[:, None, None] * paulis[0]
@@ -940,20 +941,22 @@ def qsp_phases(
             + 1j * laurent_c[:, None, None] * paulis[2]
             + 1j * laurent_d[:, None, None] * paulis[3]
         )
-        phases = np.zeros(degree)
+        phases = backend.zeros(degree, dtype="float64")
         for step in range(degree, 0, -1):
             top = coefficients[step]
-            column = top[:, np.argmax(np.abs(top).sum(0))]
-            phases[step - 1] = np.angle(-column[1] / column[0])
+            norms = backend.sum(backend.abs(top), axis=0)
+            column = top[:, int(backend.argsort(norms)[-1])]
+            phases[step - 1] = backend.angle(-column[1] / column[0])
 
-            axis = np.array(
+            axis = backend.cast(
                 [
-                    [0, np.exp(-1j * phases[step - 1])],
-                    [np.exp(1j * phases[step - 1]), 0],
-                ]
+                    [0, backend.exp(-1j * phases[step - 1])],
+                    [backend.exp(1j * phases[step - 1]), 0],
+                ],
+                dtype="complex128",
             )
-            coefficients = (paulis[0] - axis) / 2 @ coefficients[1 : step + 1] + (
-                paulis[0] + axis
-            ) / 2 @ coefficients[:step]
+            coefficients = backend.matmul(
+                (paulis[0] - axis) / 2, coefficients[1 : step + 1]
+            ) + backend.matmul((paulis[0] + axis) / 2, coefficients[:step])
 
-    return backend.cast(phases, dtype=phases.dtype)
+    return phases
