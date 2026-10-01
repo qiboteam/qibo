@@ -49,6 +49,8 @@ __all__ = [
     "ladder_synthesis",
     "permutation_synthesis",
     "phase_encoder",
+    "qsp_circuit",
+    "qsp_phases",
     "sparse_encoder",
     "unary_encoder",
     "unary_encoder_random_gaussian",
