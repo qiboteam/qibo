@@ -129,3 +129,28 @@ def test_temp_cnot_decomposition(backend):
     assert transpiled_circuit.queue[8].name == "cx"
     assert transpiled_circuit.queue[9].name == "z"
     assert transpiled_circuit.queue[10].name == "gpi2"
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.X(4).controlled_by(0, 1, 2, 3),
+        gates.RX(3, 0.7).controlled_by(0, 1, 2),
+        gates.H(3).controlled_by(0, 1, 2),
+        gates.U3(2, 0.3, 0.5, 0.9).controlled_by(0, 1),
+    ],
+)
+def test_unroller_multi_controlled_gates(backend, gate):
+    circuit = Circuit(5)
+    circuit.add(gate)
+    natives = NativeGates.default()
+    unrolled = Unroller(natives, backend=backend)(circuit)
+
+    assert all(len(g.qubits) <= 2 and not g.is_controlled_by for g in unrolled.queue)
+    assert_decomposition(unrolled, natives)
+
+    # The unroller drops the global phase.
+    original = circuit.unitary(backend)
+    final = unrolled.unitary(backend)
+    overlap = backend.vdot(original, final)
+    backend.assert_allclose(final, original * overlap / backend.abs(overlap), atol=1e-8)
