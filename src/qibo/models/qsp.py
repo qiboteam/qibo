@@ -519,9 +519,6 @@ def _fourier_qsp_phases(coefficients: ArrayLike, backend: Backend = None) -> Arr
         spectrum = backend.zeros(nsamples, dtype="complex128")
         spectrum[indices] = coefficients * (1 - margin)
         residual = 1 - backend.abs(backend.ifft(spectrum) * nsamples) ** 2
-        if backend.min(residual) <= 0.0:
-            continue
-
         cepstrum = backend.fft(backend.log(residual)) / nsamples
         causal = backend.zeros(nsamples, dtype="complex128")
         causal[0] = cepstrum[0] / 2
@@ -530,7 +527,7 @@ def _fourier_qsp_phases(coefficients: ArrayLike, backend: Backend = None) -> Arr
         series = backend.fft(backend.exp(backend.ifft(causal) * nsamples)) / nsamples
         if backend.max(backend.abs(series[degree + 1 : nsamples // 2])) < 1e-12:
             break
-    else:
+    else:  # pragma: no cover
         raise_error(RuntimeError, "Complementary Fourier series not found.")
 
     coefficients = coefficients * (1 - margin)
@@ -798,7 +795,7 @@ def _qsp_phases(
         distance = backend.min(backend.abs(backend.abs(roots) - 1.0))
         if distance > 1e-6 and backend.sum(backend.abs(roots) < 1.0) == degree:
             break
-    else:
+    else:  # pragma: no cover
         raise_error(RuntimeError, "Fejer-Riesz factorization failed.")
 
     roots = roots[backend.abs(roots) < 1.0]
