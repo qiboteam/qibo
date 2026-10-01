@@ -233,6 +233,19 @@ def test_convolve(backend, size_1, size_2):
     backend.assert_allclose(backend.convolve(array_1, array_2), target)
 
 
+@pytest.mark.parametrize("mode", ["full", "same", "valid"])
+def test_convolve_mode(backend, mode):
+    backend.set_seed(42)
+    array_1 = backend.random_normal(0, 1, 6)
+    array_2 = backend.random_normal(0, 1, 3)
+
+    target = np.convolve(
+        backend.to_numpy(array_1), backend.to_numpy(array_2), mode=mode
+    )
+
+    backend.assert_allclose(backend.convolve(array_1, array_2, mode=mode), target)
+
+
 @pytest.mark.parametrize("size", [4, 7])
 def test_fft_ifft(backend, size):
     backend.set_seed(42)
@@ -257,6 +270,18 @@ def test_poly_roots(backend, degree):
 
     test = backend.to_numpy(backend.roots(coefficients))
     backend.assert_allclose(np.sort_complex(test), np.sort_complex(roots_numpy))
+
+
+@pytest.mark.parametrize("size", [2, 3])
+def test_poly_matrix(backend, size):
+    backend.set_seed(42)
+    matrix = backend.random_normal(0, 1, (size, size)) + 1j * backend.random_normal(
+        0, 1, (size, size)
+    )
+
+    target = np.poly(backend.to_numpy(matrix))
+
+    backend.assert_allclose(backend.poly(matrix), target)
 
 
 def test_set_backend_error():

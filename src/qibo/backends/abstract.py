@@ -1288,7 +1288,7 @@ class Backend:
         """
         return self.engine.outer(array_1, array_2)
 
-    def poly(self, array: ArrayLike, **kwargs) -> ArrayLike:
+    def poly(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         """Return the coefficients of the polynomial with the given roots.
 
         Args:
@@ -1300,7 +1300,7 @@ class Backend:
         Returns:
             ArrayLike: Polynomial coefficients, from the highest to the lowest degree.
         """
-        return self.engine.poly(array, **kwargs)
+        raise_error(NotImplementedError)
 
     def prod(self, array: ArrayLike, **kwargs) -> ArrayLike:
         """Return the product of array elements.
@@ -1613,7 +1613,7 @@ class Backend:
         """
         return self.engine.roll(array, shift, **kwargs)
 
-    def roots(self, array: ArrayLike, **kwargs) -> ArrayLike:
+    def roots(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         """Return the roots of a polynomial given its coefficients.
 
         Args:
@@ -1625,7 +1625,7 @@ class Backend:
         Returns:
             ArrayLike: Roots of the polynomial.
         """
-        return self.engine.roots(array, **kwargs)
+        raise_error(NotImplementedError)
 
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         """Return element-wise evenly round ``array`` to the given number of ``decimals``.

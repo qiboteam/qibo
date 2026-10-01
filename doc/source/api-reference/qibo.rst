@@ -174,6 +174,14 @@ Grover's Algorithm
     :member-order: bysource
 
 
+Quantum Signal Processing
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.qsp.qsp_phases
+
+.. autofunction:: qibo.models.qsp.qsp_circuit
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 """""""""""""""""""""""""""""""""""""""""""""
 

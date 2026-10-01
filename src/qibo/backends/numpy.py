@@ -1,6 +1,7 @@
 """Module defining the Numpy backend."""
 
 import numpy as np
+from numpy.polynomial.polynomial import polyfromroots, polyroots
 from numpy.typing import ArrayLike, DTypeLike
 from scipy.linalg import block_diag, expm, fractional_matrix_power, logm
 from scipy.sparse import coo_matrix, csr_matrix, issparse
@@ -180,6 +181,37 @@ class NumpyBackend(Backend):
             ArrayLike: The resulting matrix logarithm.
         """
         return logm(array, **kwargs)
+
+    def poly(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the coefficients of the polynomial with the given roots.
+
+        Args:
+            array (ArrayLike): roots of the polynomial, or a square matrix
+                whose eigenvalues are the roots.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Polynomial coefficients, from the highest to the lowest degree.
+        """
+        if self.engine.ndim(array) == 2:
+            array = self.engine.linalg.eigvals(array)
+
+        return self.engine.flip(polyfromroots(array, **kwargs))
+
+    def roots(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Return the roots of a polynomial given its coefficients.
+
+        Args:
+            array (ArrayLike): polynomial coefficients, from the highest to the
+                lowest degree.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Roots of the polynomial.
+        """
+        return polyroots(self.engine.flip(array), **kwargs)
 
     ########################################################################################
     ######## Methods related to linear algebra operations                           ########
