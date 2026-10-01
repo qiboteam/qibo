@@ -179,21 +179,7 @@ Quantum Signal Processing
 
 .. autofunction:: qibo.models.qsp.qsp_phases
 
-.. autofunction:: qibo.models.qsp.qsp_hamiltonian_simulation_phases
-
 .. autofunction:: qibo.models.qsp.qsp_circuit
-
-
-Fourier-based Quantum Signal Processing
-""""""""""""""""""""""""""""""""""""""""""""""
-
-.. autofunction:: qibo.models.qsp.fourier_qsp_bounded_error_coefficients
-
-.. autofunction:: qibo.models.qsp.fourier_qsp_analytic_extension_coefficients
-
-.. autofunction:: qibo.models.qsp.fourier_qsp_phases
-
-.. autofunction:: qibo.models.qsp.fourier_qsp_circuit
 
 
 Iterative Quantum Amplitude Estimation (IQAE)
