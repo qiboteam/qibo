@@ -168,11 +168,13 @@ class X(Gate):
 
             decomp_gates = [*part1, *part2]
 
-        else:  # pragma: no cover
-            # impractical case
-            raise_error(
-                NotImplementedError,
-                "``X`` decomposition not implemented for zero free qubits.",
+        else:
+            from qibo.transpiler.multicontrolled_decompositions import (
+                multi_controlled_decomposition,
+            )
+
+            return multi_controlled_decomposition(
+                _check_backend(None).matrices.X, controls, target, use_toffolis
             )
 
         decomp_gates.extend(decomp_gates)

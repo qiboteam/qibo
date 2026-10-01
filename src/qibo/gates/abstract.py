@@ -204,9 +204,13 @@ class Gate:
     ):
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
-        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        Decompositions are based on `Phys. Rev. A 52, 3457 (1995)
+        <https://doi.org/10.1103/PhysRevA.52.3457>`_.
         If the gate is already controlled, it recursively decomposes the base gate and updates
-        the control qubits accordingly.
+        the control qubits accordingly. The exception are one-qubit gates controlled by more
+        than one qubit, which are decomposed without auxiliary qubits by
+        :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`
+        (only if ``method="standard"``).
 
         Args:
             free (int): Ids of free qubits to use for the gate decomposition.
@@ -246,7 +250,20 @@ class Gate:
 
             ncontrols = len(self.control_qubits)
 
-            # Step 2: Decompose base gate without controls
+            # Step 2: Multi-controlled one-qubit gates have a dedicated decomposition
+            if ncontrols > 1 and len(self.target_qubits) == 1 and method == "standard":
+                from qibo.transpiler.multicontrolled_decompositions import (
+                    multi_controlled_decomposition,
+                )
+
+                return multi_controlled_decomposition(
+                    self.matrix(),
+                    self.control_qubits,
+                    self.target_qubits[0],
+                    use_toffolis,
+                )
+
+            # Step 3: Decompose base gate without controls
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
             decomposed = base_gate._base_decompose(
                 *free,
@@ -357,7 +374,7 @@ class Gate:
                 the current backend. Defaults to ``None``.
 
         Returns:
-            ndarray: Matrix representation of gate.
+            ArrayLike: Matrix representation of gate.
         """
         from qibo.backends import _check_backend
 
