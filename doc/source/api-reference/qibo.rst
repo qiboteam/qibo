@@ -2820,6 +2820,12 @@ Gate decomposition
     :member-order: bysource
 
 
+Multi-controlled gate decomposition
+"""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition
+
+
 Optimizer
 ^^^^^^^^^
 
