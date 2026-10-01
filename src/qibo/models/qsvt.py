@@ -129,10 +129,11 @@ def qsvt_phases(coefficients: ArrayLike, backend: Backend = None) -> ArrayLike:
     :math:`1 - P^{2}` that :func:`qibo.models.qsp.qsp_phases` uses for the Fourier-based
     QSP, and the phases are then extracted one at a time as in Ref. [2].
 
-    The coefficients are divided by :math:`\\max_{x} |P(x)|` if it is larger than one.
-    If :math:`|P|` reaches one, the polynomial is implemented with a relative error
-    of about :math:`10^{-6}` for degrees up to :math:`100` and :math:`10^{-5}` up to
-    :math:`300`, and the error is much smaller for polynomials that stay away from one.
+    The coefficients are divided by its (grid-estimated) :math:`\\max_{x} |P(x)|`
+    if it is larger than one. If :math:`|P|` reaches one, the polynomial is implemented
+    with a relative error of about :math:`10^{-6}` for degrees up to :math:`100` and
+    :math:`10^{-5}` up to :math:`300`, and the error is much smaller for polynomials that
+    stay away from one.
 
     Args:
         coefficients (ArrayLike): Chebyshev coefficients :math:`(c_{0}, \\dots, c_{d})`.
@@ -197,6 +198,8 @@ def qsvt_phases(coefficients: ArrayLike, backend: Backend = None) -> ArrayLike:
         return backend.real(backend.ifft(padded) * 2 * nsamples)[:nsamples]
 
     # Normalize the polynomial so that its modulus is bounded by one.
+    # 128 is a heuristic for resolving the peak of the Chebyshev series on the nbase grid.
+    # It works well for the tested degrees. It could be turn into a hyperparameter
     nbase = 2 ** max(12, int(backend.ceil(backend.log2(128 * (degree + 1)))))
     peak = float(backend.max(backend.abs(evaluate(nbase))))
     scale = 1.0 / max(peak, 1.0)
