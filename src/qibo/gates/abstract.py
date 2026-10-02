@@ -770,7 +770,7 @@ class ParametrizedGate(Gate):
         self.parameters = tuple(params)
 
 
-def _to_numpy(array: ArrayLike) -> ArrayLike:
+def _to_numpy(array: ArrayLike) -> ArrayLike:  # pragma: no cover
     """Converts a CuPy or PyTorch array to NumPy, and returns any other object unchanged.
 
     This does not use any backend, since the arrays held by a gate can come from
