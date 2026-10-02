@@ -262,9 +262,9 @@ class Gate:
                     *map(_to_numpy, self.init_args), **self.init_kwargs
                 )
 
-                clean=kwargs.get("clean", ())
-                minimize_toffolis=kwargs.get("minimize_toffolis", False)
-                minimize_depth=kwargs.get("minimize_depth", False)
+                clean = kwargs.get("clean", ())
+                minimize_toffolis = kwargs.get("minimize_toffolis", False)
+                minimize_depth = kwargs.get("minimize_depth", False)
 
                 return multi_controlled_decomposition(
                     unitary=base_gate.matrix(backend),

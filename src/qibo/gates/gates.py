@@ -140,9 +140,9 @@ class X(Gate):
 
         backend = _numpy_backend()
 
-        clean=kwargs.get("clean", ())
-        minimize_toffolis=kwargs.get("minimize_toffolis", False)
-        minimize_depth=kwargs.get("minimize_depth", False)
+        clean = kwargs.get("clean", ())
+        minimize_toffolis = kwargs.get("minimize_toffolis", False)
+        minimize_depth = kwargs.get("minimize_depth", False)
 
         return multi_controlled_decomposition(
             unitary=backend.matrices.X,
