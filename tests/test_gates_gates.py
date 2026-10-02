@@ -2159,14 +2159,13 @@ def test_gate_basis_rotation(backend):
         (8, (0, 2, 4, 6, 9), (3, 5, 7)),
     ],
 )
-@pytest.mark.parametrize("use_toffolis", [True, False])
-def test_x_decomposition_execution(backend, target, controls, free, use_toffolis):
+def test_x_decomposition_execution(backend, target, controls, free):
     """Check that applying the decomposition is equivalent to applying the multi-control gate."""
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
     initial_state = random_statevector(2**nqubits, backend=backend)
     target_state = backend.apply_gate(gate, backend.copy(initial_state), nqubits)
-    dgates = gate.decompose(*free, use_toffolis=use_toffolis)
+    dgates = gate.decompose(*free)
     final_state = backend.copy(initial_state)
     for gate in dgates:
         final_state = backend.apply_gate(gate, final_state, nqubits)

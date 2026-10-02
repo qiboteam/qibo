@@ -154,3 +154,65 @@ def test_unroller_multi_controlled_gates(backend, gate):
     final = unrolled.unitary(backend)
     overlap = backend.sum(backend.conj(original) * final)
     backend.assert_allclose(final, original * overlap / backend.abs(overlap), atol=1e-8)
+
+
+def _assert_equal_up_to_global_phase(backend, circuit, unrolled):
+    original = circuit.unitary(backend)
+    final = unrolled.unitary(backend)
+    overlap = backend.sum(backend.conj(original) * final)
+    backend.assert_allclose(final, original * overlap / backend.abs(overlap), atol=1e-8)
+
+
+@pytest.mark.parametrize("nctrl", [4, 5, 6])
+def test_unroller_dirty_ancillas(backend, nctrl):
+    """Spare qubits make the unrolled multi-controlled ``X`` cheaper."""
+    circuit = Circuit(nctrl + 3)
+    circuit.add(gates.X(nctrl).controlled_by(*range(nctrl)))
+    natives = NativeGates.default()
+
+    without = Unroller(natives, backend=backend)(circuit)
+    with_ancillas = Unroller(natives, backend=backend, use_dirty_ancillas=True)(circuit)
+
+    assert_decomposition(with_ancillas, natives)
+    _assert_equal_up_to_global_phase(backend, circuit, without)
+    _assert_equal_up_to_global_phase(backend, circuit, with_ancillas)
+    assert with_ancillas.gate_types[gates.CZ] < without.gate_types[gates.CZ]
+
+
+def test_unroller_dirty_ancillas_without_spare_qubits(backend):
+    """Without spare qubits the result is the same as without the option."""
+    circuit = Circuit(5)
+    circuit.add(gates.X(4).controlled_by(0, 1, 2, 3))
+    natives = NativeGates.default()
+
+    without = Unroller(natives, backend=backend)(circuit)
+    with_ancillas = Unroller(natives, backend=backend, use_dirty_ancillas=True)(circuit)
+
+    assert [g.name for g in with_ancillas.queue] == [g.name for g in without.queue]
+    assert [g.qubits for g in with_ancillas.queue] == [g.qubits for g in without.queue]
+
+
+def test_unroller_dirty_ancillas_do_not_change_other_gates(backend):
+    """Only multi-controlled ``X`` gates benefit from auxiliary qubits."""
+    circuit = Circuit(7)
+    circuit.add(gates.H(0))
+    circuit.add(gates.RX(3, 0.3).controlled_by(0, 1, 2))
+    circuit.add(gates.CNOT(5, 6))
+    natives = NativeGates.default()
+
+    without = Unroller(natives, backend=backend)(circuit)
+    with_ancillas = Unroller(natives, backend=backend, use_dirty_ancillas=True)(circuit)
+
+    assert [g.name for g in with_ancillas.queue] == [g.name for g in without.queue]
+    assert [g.qubits for g in with_ancillas.queue] == [g.qubits for g in without.queue]
+
+
+def test_translate_gate_free_qubits(backend):
+    gate = gates.X(4).controlled_by(0, 1, 2, 3)
+    natives = NativeGates.default()
+
+    without = translate_gate(gate, natives, backend)
+    with_free = translate_gate(gate, natives, backend, free=(5, 6))
+
+    count = lambda gate_list: sum(isinstance(g, gates.CZ) for g in gate_list)
+    assert count(with_free) < count(without)
