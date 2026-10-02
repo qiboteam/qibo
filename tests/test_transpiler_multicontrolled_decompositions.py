@@ -1,11 +1,13 @@
 import copy
 import math
+import random
 
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates
 from qibo.quantum_info.random_ensembles import random_unitary
+from qibo.transpiler import multicontrolled_decompositions
 from qibo.transpiler.multicontrolled_decompositions import (
     multi_controlled_decomposition,
 )
@@ -297,11 +299,13 @@ def _parameters(gate_list):
     return np.array([float(p) for g in gate_list for p in g.parameters])
 
 
-@pytest.mark.parametrize("minimize_toffolis", [False, True])
-@pytest.mark.parametrize("free", [(), (5, 6, 7)])
+@pytest.mark.parametrize(
+    "option", [{}, {"minimize_toffolis": True}, {"minimize_depth": True}]
+)
+@pytest.mark.parametrize("free", [(), (5,), (5, 6, 7)])
 @pytest.mark.parametrize("name", ["real rotation", "diagonal", "Hadamard", "X"])
 def test_multi_controlled_decomposition_of_accelerator_array(
-    backend, accelerator_backend, name, free, minimize_toffolis
+    backend, accelerator_backend, name, free, option
 ):
     """The decomposition only moves the matrix to the CPU, and returns plain floats."""
     controls = (0, 1, 2, 3)
@@ -310,16 +314,16 @@ def test_multi_controlled_decomposition_of_accelerator_array(
         controls,
         4,
         free,
-        backend,
-        minimize_toffolis=minimize_toffolis,
+        backend=backend,
+        **option,
     )
     decomposition = multi_controlled_decomposition(
         _AcceleratorArray(MATRICES[name]),
         controls,
         4,
         free,
-        accelerator_backend,
-        minimize_toffolis=minimize_toffolis,
+        backend=accelerator_backend,
+        **option,
     )
 
     assert [type(g) for g in decomposition] == [type(g) for g in expected]
@@ -368,9 +372,9 @@ def _mcx_with_ancillas(backend, nctrl, free=(), clean=()):
         tuple(range(nctrl)),
         nctrl,
         free,
-        backend,
         clean=clean,
         minimize_toffolis=True,
+        backend=backend,
     )
     return decomposition, nqubits
 
@@ -499,7 +503,7 @@ def test_clean_qubits_are_used_as_dirty_qubits_by_default(backend):
         backend.matrices.X, controls, 5, backend=backend, clean=clean
     )
     expected = multi_controlled_decomposition(
-        backend.matrices.X, controls, 5, clean, backend
+        backend.matrices.X, controls, 5, clean, backend=backend
     )
     assert [type(g) for g in decomposition] == [type(g) for g in expected]
     assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
@@ -516,9 +520,11 @@ def test_minimize_toffolis_is_ignored_without_benefit(backend, name):
     matrix, controls = backend.cast(MATRICES[name]), (0, 1, 2, 3)
     free = (5, 6) if name != "X" else ()
     with_option = multi_controlled_decomposition(
-        matrix, controls, 4, free, backend, minimize_toffolis=True
+        matrix, controls, 4, free, minimize_toffolis=True, backend=backend
     )
-    without_option = multi_controlled_decomposition(matrix, controls, 4, free, backend)
+    without_option = multi_controlled_decomposition(
+        matrix, controls, 4, free, backend=backend
+    )
     assert [type(g) for g in with_option] == [type(g) for g in without_option]
     assert [g.qubits for g in with_option] == [g.qubits for g in without_option]
 
@@ -530,7 +536,7 @@ def test_minimize_toffolis_is_ignored_without_benefit(backend, name):
 def test_auxiliary_qubits_errors(backend, free, clean):
     with pytest.raises(ValueError):
         multi_controlled_decomposition(
-            backend.matrices.X, (0, 1, 2, 3), 4, free, backend, clean=clean
+            backend.matrices.X, (0, 1, 2, 3), 4, free, clean=clean, backend=backend
         )
 
 
@@ -563,6 +569,220 @@ def test_minimize_toffolis_does_not_use_global_backend(monkeypatch, options):
         *free, clean=options.get("clean", ()), minimize_toffolis=True
     )
     assert len(decomposition) > 0
+
+
+def _mcx_depth_minimized(backend, nctrl, free=(), clean=()):
+    nqubits = nctrl + 1 + len(free) + len(clean)
+    decomposition = multi_controlled_decomposition(
+        backend.matrices.X,
+        tuple(range(nctrl)),
+        nctrl,
+        free,
+        clean=clean,
+        minimize_depth=True,
+        backend=backend,
+    )
+    return decomposition, nqubits
+
+
+@pytest.mark.parametrize("nctrl", range(3, 10))
+def test_minimize_depth_with_dirty_qubit(backend, nctrl):
+    """A dirty qubit can be in any state, so the whole unitary must be exact."""
+    free = (nctrl + 1,)
+    decomposition, nqubits = _mcx_depth_minimized(backend, nctrl, free=free)
+    gate = gates.X(nctrl).controlled_by(*range(nctrl))
+
+    backend.assert_allclose(
+        _unitary(backend, decomposition, nqubits),
+        _unitary(backend, [gate], nqubits),
+        atol=1e-10,
+    )
+
+
+@pytest.mark.parametrize("nctrl", range(3, 10))
+def test_minimize_depth_with_clean_qubit(backend, nctrl):
+    clean = (nctrl + 1,)
+    decomposition, nqubits = _mcx_depth_minimized(backend, nctrl, clean=clean)
+    gate = gates.X(nctrl).controlled_by(*range(nctrl))
+
+    np.testing.assert_allclose(
+        _clean_columns(
+            backend, _unitary(backend, decomposition, nqubits), nqubits, clean
+        ),
+        _clean_columns(backend, _unitary(backend, [gate], nqubits), nqubits, clean),
+        atol=1e-10,
+    )
+
+
+def _apply_classically(gate_list, bits):
+    """Applies ``X`` gates, with any number of controls, to a list of bits."""
+    for gate in gate_list:
+        assert isinstance(gate, (gates.X, gates.CNOT, gates.TOFFOLI)), gate.name
+        if all(bits[qubit] for qubit in gate.control_qubits):
+            bits[gate.target_qubits[0]] ^= 1
+    return bits
+
+
+@pytest.mark.parametrize("clean", [True, False])
+@pytest.mark.parametrize("nctrl", [6, 9, 20, 37, 64, 129, 200])
+def test_minimize_depth_recursion_with_many_controls(monkeypatch, nctrl, clean):
+    """The recursion is a classical reversible computation. With the small gadgets
+    replaced by exact gates, which are tested separately, it is checked on bits."""
+
+    def exact(controls, target, *args):
+        return [gates.X(target).controlled_by(*controls)]
+
+    for name in ("_c3x", "_c4x", "_linear_mcx"):
+        monkeypatch.setattr(multicontrolled_decompositions, name, exact)
+
+    controls, target, ancilla = tuple(range(nctrl)), nctrl, nctrl + 1
+    decomposition = multicontrolled_decompositions._mcx_nie_log_depth(
+        controls, target, ancilla, clean
+    )
+
+    generator = random.Random(nctrl)
+    for _ in range(100):
+        bits = [generator.getrandbits(1) for _ in range(nctrl + 2)]
+        if generator.random() < 0.5:  # the case that activates the gate
+            bits[:nctrl] = [1] * nctrl
+        if generator.random() < 0.2:
+            bits[generator.randrange(nctrl)] = 0
+        if clean:
+            bits[ancilla] = 0
+
+        expected = bits.copy()
+        expected[target] ^= int(all(bits[:nctrl]))
+        assert _apply_classically(decomposition, bits.copy()) == expected
+
+
+# Depth for 64, 128, 256 and 512 controls. It grows by a constant for each doubling
+# of the number of controls (logarithmically), and by increasing amounts if
+# it is not minimized.
+MINIMIZE_DEPTH_DEPTHS = {
+    "clean": [569, 697, 849, 1001],
+    "dirty": [1036, 1292, 1596, 1900],
+    "default": [1947, 3995, 8091, 16283],
+}
+
+
+@pytest.mark.parametrize("kind", list(MINIMIZE_DEPTH_DEPTHS))
+def test_minimize_depth_depth(backend, kind):
+    depths = []
+    for nctrl in (64, 128, 256, 512):
+        ancilla = (nctrl + 1,)
+        if kind == "default":
+            decomposition = multi_controlled_decomposition(
+                backend.matrices.X, tuple(range(nctrl)), nctrl, ancilla, backend=backend
+            )
+            nqubits = nctrl + 2
+        else:
+            decomposition, nqubits = _mcx_depth_minimized(
+                backend,
+                nctrl,
+                **({"clean": ancilla} if kind == "clean" else {"free": ancilla}),
+            )
+        depths.append(_depth(decomposition, nqubits))
+
+    assert depths == MINIMIZE_DEPTH_DEPTHS[kind]
+
+
+@pytest.mark.parametrize(
+    ("free", "clean"), [((8, 9), ()), ((8, 9, 10), ()), ((), (8, 9)), ((8,), (9,))]
+)
+def test_minimize_depth_with_two_qubits_uses_the_shallowest_construction(
+    backend, free, clean
+):
+    """With two or more auxiliary qubits it is the construction of Ref. [4]."""
+    controls = tuple(range(7))
+    depth_minimized = multi_controlled_decomposition(
+        backend.matrices.X,
+        controls,
+        7,
+        free,
+        clean=clean,
+        minimize_depth=True,
+        backend=backend,
+    )
+    toffolis_minimized = multi_controlled_decomposition(
+        backend.matrices.X,
+        controls,
+        7,
+        free,
+        clean=clean,
+        minimize_toffolis=True,
+        backend=backend,
+    )
+    # With one clean and one dirty qubit only the dirty construction is valid for both.
+    if len(clean) == 1:
+        toffolis_minimized = multi_controlled_decomposition(
+            backend.matrices.X,
+            controls,
+            7,
+            (*clean, *free),
+            minimize_toffolis=True,
+            backend=backend,
+        )
+    assert [type(g) for g in depth_minimized] == [type(g) for g in toffolis_minimized]
+    assert [g.qubits for g in depth_minimized] == [g.qubits for g in toffolis_minimized]
+
+
+@pytest.mark.parametrize("kwargs", [{"free": (8,)}, {"clean": (8,)}])
+def test_minimize_depth_with_one_qubit_is_not_the_toffoli_minimizing_one(
+    backend, kwargs
+):
+    """With one auxiliary qubit, Ref. [5] is used and not the circuit of Ref. [4]."""
+    depth_minimized, _ = _mcx_depth_minimized(backend, 7, **kwargs)
+    toffolis_minimized, _ = _mcx_with_ancillas(backend, 7, **kwargs)
+
+    assert len(depth_minimized) != len(toffolis_minimized)
+    # Ref. [4] only has Toffoli and X gates
+    assert {type(g) for g in toffolis_minimized} <= {gates.TOFFOLI, gates.X}
+    assert not {type(g) for g in depth_minimized} <= {gates.TOFFOLI, gates.X}
+
+
+def test_minimize_depth_and_minimize_toffolis_are_exclusive(backend):
+    with pytest.raises(ValueError):
+        multi_controlled_decomposition(
+            backend.matrices.X,
+            (0, 1, 2, 3, 4),
+            5,
+            (6,),
+            minimize_toffolis=True,
+            minimize_depth=True,
+            backend=backend,
+        )
+
+
+@pytest.mark.parametrize("name", ["real rotation", "Hadamard", "X"])
+def test_minimize_depth_is_ignored_without_benefit(backend, name):
+    matrix, controls = backend.cast(MATRICES[name]), (0, 1, 2, 3)
+    free = (5, 6) if name != "X" else ()
+    with_option = multi_controlled_decomposition(
+        matrix, controls, 4, free, minimize_depth=True, backend=backend
+    )
+    without_option = multi_controlled_decomposition(
+        matrix, controls, 4, free, backend=backend
+    )
+    assert [type(g) for g in with_option] == [type(g) for g in without_option]
+    assert [g.qubits for g in with_option] == [g.qubits for g in without_option]
+
+
+def test_decompose_minimize_depth(backend):
+    gate = gates.X(8).controlled_by(*range(8))
+    decomposition = gate.decompose(9, minimize_depth=True)
+    default = gate.decompose(9)
+    assert len(decomposition) != len(default)
+
+    backend.assert_allclose(
+        _unitary(backend, decomposition, 10),
+        _unitary(backend, [gate], 10),
+        atol=1e-10,
+    )
+
+    circuit = Circuit(10)
+    circuit.add(gate)
+    decomposed = circuit.decompose(9, minimize_depth=True)
+    assert [type(g) for g in decomposed.queue] == [type(g) for g in decomposition]
 
 
 def _raise_global_backend_used(*args, **kwargs):

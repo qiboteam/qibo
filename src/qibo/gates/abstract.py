@@ -231,8 +231,8 @@ class Gate:
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
                 ``mpmmath_dps`` defaults to :math:`256`. For gates controlled by more than one
-                qubit and ``method = "standard"``, the keyword arguments ``clean`` and
-                ``minimize_toffolis`` are passed to
+                qubit and ``method = "standard"``, the keyword arguments ``clean``,
+                ``minimize_toffolis`` and ``minimize_depth`` are passed to
                 :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
 
         Returns:
@@ -261,14 +261,20 @@ class Gate:
                 base_gate = self.__class__(
                     *map(_to_numpy, self.init_args), **self.init_kwargs
                 )
+
+                clean=kwargs.get("clean", ())
+                minimize_toffolis=kwargs.get("minimize_toffolis", False)
+                minimize_depth=kwargs.get("minimize_depth", False)
+
                 return multi_controlled_decomposition(
-                    base_gate.matrix(backend),
-                    self.control_qubits,
-                    self.target_qubits[0],
-                    free,
-                    backend,
-                    clean=kwargs.get("clean", ()),
-                    minimize_toffolis=kwargs.get("minimize_toffolis", False),
+                    unitary=base_gate.matrix(backend),
+                    controls=self.control_qubits,
+                    target=self.target_qubits[0],
+                    free=free,
+                    clean=clean,
+                    minimize_toffolis=minimize_toffolis,
+                    minimize_depth=minimize_depth,
+                    backend=backend,
                 )
 
             # Step 3: Decompose base gate without controls

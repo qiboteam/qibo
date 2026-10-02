@@ -113,7 +113,8 @@ class X(Gate):
                 number of decimal places used by the ``mpmath`` package.
                 ``mpmmath_dps`` defaults to :math:`256`.
                 For gates controlled by more than two qubits and ``method = "standard"``,
-                the keyword arguments ``clean`` and ``minimize_toffolis`` are passed to
+                the keyword arguments ``clean``, ``minimize_toffolis`` and
+                ``minimize_depth`` are passed to
                 :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
 
         Returns:
@@ -138,13 +139,19 @@ class X(Gate):
         )
 
         backend = _numpy_backend()
+
+        clean=kwargs.get("clean", ())
+        minimize_toffolis=kwargs.get("minimize_toffolis", False)
+        minimize_depth=kwargs.get("minimize_depth", False)
+
         return multi_controlled_decomposition(
             unitary=backend.matrices.X,
             controls=controls,
             target=target,
             free=free,
-            clean=kwargs.get("clean", ()),
-            minimize_toffolis=kwargs.get("minimize_toffolis", False),
+            clean=clean,
+            minimize_toffolis=minimize_toffolis,
+            minimize_depth=minimize_depth,
             backend=backend,
         )
 

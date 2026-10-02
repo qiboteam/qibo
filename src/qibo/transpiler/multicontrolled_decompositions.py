@@ -18,6 +18,7 @@ def multi_controlled_decomposition(
     *,
     clean: tuple[int, ...] = (),
     minimize_toffolis: bool = False,
+    minimize_depth: bool = False,
     backend: Backend = None,
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled single-qubit gate, with or without auxiliary qubits.
@@ -39,6 +40,13 @@ def multi_controlled_decomposition(
     than the default. Two auxiliary qubits make the depth logarithmic in :math:`k`,
     and one makes it linear. Clean qubits are preferred over dirty ones.
 
+    If ``minimize_depth`` is ``True``, a multi-controlled :math:`X` gate with at least
+    one auxiliary qubit is decomposed with a depth that is logarithmic in :math:`k`.
+    With two or more auxiliary qubits this follows Ref. [4], and with one follows
+    Ref. [5] (see also Ref. [6]). The number of gates is linear in :math:`k` in both
+    cases, but larger than the default for one auxiliary qubit, so the depth is
+    lower only for tens of controls or more.
+
     Args:
         unitary (ArrayLike): :math:`2 \\times 2` unitary matrix of the target gate.
         controls (tuple[int, ...]): Ids of the control qubits.
@@ -52,6 +60,10 @@ def multi_controlled_decomposition(
         minimize_toffolis (bool, optional): If ``True``, a multi-controlled :math:`X`
             gate with auxiliary qubits minimizes the number of Toffoli gates instead
             of the number of CNOTs. Defaults to ``False``.
+        minimize_depth (bool, optional): If ``True``, a multi-controlled :math:`X`
+            gate with auxiliary qubits minimizes the depth instead of the number of
+            CNOTs. It cannot be used together with ``minimize_toffolis``.
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend of
             ``unitary``, which is only used to move it to the CPU, since the
             decomposition is always computed with NumPy. If ``None``, it uses the
@@ -78,6 +90,12 @@ def multi_controlled_decomposition(
         4. T. Khattar and C. Gidney, *Rise of conditionally clean ancillae for efficient
         quantum circuit constructions*, `Quantum 9, 1752 (2025)
         <https://doi.org/10.22331/q-2025-05-21-1752>`_.
+
+        5. J. Nie, W. Zi, and X. Sun, *Quantum circuit for multi-qubit Toffoli gate with
+        optimal resource*, `arXiv:2402.05053 <https://arxiv.org/abs/2402.05053>`_.
+
+        6. V. Vandaele, *Asymptotically optimal quantum circuits for comparators and
+        incrementers*, `arXiv:2603.12917 <https://arxiv.org/abs/2603.12917>`_.
     """
     backend = _check_backend(backend)
 
@@ -88,6 +106,12 @@ def multi_controlled_decomposition(
     controls, free, clean = tuple(controls), tuple(free), tuple(clean)
     if not controls:
         raise_error(ValueError, "At least one control qubit is needed.")
+
+    if minimize_toffolis and minimize_depth:
+        raise_error(
+            ValueError,
+            "``minimize_toffolis`` and ``minimize_depth`` cannot be used together.",
+        )
 
     if set(free) & {*controls, target} or set(clean) & {*controls, target, *free}:
         raise_error(
@@ -103,7 +127,15 @@ def multi_controlled_decomposition(
         and len(controls) > 2
         and backend.matrix_norm(unitary - backend.matrices.X) < PRECISION_TOL
     ):
-        if minimize_toffolis and len(clean) >= 2:
+        if minimize_depth and len(free) + len(clean) >= 2:
+            decomposition = _mcx_gidney_log_depth(
+                controls, target, (*clean, *free)[:2], len(clean) >= 2
+            )
+        elif minimize_depth:
+            decomposition = _mcx_nie_log_depth(
+                controls, target, (*clean, *free)[0], bool(clean)
+            )
+        elif minimize_toffolis and len(clean) >= 2:
             decomposition = _mcx_gidney_log_depth(controls, target, clean[:2], True)
         elif minimize_toffolis and clean:
             decomposition = _mcx_gidney_linear_depth(controls, target, clean[0], True)
@@ -138,26 +170,27 @@ def _c3x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
     angle = math.pi / 8
     # ``("p", q, s)`` is a phase gate on ``qubits[q]`` by ``s * angle``,
     # and ``("cx", c, t)`` is a CNOT from ``qubits[c]`` to ``qubits[t]``.
-    steps = [("p", q, 1) for q in range(4)] + [
+    steps = [("p", q, 1) for q in range(4)]
+    steps.extend([
         ("cx", 0, 1), ("p", 1, -1), ("cx", 0, 1), ("cx", 1, 2), ("p", 2, -1),
         ("cx", 0, 2), ("p", 2, 1), ("cx", 1, 2), ("p", 2, -1), ("cx", 0, 2),
         ("cx", 2, 3), ("p", 3, -1), ("cx", 1, 3), ("p", 3, 1), ("cx", 2, 3),
         ("p", 3, -1), ("cx", 0, 3), ("p", 3, 1), ("cx", 2, 3), ("p", 3, -1),
         ("cx", 1, 3), ("p", 3, 1), ("cx", 2, 3), ("p", 3, -1), ("cx", 0, 3),
-    ]  # fmt: skip
+    ])  # fmt: skip
 
-    return [
-        gates.H(target),
-        *(
-            (
-                gates.U1(qubits[first], second * angle)
-                if kind == "p"
-                else gates.CNOT(qubits[first], qubits[second])
-            )
-            for kind, first, second in steps
-        ),
-        gates.H(target),
-    ]
+    c3x = [gates.H(target)]
+    c3x.extend(
+        (
+            gates.U1(qubits[first], second * angle)
+            if kind == "p"
+            else gates.CNOT(qubits[first], qubits[second])
+        )
+        for kind, first, second in steps
+    )
+    c3x.append(gates.H(target))
+
+    return c3x
 
 
 def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
@@ -217,13 +250,13 @@ def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
         )
     c3sqrt_x.append(gates.H(target))
 
-    return [
-        gates.H(target), gates.CU1(d, target, math.pi / 2), gates.H(target),
-        *relative_phase_c3x,
-        gates.H(target), gates.CU1(d, target, -math.pi / 2), gates.H(target),
-        *relative_phase_c3x_dagger,
-        *c3sqrt_x,
-    ]  # fmt: skip
+    c4x = [gates.H(target), gates.CU1(d, target, math.pi / 2), gates.H(target)]
+    c4x.extend(relative_phase_c3x)
+    c4x.extend([gates.H(target), gates.CU1(d, target, -math.pi / 2), gates.H(target)])
+    c4x.extend(relative_phase_c3x_dagger)
+    c4x.extend(c3sqrt_x)
+
+    return c4x
 
 
 def _controlled_u2(
@@ -334,24 +367,30 @@ def _gidney_log_depth_ladder(
             targets = ancillas[-num_toffolis:]
             if targets != [auxiliary]:
                 for first, second, tgt in zip(firsts, seconds, targets):
-                    ladder += [
-                        gates.X(qubits[tgt]),
-                        gates.TOFFOLI(qubits[first], qubits[second], qubits[tgt]),
-                    ]
+                    ladder.extend(
+                        [
+                            gates.X(qubits[tgt]),
+                            gates.TOFFOLI(qubits[first], qubits[second], qubits[tgt]),
+                        ]
+                    )
             elif not skip_conditionally_clean:
                 ladder.append(
                     gates.TOFFOLI(
                         qubits[firsts[0]], qubits[seconds[0]], qubits[auxiliary]
                     )
                 )
-            new_ancillas += batch[offset:]
-            batch = targets + batch[:offset]
+            new_ancillas.extend(batch[offset:])
+            targets.extend(batch[:offset])
+            batch = targets
             ancillas = ancillas[:-num_toffolis]
 
-        ancillas = sorted(ancillas + new_ancillas)
-        final_controls += batch
+        ancillas.extend(new_ancillas)
+        ancillas.sort()
+        final_controls.extend(batch)
 
-    return ladder, sorted(final_controls + controls)[:-1]
+    final_controls.extend(controls)
+
+    return ladder, sorted(final_controls)[:-1]
 
 
 def _ldmcsu(
@@ -453,21 +492,20 @@ def _ldmcsu(
         controls[num_first - num_second + 2 : num_first],
     )
 
-    body = []
+    decomposition = before
     for step in range(2):
         second_gates = _mcx_vchain_dirty(*second)
-        body += [
-            *_mcx_vchain_dirty(*first),
-            gates.U3(target, *params_a),
-            *(
-                [gate.dagger() for gate in second_gates[::-1]]
-                if step == 0
-                else second_gates
-            ),
-            gates.U3(target, *params_a).dagger(),
-        ]
+        decomposition.extend(_mcx_vchain_dirty(*first))
+        decomposition.append(gates.U3(target, *params_a))
+        decomposition.extend(
+            [gate.dagger() for gate in second_gates[::-1]]
+            if step == 0
+            else second_gates
+        )
+        decomposition.append(gates.U3(target, *params_a).dagger())
+    decomposition.extend(after)
 
-    return [*before, *body, *after]
+    return decomposition
 
 
 def _ldmcu(
@@ -535,7 +573,7 @@ def _ldmcu(
                     backend.matmul(eigenvectors, backend.diag(phases)),
                     eigenvectors_dagger,
                 )
-                body += _controlled_u2(root, qubits[control], qubits[tgt], backend)
+                body.extend(_controlled_u2(root, qubits[control], qubits[tgt], backend))
             else:
                 body.append(
                     gates.CRX(
@@ -557,7 +595,7 @@ def _linear_mcx(
     and is left unchanged.
 
     Args:
-        controls (tuple[int, ...]): Ids of the control qubits. At least three are needed.
+        controls (tuple[int, ...]): Ids of the control qubits. At least four are needed.
         target (int): Id of the target qubit.
         ancilla (int): Id of the dirty auxiliary qubit.
 
@@ -571,17 +609,15 @@ def _linear_mcx(
     """
     num_controls = len(controls)
 
-    if num_controls == 3:
-        return _c3x(controls, target)
-
     if num_controls == 4:
         return _c4x(controls, target)
 
     if num_controls == 5:
-        return [
-            *_c3x(controls[:3], ancilla),
-            *_c3x((*controls[3:], ancilla), target),
-        ] * 2
+        decomposition = _c3x(controls[:3], ancilla)
+        decomposition.extend(_c3x((*controls[3:], ancilla), target))
+        decomposition *= 2
+
+        return decomposition
 
     num_second = math.ceil((num_controls + 2) / 2)
     num_first = num_controls - num_second + 1
@@ -592,12 +628,12 @@ def _linear_mcx(
         controls[num_first - num_second + 2 : num_first],
     )
 
-    return [
-        *_mcx_vchain_dirty(*first, relative_phase=True),
-        *_mcx_vchain_dirty(*second),
-        *_mcx_vchain_dirty(*first, relative_phase=True),
-        *_mcx_vchain_dirty(*second),
-    ]
+    decomposition = _mcx_vchain_dirty(*first, relative_phase=True)
+    decomposition.extend(_mcx_vchain_dirty(*second))
+    decomposition.extend(_mcx_vchain_dirty(*first, relative_phase=True))
+    decomposition.extend(_mcx_vchain_dirty(*second))
+
+    return decomposition
 
 
 def _mcx_gidney_linear_depth(
@@ -654,10 +690,18 @@ def _mcx_gidney_linear_depth(
         )
 
     middle = [gates.TOFFOLI(ancilla, controls[max(0, 6 - size)], target)]
-    block = [*ladder, *middle, *(gate.dagger() for gate in ladder[::-1])]
-    toffoli = gates.TOFFOLI(controls[0], controls[1], ancilla)
+    block = ladder.copy()
+    block.extend(middle)
+    block.extend(gate.dagger() for gate in ladder[::-1])
 
-    return [toffoli, *block, toffoli] + ([] if clean else block)
+    toffoli = gates.TOFFOLI(controls[0], controls[1], ancilla)
+    decomposition = [toffoli]
+    decomposition.extend(block)
+    decomposition.append(toffoli)
+    if not clean:
+        decomposition.extend(block)
+
+    return decomposition
 
 
 def _mcx_gidney_log_depth(
@@ -696,9 +740,59 @@ def _mcx_gidney_log_depth(
             middle = _mcx_gidney_linear_depth(
                 (ancillas[0], *final_controls), target, ancillas[1], True
             )
-        body += [*ladder, *middle, *(gate.dagger() for gate in ladder[::-1])]
+        body.extend(ladder)
+        body.extend(middle)
+        body.extend(gate.dagger() for gate in ladder[::-1])
 
     return body
+
+
+def _mcx_nie_log_depth(
+    controls: tuple[int, ...], target: int, ancilla: int, clean: bool
+) -> list[gates.Gate]:
+    """Decomposes a multi-controlled :math:`X` gate with one auxiliary qubit in logarithmic depth.
+
+    Four controls are first accumulated on ``ancilla``, which makes them conditionally
+    clean. Two of them are targets and the other two are auxiliary qubits of two
+    parallel decompositions of half the size, in which the remaining controls are
+    accumulated. For a dirty ``ancilla`` the construction is repeated, as in Ref. [1].
+    The number of gates is linear in the number of controls.
+
+    Args:
+        controls (tuple[int, ...]): Ids of the control qubits.
+        target (int): Id of the target qubit.
+        ancilla (int): Id of the auxiliary qubit.
+        clean (bool): If ``True``, ``ancilla`` is in the state :math:`\\ket{0}`. Otherwise
+            it can be in any state. It is left unchanged.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
+        the original gate.
+
+    References:
+        1. J. Nie, W. Zi, and X. Sun, *Quantum circuit for multi-qubit Toffoli gate with optimal
+        resource*, `arXiv:2402.05053 <https://arxiv.org/abs/2402.05053>`_.
+
+        2. V. Vandaele, *Asymptotically optimal quantum circuits for comparators and
+        incrementers*, `arXiv:2603.12917 <https://arxiv.org/abs/2603.12917>`_.
+    """
+    accumulate, workspace, flip = _nie_first_half(controls, target, ancilla)
+    if not accumulate:
+        return flip
+
+    block = workspace.copy()
+    block.extend(flip)
+    block.extend(gate.dagger() for gate in workspace[::-1])
+
+    decomposition = []
+    for part in (
+        (accumulate, block, accumulate)
+        if clean
+        else (block, accumulate, block, accumulate)
+    ):
+        decomposition.extend(part)
+
+    return decomposition
 
 
 def _mcx_vchain_dirty(
@@ -751,16 +845,74 @@ def _mcx_vchain_dirty(
         for i in range(num_controls - 2):
             if i > 0 or relative_phase:
                 cancel = "left" if relative_phase and i == 0 and step == 1 else "right"
-                body += _toffoli(
-                    (controls[-1 - i], ancillas[-1 - i]), targets[i], cancel
+                body.extend(
+                    _toffoli((controls[-1 - i], ancillas[-1 - i]), targets[i], cancel)
                 )
             else:
                 body.append(gates.TOFFOLI(controls[-1], ancillas[-1], target))
-        body += _toffoli(controls[:2], targets[-1])
+        body.extend(_toffoli(controls[:2], targets[-1]))
         for i in range(num_controls - 3):
-            body += _toffoli((controls[2 + i], ancillas[i]), ancillas[i + 1], "left")
+            body.extend(
+                _toffoli((controls[2 + i], ancillas[i]), ancillas[i + 1], "left")
+            )
 
     return body
+
+
+def _nie_first_half(
+    controls: tuple[int, ...], target: int, ancilla: int
+) -> tuple[list[gates.Gate], list[gates.Gate], list[gates.Gate]]:
+    """First half of the logarithmic-depth decomposition of Ref. [1] of a multi-controlled :math:`X`.
+
+    It computes the AND of the controls on ``target`` if ``target`` and ``ancilla``
+    are in the state :math:`\\ket{0}`, and leaves the other qubits in a state that
+    the inverse of the second list restores. With five controls or less, the gate is
+    decomposed directly, and the first two lists are empty.
+
+    Args:
+        controls (tuple[int, ...]): Ids of the control qubits.
+        target (int): Id of the target qubit.
+        ancilla (int): Id of the auxiliary qubit.
+
+    Returns:
+        tuple(list[:class:`qibo.gates.abstract.Gate`], ...): Gates that accumulate four
+        controls on ``ancilla``, gates that accumulate the others on two of the four
+        controls, and gates that write the result on ``target``.
+
+    References:
+        1. J. Nie, W. Zi, and X. Sun, *Quantum circuit for multi-qubit Toffoli gate with optimal
+        resource*, `arXiv:2402.05053 <https://arxiv.org/abs/2402.05053>`_.
+    """
+    num_controls = len(controls)
+    if num_controls <= 5:
+        if num_controls == 1:
+            decomposition = [gates.CNOT(controls[0], target)]
+        elif num_controls == 2:
+            decomposition = [gates.TOFFOLI(*controls, target)]
+        elif num_controls == 3:
+            decomposition = _c3x(controls, target)
+        elif num_controls == 4:
+            decomposition = _c4x(controls, target)
+        else:
+            decomposition = _linear_mcx(controls, target, ancilla)
+
+        return [], [], decomposition
+
+    first, rest = controls[:4], controls[4:]
+    half = len(rest) // 2
+    workspace = [gates.X(qubit) for qubit in first]
+    for group, group_target, group_ancilla in (
+        (rest[:half], first[0], first[1]),
+        (rest[half:], first[2], first[3]),
+    ):
+        for part in _nie_first_half(group, group_target, group_ancilla):
+            workspace.extend(part)
+
+    return (
+        _c4x(first, ancilla),
+        workspace,
+        _c3x((ancilla, first[0], first[2]), target),
+    )
 
 
 def _toffoli(
@@ -791,25 +943,24 @@ def _toffoli(
         <https://doi.org/10.1103/PhysRevA.93.022311>`_.
     """
     angle = math.pi / 4
-
-    return [
-        *(
-            []
-            if cancel == "left"
-            else [
-                gates.RY(target, -angle),
-                gates.CNOT(controls[0], target),
-                gates.RY(target, -angle),
-            ]
-        ),
-        gates.CNOT(controls[1], target),
-        *(
-            []
-            if cancel == "right"
-            else [
-                gates.RY(target, angle),
-                gates.CNOT(controls[0], target),
-                gates.RY(target, angle),
-            ]
-        ),
+    first_half = [
+        gates.RY(target, -angle),
+        gates.CNOT(controls[0], target),
+        gates.RY(target, -angle),
     ]
+    second_half = [
+        gates.RY(target, angle),
+        gates.CNOT(controls[0], target),
+        gates.RY(target, angle),
+    ]
+
+    toffoli = []
+    if cancel != "left":
+        toffoli.extend(first_half)
+
+    toffoli.append(gates.CNOT(controls[1], target))
+
+    if cancel != "right":
+        toffoli.extend(second_half)
+
+    return toffoli
