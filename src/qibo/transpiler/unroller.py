@@ -111,8 +111,8 @@ class Unroller:
                 that a multi-controlled gate does not act on are used as dirty auxiliary
                 qubits in its decomposition, which makes the cost of a multi-controlled
                 :class:`qibo.gates.X` linear in the number of controls. They can be in
-                any state and are left unchanged. Not using dirty auxuliary qubits makes
-                the gate count quadractic in the nunmber of controls. Defaults to ``False``.
+                any state and are left unchanged. Not using dirty auxiliary qubits makes
+                the gate count quadratic in the number of controls. Defaults to ``False``.
         """
 
     def __call__(self, circuit: Circuit) -> Circuit:

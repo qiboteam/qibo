@@ -1,4 +1,4 @@
-"""Decompositions of multi-controlled single-qubit gates without auxiliary qubits."""
+"""Decompositions of multi-controlled single-qubit gates, with or without auxiliary qubits."""
 
 import math
 
@@ -15,6 +15,9 @@ def multi_controlled_decomposition(
     controls: tuple[int, ...],
     target: int,
     free: tuple[int, ...] = (),
+    *,
+    clean: tuple[int, ...] = (),
+    minimize_toffolis: bool = False,
     backend: Backend = None,
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled single-qubit gate, with or without auxiliary qubits.
@@ -25,9 +28,16 @@ def multi_controlled_decomposition(
     Ref. [1], and other gates quadratically following Ref. [2]. If ``free`` qubits
     are given, a multi-controlled :math:`X` gate uses them as dirty auxiliary
     qubits, which makes its cost linear following Ref. [3]. Other gates do not
-    benefit from auxiliary qubits, and ``free`` is ignored. This is the decomposition
-    used by :meth:`qibo.gates.Gate.decompose` for gates controlled by more than
-    one qubit.
+    benefit from auxiliary qubits, and ``free`` and ``clean`` are ignored. This is
+    the decomposition used by :meth:`qibo.gates.Gate.decompose` for gates controlled
+    by more than one qubit.
+
+    If ``minimize_toffolis`` is ``True``, a multi-controlled :math:`X` gate with at
+    least one auxiliary qubit is decomposed following Ref. [4] instead. This uses
+    :math:`2k - 3` Toffoli gates for :math:`k` controls with clean qubits, and
+    :math:`4k - 8` with dirty qubits, which is the lowest count, but more CNOTs
+    than the default. Two auxiliary qubits make the depth logarithmic in :math:`k`,
+    and one makes it linear. Clean qubits are preferred over dirty ones.
 
     Args:
         unitary (ArrayLike): :math:`2 \\times 2` unitary matrix of the target gate.
@@ -36,6 +46,12 @@ def multi_controlled_decomposition(
         free (tuple[int, ...], optional): Ids of free qubits that can be used as dirty
             auxiliary qubits, that is, they can be in any state and are left
             unchanged. Defaults to ``()``, which uses no auxiliary qubits.
+        clean (tuple[int, ...], optional): Ids of free qubits that are known to be in
+            the state :math:`\\ket{0}`, and are left in that state. They are used as
+            dirty qubits unless ``minimize_toffolis`` is ``True``. Defaults to ``()``.
+        minimize_toffolis (bool, optional): If ``True``, a multi-controlled :math:`X`
+            gate with auxiliary qubits minimizes the number of Toffoli gates instead
+            of the number of CNOTs. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend of
             ``unitary``, which is only used to move it to the CPU, since the
             decomposition is always computed with NumPy. If ``None``, it uses the
@@ -58,6 +74,10 @@ def multi_controlled_decomposition(
         3. R. Iten, R. Colbeck, I. Kukuljan, J. Home, and M. Christandl,
         *Quantum circuits for isometries*, `Phys. Rev. A 93, 032318 (2016)
         <https://doi.org/10.1103/PhysRevA.93.032318>`_.
+
+        4. T. Khattar and C. Gidney, *Rise of conditionally clean ancillae for efficient
+        quantum circuit constructions*, `Quantum 9, 1752 (2025)
+        <https://doi.org/10.22331/q-2025-05-21-1752>`_.
     """
     backend = _check_backend(backend)
 
@@ -65,27 +85,36 @@ def multi_controlled_decomposition(
     # is computed on the CPU with NumPy whatever the backend of ``unitary`` is.
     unitary, backend = backend.to_numpy(unitary), _numpy_backend()
 
-    controls, free = tuple(controls), tuple(free)
+    controls, free, clean = tuple(controls), tuple(free), tuple(clean)
     if not controls:
         raise_error(ValueError, "At least one control qubit is needed.")
 
-    if set(free) & {*controls, target}:
+    if set(free) & {*controls, target} or set(clean) & {*controls, target, *free}:
         raise_error(
             ValueError,
-            "Free qubits cannot coincide with the target or control qubits.",
+            "Free qubits cannot coincide with the target or control qubits, "
+            + "or be both clean and dirty.",
         )
 
     if len(controls) == 1:
         decomposition = _controlled_u2(unitary, controls[0], target, backend)
     elif (
-        free
+        (free or clean)
         and len(controls) > 2
         and backend.matrix_norm(unitary - backend.matrices.X) < PRECISION_TOL
     ):
-        if len(free) >= len(controls) - 2:
-            decomposition = _mcx_vchain_dirty(controls, target, free)
+        if minimize_toffolis and len(clean) >= 2:
+            decomposition = _mcx_gidney_log_depth(controls, target, clean[:2], True)
+        elif minimize_toffolis and clean:
+            decomposition = _mcx_gidney_linear_depth(controls, target, clean[0], True)
+        elif minimize_toffolis and len(free) >= 2:
+            decomposition = _mcx_gidney_log_depth(controls, target, free[:2], False)
+        elif minimize_toffolis:
+            decomposition = _mcx_gidney_linear_depth(controls, target, free[0], False)
+        elif len(free) + len(clean) >= len(controls) - 2:
+            decomposition = _mcx_vchain_dirty(controls, target, (*free, *clean))
         else:
-            decomposition = _linear_mcx(controls, target, free[0])
+            decomposition = _linear_mcx(controls, target, (*free, *clean)[0])
     elif backend.abs(backend.det(unitary) - 1.0) < PRECISION_TOL:
         decomposition = _ldmcsu(unitary, controls, target, backend)
     else:
@@ -134,8 +163,9 @@ def _c3x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
 def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
     """Decomposes a four-controlled :math:`X` gate into :math:`36` CNOTs.
 
-    The gate is a relative-phase three-controlled :math:`X` gate, its inverse and a
-    three-controlled :math:`\\sqrt{X}` gate, surrounded by controlled phases.
+    The gate is a relative-phase three-controlled :math:`X` gate (Ref. [2]), its inverse
+    and a three-controlled :math:`\\sqrt{X}` gate, surrounded by controlled phases, following
+    Lemma 7.5 of Ref. [1].
 
     Args:
         controls (tuple[int, ...]): Ids of the four control qubits.
@@ -144,6 +174,14 @@ def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
+
+    References:
+        1. A. Barenco *et al.*, *Elementary gates for quantum computation*,
+        `Phys. Rev. A 52, 3457 (1995) <https://doi.org/10.1103/PhysRevA.52.3457>`_.
+
+        2. D. Maslov, *Advantages of using relative-phase Toffoli gates with an application to
+        multiple control Toffoli optimization*, `Phys. Rev. A 93, 022311 (2016)
+        <https://doi.org/10.1103/PhysRevA.93.022311>`_.
     """
     a, b, c, d = controls
     angle = math.pi / 8
@@ -255,6 +293,67 @@ def _eig_u2(unitary: ArrayLike, backend: Backend = None) -> tuple:
     return eigenvalues, eigenvectors
 
 
+def _gidney_log_depth_ladder(
+    qubits: tuple[int, ...], skip_conditionally_clean: bool = False
+) -> tuple[list[gates.Gate], list[int]]:
+    """Accumulates the AND of the controls in logarithmic depth, as in Fig. 4b of Ref. [1].
+
+    The accumulation uses conditionally clean ancillae, which are qubits that are in
+    a known state if the qubit that stores the AND of the controls they depend on is on.
+
+    Args:
+        qubits (tuple[int, ...]): Ids of the control qubits, followed by the id of the
+            auxiliary qubit.
+        skip_conditionally_clean (bool, optional): If ``True``, the first Toffoli gate,
+            which writes the AND of two controls on the auxiliary qubit, is not
+            included. Defaults to ``False``.
+
+    Returns:
+        tuple(list[:class:`qibo.gates.abstract.Gate`], list[int]): Gates of the ladder,
+        and positions in ``qubits`` of the controls that still have to be combined with
+        the auxiliary qubit.
+
+    References:
+        1. T. Khattar and C. Gidney, *Rise of conditionally clean ancillae for efficient
+        quantum circuit constructions*, `Quantum 9, 1752 (2025)
+        <https://doi.org/10.22331/q-2025-05-21-1752>`_.
+    """
+    auxiliary = len(qubits) - 1
+    controls = list(range(auxiliary))
+    ancillas, final_controls, ladder = [auxiliary], [], []
+
+    while len(controls) > 1:
+        batch_size = min(len(ancillas) + 1, len(controls))
+        controls, batch = controls[batch_size:], controls[:batch_size]
+        new_ancillas = []
+        while len(batch) > 1:
+            num_toffolis = len(batch) // 2
+            offset = len(batch) % 2
+            firsts = batch[offset : offset + num_toffolis]
+            seconds = batch[offset + num_toffolis :]
+            targets = ancillas[-num_toffolis:]
+            if targets != [auxiliary]:
+                for first, second, tgt in zip(firsts, seconds, targets):
+                    ladder += [
+                        gates.X(qubits[tgt]),
+                        gates.TOFFOLI(qubits[first], qubits[second], qubits[tgt]),
+                    ]
+            elif not skip_conditionally_clean:
+                ladder.append(
+                    gates.TOFFOLI(
+                        qubits[firsts[0]], qubits[seconds[0]], qubits[auxiliary]
+                    )
+                )
+            new_ancillas += batch[offset:]
+            batch = targets + batch[:offset]
+            ancillas = ancillas[:-num_toffolis]
+
+        ancillas = sorted(ancillas + new_ancillas)
+        final_controls += batch
+
+    return ladder, sorted(final_controls + controls)[:-1]
+
+
 def _ldmcsu(
     unitary: ArrayLike,
     controls: tuple[int, ...],
@@ -265,8 +364,7 @@ def _ldmcsu(
     themselves as dirty auxiliary qubits.
 
     The controls are split in two halves, and each half borrows the qubits of the
-    other for a multi-controlled :math:`X` gate (see Ref. [1] in
-    :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`).
+    other for a multi-controlled :math:`X` gate, following Ref. [1].
 
     Args:
         unitary (ArrayLike): :math:`2 \\times 2` unitary matrix with determinant one.
@@ -279,6 +377,12 @@ def _ldmcsu(
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
+
+    References:
+        1. R. Vale, T. M. D. Azevedo, I. C. S. Araújo, I. F. Araujo, and A. J. da Silva,
+        *Circuit Decomposition of Multi-Controlled Special Unitary Single-Qubit Gates*,
+        `IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst.
+        <https://doi.org/10.1109/TCAD.2023.3327102>`_.
     """
     backend = _check_backend(backend)
 
@@ -375,7 +479,7 @@ def _ldmcu(
     """Decomposes a multi-controlled single-qubit gate using controlled rotations.
 
     The roots :math:`U^{1 / 2^{k}}` of the gate, which are applied controlled by
-    one qubit, are obtained from its eigendecomposition.
+    one qubit, are obtained from its eigendecomposition, following Ref. [1].
 
     Args:
         unitary (ArrayLike): :math:`2 \\times 2` unitary matrix of the target gate.
@@ -388,6 +492,11 @@ def _ldmcu(
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
+
+    References:
+        1. A. J. da Silva and D. K. Park, *Linear-depth quantum circuits for multiqubit
+        controlled gates*, `Phys. Rev. A 106, 042602 (2022)
+        <https://doi.org/10.1103/PhysRevA.106.042602>`_.
     """
     backend = _check_backend(backend)
 
@@ -442,8 +551,7 @@ def _linear_mcx(
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled :math:`X` gate with one dirty auxiliary qubit.
 
-    This is Lemma 9 of `Iten et al., Phys. Rev. A 93, 032318 (2016)
-    <https://doi.org/10.1103/PhysRevA.93.032318>`_. The controls are split in two
+    This is Lemma 9 of Ref. [1]. The controls are split in two
     groups, and the gate is two pairs of smaller multi-controlled :math:`X` gates,
     the first of each pair targeting the auxiliary qubit, which can be in any state
     and is left unchanged.
@@ -456,6 +564,10 @@ def _linear_mcx(
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
+
+    References:
+        1. R. Iten, R. Colbeck, I. Kukuljan, J. Home, and M. Christandl, *Quantum circuits for
+        isometries*, `Phys. Rev. A 93, 032318 (2016) <https://doi.org/10.1103/PhysRevA.93.032318>`_.
     """
     num_controls = len(controls)
 
@@ -488,6 +600,107 @@ def _linear_mcx(
     ]
 
 
+def _mcx_gidney_linear_depth(
+    controls: tuple[int, ...], target: int, ancilla: int, clean: bool
+) -> list[gates.Gate]:
+    """Decomposes a multi-controlled :math:`X` gate with one auxiliary qubit in linear depth.
+
+    This is Fig. 3 of Ref. [1] if the ancilla is clean, with :math:`2k - 3` Toffoli
+    gates for :math:`k` controls, and Fig. 5 if it is dirty, with :math:`4k - 8`.
+
+    Args:
+        controls (tuple[int, ...]): Ids of the control qubits. At least three are needed.
+        target (int): Id of the target qubit.
+        ancilla (int): Id of the auxiliary qubit.
+        clean (bool): If ``True``, ``ancilla`` is in the state :math:`\\ket{0}`. Otherwise
+            it can be in any state. It is left unchanged.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
+        the original gate.
+
+    References:
+        1. T. Khattar and C. Gidney, *Rise of conditionally clean ancillae for efficient
+        quantum circuit constructions*, `Quantum 9, 1752 (2025)
+        <https://doi.org/10.22331/q-2025-05-21-1752>`_.
+    """
+    qubits = (ancilla, *controls)
+    size = len(qubits)
+
+    ladder = []
+    for i in range(2, size - 2, 2):
+        ladder.extend(
+            [
+                gates.TOFFOLI(qubits[i + 1], qubits[i + 2], qubits[i]),
+                gates.X(qubits[i]),
+            ]
+        )
+    first, second, last = (
+        (size - 3, size - 5, size - 6) if size % 2 else (size - 1, size - 4, size - 5)
+    )
+    if last > 0:
+        ladder.extend(
+            [
+                gates.TOFFOLI(qubits[first], qubits[second], qubits[last]),
+                gates.X(qubits[last]),
+            ]
+        )
+    for i in range(last, 2, -2):
+        ladder.extend(
+            [
+                gates.TOFFOLI(qubits[i], qubits[i - 1], qubits[i - 2]),
+                gates.X(qubits[i - 2]),
+            ]
+        )
+
+    middle = [gates.TOFFOLI(ancilla, controls[max(0, 6 - size)], target)]
+    block = [*ladder, *middle, *(gate.dagger() for gate in ladder[::-1])]
+    toffoli = gates.TOFFOLI(controls[0], controls[1], ancilla)
+
+    return [toffoli, *block, toffoli] + ([] if clean else block)
+
+
+def _mcx_gidney_log_depth(
+    controls: tuple[int, ...], target: int, ancillas: tuple[int, int], clean: bool
+) -> list[gates.Gate]:
+    """Decomposes a multi-controlled :math:`X` gate with two auxiliary qubits in logarithmic depth.
+
+    This is Fig. 4 of Ref. [1] if the ancillae are clean, with :math:`2k - 3` Toffoli
+    gates for :math:`k` controls, and Fig. 6 if they are dirty, with :math:`4k - 8`.
+
+    Args:
+        controls (tuple[int, ...]): Ids of the control qubits. At least three are needed.
+        target (int): Id of the target qubit.
+        ancillas (tuple[int, int]): Ids of the two auxiliary qubits.
+        clean (bool): If ``True``, ``ancillas`` are in the state :math:`\\ket{0}`.
+            Otherwise they can be in any state. They are left unchanged.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
+        the original gate.
+
+    References:
+        1. T. Khattar and C. Gidney, *Rise of conditionally clean ancillae for efficient
+        quantum circuit constructions*, `Quantum 9, 1752 (2025)
+        <https://doi.org/10.22331/q-2025-05-21-1752>`_.
+    """
+    body = []
+    for skip_conditionally_clean in (False,) if clean else (False, True):
+        ladder, positions = _gidney_log_depth_ladder(
+            (*controls, ancillas[0]), skip_conditionally_clean
+        )
+        final_controls = tuple(controls[i] for i in positions)
+        if len(final_controls) == 1:
+            middle = [gates.TOFFOLI(ancillas[0], final_controls[0], target)]
+        else:
+            middle = _mcx_gidney_linear_depth(
+                (ancillas[0], *final_controls), target, ancillas[1], True
+            )
+        body += [*ladder, *middle, *(gate.dagger() for gate in ladder[::-1])]
+
+    return body
+
+
 def _mcx_vchain_dirty(
     controls: tuple[int, ...],
     target: int,
@@ -496,9 +709,8 @@ def _mcx_vchain_dirty(
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled :math:`X` gate with :math:`k - 2` dirty auxiliary qubits.
 
-    This is Lemma 8 of `Iten et al., Phys. Rev. A 93, 032318 (2016)
-    <https://doi.org/10.1103/PhysRevA.93.032318>`_, using Toffoli gates up to a
-    relative phase wherever the phases cancel. The auxiliary qubits can be in any
+    This is Lemma 8 of Ref. [1], using Toffoli gates up to a relative phase
+    (Ref. [2]) wherever the phases cancel. The auxiliary qubits can be in any
     state and are left unchanged.
 
     Args:
@@ -512,6 +724,14 @@ def _mcx_vchain_dirty(
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
+
+    References:
+        1. R. Iten, R. Colbeck, I. Kukuljan, J. Home, and M. Christandl, *Quantum circuits for
+        isometries*, `Phys. Rev. A 93, 032318 (2016) <https://doi.org/10.1103/PhysRevA.93.032318>`_.
+
+        2. D. Maslov, *Advantages of using relative-phase Toffoli gates with an application to
+        multiple control Toffoli optimization*, `Phys. Rev. A 93, 022311 (2016)
+        <https://doi.org/10.1103/PhysRevA.93.022311>`_.
     """
     num_controls = len(controls)
 
@@ -549,7 +769,8 @@ def _toffoli(
     """Toffoli gate up to a relative phase, with :math:`3` CNOTs instead of :math:`6`.
 
     The circuit is two identical halves around a central CNOT, so a half can be
-    removed if it is cancelled by a neighbouring circuit.
+    removed if it is cancelled by a neighbouring circuit. See Sec. 6.2 of Ref. [1] and
+    Ref. [2].
 
     Args:
         controls (tuple[int, int]): Ids of the two control qubits.
@@ -560,6 +781,14 @@ def _toffoli(
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates of the requested circuit.
+
+    References:
+        1. A. Barenco *et al.*, *Elementary gates for quantum computation*,
+        `Phys. Rev. A 52, 3457 (1995) <https://doi.org/10.1103/PhysRevA.52.3457>`_.
+
+        2. D. Maslov, *Advantages of using relative-phase Toffoli gates with an application to
+        multiple control Toffoli optimization*, `Phys. Rev. A 93, 022311 (2016)
+        <https://doi.org/10.1103/PhysRevA.93.022311>`_.
     """
     angle = math.pi / 4
 

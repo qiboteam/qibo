@@ -112,6 +112,9 @@ class X(Gate):
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
                 ``mpmmath_dps`` defaults to :math:`256`.
+                For gates controlled by more than two qubits and ``method = "standard"``,
+                the keyword arguments ``clean`` and ``minimize_toffolis`` are passed to
+                :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Set of one-qubit, :class:`qibo.gates.CNOT`,
@@ -136,7 +139,13 @@ class X(Gate):
 
         backend = _numpy_backend()
         return multi_controlled_decomposition(
-            backend.matrices.X, controls, target, free, backend
+            unitary=backend.matrices.X,
+            controls=controls,
+            target=target,
+            free=free,
+            clean=kwargs.get("clean", ()),
+            minimize_toffolis=kwargs.get("minimize_toffolis", False),
+            backend=backend,
         )
 
     def decompose(self, *free: int, method: str = "standard", **kwargs) -> list[Gate]:
