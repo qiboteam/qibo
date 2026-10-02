@@ -142,7 +142,7 @@ class Circuit:
         circuit = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
         circuit = Circuit(wire_names=["A", "B", "C", "D", "E"])
 
-    Args:
+    Attributes:
         nqubits (int | list, optional): Number of qubits in the circuit or a list of wire names.
         wire_names (list, optional): List of wire names
         init_kwargs (dict): a dictionary with the following keys
