@@ -30,7 +30,7 @@ def multi_controlled_decomposition(
     are given, a multi-controlled :math:`X` gate uses them as dirty auxiliary
     qubits, which makes its cost linear following Ref. [3]. Other gates do not
     benefit from auxiliary qubits, and ``free`` and ``clean`` are ignored. This is
-    the decomposition used by :meth:`qibo.gates.Gate.decompose` for gates controlled
+    the decomposition used by :meth:`qibo.gates.abstract.Gate.decompose` for gates controlled
     by more than one qubit.
 
     If ``minimize_toffolis`` is ``True``, a multi-controlled :math:`X` gate with at
@@ -77,7 +77,7 @@ def multi_controlled_decomposition(
         1. R. Vale, T. M. D. Azevedo, I. C. S. Araújo, I. F. Araujo, and A. J. da Silva,
         *Circuit Decomposition of Multi-Controlled Special Unitary Single-Qubit Gates*,
         `IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst.
-        <https://doi.org/10.1109/TCAD.2023.3327102>`_.
+        <https://doi.org/10.1109/TCAD.2023.3327102>`_
 
         2. A. J. da Silva and D. K. Park, *Linear-depth quantum circuits for multiqubit
         controlled gates*, `Phys. Rev. A 106, 042602 (2022)
@@ -421,7 +421,7 @@ def _ldmcsu(
         1. R. Vale, T. M. D. Azevedo, I. C. S. Araújo, I. F. Araujo, and A. J. da Silva,
         *Circuit Decomposition of Multi-Controlled Special Unitary Single-Qubit Gates*,
         `IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst.
-        <https://doi.org/10.1109/TCAD.2023.3327102>`_.
+        <https://doi.org/10.1109/TCAD.2023.3327102>`_
     """
     backend = _check_backend(backend)
 

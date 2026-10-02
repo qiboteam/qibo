@@ -90,7 +90,20 @@ class NativeGates(Flag, metaclass=FlagMeta):
 
 # TODO: Make setting single-qubit native gates more flexible
 class Unroller:
-    """Decomposes a circuit to native gates."""
+    """Decomposes a circuit to native gates.
+
+    Args:
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
+            Native gates to use in the transpiled circuit.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use for
+            gate matrix. Defaults to ``None``.
+        use_dirty_ancillas (bool, optional): If ``True``, the qubits of the circuit
+            that a multi-controlled gate does not act on are used as dirty auxiliary
+            qubits in its decomposition, which makes the cost of a multi-controlled
+            :class:`qibo.gates.X` linear in the number of controls. They can be in
+            any state and are left unchanged. Not using dirty auxiliary qubits makes
+            the gate count quadratic in the number of controls. Defaults to ``False``.
+    """
 
     def __init__(
         self,
@@ -101,19 +114,6 @@ class Unroller:
         self.native_gates = native_gates
         self.backend = backend
         self.use_dirty_ancillas = use_dirty_ancillas
-        """Initializes the unroller.
-
-        Args:
-            native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
-                Native gates to use in the transpiled circuit.
-            backend (:class:`qibo.backends.Backend`): Backend to use for gate matrix.
-            use_dirty_ancillas (bool, optional): If ``True``, the qubits of the circuit
-                that a multi-controlled gate does not act on are used as dirty auxiliary
-                qubits in its decomposition, which makes the cost of a multi-controlled
-                :class:`qibo.gates.X` linear in the number of controls. They can be in
-                any state and are left unchanged. Not using dirty auxiliary qubits makes
-                the gate count quadratic in the number of controls. Defaults to ``False``.
-        """
 
     def __call__(self, circuit: Circuit) -> Circuit:
         """Decomposes a circuit to native gates.
