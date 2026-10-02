@@ -3,7 +3,6 @@
 import json
 from abc import abstractmethod
 from collections.abc import Iterable, Sequence
-from functools import cache
 from math import pi
 
 import sympy
@@ -200,24 +199,21 @@ class Gate:
 
         return new_gate
 
-    def decompose(
-        self, *free, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ):
+    def decompose(self, *free, method: str = "standard", **kwargs):
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
         Decompositions are based on `Phys. Rev. A 52, 3457 (1995)
         <https://doi.org/10.1103/PhysRevA.52.3457>`_.
         If the gate is already controlled, it recursively decomposes the base gate and updates
         the control qubits accordingly. The exception are one-qubit gates controlled by more
-        than one qubit, which are decomposed without auxiliary qubits by
+        than one qubit, which are decomposed by
         :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`
-        (only if ``method="standard"``).
+        (only if ``method="standard"``). Without ``free`` qubits no (dirty) auxiliary qubits
+        are used.
 
         Args:
-            free (int): Ids of free qubits to use for the gate decomposition.
-            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
-                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            free (int): Ids of free qubits that can be used as dirty auxiliary qubits,
+                that is, they can be in any state and are left unchanged.
             method (str, optional): Choice of gate set for the decomposition.
                 If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
                 :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
@@ -253,16 +249,20 @@ class Gate:
 
             # Step 2: Multi-controlled one-qubit gates have a dedicated decomposition
             if ncontrols > 1 and len(self.target_qubits) == 1 and method == "standard":
+                from qibo.backends import _numpy_backend
                 from qibo.transpiler.multicontrolled_decompositions import (
                     multi_controlled_decomposition,
                 )
 
                 backend = _numpy_backend()
+                base_gate = self.__class__(
+                    *map(_to_numpy, self.init_args), **self.init_kwargs
+                )
                 return multi_controlled_decomposition(
-                    self.matrix(backend),
+                    base_gate.matrix(backend),
                     self.control_qubits,
                     self.target_qubits[0],
-                    use_toffolis,
+                    free,
                     backend,
                 )
 
@@ -270,7 +270,6 @@ class Gate:
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
             decomposed = base_gate._base_decompose(
                 *free,
-                use_toffolis=use_toffolis,
                 ncontrols=ncontrols,
                 method=method,
                 **kwargs,
@@ -282,7 +281,7 @@ class Gate:
                     gate.control_qubits += self.control_qubits
             return decomposed
 
-        return self._base_decompose(*free, use_toffolis=use_toffolis, method=method)
+        return self._base_decompose(*free, method=method)
 
     @staticmethod
     def from_dict(raw: dict):
@@ -504,9 +503,7 @@ class Gate:
         """
         return json.dumps(self.raw)
 
-    def _base_decompose(
-        self, *free, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ):
+    def _base_decompose(self, *free, method: str = "standard", **kwargs):
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by
@@ -514,9 +511,6 @@ class Gate:
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
-            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
-                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
             kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
                 one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
                 of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
@@ -771,12 +765,16 @@ class ParametrizedGate(Gate):
         self.parameters = tuple(params)
 
 
-@cache
-def _numpy_backend():
-    """Cached Numpy backend, for computations that must not use the global backend.
+def _to_numpy(array: ArrayLike) -> ArrayLike:
+    """Converts a CuPy or PyTorch array to NumPy, and returns any other object unchanged.
 
-    The import is local due to circular imports.
+    This does not use any backend, since the arrays held by a gate can come from
+    a backend that is not the global one.
     """
-    from qibo.backends import NumpyBackend
+    if hasattr(array, "get") and hasattr(array, "shape"):
+        return array.get()
 
-    return NumpyBackend()
+    if hasattr(array, "detach"):
+        return array.detach().cpu().numpy()
+
+    return array
