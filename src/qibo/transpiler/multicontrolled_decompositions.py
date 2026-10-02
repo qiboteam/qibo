@@ -4,9 +4,8 @@ import math
 
 from numpy.typing import ArrayLike
 
-import qibo
 from qibo import gates
-from qibo.backends import Backend
+from qibo.backends import Backend, _check_backend, _numpy_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.transpiler.unitary_decompositions import u3_decomposition
 
@@ -15,27 +14,32 @@ def multi_controlled_decomposition(
     unitary: ArrayLike,
     controls: tuple[int, ...],
     target: int,
-    use_toffolis: bool = True,
+    free: tuple[int, ...] = (),
     backend: Backend = None,
 ) -> list[gates.Gate]:
-    """Decomposes a multi-controlled single-qubit gate without auxiliary qubits.
+    """Decomposes a multi-controlled single-qubit gate, with or without auxiliary qubits.
 
-    The decomposition is exact, including the global phase. Gates with
-    :math:`\\det(U) = 1` are decomposed with a number of CNOTs that grows linearly
-    with the number of controls following Ref. [1], and other gates quadratically
-    following Ref. [2]. This is the decomposition used by
-    :meth:`qibo.gates.Gate.decompose` for gates controlled by more than one qubit.
+    The decomposition is exact, including the global phase. By default, no
+    auxiliary qubits are used. Gates with :math:`\\det(U) = 1` are decomposed with
+    a number of CNOTs that grows linearly with the number of controls following
+    Ref. [1], and other gates quadratically following Ref. [2]. If ``free`` qubits
+    are given, a multi-controlled :math:`X` gate uses them as dirty auxiliary
+    qubits, which makes its cost linear following Ref. [3]. Other gates do not
+    benefit from auxiliary qubits, and ``free`` is ignored. This is the decomposition
+    used by :meth:`qibo.gates.Gate.decompose` for gates controlled by more than
+    one qubit.
 
     Args:
         unitary (ArrayLike): :math:`2 \\times 2` unitary matrix of the target gate.
         controls (tuple[int, ...]): Ids of the control qubits.
         target (int): Id of the target qubit.
-        use_toffolis (bool, optional): If ``False``, :class:`qibo.gates.TOFFOLI`
-            gates are decomposed into :class:`qibo.gates.CNOT` and one-qubit gates.
-            Defaults to ``True``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be
-            used in the calculation. If ``None``, it uses the current backend.
-            Defaults to ``None``.
+        free (tuple[int, ...], optional): Ids of free qubits that can be used as dirty
+            auxiliary qubits, that is, they can be in any state and are left
+            unchanged. Defaults to ``()``, which uses no auxiliary qubits.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend of
+            ``unitary``, which is only used to move it to the CPU, since the
+            decomposition is always computed with NumPy. If ``None``, it uses the
+            current backend. Defaults to ``None``.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
@@ -50,30 +54,44 @@ def multi_controlled_decomposition(
         2. A. J. da Silva and D. K. Park, *Linear-depth quantum circuits for multiqubit
         controlled gates*, `Phys. Rev. A 106, 042602 (2022)
         <https://doi.org/10.1103/PhysRevA.106.042602>`_.
-    """
-    backend = qibo.backends._check_backend(backend)
 
-    controls = tuple(controls)
+        3. R. Iten, R. Colbeck, I. Kukuljan, J. Home, and M. Christandl,
+        *Quantum circuits for isometries*, `Phys. Rev. A 93, 032318 (2016)
+        <https://doi.org/10.1103/PhysRevA.93.032318>`_.
+    """
+    backend = _check_backend(backend)
+
+    # The decomposition of a ``2 x 2`` matrix does not need an accelerator, so it
+    # is computed on the CPU with NumPy whatever the backend of ``unitary`` is.
+    unitary, backend = backend.to_numpy(unitary), _numpy_backend()
+
+    controls, free = tuple(controls), tuple(free)
     if not controls:
         raise_error(ValueError, "At least one control qubit is needed.")
 
+    if set(free) & {*controls, target}:
+        raise_error(
+            ValueError,
+            "Free qubits cannot coincide with the target or control qubits.",
+        )
+
     if len(controls) == 1:
         decomposition = _controlled_u2(unitary, controls[0], target, backend)
+    elif (
+        free
+        and len(controls) > 2
+        and backend.matrix_norm(unitary - backend.matrices.X) < PRECISION_TOL
+    ):
+        if len(free) >= len(controls) - 2:
+            decomposition = _mcx_vchain_dirty(controls, target, free)
+        else:
+            decomposition = _linear_mcx(controls, target, free[0])
     elif backend.abs(backend.det(unitary) - 1.0) < PRECISION_TOL:
         decomposition = _ldmcsu(unitary, controls, target, backend)
     else:
         decomposition = _ldmcu(unitary, controls, target, backend)
 
-    if use_toffolis:
-        return decomposition
-
-    return [
-        sub_gate
-        for gate in decomposition
-        for sub_gate in (
-            gate.decompose() if isinstance(gate, gates.TOFFOLI) else [gate]
-        )
-    ]
+    return decomposition
 
 
 def _c3x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
@@ -113,6 +131,63 @@ def _c3x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
     ]
 
 
+def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
+    """Decomposes a four-controlled :math:`X` gate into :math:`36` CNOTs.
+
+    The gate is a relative-phase three-controlled :math:`X` gate, its inverse and a
+    three-controlled :math:`\\sqrt{X}` gate, surrounded by controlled phases.
+
+    Args:
+        controls (tuple[int, ...]): Ids of the four control qubits.
+        target (int): Id of the target qubit.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
+        the original gate.
+    """
+    a, b, c, d = controls
+    angle = math.pi / 8
+
+    relative_phase_c3x = [
+        gates.H(d), gates.T(d), gates.CNOT(c, d), gates.TDG(d), gates.H(d),
+        gates.CNOT(a, d), gates.T(d), gates.CNOT(b, d), gates.TDG(d),
+        gates.CNOT(a, d), gates.T(d), gates.CNOT(b, d), gates.TDG(d), gates.H(d),
+        gates.T(d), gates.CNOT(c, d), gates.TDG(d), gates.H(d),
+    ]  # fmt: skip
+    relative_phase_c3x_dagger = [
+        gates.H(d), gates.T(d), gates.CNOT(c, d), gates.TDG(d), gates.H(d),
+        gates.T(d), gates.CNOT(b, d), gates.TDG(d), gates.CNOT(a, d), gates.T(d),
+        gates.CNOT(b, d), gates.TDG(d), gates.CNOT(a, d), gates.H(d), gates.T(d),
+        gates.CNOT(c, d), gates.TDG(d), gates.H(d),
+    ]  # fmt: skip
+
+    # Three-controlled square root of X. ``("p", q, s)`` is a controlled phase from
+    # ``q`` to the target by ``s * angle``, and ``("cx", q, r)`` is a CNOT from ``q``
+    # to ``r``. Each step is preceded by a Hadamard gate on the target.
+    steps = [
+        ("p", a, 1), ("cx", a, b), ("p", b, -1), ("cx", a, b), ("p", b, 1),
+        ("cx", b, c), ("p", c, -1), ("cx", a, c), ("p", c, 1), ("cx", b, c),
+        ("p", c, -1), ("cx", a, c), ("p", c, 1),
+    ]  # fmt: skip
+    c3sqrt_x = []
+    for kind, first, second in steps:
+        c3sqrt_x.append(gates.H(target))
+        c3sqrt_x.append(
+            gates.CU1(first, target, second * angle)
+            if kind == "p"
+            else gates.CNOT(first, second)
+        )
+    c3sqrt_x.append(gates.H(target))
+
+    return [
+        gates.H(target), gates.CU1(d, target, math.pi / 2), gates.H(target),
+        *relative_phase_c3x,
+        gates.H(target), gates.CU1(d, target, -math.pi / 2), gates.H(target),
+        *relative_phase_c3x_dagger,
+        *c3sqrt_x,
+    ]  # fmt: skip
+
+
 def _controlled_u2(
     unitary: ArrayLike, control: int, target: int, backend: Backend = None
 ) -> list[gates.Gate]:
@@ -134,7 +209,7 @@ def _controlled_u2(
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
     """
-    backend = qibo.backends._check_backend(backend)
+    backend = _check_backend(backend)
 
     theta, phi, lam = u3_decomposition(unitary, backend)
     u3_matrix = gates.U3(target, theta, phi, lam).matrix(backend)
@@ -165,7 +240,7 @@ def _eig_u2(unitary: ArrayLike, backend: Backend = None) -> tuple:
         tuple(ArrayLike, ArrayLike): Eigenvalues, and a unitary matrix that has
         the eigenvectors as columns.
     """
-    backend = qibo.backends._check_backend(backend)
+    backend = _check_backend(backend)
 
     eigenvalues, eigenvectors = backend.eig(unitary)
     first = eigenvectors[:, 0]
@@ -205,7 +280,7 @@ def _ldmcsu(
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
     """
-    backend = qibo.backends._check_backend(backend)
+    backend = _check_backend(backend)
 
     atol = 1e-12
     main_is_real = (
@@ -314,7 +389,7 @@ def _ldmcu(
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
         the original gate.
     """
-    backend = qibo.backends._check_backend(backend)
+    backend = _check_backend(backend)
 
     qubits = [*controls, target]
     nqubits = len(qubits)
@@ -362,8 +437,62 @@ def _ldmcu(
     return body
 
 
+def _linear_mcx(
+    controls: tuple[int, ...], target: int, ancilla: int
+) -> list[gates.Gate]:
+    """Decomposes a multi-controlled :math:`X` gate with one dirty auxiliary qubit.
+
+    This is Lemma 9 of `Iten et al., Phys. Rev. A 93, 032318 (2016)
+    <https://doi.org/10.1103/PhysRevA.93.032318>`_. The controls are split in two
+    groups, and the gate is two pairs of smaller multi-controlled :math:`X` gates,
+    the first of each pair targeting the auxiliary qubit, which can be in any state
+    and is left unchanged.
+
+    Args:
+        controls (tuple[int, ...]): Ids of the control qubits. At least three are needed.
+        target (int): Id of the target qubit.
+        ancilla (int): Id of the dirty auxiliary qubit.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
+        the original gate.
+    """
+    num_controls = len(controls)
+
+    if num_controls == 3:
+        return _c3x(controls, target)
+
+    if num_controls == 4:
+        return _c4x(controls, target)
+
+    if num_controls == 5:
+        return [
+            *_c3x(controls[:3], ancilla),
+            *_c3x((*controls[3:], ancilla), target),
+        ] * 2
+
+    num_second = math.ceil((num_controls + 2) / 2)
+    num_first = num_controls - num_second + 1
+    first = (controls[:num_first], ancilla, controls[num_first : 2 * num_first - 2])
+    second = (
+        (*controls[num_first:], ancilla),
+        target,
+        controls[num_first - num_second + 2 : num_first],
+    )
+
+    return [
+        *_mcx_vchain_dirty(*first, relative_phase=True),
+        *_mcx_vchain_dirty(*second),
+        *_mcx_vchain_dirty(*first, relative_phase=True),
+        *_mcx_vchain_dirty(*second),
+    ]
+
+
 def _mcx_vchain_dirty(
-    controls: tuple[int, ...], target: int, ancillas: tuple[int, ...]
+    controls: tuple[int, ...],
+    target: int,
+    ancillas: tuple[int, ...],
+    relative_phase: bool = False,
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled :math:`X` gate with :math:`k - 2` dirty auxiliary qubits.
 
@@ -377,6 +506,8 @@ def _mcx_vchain_dirty(
         target (int): Id of the target qubit.
         ancillas (tuple[int, ...]): Ids of the dirty auxiliary qubits. At least
             :math:`k - 2` are needed if :math:`k \\geq 3`.
+        relative_phase (bool, optional): If ``True``, the gate is implemented up to
+            a diagonal operator, with fewer CNOTs. Defaults to ``False``.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
@@ -390,16 +521,21 @@ def _mcx_vchain_dirty(
     if num_controls == 2:
         return [gates.TOFFOLI(*controls, target)]
 
-    if num_controls == 3:
+    if num_controls == 3 and not relative_phase:
         return _c3x(controls, target)
 
     ancillas = ancillas[: num_controls - 2]
     targets = [target, *ancillas[::-1]]
     body = []
-    for _ in range(2):
-        body.append(gates.TOFFOLI(controls[-1], ancillas[-1], target))
-        for i in range(1, num_controls - 2):
-            body += _toffoli((controls[-1 - i], ancillas[-1 - i]), targets[i], "right")
+    for step in range(2):
+        for i in range(num_controls - 2):
+            if i > 0 or relative_phase:
+                cancel = "left" if relative_phase and i == 0 and step == 1 else "right"
+                body += _toffoli(
+                    (controls[-1 - i], ancillas[-1 - i]), targets[i], cancel
+                )
+            else:
+                body.append(gates.TOFFOLI(controls[-1], ancillas[-1], target))
         body += _toffoli(controls[:2], targets[-1])
         for i in range(num_controls - 3):
             body += _toffoli((controls[2 + i], ancillas[i]), ancillas[i + 1], "left")

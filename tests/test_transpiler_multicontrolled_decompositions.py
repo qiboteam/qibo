@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.backends import NumpyBackend
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.multicontrolled_decompositions import (
     multi_controlled_decomposition,
@@ -175,25 +176,158 @@ def test_decompose_agrees_with_multi_controlled_decomposition(backend, nctrl):
     assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
 
 
-@pytest.mark.parametrize("name", ["real rotation", "X"])
-def test_use_toffolis(backend, name):
-    controls, target = tuple(range(4)), 4
-    matrix = backend.cast(MATRICES[name])
-    with_toffolis = multi_controlled_decomposition(
-        matrix, controls, target, use_toffolis=True, backend=backend
+# (number of controls, number of free qubits) with at most 11 qubits in total.
+FREE_QUBITS_CASES = [
+    (3, 1),
+    (3, 3),
+    (4, 1),
+    (4, 2),
+    (4, 4),
+    (5, 1),
+    (5, 3),
+    (6, 1),
+    (6, 2),
+    (6, 4),
+    (7, 1),
+    (7, 2),
+    (8, 1),
+    (8, 2),
+]
+
+
+@pytest.mark.parametrize(("nctrl", "nfree"), FREE_QUBITS_CASES)
+def test_x_decompose_with_free_qubits(backend, nctrl, nfree):
+    """The free qubits can be in any state, so the whole unitary must be exact."""
+    nqubits = nctrl + 1 + nfree
+    controls, target, free = (
+        tuple(range(nctrl)),
+        nctrl,
+        tuple(range(nctrl + 1, nqubits)),
     )
-    without_toffolis = multi_controlled_decomposition(
-        matrix, controls, target, use_toffolis=False, backend=backend
+    gate = gates.X(target).controlled_by(*controls)
+    decomposition = gate.decompose(*free)
+
+    backend.assert_allclose(
+        _unitary(backend, decomposition, nqubits),
+        _unitary(backend, [gate], nqubits),
+        atol=1e-10,
+    )
+    used = {q for g in decomposition for q in g.qubits}
+    assert set(controls + (target,)) <= used <= set(range(nqubits))
+
+
+def test_x_decompose_with_free_qubits_scattered(backend):
+    controls, target, free, nqubits = (6, 2, 9, 0, 4), 7, (1, 8, 3), 10
+    gate = gates.X(target).controlled_by(*controls)
+    backend.assert_allclose(
+        _unitary(backend, gate.decompose(*free), nqubits),
+        _unitary(backend, [gate], nqubits),
+        atol=1e-10,
     )
 
-    assert any(isinstance(g, gates.TOFFOLI) for g in with_toffolis) == (
-        name == "real rotation"
-    )
-    assert not any(isinstance(g, gates.TOFFOLI) for g in without_toffolis)
+
+def test_circuit_decompose_with_free_qubits(backend):
+    circuit = Circuit(8)
+    circuit.add(gates.X(4).controlled_by(0, 1, 2, 3))
+    circuit.add(gates.X(7).controlled_by(1, 2, 3, 4, 5))
+    decomposed = circuit.decompose(6)
+
+    assert not any(g.is_controlled_by for g in decomposed.queue)
     backend.assert_allclose(
-        _unitary(backend, without_toffolis, 5),
-        _unitary(backend, with_toffolis, 5),
-        atol=1e-10,
+        decomposed.unitary(backend), circuit.unitary(backend), atol=1e-10
+    )
+
+
+def test_free_qubits_are_ignored_by_other_gates():
+    """Only multi-controlled ``X`` gates benefit from auxiliary qubits."""
+    gate = gates.RX(4, 0.3).controlled_by(0, 1, 2, 3)
+    with_free, without_free = gate.decompose(5, 6), gate.decompose()
+    assert [type(g) for g in with_free] == [type(g) for g in without_free]
+    assert [g.qubits for g in with_free] == [g.qubits for g in without_free]
+
+
+@pytest.mark.parametrize("name", ["real rotation", "X"])
+def test_multi_controlled_decomposition_free_qubits_errors(backend, name):
+    matrix = backend.cast(MATRICES[name])
+    for free in [(0,), (4,), (5, 2)]:
+        with pytest.raises(ValueError):
+            multi_controlled_decomposition(
+                matrix, (0, 1, 2, 3), 4, free=free, backend=backend
+            )
+
+
+class _AcceleratorArray:
+    """Array that, like a CuPy array, cannot be implicitly converted to NumPy."""
+
+    def __init__(self, array):
+        self._array = np.asarray(array)
+        self.shape = self._array.shape
+
+    def get(self):
+        return self._array
+
+    def __array__(self, *args, **kwargs):
+        raise TypeError("Implicit conversion to a NumPy array is not allowed.")
+
+
+def _computation_on_accelerator(*args, **kwargs):
+    raise AssertionError("Computation on the accelerator backend.")
+
+
+class _AcceleratorBackend(NumpyBackend):
+    """Backend of ``_AcceleratorArray`` where only moving data to the CPU is allowed."""
+
+    eig = det = abs = angle = exp = matmul = matrix_norm = staticmethod(
+        _computation_on_accelerator
+    )
+
+    def to_numpy(self, array):
+        return array.get() if isinstance(array, _AcceleratorArray) else array
+
+
+def _parameters(gate_list):
+    return np.array([float(p) for g in gate_list for p in g.parameters])
+
+
+@pytest.mark.parametrize("free", [(), (5, 6, 7)])
+@pytest.mark.parametrize("name", ["real rotation", "diagonal", "Hadamard", "X"])
+def test_multi_controlled_decomposition_of_accelerator_array(name, free):
+    """The decomposition only moves the matrix to the CPU, and returns plain floats."""
+    controls = (0, 1, 2, 3)
+    expected = multi_controlled_decomposition(
+        MATRICES[name], controls, 4, free, backend=NumpyBackend()
+    )
+    decomposition = multi_controlled_decomposition(
+        _AcceleratorArray(MATRICES[name]),
+        controls,
+        4,
+        free,
+        backend=_AcceleratorBackend(),
+    )
+
+    assert [type(g) for g in decomposition] == [type(g) for g in expected]
+    assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
+    np.testing.assert_allclose(
+        _parameters(decomposition), _parameters(expected), atol=1e-12
+    )
+    for decomposed_gate in decomposition:
+        assert all(
+            isinstance(parameter, (float, np.floating))
+            for parameter in decomposed_gate.parameters
+        )
+
+
+@pytest.mark.parametrize("name", ["real rotation", "Hadamard"])
+def test_decompose_unitary_gate_with_accelerator_array(name):
+    """A ``Unitary`` that holds an array of an accelerator can be decomposed."""
+    gate = gates.Unitary(_AcceleratorArray(MATRICES[name]), 3, check_unitary=False)
+    decomposition = gate.controlled_by(0, 1, 2).decompose()
+    expected = gates.Unitary(MATRICES[name], 3).controlled_by(0, 1, 2).decompose()
+
+    assert [type(g) for g in decomposition] == [type(g) for g in expected]
+    assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
+    np.testing.assert_allclose(
+        _parameters(decomposition), _parameters(expected), atol=1e-12
     )
 
 
@@ -209,12 +343,12 @@ DECOMPOSED_GATES = [
 ]
 
 
-@pytest.mark.parametrize("use_toffolis", [True, False])
+@pytest.mark.parametrize("free", [(), (6,), (6, 7, 8)])
 @pytest.mark.parametrize("gate_class", DECOMPOSED_GATES)
-def test_decompose_does_not_use_global_backend(monkeypatch, gate_class, use_toffolis):
+def test_decompose_does_not_use_global_backend(monkeypatch, gate_class, free):
     gate = gate_class()
     monkeypatch.setattr("qibo.backends.get_backend", _raise_global_backend_used)
-    decomposition = gate.decompose(use_toffolis=use_toffolis)
+    decomposition = gate.decompose(*free)
 
     assert len(decomposition) > 0
     # Parameters are plain numbers, not arrays of any backend.
@@ -269,3 +403,40 @@ def test_cnot_counts(backend, kind):
         counts.append(_cnot_count(gate.decompose(), nctrl + 1))
 
     assert counts == CNOT_COUNTS[kind]
+
+
+# CNOT cost of a multi-controlled ``X`` gate with 3 to 8 controls, after unrolling
+# to CNOT and one-qubit gates: with the minimum number of free qubits for a V-chain
+# (the number of controls minus two), and with only one free qubit.
+FREE_QUBITS_CNOT_COUNTS = {
+    "vchain": [14, 26, 34, 42, 50, 58],
+    "one free qubit": [14, 36, 56, 72, 88, 104],
+}
+
+
+@pytest.mark.parametrize("kind", ["vchain", "one free qubit"])
+def test_cnot_counts_with_free_qubits(kind):
+    counts = []
+    for nctrl in range(3, 9):
+        nfree = nctrl - 2 if kind == "vchain" else 1
+        nqubits = nctrl + 1 + nfree
+        gate = gates.X(nctrl).controlled_by(*range(nctrl))
+        free = range(nctrl + 1, nqubits)
+        counts.append(_cnot_count(gate.decompose(*free), nqubits))
+
+    assert counts == FREE_QUBITS_CNOT_COUNTS[kind]
+
+
+def test_free_qubits_make_the_cost_of_x_linear():
+    """Without auxiliary qubits the number of CNOTs grows quadratically."""
+    nctrls = range(6, 13)
+    with_free, without_free = [], []
+    for nctrl in nctrls:
+        gate = gates.X(nctrl).controlled_by(*range(nctrl))
+        with_free.append(_cnot_count(gate.decompose(nctrl + 1), nctrl + 2))
+        without_free.append(_cnot_count(gate.decompose(), nctrl + 1))
+
+    # Constant first differences: linear. Constant second differences: quadratic.
+    assert len(set(np.diff(with_free))) == 1
+    assert len(set(np.diff(without_free, n=2))) == 1
+    assert all(w < wo for w, wo in zip(with_free, without_free))
