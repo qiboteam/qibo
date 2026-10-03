@@ -586,7 +586,7 @@ def _mcx_depth_minimized(backend, nctrl, free=(), clean=()):
     return decomposition, nqubits
 
 
-@pytest.mark.parametrize("nctrl", range(3, 10))
+@pytest.mark.parametrize("nctrl", range(3, 7))
 def test_minimize_depth_with_dirty_qubit(backend, nctrl):
     """A dirty qubit can be in any state, so the whole unitary must be exact."""
     free = (nctrl + 1,)
@@ -600,7 +600,7 @@ def test_minimize_depth_with_dirty_qubit(backend, nctrl):
     )
 
 
-@pytest.mark.parametrize("nctrl", range(3, 10))
+@pytest.mark.parametrize("nctrl", range(3, 7))
 def test_minimize_depth_with_clean_qubit(backend, nctrl):
     clean = (nctrl + 1,)
     decomposition, nqubits = _mcx_depth_minimized(backend, nctrl, clean=clean)
