@@ -290,7 +290,7 @@ def test_process_fidelity_and_infidelity(backend, seed):
         target = backend.cast(target, dtype=target.dtype)
         process_infidelity(channel, target, backend=backend)
     with pytest.raises(TypeError):
-        channel = random_hermitian(d**2, seed=rng, backend=backend)
+        channel = random_hermitian(d**2, seed=0, backend=backend)
         process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
         channel = 10 * rng.random((d**2, d**2))
@@ -396,7 +396,7 @@ def test_frame_potential(backend, nqubits, power_t, samples):
         circuit.add(gates.U3(q, 0.0, 0.0, 0.0) for q in range(nqubits))
 
     with pytest.raises(TypeError):
-        frame_potential(circuit, power_t="2", backend=backend)
+        frame_potential(circuit, power_t="2", samples=10, backend=backend)
     with pytest.raises(TypeError):
         frame_potential(circuit, 2, samples="1000", backend=backend)
 

@@ -278,3 +278,23 @@ def test_term_representation():
     term = -2 * Z(0, backend=backend) * X(1, backend=backend) * Y(3, backend=backend)
     h = SymbolicHamiltonian(term, backend=backend)
     assert str(h.terms[0]) == "(-2+0j)*Z0*X1*Y3"
+
+
+def test_symbolic_term_non_tensor_matrix(backend):
+    """Test ``SymbolicTerm`` with a symbol whose matrix is not a tensor type (line 184)."""
+    import sympy
+
+    # Create a sympy symbol subclass with a non-tensor matrix
+    class CustomSymbol(sympy.Symbol):
+        @property
+        def matrix(self):
+            return 2.0  # A plain float, not a tensor
+
+    custom_sym = CustomSymbol("custom")
+
+    # Create a sympy expression with this custom symbol
+    expression = custom_sym * X(0, backend=backend)
+
+    term = SymbolicTerm(1, expression, backend=backend)
+    # The coefficient should be multiplied by the non-tensor matrix (2.0)
+    assert term.coefficient == 2.0

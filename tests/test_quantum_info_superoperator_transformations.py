@@ -197,6 +197,8 @@ def test_batched_vectorization(backend, nqubits, order, statevector):
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
 def test_unvectorization(backend, nqubits, order):
+    with pytest.raises(TypeError):
+        unvectorization(backend.cast(np.ones((2, 2, 2))), order=order, backend=backend)
     with pytest.raises(ValueError):
         unvectorization(
             random_statevector(4**nqubits, backend=backend), order=1, backend=backend
