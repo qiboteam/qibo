@@ -212,7 +212,7 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
             circuit.add(gates.RY(2, theta=np.pi / 4))
         circuit.add(gates.M(0, 1, 2, 3))
         result = backend.execute_circuit(circuit, target_state, nshots=1)
-        target_samples.append(result.samples(binary=False)[0])
+        target_samples.append(backend.to_numpy(result.samples(binary=False))[0])
     backend.assert_allclose(final_samples, target_samples)
 
 
