@@ -94,22 +94,22 @@ def test_multi_controlled_decomposition(backend, nctrl, name):
 @pytest.mark.parametrize("special", [True, False])
 @pytest.mark.parametrize("nctrl", range(2, 7))
 def test_multi_controlled_decomposition_random(backend, nctrl, special):
-    matrix = backend.to_numpy(random_unitary(2, seed=nctrl, backend=backend))
+    matrix = random_unitary(2, seed=nctrl, backend=backend)
     if special:
-        matrix = matrix / np.sqrt(np.linalg.det(matrix))
+        matrix = matrix / backend.sqrt(backend.det(matrix))
 
     controls, target = tuple(range(nctrl)), nctrl
     decomposition = multi_controlled_decomposition(
-        backend.cast(matrix), controls, target, backend=backend
+        matrix, controls, target, backend=backend
     )
     _assert_decomposition(backend, decomposition, controls, target, matrix, nctrl + 1)
 
 
 def test_multi_controlled_decomposition_scattered_qubits(backend):
     controls, target, nqubits = (5, 1, 3, 0), 2, 7
-    matrix = backend.to_numpy(random_unitary(2, seed=9, backend=backend))
+    matrix = random_unitary(2, seed=9, backend=backend)
     decomposition = multi_controlled_decomposition(
-        backend.cast(matrix), controls, target, backend=backend
+        matrix, controls, target, backend=backend
     )
     _assert_decomposition(backend, decomposition, controls, target, matrix, nqubits)
 
@@ -168,11 +168,9 @@ def test_decompose_multi_controlled_one_qubit_gates(backend, gate_class, nctrl):
 
 @pytest.mark.parametrize("nctrl", [2, 3, 5])
 def test_decompose_agrees_with_multi_controlled_decomposition(backend, nctrl):
-    matrix = backend.to_numpy(random_unitary(2, seed=1, backend=backend))
+    matrix = random_unitary(2, seed=1, backend=backend)
     controls, target = tuple(range(nctrl)), nctrl
-    expected = multi_controlled_decomposition(
-        backend.cast(matrix), controls, target, backend=backend
-    )
+    expected = multi_controlled_decomposition(matrix, controls, target, backend=backend)
     decomposition = gates.Unitary(matrix, target).controlled_by(*controls).decompose()
 
     assert [type(g) for g in decomposition] == [type(g) for g in expected]
@@ -329,7 +327,7 @@ def test_multi_controlled_decomposition_of_accelerator_array(
 
     assert [type(g) for g in decomposition] == [type(g) for g in expected]
     assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
-    np.testing.assert_allclose(
+    backend.assert_allclose(
         _parameters(decomposition), _parameters(expected), atol=1e-12
     )
     for decomposed_gate in decomposition:
@@ -340,7 +338,7 @@ def test_multi_controlled_decomposition_of_accelerator_array(
 
 
 @pytest.mark.parametrize("name", ["real rotation", "Hadamard"])
-def test_decompose_unitary_gate_with_accelerator_array(name):
+def test_decompose_unitary_gate_with_accelerator_array(backend, name):
     """A ``Unitary`` that holds an array of an accelerator can be decomposed."""
     gate = gates.Unitary(_AcceleratorArray(MATRICES[name]), 3, check_unitary=False)
     decomposition = gate.controlled_by(0, 1, 2).decompose()
@@ -348,7 +346,7 @@ def test_decompose_unitary_gate_with_accelerator_array(name):
 
     assert [type(g) for g in decomposition] == [type(g) for g in expected]
     assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
-    np.testing.assert_allclose(
+    backend.assert_allclose(
         _parameters(decomposition), _parameters(expected), atol=1e-12
     )
 
@@ -411,7 +409,7 @@ def test_minimize_toffolis_with_clean_qubits(backend, nctrl, nancillas):
     decomposition, _ = _mcx_with_ancillas(backend, nctrl, clean=clean)
     gate = gates.X(nctrl).controlled_by(*range(nctrl))
 
-    np.testing.assert_allclose(
+    backend.assert_allclose(
         _clean_columns(
             backend, _unitary(backend, decomposition, nqubits), nqubits, clean
         ),
@@ -489,7 +487,7 @@ def test_minimize_toffolis_prefers_clean_qubits(
     gate = gates.X(6).controlled_by(*range(6))
 
     assert sum(isinstance(g, gates.TOFFOLI) for g in decomposition) == expected_toffolis
-    np.testing.assert_allclose(
+    backend.assert_allclose(
         _clean_columns(
             backend, _unitary(backend, decomposition, nqubits), nqubits, clean
         ),
@@ -606,7 +604,7 @@ def test_minimize_depth_with_clean_qubit(backend, nctrl):
     decomposition, nqubits = _mcx_depth_minimized(backend, nctrl, clean=clean)
     gate = gates.X(nctrl).controlled_by(*range(nctrl))
 
-    np.testing.assert_allclose(
+    backend.assert_allclose(
         _clean_columns(
             backend, _unitary(backend, decomposition, nqubits), nqubits, clean
         ),
@@ -825,7 +823,7 @@ def test_decompose_is_independent_of_global_backend(monkeypatch, backend, gate_c
     assert [type(g) for g in decomposition] == [type(g) for g in expected]
     assert [g.qubits for g in decomposition] == [g.qubits for g in expected]
     for decomposed_gate, expected_gate in zip(decomposition, expected):
-        np.testing.assert_allclose(
+        backend.assert_allclose(
             decomposed_gate.parameters, expected_gate.parameters, atol=1e-12
         )
 
