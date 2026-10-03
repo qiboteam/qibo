@@ -68,14 +68,3 @@ Clustering
     :maxdepth: 1
 
     tutorials/qclustering/README.md
-
-
-Diagonalization Algorithms
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. toctree::
-    :maxdepth: 1
-
-    tutorials/dbi/README.md
-
-    tutorials/dbi/dbi_tutorial_basic_intro.ipynb
