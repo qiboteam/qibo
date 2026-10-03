@@ -2716,7 +2716,7 @@ tests = [
 [[package]]
 name = "qibojit"
 version = "0.1.17"
-source = { git = "https://github.com/qiboteam/qibojit.git#3e0530f981e56cc7ef3ed8801841c47936557f0e" }
+source = { git = "https://github.com/qiboteam/qibojit.git#5a69a1ff5b95304dd97874f4755f09f03d2ed83b" }
 dependencies = [
     { name = "numba" },
     { name = "psutil" },

@@ -648,7 +648,8 @@ def random_clifford(
     cliff = Clifford(tableau, platform=engine)
 
     if return_circuit:
-        method = "BM20" if engine == "cupy" else "AG04"
+        # BM20 only supports up to three qubits
+        method = "BM20" if engine == "cupy" and nqubits <= 3 else "AG04"
         return cliff.to_circuit(method, **kwargs)
 
     return cliff
