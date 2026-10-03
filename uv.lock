@@ -2779,7 +2779,7 @@ wheels = [
 
 [[package]]
 name = "qibo"
-version = "0.3.5"
+version = "0.3.6"
 source = { editable = "." }
 dependencies = [
     { name = "cma" },
@@ -2913,7 +2913,7 @@ tests = [
 [[package]]
 name = "qibojit"
 version = "0.1.17"
-source = { git = "https://github.com/qiboteam/qibojit.git#bce72ee35ae287aada137cffb4893786a1c0c9cc" }
+source = { git = "https://github.com/qiboteam/qibojit.git#5a69a1ff5b95304dd97874f4755f09f03d2ed83b" }
 dependencies = [
     { name = "numba" },
     { name = "psutil" },
