@@ -219,23 +219,23 @@ def visualize_state(
     mode: str = "probabilities",
     n_most_relevant_components: int | None = None,
 ):
-    """
-    Plot circuit execution's result data according to the chosen ``mode``.
+    """Plot circuit execution's result data according to the chosen ``mode``.
 
     Args:
         execution_outcome: qibo circuit's result. Depending on the simulation
-            preferences, some of the visualizations can be accessed and some of them
-            not. In particular:
-                - if ``execution_outcome`` is a `QuantumState`, only probabilities and
-                  amplitudes can be visualized;
-                - if ``execution_outcome`` is a ``MeasurementOutcomes``, then all
-                  the ``mode`` options are available.
-        mode: visualization mode can be "amplitudes", "probabilities" or "frequencies".
-            Default is "probabilities".
-        n_most_relevant_components (int): in case the system is big (more than a few
-            qubits), it can be helpful to reduce the number of ticks in the x-axis.
-            To do so, this argument can be set, reducing the number of plotted ticks
-            to `n_most_relevant_components`. Default is None.
+            preferences, some of the visualizations can be accessed and some of
+            them not. In particular:
+
+            - if ``execution_outcome`` is a ``QuantumState``, only probabilities
+              and amplitudes can be visualized;
+            - if ``execution_outcome`` is a ``MeasurementOutcomes``, then all the
+              ``mode`` options are available.
+        mode: visualization mode can be "amplitudes", "probabilities" or
+            "frequencies". Default is "probabilities".
+        n_most_relevant_components (int): in case the system is big (more than a
+            few qubits), it can be helpful to reduce the number of ticks in the
+            x-axis. To do so, this argument can be set, reducing the number of
+            plotted ticks to ``n_most_relevant_components``. Default is None.
     """
     # Collect amplitude
     probabilities = execution_outcome.backend.to_numpy(
