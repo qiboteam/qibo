@@ -137,7 +137,7 @@ def test_distributed_circuit_execution_addition(
     c1 = Circuit(6, {"/GPU:0": 2, "/GPU:1": 2})
     c2 = Circuit(6, {"/GPU:0": 2})
     with pytest.raises(ValueError):
-        c = c1 + c2
+        c1 + c2
 
     c1 = Circuit(6, accelerators)
     c2 = Circuit(6, accelerators)
@@ -150,7 +150,7 @@ def test_distributed_circuit_execution_addition(
     circuit.add([gates.H(i) for i in range(6)])
     circuit.add([gates.CNOT(i, i + 1) for i in range(5)])
     circuit.add([gates.Z(i) for i in range(6)])
-    assert c.depth == dist_circuit.depth
+    assert circuit.depth == dist_circuit.depth
     final_state = backend.execute_circuit(dist_circuit)
     target_state = backend.execute_circuit(circuit)
     backend.assert_allclose(final_state, target_state, atol=1e-7)

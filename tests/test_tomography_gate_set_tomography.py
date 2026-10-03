@@ -633,11 +633,13 @@ def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
             nshots=int(1e4),
             two_qubit_basis_op_diff_registers=True,
             include_empty=False,
+            backend=backend,
         )
         ground_truth_matrix = GST(
             gate_set=[((gates.Unitary), ground_truth_matrices[_i])],
             nshots=int(1e4),
             include_empty=False,
+            backend=backend,
         )
         backend.assert_allclose(test_matrix[0], ground_truth_matrix[0], atol=1e-1)
 
