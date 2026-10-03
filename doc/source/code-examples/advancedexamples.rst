@@ -2416,6 +2416,8 @@ decomposition with the one of the original gate.
     from qibo.quantum_info import random_unitary
     from qibo.transpiler import NativeGates, Unroller, multi_controlled_decomposition
 
+    backend = NumpyBackend()
+
 
     def unitary(gate_list, nqubits, backend):
         circuit = Circuit(nqubits)
@@ -2445,7 +2447,7 @@ controlled by five qubits:
 
     print(len(decomposition), "gates")
     print(sorted({g.name for g in decomposition}))
-    print(np.allclose(unitary(decomposition, 6, backend), unitary([gate], 6, backend)))
+    print(backend.allclose(unitary(decomposition, 6, backend), unitary([gate], 6, backend)))
 
 .. testoutput:: multicontrolled
 
@@ -2478,9 +2480,9 @@ quadratically:
 
 .. testoutput:: multicontrolled
 
-    RX        10 gates, exact: True
-    U3        10 gates, exact: True
-    Unitary   10 gates, exact: True
+    RX        66 gates, exact: True
+    U3        66 gates, exact: True
+    Unitary   32 gates, exact: True
     H         32 gates, exact: True
     Unitary   32 gates, exact: True
 
