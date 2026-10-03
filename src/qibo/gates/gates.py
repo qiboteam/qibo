@@ -2038,6 +2038,9 @@ class RXX(_Rnn_):
         self.name = "rxx"
         self.draw_label = "RXX"
 
+    def generator_eigenvalue(self):
+        return 0.5
+
     @property
     def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0])
@@ -2072,6 +2075,9 @@ class RYY(_Rnn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "ryy"
         self.draw_label = "RYY"
+
+    def generator_eigenvalue(self):
+        return 0.5
 
     @property
     def hamming_weight(self) -> bool:
@@ -2108,6 +2114,9 @@ class RZZ(_Rnn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzz"
         self.draw_label = "RZZ"
+
+    def generator_eigenvalue(self):
+        return 0.5
 
     @property
     def hamming_weight(self) -> bool:
@@ -2150,6 +2159,9 @@ class RZX(_Rnn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzx"
         self.draw_label = "RZX"
+
+    def generator_eigenvalue(self):
+        return 0.5
 
     @property
     def hamming_weight(self) -> bool:
