@@ -1421,18 +1421,25 @@ def test_ecr(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    # testing random expectation value due to global phase difference
-    observable = random_hermitian(2**nqubits, backend=backend)
-    backend.assert_allclose(
-        backend.cast(backend.conj(final_state_decompose).T)
-        @ observable
-        @ final_state_decompose,
-        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
-        atol=1e-6,
-    )
+    # the decomposition is exact, including the global phase
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
+
+
+def test_ecr_decomposition_is_exact_in_clifford_plus_t(backend):
+    pytest.importorskip("pygridsynth")
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    decomposition = gates.ECR(0, 1).decompose(method="clifford_plus_t")
+
+    assert {gate.name for gate in decomposition} <= {"h", "s", "x", "y", "z", "cx"}
+    backend.assert_allclose(
+        apply_gates(backend, decomposition, nqubits, initial_state),
+        apply_gates(backend, [gates.ECR(0, 1)], nqubits, initial_state),
+        atol=1e-6,
+    )
 
     assert gates.ECR(0, 1).clifford
     assert not gates.ECR(0, 1).hamming_weight
