@@ -23,4 +23,3 @@ Bloch sphere
 .. autoclass:: qibo.ui.bloch.BlochSphere
     :members:
     :member-order: bysource
-    :special-members: __init__
