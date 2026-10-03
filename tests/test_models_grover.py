@@ -1,5 +1,6 @@
 """Test Grover model defined in `qibo/models/grover.py`."""
 
+import numpy as np
 import pytest
 
 from qibo import Circuit, gates
@@ -99,7 +100,13 @@ def test_grover_iterative(backend):
     grover = Grover(oracle, superposition_qubits=5, check=check_false, iterative=True)
     solution, _iterations = grover(backend=backend)
     grover = Grover(oracle, superposition_qubits=5, check=check, iterative=True)
-    solution, _iterations = grover(logs=True, backend=backend)
+    rng_state = np.random.get_state()
+    try:
+        np.random.seed(0)
+        backend.set_seed(0)
+        solution, _iterations = grover(logs=True, backend=backend)
+    finally:
+        np.random.set_state(rng_state)
     assert solution == "11111"
 
 
