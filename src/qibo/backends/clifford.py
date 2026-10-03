@@ -220,7 +220,9 @@ class CliffordBackend(Backend):
             ):
                 raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
 
-        if circuit.repeated_execution and nshots != 1:
+        # a stabilizer state cannot represent the mixture produced by a channel,
+        # thus channels need trajectories even if ``circuit.density_matrix=True``
+        if (circuit.has_collapse or circuit.has_unitary_channel) and nshots != 1:
             return self.execute_circuit_repeated(circuit, nshots, initial_state)
 
         try:

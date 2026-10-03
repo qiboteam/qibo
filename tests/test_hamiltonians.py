@@ -1,6 +1,7 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
 
 from collections.abc import Iterable
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -505,3 +506,31 @@ def test_dense_hamiltonian_backend_setter(backend):
     else:
         assert isinstance(h.matrix, backend.tensor_types)
     assert isinstance(h.backend, type(backend))
+
+
+def test_dense_hamiltonian_backend_setter_no_to_numpy(backend):
+    """The ``backend`` setter should fall back to casting the matrix directly
+    when the old backend does not implement ``to_numpy`` (e.g. ``CliffordBackend``).
+    """
+    nqubits = 2
+    matrix = np.random.randn(2**nqubits, 2**nqubits)
+    h = Hamiltonian(nqubits, matrix, backend=construct_backend("numpy"))
+    with mock.patch.object(h.backend, "to_numpy", side_effect=NotImplementedError):
+        h.backend = backend
+    assert isinstance(h.backend, type(backend))
+    assert h.matrix.shape == (2**nqubits, 2**nqubits)
+
+
+def test_symbolic_hamiltonian_backend_setter_no_to_numpy(backend):
+    """The ``backend`` setter should fall back to casting the matrix directly
+    when the old backend does not implement ``to_numpy`` (e.g. ``CliffordBackend``).
+    """
+    nqubits = 2
+    H = SymbolicHamiltonian(
+        X(0) + Z(1), nqubits=nqubits, backend=construct_backend("numpy")
+    )
+    _ = H.matrix  # ensure the dense matrix is materialised
+    with mock.patch.object(H.backend, "to_numpy", side_effect=NotImplementedError):
+        H.backend = backend
+    assert isinstance(H.backend, type(backend))
+    assert H.matrix.shape == (2**nqubits, 2**nqubits)
