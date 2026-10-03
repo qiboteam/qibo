@@ -210,7 +210,8 @@ class Gate:
         than one qubit, which are decomposed by
         :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`
         (only if ``method="standard"``). Without ``free`` qubits no (dirty) auxiliary qubits
-        are used.
+        are used. The decomposition is applied recursively, so that the returned
+        gates are controlled by at most one qubit.
 
         Args:
             free (int): Ids of free qubits that can be used as dirty auxiliary qubits,
@@ -273,7 +274,7 @@ class Gate:
                 minimize_toffolis = kwargs.get("minimize_toffolis", False)
                 minimize_depth = kwargs.get("minimize_depth", False)
 
-                return multi_controlled_decomposition(
+                decomposed = multi_controlled_decomposition(
                     unitary=unitary,
                     controls=self.control_qubits,
                     target=self.target_qubits[0],
@@ -284,22 +285,36 @@ class Gate:
                     backend=backend,
                 )
 
-            # Step 3: Decompose base gate without controls
-            base_gate = self.__class__(*self.init_args, **self.init_kwargs)
-            decomposed = base_gate._base_decompose(
-                *free,
-                ncontrols=ncontrols,
-                method=method,
-                **kwargs,
-            )
-            mask = self._control_mask_after_stripping(decomposed)
-            for bool_value, gate in zip(mask, decomposed):
-                if bool_value:
-                    gate.is_controlled_by = True
-                    gate.control_qubits += self.control_qubits
-            return decomposed
+            else:
+                # Step 3: Decompose base gate without controls
+                base_gate = self.__class__(*self.init_args, **self.init_kwargs)
+                decomposed = base_gate._base_decompose(
+                    *free,
+                    ncontrols=ncontrols,
+                    method=method,
+                    **kwargs,
+                )
+                mask = self._control_mask_after_stripping(decomposed)
+                for bool_value, gate in zip(mask, decomposed):
+                    if bool_value:
+                        gate.is_controlled_by = True
+                        gate.control_qubits += self.control_qubits
+        else:
+            decomposed = self._base_decompose(*free, method=method)
 
-        return self._base_decompose(*free, method=method)
+        # Step 4: Decompose recursively until no multi-controlled gates are left.
+        # Gates controlled by more than one qubit are always decomposed, except
+        # ``is_controlled_by`` gates when ``method != "standard"``, which would
+        # not be simplified further.
+        output = []
+        for gate in decomposed:
+            if len(gate.control_qubits) > 1 and (
+                method == "standard" or not gate.is_controlled_by
+            ):
+                output.extend(gate.decompose(*free, method=method, **kwargs))
+            else:
+                output.append(gate)
+        return output
 
     @staticmethod
     def from_dict(raw: dict):

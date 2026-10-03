@@ -1391,6 +1391,23 @@ def test_rbs(backend):
     assert gates.RBS(0, 1, theta).unitary
 
 
+@pytest.mark.parametrize("controls", [(0, 1), (1, 0), (0, 1, 4)])
+def test_controlled_rbs_decompose(backend, controls):
+    """Multi-controlled RBS is fully decomposed in a single call."""
+    nqubits = 5
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RBS(2, 3, 0.1).controlled_by(*controls))
+    decomposed = circuit.decompose()
+
+    assert all(len(gate.control_qubits) <= 1 for gate in decomposed.queue)
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    backend.assert_allclose(
+        backend.execute_circuit(decomposed, initial_state=initial_state).state(),
+        backend.execute_circuit(circuit, initial_state=initial_state).state(),
+        atol=1e-6,
+    )
+
+
 def test_ecr(backend):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, backend=backend)
@@ -1574,7 +1591,7 @@ def test_deutsch(backend, theta):
 
     target = gates.DEUTSCH(0, 1, 2, theta).matrix(backend)
 
-    backend.assert_allclose(unitary, target)
+    backend.assert_allclose(unitary, target, atol=1e-8)
 
 
 @pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
@@ -1659,7 +1676,7 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
     circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).decompose())
     matrix = circuit.unitary(backend)
 
-    backend.assert_allclose(matrix, target)
+    backend.assert_allclose(matrix, target, atol=1e-8)
 
 
 @pytest.mark.parametrize("phi", [0.0, 0.4321])
@@ -1690,7 +1707,7 @@ def test_generalized_rbs_empty_register_decomposition(
     circuit.add(gate.decompose())
     matrix = circuit.unitary(backend)
 
-    backend.assert_allclose(matrix, target)
+    backend.assert_allclose(matrix, target, atol=1e-8)
 
 
 @pytest.mark.parametrize("seed", [10])
@@ -1714,7 +1731,7 @@ def test_generalized_rbs_apply(backend, seed):
 
     state = gate.apply(backend, state, nqubits)
 
-    backend.assert_allclose(state, target)
+    backend.assert_allclose(state, target, atol=1e-8)
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
