@@ -2398,13 +2398,12 @@ Setting an empty transpiler is equivalent to disabling transpilation.
 How to decompose multi-controlled gates?
 ----------------------------------------
 
-Gates with many control qubits, such as a Toffoli gate (a NOT gate controlled by
-two qubits) with more controls, are not native to any hardware. Qibo decomposes them
-into gates with at most two qubits. The decompositions are exact, including the global
-phase, and they are available through the :meth:`qibo.gates.abstract.Gate.decompose` and
-:meth:`qibo.models.circuit.Circuit.decompose` methods, through the
-:class:`qibo.transpiler.unroller.Unroller` transpiler pass, and through the function
-:func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+Gates with many control qubits, such as a Toffoli gate with more controls, are not native
+to most hardware. Qibo decomposes them into gates with at most two qubits.
+The decompositions are exact, and they are available through the
+:meth:`qibo.gates.abstract.Gate.decompose` and :meth:`qibo.models.circuit.Circuit.decompose`
+methods, through the :class:`qibo.transpiler.unroller.Unroller` transpiler pass, and through
+the function :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
 
 Throughout this example we count two-qubit gates (CZ, controlled-Z) after unrolling the
 decomposition into CZ and one-qubit gates, and we compare the unitary matrix of each
