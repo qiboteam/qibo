@@ -46,6 +46,7 @@ GATES_CONTROLLED_BY_DEFAULT = [
     "cu3",
     "ccx",
     "ccz",
+    "deutsch",
     "fanout",
 ]
 
@@ -261,13 +262,19 @@ class Gate:
                 base_gate = self.__class__(
                     *map(_to_numpy, self.init_args), **self.init_kwargs
                 )
+                unitary = base_gate.matrix(backend)
+                if self.name in GATES_CONTROLLED_BY_DEFAULT:
+                    # The matrix of a gate that is controlled by default, like ``CRY``,
+                    # is the one of the whole gate. The one of the target gate is in
+                    # the last block, where all the controls are on.
+                    unitary = unitary[-2:, -2:]
 
                 clean = kwargs.get("clean", ())
                 minimize_toffolis = kwargs.get("minimize_toffolis", False)
                 minimize_depth = kwargs.get("minimize_depth", False)
 
                 return multi_controlled_decomposition(
-                    unitary=base_gate.matrix(backend),
+                    unitary=unitary,
                     controls=self.control_qubits,
                     target=self.target_qubits[0],
                     free=free,
