@@ -127,14 +127,12 @@ def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
     [
         (0, (1,), ()),
         (2, (0, 1), ()),
-        (3, (0, 1, 4), (2, 5)),
-        (7, (0, 1, 2, 3, 4), (5, 6)),
     ],
 )
 def test_x_decompose_with_cirq(target, controls, free):
     """Check that decomposition of multi-control ``X`` agrees with Cirq."""
     gate = gates.X(target).controlled_by(*controls)
-    qibo_decomp = gate.decompose(*free, use_toffolis=False)
+    qibo_decomp = gate.decompose(*free)
 
     # Calculate the decomposition using Cirq.
     nqubits = max((target,) + controls + free) + 1
@@ -145,6 +143,31 @@ def test_x_decompose_with_cirq(target, controls, free):
     assert len(qibo_decomp) == len(cirq_decomp)
     for qibo_gate, cirq_gate in zip(qibo_decomp, cirq_decomp):
         assert_cirq_gates_equivalent(qibo_gate, cirq_gate)
+
+
+@pytest.mark.parametrize(
+    ("target", "controls", "free"),
+    [
+        (3, (0, 1, 4), (2, 5)),
+        (3, (0, 1, 4), (2,)),
+        (7, (0, 1, 2, 3, 4), (5, 6)),
+        (5, (0, 1, 2, 3, 4), (6,)),
+        (6, (0, 1, 2, 3, 4, 5), (7, 8, 9, 10)),
+    ],
+)
+def test_x_decompose_with_free_qubits_equals_cirq(target, controls, free):
+    """Check that multi-control ``X`` decomposition has the same unitary as Cirq's."""
+    gate = gates.X(target).controlled_by(*controls)
+    nqubits = max((target,) + controls + free) + 1
+    circuit = Circuit(nqubits)
+    circuit.add(gate.decompose(*free))
+
+    qubits = [cirq.LineQubit(i) for i in range(nqubits)]
+    cirq_decomp = cirq.decompose_multi_controlled_x(
+        [qubits[i] for i in controls], qubits[target], [qubits[i] for i in free]
+    )
+    cirq_unitary = cirq.Circuit(cirq_decomp).unitary(qubit_order=qubits)
+    np.testing.assert_allclose(circuit.unitary(), cirq_unitary, atol=1e-8)
 
 
 @pytest.mark.parametrize(

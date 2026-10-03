@@ -756,7 +756,8 @@ standard_decompositions.add(
     [gates.X(1)] + gates.GIVENS(0, 1, math.pi / 2).decompose() + [gates.X(0)],
 )
 standard_decompositions.add(
-    gates.ECR, [gates.S(0), gates.SX(1), gates.CNOT(0, 1), gates.X(0)]
+    gates.ECR,
+    [gates.S(0), gates.RX(1, math.pi / 2), gates.CNOT(0, 1), gates.X(0)],
 )
 standard_decompositions.add(
     gates.CCZ,
@@ -1060,7 +1061,17 @@ if pygridsynth:
         + [gates.X(0)],
     )
     clifford_plus_t.add(
-        gates.ECR, [gates.S(0), gates.SX(1), gates.CNOT(0, 1), gates.X(0)]
+        gates.ECR,
+        [
+            gates.S(0),
+            gates.S(1),
+            gates.H(1),
+            gates.S(1),
+            gates.Y(1),
+            gates.Z(1),
+            gates.CNOT(0, 1),
+            gates.X(0),
+        ],
     )
     clifford_plus_t.add(
         gates.CCZ,

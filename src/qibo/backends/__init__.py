@@ -1,4 +1,5 @@
 import os
+from functools import cache
 from importlib import import_module
 
 import networkx as nx
@@ -348,6 +349,12 @@ def construct_backend(backend, **kwargs) -> Backend:
                 + f"package named '{provider}' is installed, and it is exposing valid Qibo "
                 + "backends.",
             )
+
+
+@cache
+def _numpy_backend() -> NumpyBackend:
+    """Cached Numpy backend, for computations that must not use the global backend."""
+    return NumpyBackend()
 
 
 def _check_backend_and_local_state(seed, backend):
