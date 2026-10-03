@@ -3,7 +3,7 @@ import pytest
 
 from qibo import Circuit, gates, hamiltonians
 from qibo.derivative import finite_differences, parameter_shift
-from qibo.symbols import Z
+from qibo.symbols import X, Y, Z
 
 
 # defining an observable
@@ -71,6 +71,35 @@ def test_standard_parameter_shift(backend, nshots, atol, scale_factor, grads):
     # check of known values
     for k in range(3):
         backend.assert_allclose(grad[k], grads[k], atol=atol)
+
+
+@pytest.mark.parametrize(
+    "gate_cls, obs",
+    [
+        ("RXX", X(0) * Y(1)),
+        ("RYY", X(0) * Y(1)),
+        ("RZZ", Y(0) * Z(1)),
+        ("RZX", Z(0) * Z(1)),
+    ],
+)
+def test_two_qubit_parameter_shift(backend, gate_cls, obs):
+    """The parameter shift rule should match finite differences for 2-qubit rotations.
+
+    This locks in the ``generator_eigenvalue == 0.5`` behaviour of the two-qubit
+    rotation gates: an incorrect eigenvalue would shift the parameter by the wrong
+    amount and the two estimates would disagree. A single-qubit rotation is added
+    so that the state is non-trivial and the derivative is non-zero.
+    """
+    circuit = Circuit(2)
+    circuit.add(gates.RY(0, 0.5))
+    circuit.add(getattr(gates, gate_cls)(0, 1, 0.3))
+    circuit.add(gates.M(0, 1))
+
+    ham = hamiltonians.hamiltonians.SymbolicHamiltonian(obs, backend=backend)
+
+    psr = parameter_shift(circuit, ham, parameter_index=1)
+    fd = finite_differences(circuit, ham, parameter_index=1)
+    backend.assert_allclose(psr, fd, atol=1e-6)
 
 
 @pytest.mark.parametrize("step_size", [10**-i for i in range(5, 10, 1)])

@@ -506,6 +506,13 @@ def test_generator_eigenvalue():
         gate.generator_eigenvalue()
 
 
+@pytest.mark.parametrize("gate_cls", ["RXX", "RYY", "RZZ", "RZX"])
+def test_generator_eigenvalue_two_qubit(gate_cls):
+    """Two-qubit rotations share the single-qubit generator eigenvalue of 0.5."""
+    gate = getattr(gates, gate_cls)(0, 1, 0.1)
+    assert gate.generator_eigenvalue() == 0.5
+
+
 def test_gate_set_parameters():
     gate = gates.RX(0, theta=0)
     assert gate.parameters == (0,)
