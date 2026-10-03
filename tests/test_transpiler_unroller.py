@@ -27,16 +27,16 @@ def test_native_gate_str_list():
     assert natives == NativeGates(0)
 
 
-def test_translate_gate_error_1q():
+def test_translate_gate_error_1q(backend):
     natives = NativeGates(0)
     with pytest.raises(DecompositionError):
-        translate_gate(gates.X(0), natives)
+        translate_gate(gates.X(0), natives, backend=backend)
 
 
-def test_translate_gate_error_2q():
+def test_translate_gate_error_2q(backend):
     natives = NativeGates(0)
     with pytest.raises(DecompositionError):
-        translate_gate(gates.CZ(0, 1), natives)
+        translate_gate(gates.CZ(0, 1), natives, backend=backend)
 
 
 @pytest.mark.parametrize(

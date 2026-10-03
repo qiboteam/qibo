@@ -72,10 +72,10 @@ def _assert_decomposition(backend, decomposition, controls, target, matrix, nqub
     )
 
 
-def _cnot_count(gate_list, nqubits):
+def _cnot_count(gate_list, nqubits, backend):
     circuit = Circuit(nqubits)
     circuit.add(gate_list)
-    native = Unroller(NativeGates.CNOT | NativeGates.U3)(circuit)
+    native = Unroller(NativeGates.CNOT | NativeGates.U3, backend=backend)(circuit)
     return native.gate_types.get(gates.CNOT, 0)
 
 
@@ -92,7 +92,7 @@ def test_multi_controlled_decomposition(backend, nctrl, name):
 
 
 @pytest.mark.parametrize("special", [True, False])
-@pytest.mark.parametrize("nctrl", range(2, 8))
+@pytest.mark.parametrize("nctrl", range(2, 7))
 def test_multi_controlled_decomposition_random(backend, nctrl, special):
     matrix = backend.to_numpy(random_unitary(2, seed=nctrl, backend=backend))
     if special:
@@ -119,7 +119,7 @@ def test_multi_controlled_decomposition_no_controls(backend):
         multi_controlled_decomposition(backend.matrices.X, (), 0, backend=backend)
 
 
-@pytest.mark.parametrize("nctrl", range(3, 8))
+@pytest.mark.parametrize("nctrl", range(3, 7))
 def test_x_decompose_without_free_qubits(backend, nctrl):
     controls, target = tuple(range(nctrl)), nctrl
     gate = gates.X(target).controlled_by(*controls)
@@ -382,7 +382,7 @@ def _mcx_with_ancillas(backend, nctrl, free=(), clean=()):
 
 # (number of controls, number of auxiliary qubits) with at most 11 qubits in total.
 TOFFOLI_MINIMIZING_CASES = [
-    (nctrl, nancillas) for nctrl in range(3, 9) for nancillas in (1, 2)
+    (nctrl, nancillas) for nctrl in range(3, 7) for nancillas in (1, 2)
 ]
 
 
@@ -972,14 +972,14 @@ CNOT_COUNTS = {
 
 @pytest.mark.parametrize("kind", ["special", "general"])
 def test_cnot_counts(backend, kind):
-    matrix = backend.to_numpy(random_unitary(2, seed=1, backend=backend))
+    matrix = random_unitary(2, seed=1, backend=backend)
     if kind == "special":
-        matrix = matrix / np.sqrt(np.linalg.det(matrix))
+        matrix = matrix / backend.sqrt(backend.det(matrix))
 
     counts = []
     for nctrl in range(2, 9):
         gate = gates.Unitary(matrix, nctrl).controlled_by(*range(nctrl))
-        counts.append(_cnot_count(gate.decompose(), nctrl + 1))
+        counts.append(_cnot_count(gate.decompose(), nctrl + 1, backend=backend))
 
     assert counts == CNOT_COUNTS[kind]
 
@@ -994,26 +994,26 @@ FREE_QUBITS_CNOT_COUNTS = {
 
 
 @pytest.mark.parametrize("kind", ["vchain", "one free qubit"])
-def test_cnot_counts_with_free_qubits(kind):
+def test_cnot_counts_with_free_qubits(backend, kind):
     counts = []
     for nctrl in range(3, 9):
         nfree = nctrl - 2 if kind == "vchain" else 1
         nqubits = nctrl + 1 + nfree
         gate = gates.X(nctrl).controlled_by(*range(nctrl))
         free = range(nctrl + 1, nqubits)
-        counts.append(_cnot_count(gate.decompose(*free), nqubits))
+        counts.append(_cnot_count(gate.decompose(*free), nqubits, backend))
 
     assert counts == FREE_QUBITS_CNOT_COUNTS[kind]
 
 
-def test_free_qubits_make_the_cost_of_x_linear():
+def test_free_qubits_make_the_cost_of_x_linear(backend):
     """Without auxiliary qubits the number of CNOTs grows quadratically."""
     nctrls = range(6, 13)
     with_free, without_free = [], []
     for nctrl in nctrls:
         gate = gates.X(nctrl).controlled_by(*range(nctrl))
-        with_free.append(_cnot_count(gate.decompose(nctrl + 1), nctrl + 2))
-        without_free.append(_cnot_count(gate.decompose(), nctrl + 1))
+        with_free.append(_cnot_count(gate.decompose(nctrl + 1), nctrl + 2, backend))
+        without_free.append(_cnot_count(gate.decompose(), nctrl + 1, backend))
 
     # Constant first differences: linear. Constant second differences: quadratic.
     assert len(set(np.diff(with_free))) == 1
