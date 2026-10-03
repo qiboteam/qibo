@@ -1082,9 +1082,7 @@ def frame_potential(
             unitary_2 = unitary_2.unitary(backend) / float(np.sqrt(dim))
 
             potential += backend.abs(
-                backend.trace(
-                    backend.transpose(backend.conj(unitary_1), (1, 0)) @ unitary_2
-                )
+                backend.trace(backend.dagger(unitary_1) @ unitary_2)
             ) ** (2 * power_t)
 
     return potential / samples**2

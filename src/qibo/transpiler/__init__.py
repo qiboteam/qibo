@@ -1,4 +1,16 @@
-from qibo.transpiler.optimizer import Preprocessing, Rearrange
+from qibo.transpiler.optimizer import (
+    InverseCancellation,
+    Optimize1qGatesDecomposition,
+    ParametrizedGateFusion,
+    Preprocessing,
+    Rearrange,
+    RemoveDiagonalGatesBeforeMeasurement,
+    RemoveFinalReset,
+    RemoveIdentityEquivalent,
+    RemoveResetInZeroState,
+    ResetAfterMeasureSimplification,
+    TGateRules,
+)
 from qibo.transpiler.pipeline import Passes
 from qibo.transpiler.placer import (
     Random,
@@ -10,16 +22,25 @@ from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 __all__ = [
+    "InverseCancellation",
     "NativeGates",
+    "Optimize1qGatesDecomposition",
+    "ParametrizedGateFusion",
     "Passes",
     "Preprocessing",
     "Random",
     "Rearrange",
+    "RemoveDiagonalGatesBeforeMeasurement",
+    "RemoveFinalReset",
+    "RemoveIdentityEquivalent",
+    "RemoveResetInZeroState",
+    "ResetAfterMeasureSimplification",
     "ReverseTraversal",
     "Sabre",
     "ShortestPaths",
     "StarConnectivityPlacer",
     "StarConnectivityRouter",
     "Subgraph",
+    "TGateRules",
     "Unroller",
 ]

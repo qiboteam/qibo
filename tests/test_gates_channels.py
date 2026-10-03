@@ -25,11 +25,11 @@ def test_general_channel(backend):
     m_2 = backend.cast(a_2, dtype=a_2.dtype)
     target_state = backend.matmul(
         backend.matmul(m_1, initial_state),
-        backend.transpose(backend.conj(m_1), (1, 0)),
+        backend.dagger(m_1),
     )
     target_state = target_state + backend.matmul(
         backend.matmul(m_2, initial_state),
-        backend.transpose(backend.conj(m_2), (1, 0)),
+        backend.dagger(m_2),
     )
 
     channel1 = gates.KrausChannel([(1,), (0, 1)], [a_1, a_2])
@@ -253,9 +253,9 @@ def test_amplitude_damping_channel(backend):
 
     initial_state = random_density_matrix(2**1, backend=backend)
     final_state = channel.apply(backend, backend.copy(initial_state), 1)
-    target_state = kraus_0 @ initial_state @ backend.transpose(
-        backend.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.transpose(backend.conj(kraus_1), (1, 0))
+    target_state = kraus_0 @ initial_state @ backend.dagger(
+        kraus_0
+    ) + kraus_1 @ initial_state @ backend.dagger(kraus_1)
 
     backend.assert_allclose(final_state, target_state)
 
@@ -278,7 +278,7 @@ def test_phase_damping_channel(backend):
     final_state = channel.apply(backend, backend.copy(initial_state), 1)
     target_state = kraus_0 @ initial_state @ backend.transpose(
         backend.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.transpose(backend.conj(kraus_1), (1, 0))
+    ) + kraus_1 @ initial_state @ backend.dagger(kraus_1)
 
     backend.assert_allclose(final_state, target_state)
 

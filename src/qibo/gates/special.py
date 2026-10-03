@@ -1,11 +1,106 @@
 from typing import TYPE_CHECKING
 
 from qibo.backends import _check_backend
+from qibo.config import raise_error
 from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
 
 if TYPE_CHECKING:
     from qibo.callbacks import Callback
+
+
+class Barrier(SpecialGate):
+    """Directive that separates the operations before and after it on the given qubits.
+
+    It does not change the quantum state (its action is the identity), so it
+    never affects simulation results. Its only purpose is to mark a boundary
+    that circuit-manipulation tools must respect:
+
+    * :meth:`qibo.models.circuit.Circuit.fuse` does not fuse gates across it;
+    * :meth:`qibo.gates.abstract.Gate.commutes` always returns ``False``, so
+      commutation-based rewriting never moves gates through it;
+    * it is drawn by :meth:`qibo.models.circuit.Circuit.draw` and exported to
+      OpenQASM (Open Quantum Assembly Language) as ``barrier q[i], q[j];``.
+
+    .. note::
+        Like every :class:`qibo.gates.abstract.SpecialGate`, a barrier is
+        treated as acting on *all* qubits of the circuit by
+        :meth:`qibo.models.circuit.Circuit.fuse`, even when it lists only a
+        subset of them. This is conservative: it can only prevent fusions,
+        never allow a wrong one.
+
+    Args:
+        q (int, ...): Indices of the qubits the barrier acts on.
+    Example:
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.gates.special import Barrier
+
+            circuit = Circuit(3)
+            circuit.add(gates.H(0))
+            circuit.add(gates.H(1))
+            circuit.add(Barrier(0, 1))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(Barrier(*range(circuit.nqubits)))
+            circuit.draw()
+
+        .. testoutput::
+
+            0: ─H─░─o─░─
+            1: ─H─░─X─░─
+            2: ───────░─
+    """
+
+    def __init__(self, *q: int):
+        super().__init__()
+        if len(q) == 0:
+            raise_error(
+                ValueError,
+                "Barrier requires at least one qubit. To act on every qubit of a "
+                "circuit use ``Barrier(*range(circuit.nqubits))``.",
+            )
+        self.name = "barrier"
+        self.draw_label = "░"
+        self.init_args = list(q)
+        self.target_qubits = q
+
+    @property
+    def clifford(self) -> bool:
+        """Barriers are the identity operation, hence trivially Clifford."""
+        return True
+
+    @property
+    def qasm_label(self) -> str:
+        """OpenQASM (Open Quantum Assembly Language) keyword for the barrier."""
+        return "barrier"
+
+    def apply(self, backend, state, nqubits):
+        """Return ``state`` unchanged, since a barrier does not act on the state."""
+        return state
+
+    def apply_clifford(self, backend, state, nqubits):
+        """Return ``state`` unchanged, since a barrier does not act on the state."""
+        return state
+
+    def on_qubits(self, qubit_map: dict):
+        """Creates the same barrier acting on different qubits.
+
+        Args:
+            qubit_map (dict): Dictionary mapping original qubit indices to new ones.
+                Every qubit of the barrier must appear as a key.
+
+        Returns:
+            :class:`qibo.gates.Barrier`: Barrier acting on the mapped qubits.
+        """
+        missing = [q for q in self.target_qubits if q not in qubit_map]
+        if len(missing) > 0:
+            raise_error(
+                KeyError,
+                f"Qubits {missing} of the barrier are missing from ``qubit_map``.",
+            )
+        return self.__class__(*(qubit_map[q] for q in self.target_qubits))
 
 
 class CallbackGate(SpecialGate):
@@ -159,3 +254,24 @@ class FusedGate(SpecialGate):
         for gate in self.gates:
             state = gate.apply_clifford(backend, state, nqubits)
         return state
+
+
+def remove_barriers(circuit):
+    """Return a deep copy of ``circuit`` with every barrier removed.
+
+    Use it before :mod:`qibo.transpiler`: its placer, router and unroller do not
+    handle barriers, and either raise an error or treat a two-qubit barrier as a
+    real interaction, inserting unnecessary ``SWAP`` gates to make its qubits
+    adjacent.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit that may contain
+            barriers. It is not modified.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Copy of ``circuit`` without barriers.
+    """
+    new_circuit = circuit.copy(deep=True)
+    kept_gates = [gate for gate in new_circuit.queue if not isinstance(gate, Barrier)]
+    new_circuit.queue[:] = kept_gates
+    return new_circuit

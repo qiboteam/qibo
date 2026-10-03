@@ -174,6 +174,22 @@ Grover's Algorithm
     :member-order: bysource
 
 
+Quantum Signal Processing
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.qsp.qsp_phases
+
+.. autofunction:: qibo.models.qsp.qsp_circuit
+
+
+Quantum Singular Value Transformation
+"""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.qsvt.qsvt_phases
+
+.. autofunction:: qibo.models.qsvt.qsvt_circuit
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 """""""""""""""""""""""""""""""""""""""""""""
 
@@ -1011,6 +1027,15 @@ Arbitrary unitary
 .. autoclass:: qibo.gates.Unitary
     :members:
     :member-order: bysource
+
+
+Barrier
+"""""""
+
+.. autoclass:: qibo.gates.Barrier
+    :members:
+    :member-order: bysource
+
 
 Callback gate
 """""""""""""
@@ -2798,6 +2823,30 @@ Gate decomposition
 Optimizer
 ^^^^^^^^^
 
+Inverse cancellation
+""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.InverseCancellation
+    :members:
+    :member-order: bysource
+
+
+Optimize 1-qubit gates decomposition
+""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.Optimize1qGatesDecomposition
+    :members:
+    :member-order: bysource
+
+
+Parametrized gate fusion
+""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.ParametrizedGateFusion
+    :members:
+    :member-order: bysource
+
+
 Preprocessing
 """""""""""""
 
@@ -2810,6 +2859,56 @@ Rearrange
 """""""""
 
 .. autoclass:: qibo.transpiler.optimizer.Rearrange
+    :members:
+    :member-order: bysource
+
+
+Remove diagonal gates before measurements
+"""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement
+    :members:
+    :member-order: bysource
+
+
+Remove final reset
+""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveFinalReset
+    :members:
+    :member-order: bysource
+
+
+Remove identity equivalent
+""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveIdentityEquivalent
+    :members:
+    :member-order: bysource
+
+
+Remove reset in zero state
+""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.RemoveResetInZeroState
+    :members:
+    :member-order: bysource
+
+
+Reset after measure simplification
+""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.ResetAfterMeasureSimplification
+    :members:
+    :member-order: bysource
+
+
+
+
+T-gate rules
+""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.TGateRules
     :members:
     :member-order: bysource
 

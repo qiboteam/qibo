@@ -1326,6 +1326,30 @@ def test_givens(backend):
     assert gates.GIVENS(0, 1, theta).unitary
 
 
+@pytest.mark.parametrize("theta", [0.1234, -0.7])
+@pytest.mark.parametrize(
+    "qubits,controls,nqubits",
+    [
+        ((0, 1), (2,), 3),
+        ((0, 1), (2, 3), 4),
+        ((3, 0), (1, 2), 4),
+        ((1, 2), (0, 3, 4), 5),
+    ],
+)
+def test_rbs_controlled_decomposition(backend, qubits, controls, nqubits, theta):
+    gate = gates.RBS(*qubits, theta).controlled_by(*controls)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate.decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target, atol=1e-8)
+
+
 def test_rbs(backend):
     theta = 0.1234
     nqubits = 2
@@ -1611,6 +1635,7 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
 
     assert not gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).clifford
     assert gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).unitary
+
     if len(qubits_in) == len(qubits_out):
         assert gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).hamming_weight
     else:
@@ -1620,11 +1645,42 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
 
     # test decomposition
     circuit = Circuit(nqubits)
-    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1))
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi))
     target = circuit.unitary(backend)
 
     circuit = Circuit(nqubits)
-    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1).decompose())
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
+
+@pytest.mark.parametrize("phi", [0.0, 0.4321])
+@pytest.mark.parametrize("controls", [(), (5,)])
+@pytest.mark.parametrize(
+    "qubits_in,qubits_out",
+    [
+        ([], [0]),
+        ([0], []),
+        ([], [0, 1]),
+        ([2, 0], []),
+        ([], [3, 1, 0]),
+    ],
+)
+def test_generalized_rbs_empty_register_decomposition(
+    backend, qubits_in, qubits_out, controls, phi
+):
+    nqubits = 6 if controls else 4
+    gate = gates.GeneralizedRBS(qubits_in, qubits_out, 0.1234, phi)
+    if controls:
+        gate = gate.controlled_by(*controls)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate.decompose())
     matrix = circuit.unitary(backend)
 
     backend.assert_allclose(matrix, target)
@@ -1680,6 +1736,11 @@ def test_unitary_initialization(backend):
     assert gate.hamming_weight
     assert not gates.Unitary(matrix, 0, 1, check_unitary=False).unitary
     assert gates.Unitary(random_unitary(2, backend=backend), 0).unitary
+
+    gate = gates.Unitary(random_unitary(4, backend=backend), 0, 1, draw_label="W")
+    assert gate.draw_label == "W"
+    assert gate.dagger().draw_label == "W"
+    assert gate.on_qubits({0: 1, 1: 2}).draw_label == "W"
 
 
 def test_unitary_common_gates(backend):

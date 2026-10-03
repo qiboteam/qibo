@@ -553,6 +553,73 @@ def _ehrlich_codewords_up_to_k(
             last_emitted = k_seq[-1]
 
 
+def _fanout_parity_tree(
+    qubits: list[int] | tuple[int], nqubits: int | None = None, **kwargs
+) -> Circuit:
+    """Synthesis of :math:`k`-target fanout with a depth :math:`2 \\lceil \\log_{2} k \\rceil + 3`.
+
+    Since :math:`(H \\otimes H) \\, \\mathrm{CNOT}_{t \\to a} \\, (H \\otimes H) =
+    \\mathrm{CNOT}_{a \\to t}`, the fanout from :math:`a` to
+    :math:`t_{1}, \\dots, t_{k}` is equal to Hadamard gates on all these qubits, the
+    parity :math:`t_{1} \\oplus \\dots \\oplus t_{k}` added to :math:`a`, and Hadamard
+    gates on all these qubits again. The parity is computed in place on :math:`t_{1}` by
+    a binary tree of :class:`qibo.gates.CNOT` gates, added to :math:`a` by one
+    :class:`qibo.gates.CNOT` gate, and uncomputed by the reversed tree. With a single
+    target, the fanout is a single :class:`qibo.gates.CNOT` gate.
+
+    Args:
+        qubits (list[int] | tuple[int]): qubits in which the fanout acts on. The first
+            qubit is the control.
+        nqubits (int, optional): total number of qubits in the circuit. To be used when
+            the total number of qubits differ from ``len(qubits)``.
+            Defaults to ``None``.
+        kwargs (dict, optional): additional arguments used to initialize a Circuit
+            object. For details, see the documentation of
+            :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Fanout circuit.
+
+    References:
+        1. C. Moore, *Quantum circuits: fanout, parity, and counting*,
+        `arXiv:quant-ph/9903046 (1999) <https://arxiv.org/abs/quant-ph/9903046>`_.
+
+        2. F. Green, S. Homer, C. Moore, and C. Pollett, *Counting, fanout, and the
+        complexity of quantum ACC*, `Quantum Inf. Comput. 2, 35 (2002)
+        <https://arxiv.org/abs/quant-ph/0106017>`_.
+    """
+    if nqubits is None:
+        if set(qubits) != set(range(len(qubits))):
+            raise_error(
+                ValueError,
+                "`nqubits` must be specified when "
+                "`set(qubits) != set(range(len(qubits)))`.",
+            )
+        nqubits = len(qubits)
+
+    control, targets = qubits[0], list(qubits[1:])
+    circuit = Circuit(nqubits, **kwargs)
+    if len(targets) == 1:
+        circuit.add(gates.CNOT(control, targets[0]))
+        return circuit
+
+    tree, step = [], 1
+    while step < len(targets):
+        tree += [
+            (targets[index + step], targets[index])
+            for index in range(0, len(targets) - step, 2 * step)
+        ]
+        step *= 2
+
+    circuit.add(gates.H(qubit) for qubit in qubits)
+    circuit.add(gates.CNOT(source, target) for source, target in tree)
+    circuit.add(gates.CNOT(targets[0], control))
+    circuit.add(gates.CNOT(source, target) for source, target in reversed(tree))
+    circuit.add(gates.H(qubit) for qubit in qubits)
+
+    return circuit
+
+
 def _gate_params(
     bsi: list[int], bsip1: list[int], keep_antictrls: bool = False
 ) -> tuple[list[int], ...]:
