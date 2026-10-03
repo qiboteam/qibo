@@ -2427,14 +2427,17 @@ class ECR(Gate):
         return True
 
     def decompose(self, *free: int, method: str = "standard", **kwargs) -> list[Gate]:
-        """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
+        """Decomposition of :math:`\\textup{ECR}` gate.
 
-        A global phase difference exists between the definitions of
-        :math:`\\textup{ECR}` and this decomposition. More precisely,
+        The decomposition is exact, including the global phase. More precisely,
 
         .. math::
-            \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
-                \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0}) \\, .
+            \\textup{ECR} = X(q_{0}) \\, \\textup{CNOT}(q_{0}, q_{1}) \\,
+                R_{X}(q_{1}, \\pi / 2) \\, S(q_{0}) \\, ,
+
+        where :math:`R_{X}(q_{1}, \\pi / 2) = e^{-i \\pi / 4} \\sqrt{X}(q_{1})`.
+        If ``method = "clifford_plus_t"``, :math:`R_{X}(q_{1}, \\pi / 2)` is the product
+        :math:`Z \\, Y \\, S \\, H \\, S` of Clifford gates.
         """
         return super().decompose(*free, method=method, **kwargs)
 
