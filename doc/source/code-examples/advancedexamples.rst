@@ -2411,16 +2411,16 @@ decomposition with the one of the original gate.
 
 .. testcode:: multicontrolled
 
-    import numpy as np
-
     from qibo import Circuit, gates
+    from qibo.backends import NumpyBackend
+    from qibo.quantum_info import random_unitary
     from qibo.transpiler import NativeGates, Unroller, multi_controlled_decomposition
 
 
-    def unitary(gate_list, nqubits):
+    def unitary(gate_list, nqubits, backend):
         circuit = Circuit(nqubits)
         circuit.add(gate_list)
-        return circuit.unitary()
+        return circuit.unitary(backend)
 
 
     def unroll(gate_list, nqubits):
@@ -2445,7 +2445,7 @@ controlled by five qubits:
 
     print(len(decomposition), "gates")
     print(sorted({g.name for g in decomposition}))
-    print(np.allclose(unitary(decomposition, 6), unitary([gate], 6)))
+    print(np.allclose(unitary(decomposition, 6, backend), unitary([gate], 6, backend)))
 
 .. testoutput:: multicontrolled
 
@@ -2463,8 +2463,8 @@ quadratically:
 
 .. testcode:: multicontrolled
 
-    phase = np.exp(0.4j)
-    matrix = np.array([[0.6, 0.8j], [0.8j, 0.6]])  # determinant one
+    phase = backend.exp(0.4j)
+    matrix = random_unitary(2, backend=backend)
     for gate in (
         gates.RX(4, 0.3).controlled_by(0, 1, 2, 3),
         gates.U3(4, 0.1, 0.2, 0.3).controlled_by(0, 1, 2, 3),
@@ -2473,7 +2473,7 @@ quadratically:
         gates.Unitary(phase * matrix, 4).controlled_by(0, 1, 2, 3),
     ):
         decomposition = gate.decompose()
-        exact = np.allclose(unitary(decomposition, 5), unitary([gate], 5))
+        exact = backend.allclose(unitary(decomposition, 5, backend), unitary([gate], 5, backend))
         print(f"{type(gate).__name__:8s} {len(decomposition):3d} gates, exact: {exact}")
 
 .. testoutput:: multicontrolled
@@ -2523,7 +2523,7 @@ to ``decompose``:
 
     # The free qubit can be in any state, so the whole unitary matrix is the same
     small = gates.X(5).controlled_by(0, 1, 2, 3, 4)
-    print(np.allclose(unitary(small.decompose(6), 7), unitary([small], 7)))
+    print(backend.allclose(unitary(small.decompose(6), 7, backend), unitary([small], 7, backend)))
 
 .. testoutput:: multicontrolled
 
@@ -2551,7 +2551,7 @@ decomposed gates do not act on:
 
     print(circuit.ngates, decomposed.ngates)
     print(any(gate.is_controlled_by for gate in decomposed.queue))
-    print(np.allclose(circuit().state(), decomposed().state()))
+    print(backend.allclose(circuit().state(), decomposed().state()))
 
 .. testoutput:: multicontrolled
 
@@ -2583,7 +2583,7 @@ that uses the lowest possible number of Toffoli gates, :math:`2k - 3` with clean
     print(sorted({type(g).__name__ for g in clean}))
 
     # Dirty qubits can be in any state
-    print(np.allclose(unitary(dirty, 8), unitary([gate], 8)))
+    print(backend.allclose(unitary(dirty, 8, backend), unitary([gate], 8, backend)))
 
     # Clean qubits have to start in the state 0, as the qubits of a new circuit do
     states = []
@@ -2592,7 +2592,7 @@ that uses the lowest possible number of Toffoli gates, :math:`2k - 3` with clean
         circuit.add(gates.H(q) for q in range(5))
         circuit.add(gate_list)
         states.append(circuit().state())
-    print(np.allclose(states[0], states[1]))
+    print(backend.allclose(states[0], states[1]))
 
 .. testoutput:: multicontrolled
 
@@ -2663,7 +2663,12 @@ and the id of the target qubit. It returns a list of gates, like ``decompose``:
 
     circuit = Circuit(6)
     circuit.add(decomposition)
-    print(np.allclose(circuit.unitary(), unitary([gates.H(4).controlled_by(0, 1, 2, 3)], 6)))
+    print(
+        backend.allclose(
+            circuit.unitary(backend),
+            unitary([gates.H(4).controlled_by(0, 1, 2, 3)], 6, backend)
+        )
+    )
 
 .. testoutput:: multicontrolled
 
