@@ -442,12 +442,31 @@ class Gate:
 
     @property
     def raw(self) -> dict:
-        """Serialize to dictionary.
+        """Serialize the gate to a JSON-compatible dictionary.
 
-        The values used in the serialization should be compatible with a
-        JSON dump (or any other one supporting a minimal set of scalar
-        types). Though the specific implementation is up to the specific
-        gate.
+        The returned dictionary always contains the following keys:
+
+        .. code-block:: text
+
+            {
+                "name": str,             # gate name (e.g. "h", "cx", "rz")
+                "init_args": list,       # positional args of the gate constructor
+                "init_kwargs": dict,     # keyword args of the gate constructor
+                "_target_qubits": list,  # ids of the target qubits
+                "_control_qubits": list, # ids of the control qubits
+                "_class": str,           # gate class name (e.g. "H", "CNOT", "RZ")
+            }
+
+        Only the constructor keyword arguments listed in
+        ``qibo.gates.abstract.REQUIRED_FIELDS_INIT_KWARGS`` (e.g. ``theta``,
+        ``phi``, ``lam``, ``basis``, ``collapse``, ...) are kept in
+        ``init_kwargs``. The values are restricted to JSON-compatible scalar
+        types. Measurement gates additionally carry a ``measurement_result``
+        entry. The dictionary can be loaded back into a gate with
+        :meth:`qibo.gates.Gate.from_dict`.
+
+        Returns:
+            dict: JSON-compatible representation of the gate.
         """
         encoded = self.__dict__
 
