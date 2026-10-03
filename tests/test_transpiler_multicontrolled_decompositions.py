@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.gates.abstract import GATES_CONTROLLED_BY_DEFAULT
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler import multicontrolled_decompositions
 from qibo.transpiler.multicontrolled_decompositions import (
@@ -827,6 +828,130 @@ def test_decompose_is_independent_of_global_backend(monkeypatch, backend, gate_c
         np.testing.assert_allclose(
             decomposed_gate.parameters, expected_gate.parameters, atol=1e-12
         )
+
+
+# Two-target gates whose controlled versions are decomposed into gates that are
+# natively controlled (for example ``CRY`` or ``CNOT``) and have extra controls.
+TWO_TARGET_GATES = {
+    "SWAP": lambda targets: gates.SWAP(*targets),
+    "FSWAP": lambda targets: gates.FSWAP(*targets),
+    "iSWAP": lambda targets: gates.iSWAP(*targets),
+    "RBS": lambda targets: gates.RBS(*targets, 0.1),
+    "GIVENS": lambda targets: gates.GIVENS(*targets, 0.2),
+    "RXX": lambda targets: gates.RXX(*targets, 0.3),
+    "RYY": lambda targets: gates.RYY(*targets, 0.3),
+    "RZZ": lambda targets: gates.RZZ(*targets, 0.3),
+    "RZX": lambda targets: gates.RZX(*targets, 0.3),
+    "ECR": lambda targets: gates.ECR(*targets),
+}
+
+
+@pytest.mark.parametrize("nctrl", [1, 2, 3])
+@pytest.mark.parametrize("name", list(TWO_TARGET_GATES))
+def test_decompose_controlled_two_qubit_gates(backend, name, nctrl):
+    """Natively controlled gates with extra controls, like ``CRY``, are decomposed with the
+    matrix of their target gate and not with the matrix of the whole gate."""
+    controls, targets, nqubits = tuple(range(nctrl)), (nctrl, nctrl + 1), nctrl + 2
+    gate = TWO_TARGET_GATES[name](targets).controlled_by(*controls)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate.decompose())
+    for _ in range(6):
+        circuit = circuit.decompose()
+        if not any(
+            g.is_controlled_by and len(g.control_qubits) > 1 for g in circuit.queue
+        ):
+            break
+
+    assert not any(
+        g.is_controlled_by and len(g.control_qubits) > 1 for g in circuit.queue
+    )
+    backend.assert_allclose(
+        circuit.unitary(backend), _unitary(backend, [gate], nqubits), atol=1e-8
+    )
+
+
+# Gates that are controlled by default: a function that creates the gate from the ids of
+# its own controls and of its target, and the one-qubit gate that acts on the target.
+_DEUTSCH = np.array(
+    [[1j * math.cos(0.3), math.sin(0.3)], [math.sin(0.3), 1j * math.cos(0.3)]]
+)
+CONTROLLED_BY_DEFAULT_GATES = {
+    "cx": (1, lambda c, t: gates.CNOT(*c, t), lambda t: gates.X(t)),
+    "cy": (1, lambda c, t: gates.CY(*c, t), lambda t: gates.Y(t)),
+    "cz": (1, lambda c, t: gates.CZ(*c, t), lambda t: gates.Z(t)),
+    "ch": (1, lambda c, t: gates.CH(*c, t), lambda t: gates.H(t)),
+    "csx": (1, lambda c, t: gates.CSX(*c, t), lambda t: gates.SX(t)),
+    "csxdg": (1, lambda c, t: gates.CSXDG(*c, t), lambda t: gates.SXDG(t)),
+    "crx": (1, lambda c, t: gates.CRX(*c, t, 0.3), lambda t: gates.RX(t, 0.3)),
+    "cry": (1, lambda c, t: gates.CRY(*c, t, 0.3), lambda t: gates.RY(t, 0.3)),
+    "crz": (1, lambda c, t: gates.CRZ(*c, t, 0.3), lambda t: gates.RZ(t, 0.3)),
+    "cu1": (1, lambda c, t: gates.CU1(*c, t, 0.3), lambda t: gates.U1(t, 0.3)),
+    "cu2": (
+        1,
+        lambda c, t: gates.CU2(*c, t, 0.3, 0.4),
+        lambda t: gates.U2(t, 0.3, 0.4),
+    ),
+    "cu3": (
+        1,
+        lambda c, t: gates.CU3(*c, t, 0.3, 0.4, 0.5),
+        lambda t: gates.U3(t, 0.3, 0.4, 0.5),
+    ),
+    "ccx": (2, lambda c, t: gates.TOFFOLI(*c, t), lambda t: gates.X(t)),
+    "ccz": (2, lambda c, t: gates.CCZ(*c, t), lambda t: gates.Z(t)),
+    "deutsch": (
+        2,
+        lambda c, t: gates.DEUTSCH(*c, t, 0.3),
+        lambda t: gates.Unitary(_DEUTSCH, t),
+    ),
+    "fanout": (1, lambda c, t: gates.FanOut(*c, t), lambda t: gates.X(t)),
+}
+
+
+def test_all_gates_controlled_by_default_are_tested():
+    assert set(CONTROLLED_BY_DEFAULT_GATES) == set(GATES_CONTROLLED_BY_DEFAULT)
+
+
+@pytest.mark.parametrize("nextra", [1, 2])
+@pytest.mark.parametrize("name", list(CONTROLLED_BY_DEFAULT_GATES))
+def test_decompose_gates_controlled_by_default_with_extra_controls(
+    backend, name, nextra
+):
+    """The extra controls are added to the controls of the gate, as ``decompose`` does when
+    it decomposes gates that act on more qubits. The result must be the one-qubit gate of the
+    target controlled by all of them."""
+    nnative, make, target_gate = CONTROLLED_BY_DEFAULT_GATES[name]
+    extra = tuple(range(nextra))
+    native = tuple(range(nextra, nextra + nnative))
+    target, nqubits = nextra + nnative, nextra + nnative + 1
+
+    gate = make(native, target)
+    gate.is_controlled_by = True
+    gate.control_qubits += extra
+    reference = target_gate(target).controlled_by(*extra, *native)
+
+    expected = _unitary(backend, [reference], nqubits)
+    backend.assert_allclose(_unitary(backend, [gate], nqubits), expected, atol=1e-10)
+
+    decomposition = gate.decompose()
+    assert not any(
+        g.is_controlled_by and len(g.control_qubits) > 1 for g in decomposition
+    )
+    backend.assert_allclose(
+        _unitary(backend, decomposition, nqubits), expected, atol=1e-8
+    )
+
+
+def test_circuit_decompose_returns_a_new_circuit():
+    circuit = Circuit(4)
+    circuit.add(gates.RY(2, 0.1).controlled_by(0, 1, 3))
+    decomposed = circuit.decompose()
+
+    assert circuit.ngates == 1 and circuit.queue[0].is_controlled_by
+    assert decomposed.ngates > 1
+    assert not any(
+        g.is_controlled_by and len(g.control_qubits) > 1 for g in decomposed.queue
+    )
 
 
 def test_decompose_does_not_modify_the_gate():
