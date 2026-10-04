@@ -66,7 +66,7 @@ def calculate_psi(
     # construct and diagonalize UT_U
     ut_u = u_magic.T @ u_magic
     ut_u_real = backend.real(ut_u) + backend.imag(ut_u)
-    if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
+    if backend.platform not in ("pytorch", "tensorflow"):
         ut_u_real = backend.round(ut_u_real, decimals=15)
 
     _eigvals_real, psi_magic = backend.eigenvectors(ut_u_real, hermitian=True)

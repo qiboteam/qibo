@@ -281,7 +281,7 @@ class QuantumNetwork:
                 f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
             )
 
-        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+        if order is None and self._backend.platform == "tensorflow":
             order = "euclidean"
 
         if self.is_pure():  # if the input is pure, it is always hermitian
@@ -757,7 +757,7 @@ class QuantumComb(QuantumNetwork):
                 f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
             )
 
-        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+        if order is None and self._backend.platform == "tensorflow":
             order = "euclidean"
 
         backend = self._backend
@@ -885,7 +885,7 @@ class QuantumChannel(QuantumComb):
                 f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
             )
 
-        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+        if order is None and self._backend.platform == "tensorflow":
             order = "euclidean"
 
         backend = self._backend

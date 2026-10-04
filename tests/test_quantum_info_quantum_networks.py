@@ -549,51 +549,28 @@ def test_operator_to_tensor_torch(backend):
     assert result is not None
 
 
-def test_tensorflow_backend_order(backend):
-    """Test that ``is_hermitian``, ``is_causal``, and ``is_unital`` set
-    ``order="euclidean"`` when the backend is a TensorflowBackend (lines 285, 761, 889)."""
+def test_tensorflow_backend_order(monkeypatch):
+    """Test that TensorFlow defaults to the ``euclidean`` norm order."""
     from unittest.mock import MagicMock
 
+    from qibo.backends import construct_backend
     from qibo.quantum_info.quantum_networks import QuantumChannel, QuantumComb
 
-    # Create a mock backend whose class name is "TensorflowBackend"
-    TensorflowBackend = type("TensorflowBackend", (), {})
-    mock_backend = MagicMock(spec=TensorflowBackend)
-    mock_backend.__class__ = TensorflowBackend
-    mock_backend.platform = "tensorflow"
-    mock_backend.name = "tensorflow"
+    backend = construct_backend("numpy")
+    channel = QuantumChannel(np.eye(4, dtype=complex), backend=backend)
+    comb = QuantumComb(np.eye(4, dtype=complex), backend=backend)
 
-    # We need a valid tensor for the channel
-    tensor = np.eye(4, dtype=complex)
+    matrix_norm = MagicMock(return_value=0.0)
+    vector_norm = MagicMock(return_value=0.0)
+    monkeypatch.setattr(backend, "platform", "tensorflow")
+    monkeypatch.setattr(backend, "matrix_norm", matrix_norm)
+    monkeypatch.setattr(backend, "vector_norm", vector_norm)
 
-    # --- is_hermitian (line 285) ---
-    channel = QuantumChannel(tensor, backend=backend)
-    channel._backend = mock_backend
-    mock_backend.cast = MagicMock(return_value=tensor)
-    mock_backend.transpose = MagicMock(return_value=tensor)
-    mock_backend.conj = MagicMock(return_value=tensor)
-    mock_backend.matrix_norm = MagicMock(return_value=0.0)
-    result = channel.is_hermitian()
-    assert result is True
+    assert channel.is_hermitian()
+    assert matrix_norm.call_args.args[1] == "euclidean"
 
-    # --- is_causal (line 761) and is_unital (line 889) ---
-    # Create a mock backend without spec so all attributes are available
-    mock_backend2 = MagicMock()
-    mock_backend2.__class__ = TensorflowBackend
-    mock_backend2.platform = "tensorflow"
-    mock_backend2.name = "tensorflow"
+    assert comb.is_causal()
+    assert vector_norm.call_args.kwargs["order"] == "euclidean"
 
-    # is_causal on a QuantumComb — the order check (line 761) executes before
-    # the method fails on the mocked backend, which is sufficient for coverage.
-    comb = QuantumComb.__new__(QuantumComb)
-    comb._backend = mock_backend2
-    comb.partition = (2, 2)
-    with pytest.raises(ValueError):
-        QuantumComb.is_causal(comb)
-
-    # is_unital on a QuantumChannel — same approach (line 889)
-    channel2 = QuantumChannel.__new__(QuantumChannel)
-    channel2._backend = mock_backend2
-    channel2.partition = (2, 2)
-    with pytest.raises(ValueError):
-        QuantumChannel.is_unital(channel2)
+    assert channel.is_unital()
+    assert vector_norm.call_args.kwargs["order"] == "euclidean"

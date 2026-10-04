@@ -429,31 +429,16 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
 
 
-def test_vncdr_cupy_model(backend):
-    """Test ``vnCDR`` with a cupy backend to cover the cupy model lambda (line 648)."""
-    from unittest.mock import MagicMock, patch
+@pytest.mark.parametrize("platform", ["cupy", "cuquantum"])
+def test_vncdr_cupy_model(platform):
+    """Test that ``vnCDR`` selects a numpy-based model for cupy/cuquantum backends."""
+    from types import SimpleNamespace
 
-    circuit = Circuit(2)
-    circuit.add(gates.X(0))
+    from qibo.models.error_mitigation import _default_model
 
-    # Create a mock backend with platform="cupy"
-    mock_backend = MagicMock()
-    mock_backend.platform = "cupy"
-    mock_backend.name = "cupy"
-    mock_backend.set_seed = MagicMock()
+    model = _default_model(SimpleNamespace(platform=platform))
 
-    # We only need to get past the model check (line 648).
-    # The function will fail later, but that's OK for coverage.
-    with (
-        patch("qibo.models.error_mitigation._check_backend", return_value=mock_backend),
-        pytest.raises(ValueError),
-    ):
-        vnCDR(
-            circuit,
-            observable=SymbolicHamiltonian(Z(0)),
-            noise_levels=[0.1],
-            noise_model=NoiseModel(),
-            model=None,
-            n_training_samples=1,
-            backend=mock_backend,
-        )
+    x = np.array([1.0, 2.0])
+    params = (np.array([1.0, 2.0]), np.array([3.0, 4.0]))
+    result = model(x, *params)
+    np.testing.assert_allclose(result, np.sum(x * np.vstack(params), axis=0))
