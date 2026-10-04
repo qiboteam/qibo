@@ -341,7 +341,7 @@ def to_stinespring(
     channel: Channel | ArrayLike,
     partition: list[int] | tuple[int, ...] | None = None,
     nqubits: int | None = None,
-    initial_state_env=None,
+    initial_state_env: ArrayLike | None = None,
     backend: Backend | None = None,
 ) -> ArrayLike:
     """Convert quantum ``channel`` :math:`U` to its Stinespring representation :math:`U_{0}`.

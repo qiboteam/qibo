@@ -845,6 +845,16 @@ def test_kraus_to_choi(backend, order):
 
     backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
 
+    # Kraus operators given as a list of gates
+    kraus_gates = [gates.Unitary(matrix, *qubits) for qubits, matrix in test_kraus]
+    choi = kraus_to_choi(kraus_gates, order=order, backend=backend)
+
+    backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
+
+    # Kraus operator shape incompatible with the number of qubits it acts on
+    with pytest.raises(ValueError):
+        kraus_to_choi([((0, 1), test_a0)], order=order, backend=backend)
+
 
 @pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
