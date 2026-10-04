@@ -8,7 +8,6 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.channels import Channel
 from qibo.gates.gates import Unitary
-from qibo.gates.special import FusedGate
 from qibo.quantum_info.utils import _pauli_basis_normalization
 
 
@@ -565,32 +564,3 @@ def _set_gate_and_target_qubits(
         target_qubits = tuple(sorted(qubitset))
 
     return gates, target_qubits
-
-
-def _individual_kraus_to_liouville(
-    kraus_ops, order: str = "row", backend: Backend | None = None
-):  # pragma: no cover
-    """Auxiliary, modified version of :func:`qibo.quantum_info.kraus_to_choi`
-    to be used in :func:`qibo.quantum_info.kraus_to_unitaries`. In principle,
-    this should be not be accessible to users.
-    """
-    from qibo.quantum_info.superoperator_transformations import (
-        choi_to_liouville,
-        vectorization,
-    )
-
-    backend = _check_backend(backend)
-
-    gates, target_qubits = _set_gate_and_target_qubits(kraus_ops, backend=backend)
-    nqubits = 1 + max(target_qubits)
-
-    super_ops = []
-    for gate in gates:
-        kraus_op = FusedGate(*range(nqubits))
-        kraus_op.append(gate)
-        kraus_op = kraus_op.matrix(backend)
-        kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        kraus_op = backend.outer(kraus_op, backend.conj(kraus_op))
-        super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
-
-    return super_ops

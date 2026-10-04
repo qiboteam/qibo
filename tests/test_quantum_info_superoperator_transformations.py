@@ -22,7 +22,6 @@ from qibo.quantum_info.superoperator_transformations import (
     kraus_to_liouville,
     kraus_to_pauli,
     kraus_to_stinespring,
-    kraus_to_unitaries,
     liouville_to_chi,
     liouville_to_choi,
     liouville_to_kraus,
@@ -1412,38 +1411,6 @@ def test_stinespring_to_chi(
     )
 
     backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
-
-
-@pytest.mark.parametrize("order", ["row", "column"])
-def test_kraus_to_unitaries(backend, order):
-    test_a0 = np.sqrt(0.4) * matrices.X
-    test_a1 = np.sqrt(0.6) * matrices.Y
-    test_kraus = [((0,), test_a0), ((0,), test_a1)]
-
-    with pytest.raises(TypeError):
-        kraus_to_unitaries(test_kraus, order, str(PRECISION_TOL), backend=backend)
-    with pytest.raises(ValueError):
-        kraus_to_unitaries(test_kraus, order, -1.0 * PRECISION_TOL, backend=backend)
-
-    target = kraus_to_liouville(test_kraus, order=order, backend=backend)
-
-    unitaries, probabilities = kraus_to_unitaries(
-        test_kraus, order=order, backend=backend
-    )
-    unitaries = np.array(
-        [np.sqrt(prob) * unitary for prob, unitary in zip(probabilities, unitaries)]
-    )
-    unitaries = list(zip([(0,)] * len(unitaries), unitaries))
-
-    operator = kraus_to_liouville(unitaries, backend=backend)
-
-    backend.assert_allclose(target, operator, atol=2 * PRECISION_TOL)
-
-    # warning coverage
-    test_a0 = np.sqrt(0.4) * matrices.X
-    test_a1 = np.sqrt(0.6) * matrices.Z
-    test_kraus = [((0,), test_a0), ((0,), test_a1)]
-    kraus_to_unitaries(test_kraus, order=order, backend=backend)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])

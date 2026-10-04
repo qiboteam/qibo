@@ -2580,18 +2580,6 @@ Stinespring to Chi-matrix
 .. autofunction:: qibo.quantum_info.stinespring_to_chi
 
 
-Kraus operators as probabilistic sum of unitaries
-"""""""""""""""""""""""""""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.kraus_to_unitaries
-
-.. note::
-    It is not guaranteed that a good approximation will be found or that any
-    approximation will be found at all. This functions will find good solutions
-    for a limited set of operators. We leave to the user to decide how to
-    best use this function.
-
-
 Utility Functions
 ^^^^^^^^^^^^^^^^^
 
