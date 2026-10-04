@@ -500,7 +500,7 @@ def _reshuffling(
 
 def _set_gate_and_target_qubits(
     kraus_ops: list | Channel, backend: Backend | None = None
-):  # pragma: no cover
+):
     """Returns Kraus operators as a set of gates acting on
     their respective ``target qubits``.
 
