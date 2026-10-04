@@ -1833,7 +1833,7 @@ def chi_to_stinespring(
 
 
 def stinespring_to_choi(
-    stinespring: Channel | ArrayLike,
+    stinespring: ArrayLike,
     dim_env: int,
     initial_state_env=None,
     nqubits: int | None = None,
@@ -1888,7 +1888,7 @@ def stinespring_to_choi(
 
 
 def stinespring_to_liouville(
-    stinespring: Channel | ArrayLike,
+    stinespring: ArrayLike,
     dim_env: int,
     initial_state_env=None,
     nqubits: int | None = None,
@@ -1944,7 +1944,7 @@ def stinespring_to_liouville(
 
 
 def stinespring_to_pauli(
-    stinespring: Channel | ArrayLike,
+    stinespring: ArrayLike,
     dim_env: int,
     initial_state_env=None,
     nqubits: int | None = None,
@@ -2010,7 +2010,7 @@ def stinespring_to_pauli(
 
 
 def stinespring_to_kraus(
-    stinespring: Channel | ArrayLike,
+    stinespring: ArrayLike,
     dim_env: int,
     initial_state_env=None,
     nqubits: int | None = None,
@@ -2074,7 +2074,7 @@ def stinespring_to_kraus(
 
 
 def stinespring_to_chi(
-    stinespring: Channel | ArrayLike,
+    stinespring: ArrayLike,
     dim_env: int,
     initial_state_env=None,
     nqubits: int | None = None,
