@@ -281,7 +281,7 @@ def test_term_representation():
 
 
 def test_symbolic_term_non_tensor_matrix(backend):
-    """Test ``SymbolicTerm`` with a symbol whose matrix is not a tensor type (line 184)."""
+    """Test ``SymbolicTerm`` with a symbol whose matrix is not a tensor type."""
     import sympy
 
     # Create a sympy symbol subclass with a non-tensor matrix

@@ -500,7 +500,7 @@ def test_random_stochastic_matrix(backend):
 
 def test_random_pauli_hamiltonian_tensorflow(backend):
     """Test ``random_pauli_hamiltonian`` with a tensorflow backend to cover
-    the ``to_numpy`` conversion (lines 840-841)."""
+    the ``to_numpy`` conversion."""
     from unittest.mock import MagicMock, patch
 
     # Create a mock backend with platform="tensorflow"

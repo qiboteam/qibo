@@ -356,7 +356,7 @@ def test_list_available_backends():
 
 
 def test_oom_error(backend):
-    """Test that OOM error is caught and re-raised as RuntimeError (line 2597)."""
+    """Test that OOM error is caught and re-raised as RuntimeError."""
     from unittest.mock import patch
 
     circuit = Circuit(2)

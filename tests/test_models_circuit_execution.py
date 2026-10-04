@@ -176,7 +176,8 @@ def test_initial_state_shape_error(backend, density_matrix):
 def test_compile_with_mock_backend():
     """Test ``Circuit.compile()`` and compiled ``execute()`` with a mock backend.
 
-    This covers the tensorflow-only compile path (lines 1056-1075) and the
+    This covers the compile path and the compiled execute path without
+    requiring tensorflow.
     compiled execute path (lines 1092-1094) without requiring tensorflow.
     """
     from unittest.mock import MagicMock

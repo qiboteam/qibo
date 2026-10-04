@@ -525,7 +525,7 @@ def test_default_construction(backend):
 
 
 def test_operator_to_tensor_torch(backend):
-    """Test ``_operator_to_tensor`` with a mock torch Tensor (covers line 117)."""
+    """Test ``_operator_to_tensor`` with a mock torch Tensor."""
     from qibo.quantum_info.quantum_networks import QuantumChannel
 
     # Create a mock Tensor class with reshape and permute methods
