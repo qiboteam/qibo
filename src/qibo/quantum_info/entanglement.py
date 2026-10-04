@@ -1,9 +1,13 @@
 """Submodules with entanglement measures."""
 
+import math
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
+from qibo.models.circuit import Circuit
 from qibo.quantum_info.linalg_operations import (
     matrix_power,
     partial_trace,
@@ -12,7 +16,12 @@ from qibo.quantum_info.linalg_operations import (
 from qibo.quantum_info.metrics import fidelity, purity
 
 
-def concurrence(state, bipartition, check_purity: bool = True, backend=None):
+def concurrence(
+    state: ArrayLike,
+    bipartition: list[int] | tuple[int, ...],
+    check_purity: bool = True,
+    backend: Backend = None,
+) -> float:
     """Calculates concurrence of a pure bipartite quantum state
     :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
 
@@ -23,8 +32,8 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     obtained by tracing out the qubits in the ``bipartition`` :math:`B`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        state (ArrayLike): statevector or density matrix.
+        bipartition (list or tuple): qubits in the subsystem to be traced out.
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -74,8 +83,12 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
 
 
 def entanglement_of_formation(
-    state, bipartition, base: float = 2, check_purity: bool = True, backend=None
-):
+    state: ArrayLike,
+    bipartition: list[int] | tuple[int, ...],
+    base: float = 2,
+    check_purity: bool = True,
+    backend: Backend = None,
+) -> float:
     """Calculates the entanglement of formation :math:`E_{f}` of a pure bipartite
     quantum state :math:`\\rho`, which is given by
 
@@ -91,8 +104,8 @@ def entanglement_of_formation(
     and :math:`H` is the :func:`qibo.quantum_info.entropies.shannon_entropy`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        state (ArrayLike): statevector or density matrix.
+        bipartition (list or tuple): qubits in the subsystem to be traced out.
         base (float): the base of the log in :func:`qibo.quantum_info.entropies.shannon_entropy`.
             Defaults to  :math:`2`.
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
@@ -120,7 +133,9 @@ def entanglement_of_formation(
     return ent_of_form
 
 
-def negativity(state, bipartition, backend=None):
+def negativity(
+    state: ArrayLike, bipartition: list[int] | tuple[int, ...], backend: Backend = None
+) -> float:
     """Calculates the negativity of a bipartite quantum state.
 
     Given a bipartite state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
@@ -135,8 +150,8 @@ def negativity(state, bipartition, backend=None):
     (also known as nuclear norm or trace norm).
 
     Args:
-        state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        state (ArrayLike): statevector or density matrix.
+        bipartition (list or tuple): qubits in the subsystem to be traced out.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses it uses the current backend.
             Defaults to ``None``.
@@ -153,7 +168,55 @@ def negativity(state, bipartition, backend=None):
     return backend.real((norm - 1) / 2)
 
 
-def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
+def logarithmic_negativity(
+    state: ArrayLike,
+    bipartition: list[int] | tuple[int, ...],
+    base: float = 2,
+    backend: Backend = None,
+) -> float:
+    """Logarithmic negativity of a bipartite quantum state.
+
+    Given a bipartite state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    the logarithmic negativity :math:`E_{N}(\\rho)` is given by
+
+    .. math::
+        E_{N}(\\rho) = \\log_{b}\\left( \\|\\rho^{T_{B}}\\|_{1} \\right)
+            = \\log_{b}\\left( 2 \\, \\operatorname{Neg}(\\rho) + 1 \\right) \\, ,
+
+    where :math:`b` is ``base``, :math:`\\rho^{T_{B}}` is the partial transpose of
+    :math:`\\rho` with respect to ``bipartition`` :math:`B`, :math:`\\|\\cdot\\|_{1}`
+    is the Schatten :math:`1`-norm, and :math:`\\operatorname{Neg}(\\rho)` is the
+    :func:`qibo.quantum_info.negativity`.
+
+    Args:
+        state (ArrayLike): statevector or density matrix.
+        bipartition (list or tuple): indices of qubits in partition :math:`B`,
+            which is partially transposed.
+        base (float, optional): the base of the log. Defaults to :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Logarithmic negativity :math:`E_{N}(\\rho)` of ``state`` :math:`\\rho`.
+
+    References:
+        1. G. Vidal, R. F. Werner, *Computable measure of entanglement*,
+           `Phys. Rev. A 65, 032314 <https://doi.org/10.1103/PhysRevA.65.032314>`_ (2002).
+    """
+    backend = _check_backend(backend)
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be positive.")
+
+    neg = negativity(state, bipartition, backend=backend)
+
+    return backend.log2(2 * neg + 1) / math.log2(base)
+
+
+def entanglement_fidelity(
+    channel: ArrayLike, nqubits: int, state: ArrayLike = None, backend: Backend = None
+) -> float:
     """Entanglement fidelity :math:`F_{\\mathcal{E}}` of a ``channel`` :math:`\\mathcal{E}`
     on ``state`` :math:`\\rho` is given by
 
@@ -169,7 +232,7 @@ def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
         channel (:class:`qibo.gates.channels.Channel`): quantum channel
             acting on partition :math:`A`.
         nqubits (int): total number of qubits in ``state``.
-        state (ndarray, optional): statevector or density matrix to be evolved
+        state (ArrayLike, optional): statevector or density matrix to be evolved
             by ``channel``. If ``None``, defaults to the maximally entangled state
             :math:`\\frac{1}{2^{n}} \\, \\sum_{k} \\, \\ket{k}\\ket{k}`, where
             :math:`n` is ``nqubits``. Defaults to ``None``.
@@ -217,7 +280,7 @@ def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
     return entang_fidelity
 
 
-def meyer_wallach_entanglement(state, backend=None):
+def meyer_wallach_entanglement(state: ArrayLike, backend: Backend = None) -> float:
     """Compute the Meyer-Wallach entanglement :math:`Q` of a ``state``,
 
     .. math::
@@ -232,7 +295,7 @@ def meyer_wallach_entanglement(state, backend=None):
     <https://doi.org/10.1063/1.1497700>`_.
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -279,8 +342,11 @@ def meyer_wallach_entanglement(state, backend=None):
 
 
 def entangling_capability(
-    circuit, samples: int, seed: int | None = None, backend: Backend | None = None
-):
+    circuit: Circuit,
+    samples: int,
+    seed: int | None = None,
+    backend: Backend | None = None,
+) -> float:
     """Return the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
 
     It is defined as the average Meyer-Wallach entanglement :math:`Q`
