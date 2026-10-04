@@ -807,8 +807,7 @@ def test_reset_after_measure_simplification(backend):
         "u3",
     ]
 
-    target = np.zeros((4, 4))
-    target[0, 0] = 1.0
+    target = backend.zero_state(2, density_matrix=True)
     for transpiled in (circuit, simplified):
         state = backend.execute_circuit(transpiled).state()
         backend.assert_allclose(state, target, atol=1e-8)

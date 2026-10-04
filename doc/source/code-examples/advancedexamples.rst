@@ -2393,6 +2393,358 @@ Setting an empty transpiler is equivalent to disabling transpilation.
 
     set_transpiler(Passes())
 
+.. _tutorials_multicontrolled:
+
+How to decompose multi-controlled gates?
+----------------------------------------
+
+Gates with many control qubits, such as a Toffoli gate with more controls, are not native
+to most hardware. Qibo decomposes them into gates with at most two qubits.
+The decompositions are exact, and they are available through the
+:meth:`qibo.gates.abstract.Gate.decompose` and :meth:`qibo.models.circuit.Circuit.decompose`
+methods, through the :class:`qibo.transpiler.unroller.Unroller` transpiler pass, and through
+the function :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+
+Throughout this example we count two-qubit gates (CZ, controlled-Z) after unrolling the
+decomposition into CZ and one-qubit gates, and we compare the unitary matrix of each
+decomposition with the one of the original gate.
+
+.. testcode:: multicontrolled
+
+    from qibo import Circuit, gates
+    from qibo.backends import NumpyBackend
+    from qibo.quantum_info import random_unitary
+    from qibo.transpiler import NativeGates, Unroller, multi_controlled_decomposition
+
+    backend = NumpyBackend()
+
+
+    def unitary(gate_list, nqubits, backend):
+        circuit = Circuit(nqubits)
+        circuit.add(gate_list)
+        return circuit.unitary(backend)
+
+
+    def unroll(gate_list, nqubits):
+        circuit = Circuit(nqubits)
+        circuit.add(gate_list)
+        return Unroller(NativeGates.CZ | NativeGates.U3)(circuit)
+
+
+    def count_cz(gate_list, nqubits):
+        return unroll(gate_list, nqubits).gate_types[gates.CZ]
+
+Without auxiliary qubits
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, no auxiliary qubits are used. Here we decompose a NOT gate (:class:`qibo.gates.X`)
+controlled by five qubits:
+
+.. testcode:: multicontrolled
+
+    gate = gates.X(5).controlled_by(0, 1, 2, 3, 4)
+    decomposition = gate.decompose()
+
+    print(len(decomposition), "gates")
+    print(sorted({g.name for g in decomposition}))
+    print(backend.allclose(unitary(decomposition, 6, backend), unitary([gate], 6, backend)))
+
+.. testoutput:: multicontrolled
+
+    50 gates
+    ['crx', 'cu3', 'u1']
+    True
+
+Any one-qubit gate with several controls can be decomposed in the same way. The cost depends
+on the determinant of the matrix of the target gate. Matrices with determinant one
+(the special unitary group SU(2), which includes :class:`qibo.gates.RX`, :class:`qibo.gates.RY`,
+:class:`qibo.gates.RZ` and :class:`qibo.gates.U3`) need a number of two-qubit gates that grows
+linearly with the number of controls. Any other :math:`2 \times 2` unitary matrix (the group
+U(2), which includes :class:`qibo.gates.H` and :class:`qibo.gates.X`) needs a number that grows
+quadratically:
+
+.. testcode:: multicontrolled
+
+    phase = backend.exp(0.4j)
+    matrix = random_unitary(2, backend=backend)
+    for gate in (
+        gates.RX(4, 0.3).controlled_by(0, 1, 2, 3),
+        gates.U3(4, 0.1, 0.2, 0.3).controlled_by(0, 1, 2, 3),
+        gates.Unitary(matrix, 4).controlled_by(0, 1, 2, 3),
+        gates.H(4).controlled_by(0, 1, 2, 3),
+        gates.Unitary(phase * matrix, 4).controlled_by(0, 1, 2, 3),
+    ):
+        decomposition = gate.decompose()
+        exact = backend.allclose(unitary(decomposition, 5, backend), unitary([gate], 5, backend))
+        print(f"{type(gate).__name__:8s} {len(decomposition):3d} gates, exact: {exact}")
+
+.. testoutput:: multicontrolled
+
+    RX        66 gates, exact: True
+    U3        66 gates, exact: True
+    Unitary   32 gates, exact: True
+    H         32 gates, exact: True
+    Unitary   32 gates, exact: True
+
+The number of two-qubit gates for an increasing number of controls is:
+
+.. testcode:: multicontrolled
+
+    print("controls   RX   H and X")
+    for nctrl in (3, 5, 7, 9):
+        controls = tuple(range(nctrl))
+        special = gates.RX(nctrl, 0.3).controlled_by(*controls)
+        general = gates.X(nctrl).controlled_by(*controls)
+        counts = [count_cz(g.decompose(), nctrl + 1) for g in (special, general)]
+        print(f"{nctrl:>8} {counts[0]:>4} {counts[1]:>8}")
+
+.. testoutput:: multicontrolled
+
+    controls   RX   H and X
+           3   14       26
+           5   40       82
+           7   80      170
+           9  120      290
+
+Dirty auxiliary qubits
+^^^^^^^^^^^^^^^^^^^^^^
+
+A multi-controlled :math:`X` gate becomes much cheaper if the decomposition can use other
+qubits of the circuit as workspace. These are called *dirty* auxiliary qubits, because
+they can be in any state, even entangled with the rest of the circuit, and they are left
+exactly as they were found. The user chooses which qubits can be borrowed by passing them
+to ``decompose``:
+
+.. testcode:: multicontrolled
+
+    gate = gates.X(8).controlled_by(*range(8))
+
+    print("no auxiliary qubits:", count_cz(gate.decompose(), 9))
+    print("one free qubit:     ", count_cz(gate.decompose(9), 10))
+    print("six free qubits:    ", count_cz(gate.decompose(*range(9, 15)), 15))
+
+    # The free qubit can be in any state, so the whole unitary matrix is the same
+    small = gates.X(5).controlled_by(0, 1, 2, 3, 4)
+    print(backend.allclose(unitary(small.decompose(6), 7, backend), unitary([small], 7, backend)))
+
+.. testoutput:: multicontrolled
+
+    no auxiliary qubits: 226
+    one free qubit:      104
+    six free qubits:     58
+    True
+
+With one free qubit the number of two-qubit gates grows linearly with the number of controls,
+and with :math:`k - 2` free qubits, where :math:`k` is the number of controls, it grows
+linearly with a smaller slope. Only multi-controlled :math:`X` gates profit from auxiliary qubits.
+For any other gate the free qubits are simply ignored.
+
+The same free qubits can be given to a whole circuit. They have to be qubits that the
+decomposed gates do not act on:
+
+.. testcode:: multicontrolled
+
+    circuit = Circuit(8)
+    circuit.add(gates.H(q) for q in range(5))
+    circuit.add(gates.X(5).controlled_by(0, 1, 2, 3, 4))
+
+    # qubits 6 and 7 are free
+    decomposed = circuit.decompose(6, 7)
+
+    print(circuit.ngates, decomposed.ngates)
+    print(any(gate.is_controlled_by for gate in decomposed.queue))
+    print(backend.allclose(circuit().state(), decomposed().state()))
+
+.. testoutput:: multicontrolled
+
+    6 129
+    False
+    True
+
+Clean auxiliary qubits and Toffoli gates
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If some free qubits are known to be in the state :math:`\ket{0}`, they are *clean* auxiliary
+qubits and the decomposition can be cheaper. Clean qubits are passed with the keyword
+argument ``clean``. When Toffoli gates are expensive, for example in fault-tolerant
+quantum computing, the keyword argument ``minimize_toffolis`` selects a decomposition
+that uses the lowest possible number of Toffoli gates, :math:`2k - 3` with clean qubits and
+:math:`4k - 8` with dirty qubits, instead of minimizing the number of two-qubit gates:
+
+.. testcode:: multicontrolled
+
+    gate = gates.X(5).controlled_by(0, 1, 2, 3, 4)
+
+    def count_toffolis(gate_list):
+        return sum(isinstance(g, gates.TOFFOLI) for g in gate_list)
+
+    dirty = gate.decompose(6, 7, minimize_toffolis=True)
+    clean = gate.decompose(clean=(6, 7), minimize_toffolis=True)
+    print("dirty:", count_toffolis(dirty), "Toffoli gates")
+    print("clean:", count_toffolis(clean), "Toffoli gates")
+    print(sorted({type(g).__name__ for g in clean}))
+
+    # Dirty qubits can be in any state
+    print(backend.allclose(unitary(dirty, 8, backend), unitary([gate], 8, backend)))
+
+    # Clean qubits have to start in the state 0, as the qubits of a new circuit do
+    states = []
+    for gate_list in (clean, [gate]):
+        circuit = Circuit(8)
+        circuit.add(gates.H(q) for q in range(5))
+        circuit.add(gate_list)
+        states.append(circuit().state())
+    print(backend.allclose(states[0], states[1]))
+
+.. testoutput:: multicontrolled
+
+    dirty: 12 Toffoli gates
+    clean: 7 Toffoli gates
+    ['TOFFOLI', 'X']
+    True
+    True
+
+.. warning::
+
+    The decomposition with clean qubits is only correct if the qubits given in ``clean``
+    are in the state :math:`\ket{0}` when the gate is applied. Use the argument ``free``
+    (or the positional arguments of ``decompose``) if this is not guaranteed.
+
+Decompositions with a lower depth
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The decompositions above have a depth that grows linearly with the number of controls.
+The keyword argument ``minimize_depth`` selects decompositions whose depth grows
+logarithmically, at the price of a larger number of gates. With two or more auxiliary
+qubits the decomposition is the one of the previous section, which is logarithmic with
+two qubits. With a single auxiliary qubit, clean or dirty, a different construction is used:
+
+.. testcode:: multicontrolled
+
+    print("controls | default | one free | one clean | two free")
+    for nctrl in (16, 64):
+        gate = gates.X(nctrl).controlled_by(*range(nctrl))
+        nqubits = nctrl + 3
+        depths = [
+            unroll(gate.decompose(nctrl + 1), nqubits).depth,
+            unroll(gate.decompose(nctrl + 1, minimize_depth=True), nqubits).depth,
+            unroll(gate.decompose(clean=(nctrl + 1,), minimize_depth=True), nqubits).depth,
+            unroll(gate.decompose(nctrl + 1, nctrl + 2, minimize_depth=True), nqubits).depth,
+        ]
+        print(f"{nctrl:>8} | {depths[0]:>7} | {depths[1]:>8} | {depths[2]:>9} | {depths[3]:>8}")
+
+.. testoutput:: multicontrolled
+
+    controls | default | one free | one clean | two free
+          16 |     734 |      983 |       599 |      272
+          64 |    3422 |     2039 |      1127 |      474
+
+The depth is the one of the unrolled circuit. With a single dirty qubit the decomposition
+is shallower than the default only for tens of controls or more, because it uses about twice as
+many gates, whereas with two qubits it is shallower already for a few controls.
+The arguments ``minimize_toffolis`` and ``minimize_depth`` cannot be used together.
+
+Using the decomposition function directly
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The methods above call the function
+:func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`, which
+can also be used directly with the matrix of the target gate, the ids of the control qubits
+and the id of the target qubit. It returns a list of gates, like ``decompose``:
+
+.. testcode:: multicontrolled
+
+    decomposition = multi_controlled_decomposition(
+        gates.H(0).matrix(),
+        controls=(0, 1, 2, 3),
+        target=4,
+        free=(5,),
+        minimize_depth=True,
+    )
+    print(len(decomposition), "gates")
+
+    circuit = Circuit(6)
+    circuit.add(decomposition)
+    print(
+        backend.allclose(
+            circuit.unitary(backend),
+            unitary([gates.H(4).controlled_by(0, 1, 2, 3)], 6, backend)
+        )
+    )
+
+.. testoutput:: multicontrolled
+
+    32 gates
+    True
+
+Dirty auxiliary qubits in the transpiler
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :class:`qibo.transpiler.unroller.Unroller` pass also decomposes multi-controlled gates
+(see :ref:`tutorials_set_transpiler`). By default it uses no auxiliary qubits. With the option
+``use_dirty_ancillas=True`` it uses all the qubits of the circuit that the gate does not act on
+as dirty auxiliary qubits:
+
+.. testcode:: multicontrolled
+
+    circuit = Circuit(10)
+    circuit.add(gates.X(5).controlled_by(0, 1, 2, 3, 4))
+    natives = NativeGates.default()
+
+    without = Unroller(natives)(circuit)
+    with_qubits = Unroller(natives, use_dirty_ancillas=True)(circuit)
+    print(without.gate_types[gates.CZ], with_qubits.gate_types[gates.CZ])
+
+.. testoutput:: multicontrolled
+
+    82 34
+
+Summary of the options
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+    :header-rows: 1
+    :widths: 33 20 47
+
+    * - Call
+      - Auxiliary qubits
+      - Cost for :math:`k` controls
+    * - ``gate.decompose()``
+      - none
+      - Linear number of two-qubit gates if :math:`\det(U) = 1`, quadratic otherwise.
+        Linear depth.
+    * - ``gate.decompose(*free)``
+      - dirty (:math:`X` only)
+      - Linear number of two-qubit gates, with a smaller slope with :math:`k - 2` qubits.
+        Linear depth.
+    * - ``minimize_toffolis=True``
+      - one or two, clean or dirty (:math:`X` only)
+      - :math:`2k - 3` Toffoli gates with clean qubits, :math:`4k - 8` with dirty qubits.
+        Logarithmic depth with two qubits, linear with one.
+    * - ``minimize_depth=True``
+      - one or two, clean or dirty (:math:`X` only)
+      - Logarithmic depth and a linear number of gates.
+
+.. rubric:: References
+
+1. R. Vale, T. M. D. Azevedo, I. C. S. Araújo, I. F. Araujo, and A. J. da Silva,
+   *Circuit Decomposition of Multi-Controlled Special Unitary Single-Qubit Gates*,
+   `IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst.
+   <https://doi.org/10.1109/TCAD.2023.3327102>`_
+2. A. J. da Silva and D. K. Park, *Linear-depth quantum circuits for multiqubit
+   controlled gates*, `Phys. Rev. A 106, 042602 (2022)
+   <https://doi.org/10.1103/PhysRevA.106.042602>`_.
+3. R. Iten, R. Colbeck, I. Kukuljan, J. Home, and M. Christandl,
+   *Quantum circuits for isometries*, `Phys. Rev. A 93, 032318 (2016)
+   <https://doi.org/10.1103/PhysRevA.93.032318>`_.
+4. T. Khattar and C. Gidney, *Rise of conditionally clean ancillae for efficient
+   quantum circuit constructions*, `Quantum 9, 1752 (2025)
+   <https://doi.org/10.22331/q-2025-05-21-1752>`_.
+5. J. Nie, W. Zi, and X. Sun, *Quantum circuit for multi-qubit Toffoli gate with
+   optimal resource*, `arXiv:2402.05053 <https://arxiv.org/abs/2402.05053>`_.
+6. V. Vandaele, *Asymptotically optimal quantum circuits for comparators and
+   incrementers*, `arXiv:2603.12917 <https://arxiv.org/abs/2603.12917>`_.
+
 .. _gst_example:
 
 How to perform Gate Set Tomography?

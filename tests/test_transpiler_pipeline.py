@@ -128,7 +128,7 @@ def test_custom_passes(backend, router, placer, ngates, nqubits, star_connectivi
     else:
         custom_passes.append(placer())
     custom_passes.append(router())
-    custom_passes.append(Unroller(native_gates=NativeGates.default()))
+    custom_passes.append(Unroller(native_gates=NativeGates.default(), backend=backend))
     custom_pipeline = Passes(
         passes=custom_passes,
         connectivity=connectivity,
@@ -163,7 +163,7 @@ def test_custom_passes_restrict(
     else:
         custom_passes.append(placer())
     custom_passes.append(routing())
-    custom_passes.append(Unroller(native_gates=NativeGates.default()))
+    custom_passes.append(Unroller(native_gates=NativeGates.default(), backend=backend))
     custom_pipeline = Passes(
         passes=custom_passes,
         connectivity=connectivity,
@@ -181,12 +181,12 @@ def test_custom_passes_restrict(
     assert set(transpiled_circ.wire_names) == set(restrict_names)
 
 
-def test_custom_passes_wrong_pass():
+def test_custom_passes_wrong_pass(backend):
     custom_passes = [0]
     custom_pipeline = Passes(passes=custom_passes, connectivity=None)
     circ = generate_random_circuit(nqubits=5, ngates=5)
     with pytest.raises(TranspilerPipelineError):
-        custom_pipeline(circ)
+        custom_pipeline(circ, backend=backend)
 
 
 def test_custom_passes_optimizer_backend(backend):
@@ -220,7 +220,7 @@ def test_int_qubit_names(backend, star_connectivity):
             Preprocessing(),
             Random(seed=0),
             Sabre(),
-            Unroller(NativeGates.default()),
+            Unroller(NativeGates.default(), backend=backend),
         ],
     )
     circuit = Circuit(1, wire_names=[123])
@@ -237,7 +237,7 @@ def test_int_qubit_names(backend, star_connectivity):
     )
 
 
-def test_qiskit_passes(star_connectivity):
+def test_qiskit_passes(backend, star_connectivity):
     nqubits = 5
     ngates = 10
     connectivity = star_connectivity()
@@ -252,13 +252,13 @@ def test_qiskit_passes(star_connectivity):
     custom_passes.append(Sabre())
     qiskit_passes = [passes.Optimize1qGates(), passes.InverseCancellation()]
     custom_passes.append(QiskitPasses(PassManager(qiskit_passes)))
-    custom_passes.append(Unroller(native_gates=NativeGates.default()))
+    custom_passes.append(Unroller(native_gates=NativeGates.default(), backend=backend))
     custom_pipeline = Passes(
         passes=custom_passes,
         connectivity=connectivity,
         native_gates=NativeGates.default(),
     )
-    transpiled_circ, final_layout = custom_pipeline(circ)
+    transpiled_circ, final_layout = custom_pipeline(circ, backend=backend)
     assert_transpiling(
         original_circuit=circ,
         transpiled_circuit=transpiled_circ,

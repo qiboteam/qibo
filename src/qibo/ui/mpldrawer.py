@@ -85,7 +85,7 @@ def plot_circuit(
 
     Example:
 
-        .. testcode::
+        .. code-block:: python
 
             import matplotlib.pyplot as plt
 

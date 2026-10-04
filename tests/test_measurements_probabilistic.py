@@ -25,9 +25,11 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         _ = result.samples()
 
     # update reference values based on backend and device
+    # (cupy's random_choice matches numpy's exactly once probabilities are
+    # correctly normalized; cuquantum is untested and kept separate)
     decimal_frequencies = (
         {2: 269, 0: 264, 1: 235, 3: 232}
-        if backend.platform in ("cupy", "cuquantum")
+        if backend.platform == "cuquantum"
         else {0: 249, 1: 231, 2: 253, 3: 267}
     )
     assert sum(result.frequencies().values()) == 1000
@@ -68,9 +70,11 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
+    # (cupy's random_choice matches numpy's exactly once probabilities are
+    # correctly normalized; cuquantum is untested and kept separate)
     decimal_frequencies = (
         {3: 509, 0: 170, 2: 167, 1: 154}
-        if backend.platform in ("cupy", "cuquantum")
+        if backend.platform == "cuquantum"
         else {0: 171, 1: 148, 2: 161, 3: 520}
     )
     assert sum(result.frequencies().values()) == 1000
@@ -120,19 +124,29 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     circuit.add(gates.M(3, p0=probs[2]))
     result = backend.execute_circuit(circuit, nshots=30)
     freqs = result.frequencies(binary=False)
-    targets = (
-        [
+    # gate-level p0/p1 bitflips are applied via apply_bitflips, which draws
+    # from backend.random_sample: cupy's curand generator produces a
+    # different (but internally consistent) stream than numpy's Mersenne
+    # Twister even for the same seed, so cupy needs its own reference
+    # values; cuquantum is untested and kept separate.
+    if backend.platform == "cuquantum":
+        targets = [
             {5: 30},
             {5: 17, 4: 5, 7: 4, 1: 2, 6: 2},
             {4: 9, 2: 5, 5: 5, 3: 4, 6: 4, 0: 1, 1: 1, 7: 1},
         ]
-        if backend.platform in ("cupy", "cuquantum")
-        else [
+    elif backend.platform == "cupy":
+        targets = [
+            {5: 30},
+            {1: 5, 4: 4, 5: 12, 7: 9},
+            {0: 5, 1: 1, 2: 4, 3: 7, 4: 3, 5: 3, 6: 3, 7: 4},
+        ]
+    else:
+        targets = [
             {5: 30},
             {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
             {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
         ]
-    )
     assert freqs == targets[i]
 
 
@@ -170,11 +184,23 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     result._samples = backend.cast(np.zeros((10, 3)), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)
-    targets = [
-        [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-        [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
-    ]
+    # apply_bitflips draws from backend.random_sample: cupy's curand
+    # generator produces a different (but internally consistent) stream
+    # than numpy's Mersenne Twister even for the same seed, so cupy needs
+    # its own reference values.
+    if backend.platform == "cupy":
+        targets = [
+            [0, 0, 0, 6, 4, 1, 1, 4, 0, 2],
+            [0, 0, 0, 6, 4, 1, 1, 4, 0, 2],
+            [0, 0, 0, 0, 4, 1, 1, 4, 0, 0],
+            [0, 0, 0, 6, 4, 0, 0, 4, 0, 2],
+        ]
+    else:
+        targets = [
+            [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+            [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+        ]
     noisy_samples = backend.samples_to_decimal(noisy_samples, 3)
     backend.assert_allclose(noisy_samples, targets[i])

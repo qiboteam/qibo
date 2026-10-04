@@ -2056,7 +2056,7 @@ def kraus_to_unitaries(
     backend = _check_backend(backend)
 
     target_qubits = [q for q, _ in kraus_ops]
-    nqubits = 1 + backend.max(target_qubits)
+    nqubits = 1 + int(np.max(target_qubits))
     dim = 2**nqubits
 
     target = kraus_to_liouville(kraus_ops, order=order, backend=backend)

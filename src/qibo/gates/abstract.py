@@ -46,6 +46,7 @@ GATES_CONTROLLED_BY_DEFAULT = [
     "cu3",
     "ccx",
     "ccz",
+    "deutsch",
     "fanout",
 ]
 
@@ -199,20 +200,22 @@ class Gate:
 
         return new_gate
 
-    def decompose(
-        self, *free, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ):
+    def decompose(self, *free, method: str = "standard", **kwargs):
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
-        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        Decompositions are based on `Phys. Rev. A 52, 3457 (1995)
+        <https://doi.org/10.1103/PhysRevA.52.3457>`_.
         If the gate is already controlled, it recursively decomposes the base gate and updates
-        the control qubits accordingly.
+        the control qubits accordingly. The exception are one-qubit gates controlled by more
+        than one qubit, which are decomposed by
+        :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`
+        (only if ``method="standard"``). Without ``free`` qubits no (dirty) auxiliary qubits
+        are used. The decomposition is applied recursively, so that the returned
+        gates are controlled by at most one qubit.
 
         Args:
-            free (int): Ids of free qubits to use for the gate decomposition.
-            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
-                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            free (int): Ids of free qubits that can be used as dirty auxiliary qubits,
+                that is, they can be in any state and are left unchanged.
             method (str, optional): Choice of gate set for the decomposition.
                 If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
                 :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
@@ -229,7 +232,10 @@ class Gate:
                 This precision defaults to :math:`\\epsilon = 10^{-16}`.
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
-                ``mpmmath_dps`` defaults to :math:`256`.
+                ``mpmmath_dps`` defaults to :math:`256`. For gates controlled by more than one
+                qubit and ``method = "standard"``, the keyword arguments ``clean``,
+                ``minimize_toffolis`` and ``minimize_depth`` are passed to
+                :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
@@ -246,23 +252,69 @@ class Gate:
 
             ncontrols = len(self.control_qubits)
 
-            # Step 2: Decompose base gate without controls
-            base_gate = self.__class__(*self.init_args, **self.init_kwargs)
-            decomposed = base_gate._base_decompose(
-                *free,
-                use_toffolis=use_toffolis,
-                ncontrols=ncontrols,
-                method=method,
-                **kwargs,
-            )
-            mask = self._control_mask_after_stripping(decomposed)
-            for bool_value, gate in zip(mask, decomposed):
-                if bool_value:
-                    gate.is_controlled_by = True
-                    gate.control_qubits += self.control_qubits
-            return decomposed
+            # Step 2: Multi-controlled one-qubit gates have a dedicated decomposition
+            if ncontrols > 1 and len(self.target_qubits) == 1 and method == "standard":
+                from qibo.backends import _numpy_backend
+                from qibo.transpiler.multicontrolled_decompositions import (
+                    multi_controlled_decomposition,
+                )
 
-        return self._base_decompose(*free, use_toffolis=use_toffolis, method=method)
+                backend = _numpy_backend()
+                base_gate = self.__class__(
+                    *map(_to_numpy, self.init_args), **self.init_kwargs
+                )
+                unitary = base_gate.matrix(backend)
+                if self.name in GATES_CONTROLLED_BY_DEFAULT:
+                    # The matrix of a gate that is controlled by default, like ``CRY``,
+                    # is the one of the whole gate. The one of the target gate is in
+                    # the last block, where all the controls are on.
+                    unitary = unitary[-2:, -2:]
+
+                clean = kwargs.get("clean", ())
+                minimize_toffolis = kwargs.get("minimize_toffolis", False)
+                minimize_depth = kwargs.get("minimize_depth", False)
+
+                decomposed = multi_controlled_decomposition(
+                    unitary=unitary,
+                    controls=self.control_qubits,
+                    target=self.target_qubits[0],
+                    free=free,
+                    clean=clean,
+                    minimize_toffolis=minimize_toffolis,
+                    minimize_depth=minimize_depth,
+                    backend=backend,
+                )
+
+            else:
+                # Step 3: Decompose base gate without controls
+                base_gate = self.__class__(*self.init_args, **self.init_kwargs)
+                decomposed = base_gate._base_decompose(
+                    *free,
+                    ncontrols=ncontrols,
+                    method=method,
+                    **kwargs,
+                )
+                mask = self._control_mask_after_stripping(decomposed)
+                for bool_value, gate in zip(mask, decomposed):
+                    if bool_value:
+                        gate.is_controlled_by = True
+                        gate.control_qubits += self.control_qubits
+        else:
+            decomposed = self._base_decompose(*free, method=method)
+
+        # Step 4: Decompose recursively until no multi-controlled gates are left.
+        # Gates controlled by more than one qubit are always decomposed, except
+        # ``is_controlled_by`` gates when ``method != "standard"``, which would
+        # not be simplified further.
+        output = []
+        for gate in decomposed:
+            if len(gate.control_qubits) > 1 and (
+                method == "standard" or not gate.is_controlled_by
+            ):
+                output.extend(gate.decompose(*free, method=method, **kwargs))
+            else:
+                output.append(gate)
+        return output
 
     @staticmethod
     def from_dict(raw: dict):
@@ -357,7 +409,7 @@ class Gate:
                 the current backend. Defaults to ``None``.
 
         Returns:
-            ndarray: Matrix representation of gate.
+            ArrayLike: Matrix representation of gate.
         """
         from qibo.backends import _check_backend
 
@@ -484,9 +536,7 @@ class Gate:
         """
         return json.dumps(self.raw)
 
-    def _base_decompose(
-        self, *free, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ):
+    def _base_decompose(self, *free, method: str = "standard", **kwargs):
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by
@@ -494,9 +544,6 @@ class Gate:
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
-            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
-                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
             kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
                 one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
                 of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
@@ -749,3 +796,18 @@ class ParametrizedGate(Gate):
                 param = symbol.evaluate(param)
             params[i] = float(param)
         self.parameters = tuple(params)
+
+
+def _to_numpy(array: ArrayLike) -> ArrayLike:  # pragma: no cover
+    """Converts a CuPy or PyTorch array to NumPy, and returns any other object unchanged.
+
+    This does not use any backend, since the arrays held by a gate can come from
+    a backend that is not the global one.
+    """
+    if hasattr(array, "get") and hasattr(array, "shape"):
+        return array.get()
+
+    if hasattr(array, "detach"):
+        return array.detach().cpu().numpy()
+
+    return array
