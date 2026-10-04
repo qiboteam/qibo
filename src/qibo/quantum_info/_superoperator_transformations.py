@@ -46,7 +46,6 @@ def _fast_walsh_hadamard_transform(
     backend = _check_backend(backend)
 
     axis = axis % len(array.shape)
-    # array = backend.cast(array, dtype=array.dtype, copy=True)
     array = backend.cast(array, dtype=array.dtype)
     array = backend.swapaxes(array, axis, -1)
 
