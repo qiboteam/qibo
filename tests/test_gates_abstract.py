@@ -513,6 +513,14 @@ def test_generator_eigenvalue_two_qubit(gate_cls):
     assert gate.generator_eigenvalue() == 0.5
 
 
+def test_generator_eigenvalue_rxxyy_not_implemented():
+    """RXXYY's generator (XX + YY) / 4 has eigenvalues {±1/2, 0, 0}, so the
+    simple parameter-shift eigenvalue does not apply to it."""
+    gate = gates.RXXYY(0, 1, 0.1)
+    with pytest.raises(NotImplementedError):
+        gate.generator_eigenvalue()
+
+
 def test_gate_set_parameters():
     gate = gates.RX(0, theta=0)
     assert gate.parameters == (0,)
