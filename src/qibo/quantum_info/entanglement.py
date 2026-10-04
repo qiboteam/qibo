@@ -208,7 +208,6 @@ def logarithmic_negativity(
 
     if base <= 0.0 or base == 1.0:
         raise_error(ValueError, "log base must be positive and not equal to 1.")
-        raise_error(ValueError, "log base must be positive.")
 
     neg = negativity(state, bipartition, backend=backend)
 
