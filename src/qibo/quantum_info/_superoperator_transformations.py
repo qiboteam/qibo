@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
-from qibo.gates.channels import Channel, Gate
+from qibo.gates.channels import Channel
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 from qibo.quantum_info.utils import _pauli_basis_normalization
