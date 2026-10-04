@@ -1217,6 +1217,132 @@ def relative_entropy_of_coherence(
     )
 
 
+def stabilizer_renyi_entropy(
+    state: ArrayLike,
+    alpha: float,
+    base: float = 2,
+    check_purity: bool = True,
+    backend: Backend = None,
+) -> float:
+    """Stabilizer Rényi entropy of a pure quantum state :math:`\\rho`.
+
+    For a pure :math:`n`-qubit state, the stabilizer Rényi entropy of order
+    :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` is given by
+
+    .. math::
+        M_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\, \\log\\left(
+            \\frac{1}{d} \\, \\sum_{P} \\, \\text{tr}^{2 \\alpha}(P \\, \\rho) \\right) \\, ,
+
+    where :math:`d = 2^{n}` and :math:`P` runs over all :math:`4^{n}` Pauli strings.
+    In the limit :math:`\\alpha \\to 1`, it reduces to
+    :math:`- \\frac{1}{d} \\sum_{P} \\, \\text{tr}^{2}(P \\, \\rho) \\,
+    \\log\\left(\\text{tr}^{2}(P \\, \\rho)\\right)`.
+    It is zero if, and only if, :math:`\\rho` is a stabilizer state.
+
+    All Pauli expectation values are obtained with a fast Walsh-Hadamard transform,
+    which has time complexity :math:`\\mathcal{O}(n \\, 4^{n})`.
+
+    Args:
+        state (ArrayLike): normalized statevector or density matrix.
+        alpha (float or int): order of the Rényi entropy. It must be positive and finite.
+        base (float, optional): the base of the log. Defaults to :math:`2`.
+        check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
+            it assumes ``state`` is pure. Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Stabilizer Rényi entropy :math:`M_{\\alpha}` of ``state`` :math:`\\rho`.
+
+    References:
+        1. L. Leone, S. F. E. Oliviero, A. Hamma, *Stabilizer Rényi entropy*,
+           `Phys. Rev. Lett. 128, 050402 <https://doi.org/10.1103/PhysRevLett.128.050402>`_
+           (2022).
+    """
+    backend = _check_backend(backend)
+
+    if (
+        (len(state.shape) not in (1, 2))
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    nqubits = math.log2(len(state))
+
+    if not nqubits.is_integer():
+        raise_error(ValueError, "dimensions of ``state`` must be a power of 2.")
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
+
+    if not 0.0 < alpha < math.inf:
+        raise_error(ValueError, "alpha must be positive and finite.")
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be positive.")
+
+    if not isinstance(check_purity, bool):
+        raise_error(
+            TypeError,
+            f"check_purity must be type bool, but it is type {type(check_purity)}.",
+        )
+
+    if check_purity and abs(purity(state, backend=backend) - 1.0) > PRECISION_TOL:
+        raise_error(
+            NotImplementedError,
+            "stabilizer Rényi entropy only implemented for pure quantum states.",
+        )
+
+    nqubits = int(nqubits)
+    dims = 2**nqubits
+    indices = backend.arange(dims)
+
+    # The expectation value of the Pauli string with X-pattern ``shift`` and
+    # Z-pattern ``z`` is, up to a phase, the Walsh-Hadamard transform of
+    # ``rho[k, k ^ shift]`` over ``k``, evaluated at ``z``.
+    total = 0.0
+    for shift in range(dims):
+        shifted = indices ^ shift
+
+        if len(state.shape) == 1:
+            correlations = state * backend.conj(state[shifted])
+        else:
+            correlations = state[indices, shifted]
+
+        for qubit in range(nqubits):
+            correlations = backend.reshape(correlations, (-1, 2, 2**qubit))
+            correlations = backend.concatenate(
+                (
+                    correlations[:, :1] + correlations[:, 1:],
+                    correlations[:, :1] - correlations[:, 1:],
+                ),
+                axis=1,
+            )
+
+        probabilities = backend.abs(correlations) ** 2
+
+        if alpha == 1:
+            logs = backend.log2(backend.where(probabilities > 0.0, probabilities, 1.0))
+            total += backend.sum(probabilities * logs)
+        else:
+            total += backend.sum(probabilities**alpha)
+
+    if alpha == 1:
+        entropy = -total / dims / math.log2(base)
+    else:
+        entropy = backend.log2(total / dims) / (1 - alpha) / math.log2(base)
+
+    # absolute value if entropy == 0.0 to avoid returning -0.0
+    return backend.abs(entropy) if entropy == 0.0 else entropy
+
+
 def _q_logarithm(x: ArrayLike, q: float) -> ArrayLike:
     """Generalization of logarithm function necessary for classical (relative) Tsallis entropy."""
     factor = 1 - q
