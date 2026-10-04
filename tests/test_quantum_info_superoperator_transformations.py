@@ -1355,9 +1355,13 @@ def test_stinespring_to_pauli(
 @pytest.mark.parametrize("stinespring", [test_stinespring])
 def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
     with pytest.raises(TypeError):
-        test = stinespring_to_kraus(stinespring, dim_env=2.0, nqubits=nqubits)
+        test = stinespring_to_kraus(
+            stinespring, dim_env=2.0, nqubits=nqubits, backend=backend
+        )
     with pytest.raises(ValueError):
-        test = stinespring_to_kraus(stinespring, dim_env=-1, nqubits=nqubits)
+        test = stinespring_to_kraus(
+            stinespring, dim_env=-1, nqubits=nqubits, backend=backend
+        )
     with pytest.raises(ValueError):
         state = random_density_matrix(2, pure=True, backend=backend)
         test = stinespring_to_kraus(
