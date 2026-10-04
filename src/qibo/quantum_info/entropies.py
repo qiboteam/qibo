@@ -25,7 +25,7 @@ def shannon_entropy(
     and :math:`0 \\log_{b}(0) \\equiv 0`.
 
     Args:
-        prob_dist (ArrayLike or list): a probability array :math:`\\mathbf{p}`.
+        prob_dist (ArrayLike): a probability array :math:`\\mathbf{p}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
@@ -91,8 +91,8 @@ def classical_relative_entropy(
     <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
 
     Args:
-        prob_dist_p (ArrayLike or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ArrayLike or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ArrayLike): discrete probability distribution :math:`p`.
+        prob_dist_q (ArrayLike): discrete probability distribution :math:`q`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
@@ -306,8 +306,8 @@ def classical_relative_renyi_entropy(
     :math:`\\log(\\max_{x}(\\mathbf{p}(x) \\, \\mathbf{q}(x))`.
 
     Args:
-        prob_dist_p (ArrayLike or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ArrayLike or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ArrayLike): discrete probability distribution :math:`p`.
+        prob_dist_q (ArrayLike): discrete probability distribution :math:`q`.
         alpha (float or int): order of the Rényi entropy.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -475,8 +475,8 @@ def classical_relative_tsallis_entropy(
     :class:`qibo.quantum_info.entropies.classical_relative_entropy`.
 
     Args:
-        prob_dist_p (ArrayLike or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ArrayLike or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ArrayLike): discrete probability distribution :math:`p`.
+        prob_dist_q (ArrayLike): discrete probability distribution :math:`q`.
         alpha (float): entropic index.
         base (float): the base of the log used when :math:`\\alpha = 1`. Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
