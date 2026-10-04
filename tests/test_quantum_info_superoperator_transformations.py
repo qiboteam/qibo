@@ -3,6 +3,7 @@ import pytest  # type: ignore
 
 from qibo import matrices
 from qibo.config import PRECISION_TOL
+from qibo.quantum_info._superoperator_transformations import _reshuffling
 from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.quantum_info.superoperator_transformations import (
@@ -1448,8 +1449,6 @@ def test_kraus_to_unitaries(backend, order):
 @pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_reshuffling(backend, order, test_superop):
-    from qibo.quantum_info.superoperator_transformations import _reshuffling
-
     with pytest.raises(ValueError):
         _reshuffling(test_superop, "system", backend=backend)
     with pytest.raises(ValueError):
