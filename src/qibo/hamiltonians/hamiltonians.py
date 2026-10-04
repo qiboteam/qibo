@@ -457,7 +457,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def diagonal_terms(self) -> list[list[SymbolicTerm]]:
         """List of terms that can be diagonalized simultaneously, i.e. that
         commute with each other. In detail each element of the list is a sublist
-        of commuting ``SymbolicTerm``s.
+        of commuting :class:`qibo.hamiltonians.terms.SymbolicTerm` terms.
         """
         diagonal_terms = []
         terms = self.terms

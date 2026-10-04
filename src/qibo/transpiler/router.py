@@ -790,15 +790,14 @@ class ShortestPaths(Router):
 class StarConnectivityRouter(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
-    This transpiler produces a circuit that respects the following connectivity:
+    This transpiler produces a circuit that respects the following connectivity
+    by adding SWAP gates when needed::
 
              q
              |
         q -- q -- q
              |
              q
-
-    by adding SWAP gates when needed.
 
     Args:
         connectivity (:class:`networkx.Graph`): Star connectivity graph.
