@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 import sympy
@@ -1392,3 +1394,15 @@ def test_inverse_cancellation_commutation_random(backend):
         removed += InverseCancellation()(circuit, backend=backend).ngates
         removed -= reduced.ngates
     assert removed > 0
+
+
+def test_consolidate_blocks_weight(backend):
+    circuit = Circuit(2)
+    circuit.add([gates.CZ(0, 1), gates.CNOT(0, 1), gates.T(1), gates.SWAP(0, 1)])
+
+    assert ConsolidateBlocks().weight == math.sqrt(2)
+    consolidated = ConsolidateBlocks(weight=math.pi)(circuit, backend=backend)
+    assert consolidated.ngates != circuit.ngates
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )

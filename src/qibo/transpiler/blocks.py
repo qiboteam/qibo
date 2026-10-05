@@ -1,3 +1,5 @@
+import math
+
 from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
@@ -95,7 +97,9 @@ class Block:
         """
         return not len(set(self.qubits).intersection(block.qubits)) > 0
 
-    def kak_decompose(self, backend: Backend = None) -> list[Gate]:
+    def kak_decompose(
+        self, weight: float = math.sqrt(2), backend: Backend = None
+    ) -> list[Gate]:
         """Return the gates of the block with as few CZ gates as the KAK decomposition allows.
 
         The KAK (Cartan) decomposition writes the :math:`4 \\times 4` matrix of the
@@ -107,6 +111,10 @@ class Block:
         All the gates of the block must be unitary.
 
         Args:
+            weight (float, optional): Weight of the imaginary part in the matrix that is
+                diagonalized to find the local gates, see
+                :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+                Defaults to :math:`\\sqrt{2}`.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
                 build the matrix of the block. If ``None``, defaults to the global
                 backend. Defaults to ``None``.
@@ -131,7 +139,7 @@ class Block:
         circuit = Circuit(2)
         circuit.add(self.on_qubits((0, 1)).gates)
         decomposition = two_qubit_decomposition(
-            *self.qubits, circuit.unitary(backend), backend
+            *self.qubits, circuit.unitary(backend), backend, weight=weight
         )
         if _count_2q_gates(decomposition) < cost:
             return decomposition

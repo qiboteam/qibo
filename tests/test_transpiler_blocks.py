@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from qibo import Circuit, gates
@@ -396,7 +398,7 @@ def test_return_last_block_error():
 def test_kak_decompose(backend):
     # two-qubit gates cost one controlled-Z gate, except SWAP (three) and iSWAP (two)
     block = Block(qubits=(2, 5), gates=[gates.SWAP(2, 5), gates.H(5), gates.CNOT(5, 2)])
-    decomposition = block.kak_decompose(backend)
+    decomposition = block.kak_decompose(backend=backend)
     assert sum(len(gate.qubits) == 2 for gate in decomposition) == 2
     assert all(set(gate.qubits) <= {2, 5} for gate in decomposition)
 
@@ -409,7 +411,7 @@ def test_kak_decompose(backend):
 
 def test_kak_decompose_identity(backend):
     block = Block(qubits=(0, 1), gates=[gates.CZ(0, 1), gates.CZ(0, 1)])
-    assert block.kak_decompose(backend) == []
+    assert block.kak_decompose(backend=backend) == []
 
 
 def test_kak_decompose_unchanged(backend):
@@ -421,4 +423,18 @@ def test_kak_decompose_unchanged(backend):
         [gates.RZZ(0, 1, 0.3), gates.RX(1, 0.2), gates.RZZ(0, 1, 0.5)],
     ):
         block = Block(qubits=(0, 1), gates=block_gates)
-        assert block.kak_decompose(backend) is block.gates
+        assert block.kak_decompose(backend=backend) is block.gates
+
+
+def test_kak_decompose_weight(backend):
+    circuit = Circuit(2)
+    circuit.add([gates.CZ(0, 1), gates.CNOT(0, 1), gates.T(1), gates.SWAP(0, 1)])
+    block = Block(qubits=(0, 1), gates=circuit.queue)
+
+    for kwargs in ({}, {"weight": math.pi}):
+        decomposition = block.kak_decompose(backend=backend, **kwargs)
+        new = Circuit(2)
+        new.add(decomposition)
+        backend.assert_allclose(
+            new.unitary(backend), circuit.unitary(backend), atol=1e-8
+        )

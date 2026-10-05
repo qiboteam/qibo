@@ -110,6 +110,12 @@ class ConsolidateBlocks(Optimizer):
     :class:`qibo.gates.Unitary` gates, so this pass is meant to be used before
     :class:`qibo.transpiler.unroller.Unroller`.
 
+    Args:
+        weight (float, optional): Weight of the imaginary part in the matrix that is
+            diagonalized to find the local gates of the decomposition, see
+            :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+            Defaults to :math:`\\sqrt{2}`.
+
     Example:
         A SWAP gate followed by a controlled-NOT (CNOT) gate costs four CZ gates, which
         the decomposition reduces to two.
@@ -135,6 +141,9 @@ class ConsolidateBlocks(Optimizer):
         *Optimal quantum circuits for general two-qubit gates*,
         `Phys. Rev. A 69, 032315 (2004) <https://doi.org/10.1103/PhysRevA.69.032315>`_.
     """
+
+    def __init__(self, weight: float = math.sqrt(2)):
+        self.weight = weight
 
     def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
         """Rewrite the blocks of gates acting on two qubits.
@@ -183,7 +192,11 @@ class ConsolidateBlocks(Optimizer):
 
         new = Circuit(**circuit.init_kwargs)
         for item in queue:
-            new.add(item.kak_decompose(backend) if isinstance(item, Block) else item)
+            new.add(
+                item.kak_decompose(self.weight, backend)
+                if isinstance(item, Block)
+                else item
+            )
 
         return new
 
