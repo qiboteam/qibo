@@ -200,3 +200,17 @@ def test_two_qubit_decomposition_no_entanglement(backend):
     final_matrix = circuit.unitary(backend)
 
     backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
+
+
+def test_two_qubit_decomposition_structured_angles(backend):
+    """Test decomposition of a unitary whose eigenvalue angles are multiples of pi/4."""
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.T(1))
+    matrix = circuit.unitary(backend)
+
+    decomposition = Circuit(2)
+    decomposition.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
+
+    backend.assert_allclose(decomposition.unitary(backend), matrix, atol=1e-6)
