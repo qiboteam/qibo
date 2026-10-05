@@ -1,8 +1,7 @@
 import networkx as nx
 import pytest
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.pipeline import restrict_connectivity_qubits

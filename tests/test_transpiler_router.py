@@ -4,9 +4,8 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
-from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import (

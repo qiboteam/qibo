@@ -2849,6 +2849,22 @@ See :ref:`tutorials_multicontrolled` for examples of all the options.
 Optimizer
 ^^^^^^^^^
 
+Consolidate blocks
+""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.ConsolidateBlocks
+    :members:
+    :member-order: bysource
+
+
+Fixed point
+"""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.FixedPoint
+    :members:
+    :member-order: bysource
+
+
 Inverse cancellation
 """"""""""""""""""""
 

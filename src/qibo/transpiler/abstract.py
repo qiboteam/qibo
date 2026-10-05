@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import networkx as nx
 
-from qibo.models import Circuit
+from qibo import Circuit
 
 
 class Placer(ABC):
