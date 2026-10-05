@@ -44,6 +44,7 @@ def test_circuit_execute_hamming_weight(backend):
         initial_state = random_statevector(dim, backend=backend, seed=1237)
         circuit = Circuit(nqubits)
         circuit.add(gates.CZ(0, 1))
+        circuit.add(gates.RBS(0, 2, theta=-1.3).controlled_by(1))
         circuit.add(gates.RZ(2, theta=0.123))
         result = circuit.execute(weight=weight, initial_state=initial_state)
         assert result is not None

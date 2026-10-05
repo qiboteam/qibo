@@ -1,6 +1,7 @@
 """Tests for the quantum_info.random_ensembles module."""
 
 from functools import reduce
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -501,8 +502,6 @@ def test_random_stochastic_matrix(backend):
 def test_random_pauli_hamiltonian_tensorflow(backend):
     """Test ``random_pauli_hamiltonian`` with a tensorflow backend to cover
     the ``to_numpy`` conversion."""
-    from unittest.mock import MagicMock, patch
-
     # Create a mock backend with platform="tensorflow"
     mock_backend = MagicMock()
     mock_backend.platform = "tensorflow"

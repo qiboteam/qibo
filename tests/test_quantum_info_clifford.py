@@ -64,7 +64,7 @@ def test_clifford_probabilities_unmeasured_qubit(backend):
     """``probabilities`` raises when asking for a qubit that was not measured."""
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
-        return
+        pytest.skip("Clifford backend not available for this engine.")
     circuit = random_clifford(3, backend=backend)
     circuit.add(gates.M(0))  # measure only qubit 0
     obj = Clifford.from_circuit(circuit, platform=_get_engine_name(backend))
@@ -76,7 +76,7 @@ def test_cnot_cost_two_qubit(backend):
     """``_cnot_cost`` works for 2-qubit Cliffords (exercises ``_cnot_cost2``)."""
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
-        return
+        pytest.skip("Clifford backend not available for this engine.")
     platform = _get_engine_name(backend)
     # A CNOT has r00 == 2, exercising the ``if r00 == 2: return r01`` branch.
     circuit = Circuit(2)
@@ -94,7 +94,7 @@ def test_cnot_cost_too_many_qubits(backend):
     """``_cnot_cost`` raises for more than 3 qubits."""
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
-        return
+        pytest.skip("Clifford backend not available for this engine.")
     circuit = random_clifford(4, backend=backend)
     obj = Clifford.from_circuit(circuit, platform=_get_engine_name(backend))
     with pytest.raises(ValueError):

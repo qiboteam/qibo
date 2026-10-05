@@ -215,7 +215,7 @@ def test_hamiltonian_matmul(backend, sparse_type):
 
 def test_hamiltonian_matmul_unsupported_type(backend):
     """``Hamiltonian @ other`` raises for non-tensor, non-Hamiltonian ``other``."""
-    H = Hamiltonian(2, np.eye(4), backend=backend)
+    H = Hamiltonian(2, backend.identity(4), backend=backend)
     with pytest.raises(NotImplementedError):
         H @ "not a tensor"
 
@@ -224,7 +224,7 @@ def test_symbolic_hamiltonian_matmul_qubit_mismatch(backend):
     """``SymbolicHamiltonian @ state`` raises when the state has a different
     number of qubits than the Hamiltonian."""
     H = SymbolicHamiltonian(X(0) + Z(1), nqubits=2, backend=backend)
-    state = backend.cast(np.ones(8))  # 3-qubit state
+    state = backend.ones(8)  # 3-qubit state
     with pytest.raises(ValueError):
         H @ state
 

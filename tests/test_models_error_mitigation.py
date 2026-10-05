@@ -287,12 +287,12 @@ def test_zne_exact_simulation(backend):
     nqubits = 1
     noise = get_noise_model(DepolarizingError(0.1), gates.RX)
     circuit = get_circuit(nqubits)
-    obs = np.prod([Z(qubit, backend=backend) for qubit in range(nqubits)])
+    obs = backend.prod([Z(qubit, backend=backend) for qubit in range(nqubits)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     estimate = ZNE(
         circuit=circuit,
         observable=obs,
-        noise_levels=np.array(range(4)),
+        noise_levels=backend.arange(4),
         noise_model=noise,
         nshots=None,
         insertion_gate="RX",
@@ -307,7 +307,7 @@ def test_vncdr_exact_simulation(backend):
     nqubits = 1
     noise = get_noise_model(DepolarizingError(0.1), gates.RX)
     circuit = get_circuit(nqubits)
-    obs = np.prod([Z(qubit, backend=backend) for qubit in range(nqubits)])
+    obs = backend.prod([Z(qubit, backend=backend) for qubit in range(nqubits)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     estimate = vnCDR(
         circuit=circuit,
@@ -427,18 +427,3 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
         estimate = estimate[0]
 
     assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
-
-
-@pytest.mark.parametrize("platform", ["cupy", "cuquantum"])
-def test_vncdr_cupy_model(platform):
-    """Test that ``vnCDR`` selects a numpy-based model for cupy/cuquantum backends."""
-    from types import SimpleNamespace
-
-    from qibo.models.error_mitigation import _default_model
-
-    model = _default_model(SimpleNamespace(platform=platform))
-
-    x = np.array([1.0, 2.0])
-    params = (np.array([1.0, 2.0]), np.array([3.0, 4.0]))
-    result = model(x, *params)
-    np.testing.assert_allclose(result, np.sum(x * np.vstack(params), axis=0))

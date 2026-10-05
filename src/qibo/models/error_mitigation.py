@@ -574,17 +574,6 @@ def CDR(
     return mit_val
 
 
-def _default_model(backend):
-    """Return the default fitting model for the given backend.
-
-    ``cupy``/``cuquantum`` backends use numpy directly because they are not
-    compatible with ``scipy.optimize``.
-    """
-    if backend.platform in ("cupy", "cuquantum"):
-        return lambda x, *params: np.sum(x * np.vstack(params), axis=0)
-    return lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
-
-
 def vnCDR(
     circuit: "Circuit",  # type: ignore
     observable: Hamiltonian | SymbolicHamiltonian,
@@ -655,7 +644,7 @@ def vnCDR(
     backend.set_seed(seed)
 
     if model is None:
-        model = _default_model(backend)
+        model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
 
     if readout is None:
         readout = {}

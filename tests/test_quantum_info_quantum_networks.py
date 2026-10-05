@@ -1,9 +1,12 @@
 """Tests for quantum_info.quantum_networks submodule"""
 
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.backends import construct_backend
 from qibo.quantum_info.quantum_networks import (
     IdentityChannel,
     QuantumChannel,
@@ -526,7 +529,6 @@ def test_default_construction(backend):
 
 def test_operator_to_tensor_torch(backend):
     """Test ``_operator_to_tensor`` with a mock torch Tensor."""
-    from qibo.quantum_info.quantum_networks import QuantumChannel
 
     # Create a mock Tensor class with reshape and permute methods
     class Tensor:
@@ -541,7 +543,7 @@ def test_operator_to_tensor_torch(backend):
             return Tensor(self._data.transpose(order))
 
     # Create a 4x4 matrix (2 qubits)
-    data = np.eye(4, dtype=complex)
+    data = backend.identity(4, dtype=backend.complex64)
     tensor = Tensor(data)
 
     # Call _operator_to_tensor with the mock Tensor
@@ -550,19 +552,24 @@ def test_operator_to_tensor_torch(backend):
 
 
 def test_tensorflow_backend_order(monkeypatch):
-    """Test that TensorFlow defaults to the ``euclidean`` norm order."""
-    from unittest.mock import MagicMock
+    """TensorFlow backends default to the ``euclidean`` norm order.
 
-    from qibo.backends import construct_backend
-    from qibo.quantum_info.quantum_networks import QuantumChannel, QuantumComb
-
+    ``is_hermitian``, ``is_causal`` and ``is_unital`` resolve ``order=None``
+    to ``"euclidean"`` when the backend is a ``TensorflowBackend``, because
+    TensorFlow's norm functions do not support all order options. The norm
+    functions are mocked so the test only verifies the resolved ``order``.
+    """
     backend = construct_backend("numpy")
     channel = QuantumChannel(np.eye(4, dtype=complex), backend=backend)
     comb = QuantumComb(np.eye(4, dtype=complex), backend=backend)
 
     matrix_norm = MagicMock(return_value=0.0)
     vector_norm = MagicMock(return_value=0.0)
-    monkeypatch.setattr(backend, "platform", "tensorflow")
+    # Make the backend report its class name as ``TensorflowBackend`` so the
+    # class-name check in the source triggers the euclidean default.
+    monkeypatch.setattr(
+        backend, "__class__", type("TensorflowBackend", (backend.__class__,), {})
+    )
     monkeypatch.setattr(backend, "matrix_norm", matrix_norm)
     monkeypatch.setattr(backend, "vector_norm", vector_norm)
 

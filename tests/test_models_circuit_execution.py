@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 
@@ -180,8 +182,6 @@ def test_compile_with_mock_backend():
     requiring tensorflow.
     compiled execute path (lines 1092-1094) without requiring tensorflow.
     """
-    from unittest.mock import MagicMock
-
     # --- Case 1: no measurements (covers line 1075) ---
     circuit = Circuit(2)
     circuit.add(gates.X(0))

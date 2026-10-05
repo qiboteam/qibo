@@ -1,5 +1,7 @@
 """Test gates defined in `qibo/gates/gates.py`."""
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
 
@@ -2279,8 +2281,6 @@ def test_gradient_rn(backend, gate):
 
 def test_check_engine_torch():
     """Test ``_check_engine`` with a mock torch Tensor (covers torch import path)."""
-    from unittest.mock import MagicMock, patch
-
     # Create a mock Tensor class
     Tensor = type("Tensor", (), {})
     tensor = Tensor()
