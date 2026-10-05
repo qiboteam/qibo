@@ -4,11 +4,10 @@ from inspect import signature
 
 import networkx as nx
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import SpecialGate
-from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.decompositions import u3_dec

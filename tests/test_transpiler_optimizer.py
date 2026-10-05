@@ -4,9 +4,8 @@ import numpy as np
 import pytest
 import sympy
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.gates.special import Barrier
-from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.optimizer import (
     ConsolidateBlocks,

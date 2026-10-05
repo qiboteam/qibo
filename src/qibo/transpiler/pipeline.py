@@ -2,9 +2,9 @@ from inspect import signature
 
 import networkx as nx
 
+from qibo import Circuit
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-from qibo.models import Circuit
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     PlacementError,

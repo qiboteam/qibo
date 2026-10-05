@@ -2259,8 +2259,7 @@ on a star-shaped hardware connectivity and a custom set of native gates.
 
     import networkx as nx
 
-    from qibo import gates
-    from qibo.models import Circuit
+    from qibo import Circuit, gates
     from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.optimizer import Preprocessing
     from qibo.transpiler.router import ShortestPaths
@@ -2341,8 +2340,7 @@ and the number of CZ gates that they need is compared:
 
     import networkx as nx
 
-    from qibo import gates
-    from qibo.models import Circuit
+    from qibo import Circuit, gates
     from qibo.transpiler.optimizer import (
         ConsolidateBlocks,
         FixedPoint,

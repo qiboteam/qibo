@@ -4,9 +4,8 @@ from copy import deepcopy
 import networkx as nx
 import numpy as np
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.config import raise_error
-from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.asserts import assert_placement

@@ -1,10 +1,9 @@
 import networkx as nx
 import numpy as np
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import Backend
 from qibo.config import raise_error
-from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Placer, Router
 from qibo.transpiler.asserts import assert_placement

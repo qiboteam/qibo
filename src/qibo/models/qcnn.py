@@ -7,9 +7,8 @@ The QuantumCNN class in this module provides methods to construct the QCNN.
 
 import numpy as np
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import get_backend
-from qibo.models import Circuit
 
 
 class QuantumCNN:
