@@ -539,8 +539,8 @@ def von_neumann_entropy(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
+    if base <= 0.0 or base == 1.0:
+        raise_error(ValueError, "log base must be positive and not equal to 1.")
 
     threshold = purity(state, backend=backend) - 1.0
     threshold = backend.cast(threshold, dtype=backend.float64)
@@ -618,8 +618,8 @@ def relative_von_neumann_entropy(
             f"target must have dims either (k,) or (k,k), but have dims {target.shape}.",
         )
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
+    if base <= 0.0 or base == 1.0:
+        raise_error(ValueError, "log base must be positive and not equal to 1.")
 
     threshold_state = backend.cast(
         purity(state, backend=backend) - 1.0, dtype=backend.float64
@@ -759,8 +759,8 @@ def renyi_entropy(
     if alpha < 0.0:
         raise_error(ValueError, "alpha must a non-negative float.")
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
+    if base <= 0.0 or base == 1.0:
+        raise_error(ValueError, "log base must be positive and not equal to 1.")
 
     if abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL:
         return 0.0
@@ -854,8 +854,8 @@ def relative_renyi_entropy(
     if alpha < 0.0:
         raise_error(ValueError, "alpha must a non-negative float.")
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
+    if base <= 0.0 or base == 1.0:
+        raise_error(ValueError, "log base must be positive and not equal to 1.")
 
     purity_target = purity(target, backend=backend)
     if (
@@ -938,8 +938,8 @@ def tsallis_entropy(
     if alpha < 0.0:
         raise_error(ValueError, "alpha must a non-negative float.")
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
+    if base <= 0.0 or base == 1.0:
+        raise_error(ValueError, "log base must be positive and not equal to 1.")
 
     if abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL:
         return 0.0
@@ -1057,8 +1057,8 @@ def entanglement_entropy(
     """
     backend = _check_backend(backend)
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
+    if base <= 0.0 or base == 1.0:
+        raise_error(ValueError, "log base must be positive and not equal to 1.")
 
     if (
         (len(state.shape) not in [1, 2])
