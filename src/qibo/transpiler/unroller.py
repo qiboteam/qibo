@@ -2,11 +2,10 @@ from enum import EnumMeta, Flag, auto
 from functools import reduce
 from operator import or_
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates import Gate
-from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.decompositions import (
     cz_dec,

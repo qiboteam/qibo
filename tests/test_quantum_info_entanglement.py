@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -8,6 +10,7 @@ from qibo.quantum_info.entanglement import (
     entanglement_fidelity,
     entanglement_of_formation,
     entangling_capability,
+    logarithmic_negativity,
     meyer_wallach_entanglement,
     negativity,
 )
@@ -86,6 +89,46 @@ def test_negativity(backend, p):
         target = 3 / 400
 
     backend.assert_allclose(neg, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e, 5])
+@pytest.mark.parametrize("p", [1 / 5, 1 / 3 + 0.01, 1.0])
+def test_logarithmic_negativity(backend, p, base):
+    with pytest.raises(ValueError):
+        state = backend.zero_state(2)
+        logarithmic_negativity(state, [0], base=0, backend=backend)
+
+    # werner state
+    zero, one = np.array([1, 0]), np.array([0, 1])
+    psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
+    psi = np.outer(psi, psi.T)
+    psi = backend.cast(psi)
+    state = p * psi + (1 - p) * backend.maximally_mixed_state(2)
+
+    # eigenvalues of the partial transpose: (1 + p) / 4 (three times)
+    # and (1 - 3 * p) / 4
+    trace_norm = (3 * (1 + p) + abs(1 - 3 * p)) / 4
+    target = np.log(trace_norm) / np.log(base)
+
+    log_neg = logarithmic_negativity(state, [0], base=base, backend=backend)
+
+    backend.assert_allclose(log_neg, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e, 5])
+@pytest.mark.parametrize("bipartition", [[0], [0, 1]])
+def test_logarithmic_negativity_pure_states(backend, bipartition, base):
+    # product state
+    state = backend.zero_state(3)
+    log_neg = logarithmic_negativity(state, bipartition, base=base, backend=backend)
+    backend.assert_allclose(log_neg, 0.0, atol=PRECISION_TOL)
+
+    # GHZ state: one ebit across any bipartition
+    state = np.zeros(8)
+    state[0] = state[-1] = 1 / np.sqrt(2)
+    state = backend.cast(state, dtype=state.dtype)
+    log_neg = logarithmic_negativity(state, bipartition, base=base, backend=backend)
+    backend.assert_allclose(log_neg, 1 / np.log2(base), atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("nqubits", [4, 6])

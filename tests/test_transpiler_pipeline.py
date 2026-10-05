@@ -2,8 +2,7 @@ import numpy as np
 import pytest
 from qiskit.transpiler import PassManager, passes
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.asserts import assert_circuit_equivalence, assert_transpiling

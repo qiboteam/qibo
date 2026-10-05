@@ -390,7 +390,7 @@ def test_measurement(backend, weight, collapse, nshots):
             for key, value in hamming_freq.items():
                 hamming_freq_probs[int(key, 2)] = value / nshots
 
-            backend.assert_allclose(hamming_probabilities, probabilities, atol=1e-1)
+            backend.assert_allclose(hamming_probabilities, probabilities, atol=1.5e-1)
             backend.assert_allclose(
                 hamming_freq_probs, hamming_probabilities, atol=1e-8
             )

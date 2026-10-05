@@ -6,10 +6,9 @@ from math import pi
 
 import pytest
 
-from qibo import gates, matrices
+from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.gates import Gate, abstract
-from qibo.models import Circuit
 
 
 @pytest.mark.parametrize(
