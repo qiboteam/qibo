@@ -1286,9 +1286,11 @@ def _mottonen_alpha_y(
 
     denominator = backend.sum(amplitudes[indices_denominator] ** 2, axis=-1)
 
-    division = backend.where(denominator != 0.0, numerator / denominator, 0.0)
+    # ``numerator`` vanishes wherever ``denominator`` does, so replacing the
+    # latter by one yields zero angles without any 0 / 0 floating-point warning
+    denominator = backend.where(denominator != 0.0, denominator, 1.0)
 
-    return 2 * backend.arcsin(backend.sqrt(division))
+    return 2 * backend.arcsin(backend.sqrt(numerator / denominator))
 
 
 def _mottonen_alpha_z(

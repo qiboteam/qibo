@@ -1,4 +1,3 @@
-from numpy import errstate
 from numpy.typing import ArrayLike
 
 from qibo import gates
@@ -109,18 +108,16 @@ def lcu_circuit(
     phases = coefficients / backend.where(magnitudes > 0.0, magnitudes, 1.0)
     phases = backend.concatenate((phases, padding))
 
-    # The Mottonen parametrization is used because its circuit has an exact inverse,
-    # and its 0 / 0 for the zero amplitudes is masked by the encoder.
-    with errstate(invalid="ignore"):
-        prepare_left = binary_encoder(
-            nauxiliary, parametrization="mottonen", data=amplitudes, backend=backend
-        )
-        prepare_right = binary_encoder(
-            nauxiliary,
-            parametrization="mottonen",
-            data=amplitudes * phases,
-            backend=backend,
-        )
+    # The Mottonen parametrization is used because its circuit has an exact inverse.
+    prepare_left = binary_encoder(
+        nauxiliary, parametrization="mottonen", data=amplitudes, backend=backend
+    )
+    prepare_right = binary_encoder(
+        nauxiliary,
+        parametrization="mottonen",
+        data=amplitudes * phases,
+        backend=backend,
+    )
 
     auxiliary = list(range(nauxiliary))
     system = list(range(nauxiliary, nauxiliary + nsystem))
