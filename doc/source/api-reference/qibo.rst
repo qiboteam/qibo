@@ -1841,6 +1841,12 @@ Negativity
 .. autofunction:: qibo.quantum_info.negativity
 
 
+Logarithmic negativity
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.logarithmic_negativity
+
+
 Entanglement fidelity
 """""""""""""""""""""
 
@@ -1952,6 +1958,30 @@ Entanglement entropy
 """"""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.entanglement_entropy
+
+
+Conditional entropy
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.conditional_entropy
+
+
+Linear entropy
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.linear_entropy
+
+
+Relative entropy of coherence
+"""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_entropy_of_coherence
+
+
+Stabilizer Rényi entropy
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stabilizer_renyi_entropy
 
 
 Metrics
