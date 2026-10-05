@@ -5,8 +5,7 @@ from grover import grover_qc
 from oracle import create_oracle_circ
 
 import qibo
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 def duerr_hoyer_algo(distances):

@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 from scipy.linalg import expm
@@ -200,3 +202,46 @@ def test_two_qubit_decomposition_no_entanglement(backend):
     final_matrix = circuit.unitary(backend)
 
     backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
+
+
+def test_two_qubit_decomposition_structured_angles(backend):
+    """Test decomposition of a unitary whose eigenvalue angles are multiples of pi/4."""
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.T(1))
+    matrix = circuit.unitary(backend)
+
+    decomposition = Circuit(2)
+    decomposition.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
+
+    backend.assert_allclose(decomposition.unitary(backend), matrix, atol=1e-6)
+
+
+@pytest.mark.parametrize("weight", [math.sqrt(2), math.pi, 0.3])
+def test_two_qubit_decomposition_weight(backend, weight):
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.T(1))
+    matrix = circuit.unitary(backend)
+
+    decomposition = Circuit(2)
+    decomposition.add(
+        two_qubit_decomposition(0, 1, matrix, backend=backend, weight=weight)
+    )
+
+    backend.assert_allclose(decomposition.unitary(backend), matrix, atol=1e-6)
+
+
+def test_calculate_psi_weight(backend):
+    unitary = random_unitary(4, backend=backend)
+    for weight in (math.sqrt(2), 2.0):
+        states, eigvals = calculate_psi(unitary, backend=backend, weight=weight)
+        magic = backend.cast(magic_basis)
+        u_magic = backend.conj(magic).T @ unitary @ magic
+        backend.assert_allclose(
+            u_magic.T @ u_magic @ backend.conj(magic).T @ states,
+            backend.conj(magic).T @ states * eigvals,
+            atol=1e-8,
+        )

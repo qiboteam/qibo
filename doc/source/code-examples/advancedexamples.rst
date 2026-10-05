@@ -149,10 +149,11 @@ How to select a quantum hardware device for circuit execution?
 --------------------------------------------------------------
 
 Qibolab is the dedicated Qibo backend for quantum hardware control.
-For installation instructions, see the `Qibolab Documentation <https://qibo.science/qibolab/stable/>`_.
-The ``Platform`` class in Qibolab represents a QPU device controlled by one or more instruments.
-By specifying the platform name, the user can select the quantum hardware device for circuit execution.
-When executing the circuit, it will be automatically transpiled using the :ref:`Default Transpiler <tutorials_set_transpiler>`.
+For installation instructions, see the `Qibolab Documentation
+<https://qibo.science/qibolab/stable/>`_. The ``Platform`` class in Qibolab represents a QPU device
+controlled by one or more instruments. By specifying the platform name, the user can select the
+quantum hardware device for circuit execution. When executing the circuit, it will be
+automatically transpiled using the :ref:`Default Transpiler <tutorials_set_transpiler>`.
 
 .. code-block:: python
 
@@ -164,10 +165,11 @@ When executing the circuit, it will be automatically transpiled using the :ref:`
 How to select specific hardware qubits for circuit execution?
 -------------------------------------------------------------
 
-The :class:`qibo.models.Circuit` has a ``wire_names`` property that stores the physical names of the qubits in the circuit.
-The physical qubit name ``wire_names[i]`` is assigned to the ``i`` th qubit in the circuit.
-Users can specify the hardware qubits to be used by setting the ``wire_names``.
-During circuit execution, Qibolab uses the ``wire_names`` to find the corresponding hardware qubits.
+The :class:`qibo.models.Circuit` has a ``wire_names`` property that stores the physical names of
+the qubits in the circuit. The physical qubit name ``wire_names[i]`` is assigned to the ``i``-th
+qubit in the circuit. Users can specify the hardware qubits to be used by setting the
+``wire_names``. During circuit execution, Qibolab uses the ``wire_names`` to find the
+corresponding hardware qubits.
 
 
 .. code-block:: python
@@ -201,7 +203,8 @@ If the circuit with the given ``wire_names`` does not meet the hardware device's
 the :ref:`default transpiler <tutorials_set_transpiler>` will automatically modify
 the circuit to satisfy these constraints.
 In this case, different hardware qubits may be used to execute the circuit.
-If the user disables the default transpiler, executing the circuit will result in compilation errors.
+If the user disables the default transpiler, executing the circuit will result in
+compilation errors.
 
 
 How to use callbacks?
@@ -1165,9 +1168,9 @@ it is sufficient to pass a circuit which was initialized with ``density_matrix=T
 Measurement errors
 ^^^^^^^^^^^^^^^^^^
 
-:class:`qibo.measurements.CircuitResult` provides :meth:`qibo.measurements.CircuitResult.apply_bitflips`
-which allows adding bit-flip errors to the sampled bit-strings without having to
-re-execute the simulation. For example:
+:class:`qibo.measurements.CircuitResult` provides
+:meth:`qibo.measurements.CircuitResult.apply_bitflips` which allows adding bit-flip errors
+to the sampled bit-strings without having to re-execute the simulation. For example:
 
 .. testcode::
 
@@ -2112,12 +2115,13 @@ How to calculate expectation values?
 
 It is possible to calculate the expectation value of a :class:`qibo.hamiltonians.Hamiltonian`
 or a :class:`qibo.hamiltonians.SymbolicHamiltonian` starting from different objects.
-The recommended way is to use the :meth:`qibo.hamiltonians.Hamiltonian.expectation` or the :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation` methods,
-which calculate the expectation values starting from an input :class:`qibo.models.circuit.Circuit`. If the circuit has
-been executed already, the cached result contained in ``circuit.final_state`` will be used, otherwise the circuit will be executed.
-This is the most flexible way for calculating expectation values and offers the broader support.
-For instance, in order to calculate the exact expectation value, thus using the quantum state prepared by the circuit,
-of an ``XXZ`` hamiltonian:
+The recommended way is to use the :meth:`qibo.hamiltonians.Hamiltonian.expectation` or
+the :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation` methods, which calculate
+the expectation values starting from an input :class:`qibo.models.circuit.Circuit`.
+If the circuit has been executed already, the cached result contained in ``circuit.final_state``
+will be used, otherwise the circuit will be executed. This is the most flexible way for calculating
+expectation values and offers the broader support. For instance, in order to calculate the exact
+expectation value, thus using the quantum state prepared by the circuit, of an ``XXZ`` Hamiltonian:
 
 
 .. testcode::
@@ -2178,7 +2182,8 @@ to trigger the calculation of expectation values directly from the samples:
 
 This example executes the circuit similarly to the previous one but calculates
 the expectation value using the frequencies of shots, instead of the exact state vector.
-As before, one can also manually extract the shots and use the :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples`
+As before, one can also manually extract the shots and use the
+:meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples`
 (or :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation_from_samples`) method as shown above,
 or even invoke it directly from the ``result`` object:
 
@@ -2187,8 +2192,8 @@ or even invoke it directly from the ``result`` object:
     expectation_value = result.expectation_from_samples(hamiltonian)
 
 There is one fundamental difference in this case, though.
-The :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation` also supports (Symbolic) Hamiltonians that are not diagonal in a
-single given basis:
+The :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation` also supports (Symbolic)
+Hamiltonians that are not diagonal in a single given basis:
 
 .. testcode::
 
@@ -2208,19 +2213,21 @@ single given basis:
    hamiltonian = SymbolicHamiltonian(3 * Z(2) * (1 - X(1)) ** 2 - (Y(0) * X(3)) / 2, nqubits=4)
    expectation_value = hamiltonian.expectation(circuit)
 
-What is happening under the hood in this case is that the expectation value is calculated individually
-for each group of simultaneously diagonalizable terms by measuring the circuit in the correct (rotated) basis.
-All the contributions are then summed to recover the global expectation value. This means, in particular,
-that several copies of the circuit are executed in parallel, one for each group of terms.
+What is happening under the hood in this case is that the expectation value is calculated
+individually for each group of simultaneously diagonalizable terms by measuring the circuit
+in the correct (rotated) basis. All the contributions are then summed to recover the global
+expectation value. This means, in particular, that several copies of the circuit are executed
+in parallel, one for each group of terms.
 
-For dense Hamiltonians, instead, the :meth:`qibo.hamiltonians.Hamiltonian.expectation` works only for diagonal
-observables when ``nshots != None``, as no method for the decomposition of a matrix in groups of diagonal terms
-is implemented yet.
+For dense Hamiltonians, instead, the :meth:`qibo.hamiltonians.Hamiltonian.expectation` works
+only for diagonal observables when ``nshots != None``, as no method for the decomposition of
+a matrix in groups of diagonal terms is implemented yet.
 
 The same is true for explicit shot extraction and expectation value calculation through the
 :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples` or
 :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation_from_samples` methods, as the passed
-set of samples is associated to only a single fixed measurement basis (the one manually appended to the circuit).
+set of samples is associated to only a single fixed measurement basis
+(the one manually appended to the circuit).
 
 
 .. _tutorials_transpiler:
@@ -2252,8 +2259,7 @@ on a star-shaped hardware connectivity and a custom set of native gates.
 
     import networkx as nx
 
-    from qibo import gates
-    from qibo.models import Circuit
+    from qibo import Circuit, gates
     from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.optimizer import Preprocessing
     from qibo.transpiler.router import ShortestPaths
@@ -2307,10 +2313,87 @@ or the ``on_qubits`` parameter.
     - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
     - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
 
-Additionally, a wrapper to qiskit's transpiler (:class:`qibo.transpiler.qiskit.QiskitPasses`) is implemented to make available
-all the qiskit transpilation tools for qibo circuits.
-In order to use it, you just need to construct a :class:`qiskit.transpiler.PassManager` as you would normally do in qiskit and
-pass it to the :class:`qibo.transpiler.qiskit.QiskitPasses` object:
+The optimization passes can be combined to simplify the circuit before it is decomposed
+into native gates:
+
+- :class:`qibo.transpiler.optimizer.InverseCancellation` removes pairs of gates that multiply
+  to the identity. With ``commutation=True`` the pair may be separated by gates that
+  commute with it.
+- :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition` rewrites runs of
+  single-qubit gates with as few gates as possible.
+- :class:`qibo.transpiler.optimizer.ConsolidateBlocks` rewrites each block of gates acting on
+  the same two qubits with at most three CZ gates, using the KAK (Cartan) decomposition.
+  It is useful after routing, where SWAP gates meet the gates of the circuit.
+  Its ``weight`` argument, :math:`\sqrt{2}` by default, is described in
+  :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+- :class:`qibo.transpiler.optimizer.FixedPoint` applies a list of optimizers repeatedly
+  until the circuit stops changing, so that each optimizer can profit from the
+  simplifications made by the others.
+
+In the following example, the two CNOT gates on the first pair of qubits cancel
+because the gates between them commute with them, and the SWAP and CNOT gates on the
+second pair of qubits are rewritten with two CZ gates instead of four.
+Both pipelines are completed by :class:`qibo.transpiler.unroller.Unroller`,
+and the number of CZ gates that they need is compared:
+
+.. testcode:: python
+
+    import networkx as nx
+
+    from qibo import Circuit, gates
+    from qibo.transpiler.optimizer import (
+        ConsolidateBlocks,
+        FixedPoint,
+        InverseCancellation,
+        Optimize1qGatesDecomposition,
+        Preprocessing,
+    )
+    from qibo.transpiler.pipeline import Passes
+    from qibo.transpiler.unroller import NativeGates, Unroller
+
+    # Star-shaped hardware connectivity and a custom set of native gates
+    chip = nx.Graph([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
+    natives = NativeGates.from_gatelist([gates.GPI2, gates.RZ, gates.Z, gates.CZ])
+
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
+    # The RZ gate on the control qubit and the X gate on the target qubit
+    # commute with the CNOT gates
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.X(2))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.SWAP(1, 2))
+    circuit.add(gates.CNOT(1, 2))
+
+    # The optimizers are applied again and again until the circuit stops changing
+    optimizers = FixedPoint(
+        [
+            InverseCancellation(commutation=True),
+            Optimize1qGatesDecomposition(),
+            ConsolidateBlocks(),
+        ]
+    )
+
+    without_optimizers = Passes([Preprocessing(), Unroller(natives)], connectivity=chip)
+    with_optimizers = Passes(
+        [Preprocessing(), optimizers, Unroller(natives)], connectivity=chip
+    )
+
+    for name, pipeline in (("without", without_optimizers), ("with", with_optimizers)):
+        transpiled_circ, _ = pipeline(circuit)
+        cz_count = sum(isinstance(gate, gates.CZ) for gate in transpiled_circ.queue)
+        print(f"{cz_count} CZ gates {name} optimizers")
+
+.. testoutput:: python
+
+    6 CZ gates without optimizers
+    2 CZ gates with optimizers
+
+Additionally, a wrapper to qiskit's transpiler (:class:`qibo.transpiler.qiskit.QiskitPasses`)
+is implemented to make available all the qiskit transpilation tools for qibo circuits.
+In order to use it, you just need to construct a :class:`qiskit.transpiler.PassManager`
+as you would normally do in qiskit and pass it to the :class:`qibo.transpiler.qiskit.QiskitPasses`
+object:
 
 .. testcode:: python
 
@@ -2380,9 +2463,10 @@ If the user does not explicitly set a transpiler, the default transpiler is used
 
 * For simulator backends, the default transpiler has no passes, so no transpilation is done.
 
-* For hardware backends, the default transpiler includes the :class:`qibo.transpiler.optimizer.Preprocessing`,
-:class:`qibo.transpiler.router.Sabre`, and :class:`qibo.transpiler.unroller.Unroller` passes,
-configured with the backend's connectivity and native gates.
+* For hardware backends, the default transpiler includes the
+:class:`qibo.transpiler.optimizer.Preprocessing`, :class:`qibo.transpiler.router.Sabre`,
+and :class:`qibo.transpiler.unroller.Unroller` passes, configured with the backend's
+connectivity and native gates.
 
 Setting an empty transpiler is equivalent to disabling transpilation.
 
@@ -2750,7 +2834,8 @@ Summary of the options
 How to perform Gate Set Tomography?
 -----------------------------------
 
-In order to obtain an estimated representation of a set of quantum gates in a particular noisy environment, qibo provides a GST routine in its tomography module.
+In order to obtain an estimated representation of a set of quantum gates in a particular
+noisy environment, qibo provides a GST routine in its tomography module.
 
 Let's first define the set of gates we want to estimate:
 
@@ -2758,9 +2843,17 @@ Let's first define the set of gates we want to estimate:
 
    from qibo import gates
 
-   gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX, [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), gates.CNOT]
+   gate_set = [
+       (gates.RX, [np.pi/3]),
+       gates.Z,
+       (gates.PRX, [np.pi/2, np.pi/3]),
+       (gates.GPI, [np.pi/7]),
+       gates.CNOT
+   ]
 
-For simulation purposes we can define a noise model. Naturally this is not needed when running on real quantum hardware, which is intrinsically noisy. For example, we can suppose that the three gates we want to estimate are going to be noisy:
+For simulation purposes we can define a noise model. Naturally this is not needed when
+running on real quantum hardware, which is intrinsically noisy. For example, we can
+suppose that the three gates we want to estimate are going to be noisy:
 
 .. testcode::
 
@@ -2771,7 +2864,8 @@ For simulation purposes we can define a noise model. Naturally this is not neede
    noise_model.add(DepolarizingError(1e-2), gates.H)
    noise_model.add(DepolarizingError(3e-2), gates.CZ)
 
-Then the estimated representation of the gates in this noisy environment can be extracted by running the GST:
+Then the estimated representation of the gates in this noisy environment can be extracted
+by running the GST:
 
 .. testcode::
 
@@ -2783,7 +2877,8 @@ Then the estimated representation of the gates in this noisy environment can be 
        noise_model = noise_model
    )
 
-In some cases the empty circuit matrix :math:`E` can also be useful, and can be returned by setting the ``include_empty`` argument to ``True``:
+In some cases the empty circuit matrix :math:`E` can also be useful, and can be returned by
+setting the ``include_empty`` argument to ``True``:
 
 .. testcode::
 
@@ -2794,8 +2889,9 @@ In some cases the empty circuit matrix :math:`E` can also be useful, and can be 
        include_empty = True,
    )
 
-where ``empty_1q`` and ``empty_2q`` correspond to the single and two qubits empty matrices respectively.
-Similarly, the Pauli-Liouville representation of the gates can be directly returned as well:
+where ``empty_1q`` and ``empty_2q`` correspond to the single and two qubits empty matrices
+respectively. Similarly, the Pauli-Liouville representation of the gates can be directly
+returned as well:
 
 .. testcode::
 
