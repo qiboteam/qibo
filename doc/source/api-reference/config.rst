@@ -3,7 +3,7 @@
 Configuration
 =============
 
-The :func:`set_max_qubits`` and :func:`set_max_qubits_dm` functions control the
+The :func:`set_max_qubits` and :func:`set_max_qubits_dm` functions control the
 maximum number of qubits allowed for state vector and density matrix
 allocations, respectively. These limits help prevent uncontrolled memory
 consumption; memory scales as ``2^n * 16`` bytes (complex128) for state vectors
