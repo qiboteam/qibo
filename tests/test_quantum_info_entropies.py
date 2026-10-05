@@ -1,7 +1,10 @@
+import math
+
 import numpy as np
 import pytest
 
 from qibo.config import PRECISION_TOL
+from qibo.quantum_info.basis import pauli_basis
 from qibo.quantum_info.entropies import (
     classical_mutual_information,
     classical_relative_entropy,
@@ -9,18 +12,23 @@ from qibo.quantum_info.entropies import (
     classical_relative_tsallis_entropy,
     classical_renyi_entropy,
     classical_tsallis_entropy,
+    conditional_entropy,
     entanglement_entropy,
+    linear_entropy,
     mutual_information,
+    relative_entropy_of_coherence,
     relative_renyi_entropy,
     relative_tsallis_entropy,
     relative_von_neumann_entropy,
     renyi_entropy,
     shannon_entropy,
+    stabilizer_renyi_entropy,
     tsallis_entropy,
     von_neumann_entropy,
 )
 from qibo.quantum_info.linalg_operations import matrix_power
 from qibo.quantum_info.random_ensembles import (
+    random_clifford,
     random_density_matrix,
     random_statevector,
 )
@@ -778,3 +786,267 @@ def test_entanglement_entropy(backend, bipartition, base):
         backend=backend,
     )
     backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e, 5])
+@pytest.mark.parametrize("partition", [[0], [1]])
+def test_conditional_entropy(backend, partition, base):
+    with pytest.raises(ValueError):
+        state = np.ones((3, 3))
+        state = backend.cast(state, dtype=state.dtype)
+        conditional_entropy(state, partition, base=base, backend=backend)
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        conditional_entropy(state, partition, base=base, backend=backend)
+
+    # Bell state: conditional entropy is negative
+    state = np.array([1.0, 0.0, 0.0, 1.0]) / np.sqrt(2)
+    state = backend.cast(state, dtype=state.dtype)
+    value = conditional_entropy(state, partition, base=base, backend=backend)
+    backend.assert_allclose(value, -1 / np.log2(base), atol=PRECISION_TOL)
+
+    # product pure state
+    state = backend.zero_state(2)
+    value = conditional_entropy(state, partition, base=base, backend=backend)
+    backend.assert_allclose(value, 0.0, atol=PRECISION_TOL)
+
+    # maximally mixed state
+    state = backend.maximally_mixed_state(2)
+    value = conditional_entropy(state, partition, base=base, backend=backend)
+    backend.assert_allclose(value, 1 / np.log2(base), atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e, 5])
+def test_conditional_entropy_random_states(backend, base):
+    # for product states, S(A|B) = S(A)
+    state_a = random_density_matrix(4, backend=backend)
+    state_b = random_density_matrix(4, backend=backend)
+    state = backend.kron(state_a, state_b)
+    value = conditional_entropy(state, [0, 1], base=base, backend=backend)
+    target = von_neumann_entropy(state_a, base=base, backend=backend)
+    backend.assert_allclose(value, target, atol=1e-6)
+
+    # for pure states, S(A|B) = - S(A)
+    state = random_statevector(8, backend=backend)
+    value = conditional_entropy(state, [0], base=base, backend=backend)
+    target = -entanglement_entropy(state, [1, 2], base=base, backend=backend)
+    backend.assert_allclose(value, target, atol=1e-6)
+
+
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_linear_entropy(backend, nqubits, normalize):
+    with pytest.raises(TypeError):
+        state = backend.zero_state(nqubits)
+        linear_entropy(state, normalize="True", backend=backend)
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        linear_entropy(state, normalize=normalize, backend=backend)
+
+    dims = 2**nqubits
+
+    # pure states
+    for density_matrix in (False, True):
+        state = backend.zero_state(nqubits, density_matrix=density_matrix)
+        value = linear_entropy(state, normalize=normalize, backend=backend)
+        backend.assert_allclose(value, 0.0, atol=PRECISION_TOL)
+
+    # maximally mixed state
+    state = backend.maximally_mixed_state(nqubits)
+    value = linear_entropy(state, normalize=normalize, backend=backend)
+    target = 1.0 if normalize else 1 - 1 / dims
+    backend.assert_allclose(value, target, atol=PRECISION_TOL)
+
+    # random state
+    state = random_density_matrix(dims, backend=backend)
+    value = linear_entropy(state, normalize=normalize, backend=backend)
+    state = backend.to_numpy(state)
+    target = 1 - np.real(np.trace(state @ state))
+    target = target * dims / (dims - 1) if normalize else target
+    backend.assert_allclose(value, target, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e, 5])
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_relative_entropy_of_coherence(backend, nqubits, base):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        relative_entropy_of_coherence(state, base=base, backend=backend)
+    with pytest.raises(ValueError):
+        state = backend.zero_state(nqubits)
+        relative_entropy_of_coherence(state, base=0, backend=backend)
+
+    dims = 2**nqubits
+
+    for density_matrix in (False, True):
+        # incoherent state
+        state = backend.zero_state(nqubits, density_matrix=density_matrix)
+        value = relative_entropy_of_coherence(state, base=base, backend=backend)
+        backend.assert_allclose(value, 0.0, atol=PRECISION_TOL)
+
+        # maximally coherent state
+        state = backend.plus_state(nqubits, density_matrix=density_matrix)
+        value = relative_entropy_of_coherence(state, base=base, backend=backend)
+        backend.assert_allclose(value, nqubits / np.log2(base), atol=PRECISION_TOL)
+
+    # maximally mixed state is diagonal
+    state = backend.maximally_mixed_state(nqubits)
+    value = relative_entropy_of_coherence(state, base=base, backend=backend)
+    backend.assert_allclose(value, 0.0, atol=PRECISION_TOL)
+
+    # random state: S(diag(rho)) - S(rho)
+    state = random_density_matrix(dims, backend=backend)
+    value = relative_entropy_of_coherence(state, base=base, backend=backend)
+    state = backend.to_numpy(state)
+    eigenvalues = np.linalg.eigvalsh(state)
+    eigenvalues = eigenvalues[eigenvalues > 0.0]
+    diagonal = np.real(np.diag(state))
+    diagonal = diagonal[diagonal > 0.0]
+    target = np.sum(eigenvalues * np.log2(eigenvalues))
+    target -= np.sum(diagonal * np.log2(diagonal))
+    backend.assert_allclose(value, target / np.log2(base), atol=1e-6)
+
+    # single-qubit state (I + 0.6 X) / 2, for which diag(rho) = I / 2
+    # and the eigenvalues are 0.8 and 0.2
+    state = np.array([[0.5, 0.3], [0.3, 0.5]])
+    state = backend.cast(state, dtype=state.dtype)
+    value = relative_entropy_of_coherence(state, base=base, backend=backend)
+    target = 1 + 0.8 * np.log2(0.8) + 0.2 * np.log2(0.2)
+    backend.assert_allclose(value, target / np.log2(base), atol=PRECISION_TOL)
+
+
+def test_stabilizer_renyi_entropy_errors(backend):
+    state = backend.zero_state(2)
+
+    with pytest.raises(TypeError):
+        wrong_state = np.random.rand(2, 3)
+        wrong_state = backend.cast(wrong_state, dtype=wrong_state.dtype)
+        stabilizer_renyi_entropy(wrong_state, 2, backend=backend)
+    with pytest.raises(TypeError):
+        wrong_state = np.array([])
+        wrong_state = backend.cast(wrong_state, dtype=wrong_state.dtype)
+        stabilizer_renyi_entropy(wrong_state, 2, backend=backend)
+    with pytest.raises(ValueError):
+        wrong_state = np.ones(3) / math.sqrt(3)
+        wrong_state = backend.cast(wrong_state, dtype=wrong_state.dtype)
+        stabilizer_renyi_entropy(wrong_state, 2, backend=backend)
+    with pytest.raises(TypeError):
+        stabilizer_renyi_entropy(state, "2", backend=backend)
+    for alpha in (0, -1, math.inf, math.nan):
+        with pytest.raises(ValueError):
+            stabilizer_renyi_entropy(state, alpha, backend=backend)
+    with pytest.raises(ValueError):
+        stabilizer_renyi_entropy(state, 2, base=0, backend=backend)
+    with pytest.raises(TypeError):
+        stabilizer_renyi_entropy(state, 2, check_purity="True", backend=backend)
+    with pytest.raises(NotImplementedError):
+        mixed_state = backend.maximally_mixed_state(2)
+        stabilizer_renyi_entropy(mixed_state, 2, backend=backend)
+
+    # purity is not verified if ``check_purity=False``
+    mixed_state = backend.maximally_mixed_state(2)
+    value = stabilizer_renyi_entropy(
+        mixed_state, 2, check_purity=False, backend=backend
+    )
+    assert math.isfinite(float(value))
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e, 5])
+@pytest.mark.parametrize("alpha", [0.5, 1, 2, 3, 4.5])
+def test_stabilizer_renyi_entropy_single_qubit_magic_state(backend, alpha, base):
+    # (|0> + exp(i * pi / 4) |1>) / sqrt(2) has Pauli expectation values
+    # <I> = 1, <X> = <Y> = 1 / sqrt(2), and <Z> = 0.
+    state = np.array([1.0, np.exp(1j * math.pi / 4)]) / math.sqrt(2)
+    state = backend.cast(state, dtype=state.dtype)
+
+    if alpha == 1:
+        target = 1 / 2
+    else:
+        target = math.log2((1 + 2 ** (1 - alpha)) / 2) / (1 - alpha)
+
+    for kind in (state, backend.outer(state, backend.conj(state))):
+        value = stabilizer_renyi_entropy(kind, alpha, base=base, backend=backend)
+        backend.assert_allclose(value, target / math.log2(base), atol=1e-10)
+
+
+@pytest.mark.parametrize("alpha", [0.5, 1, 2, 3])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4])
+def test_stabilizer_renyi_entropy_stabilizer_states(backend, nqubits, alpha):
+    dims = 2**nqubits
+
+    ghz = np.zeros(dims)
+    ghz[0] = ghz[-1] = 1 / math.sqrt(2)
+    ghz = backend.cast(ghz, dtype=ghz.dtype)
+
+    clifford = random_clifford(nqubits, seed=10, backend=backend)
+    random_stabilizer = backend.execute_circuit(clifford).state()
+
+    states = [
+        backend.zero_state(nqubits),
+        backend.plus_state(nqubits),
+        ghz,
+        random_stabilizer,
+    ]
+
+    for state in states:
+        for kind in (state, backend.outer(state, backend.conj(state))):
+            value = stabilizer_renyi_entropy(kind, alpha, backend=backend)
+            backend.assert_allclose(value, 0.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e])
+@pytest.mark.parametrize("alpha", [0.3, 0.5, 1, 2, 3, 4.5])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4])
+def test_stabilizer_renyi_entropy_random_states(backend, nqubits, alpha, base):
+    dims = 2**nqubits
+
+    state = random_statevector(dims, backend=backend)
+
+    # brute-force calculation over all Pauli strings
+    paulis = backend.to_numpy(pauli_basis(nqubits, backend=backend))
+    vector = backend.to_numpy(state)
+    expectations = np.real(np.einsum("a,iab,b->i", np.conj(vector), paulis, vector))
+    probabilities = expectations**2
+
+    if alpha == 1:
+        logs = np.log2(np.where(probabilities > 0.0, probabilities, 1.0))
+        target = -np.sum(probabilities * logs) / dims
+    else:
+        target = np.log2(np.sum(probabilities**alpha) / dims) / (1 - alpha)
+
+    for kind in (state, backend.outer(state, backend.conj(state))):
+        value = stabilizer_renyi_entropy(kind, alpha, base=base, backend=backend)
+        backend.assert_allclose(value, target / math.log2(base), atol=1e-8)
+
+
+@pytest.mark.parametrize("alpha", [0.5, 1, 2, 3])
+def test_stabilizer_renyi_entropy_properties(backend, alpha):
+    state_a = random_statevector(2, backend=backend)
+    state_b = random_statevector(4, backend=backend)
+    entropy_a = stabilizer_renyi_entropy(state_a, alpha, backend=backend)
+    entropy_b = stabilizer_renyi_entropy(state_b, alpha, backend=backend)
+
+    # additivity for product states
+    entropy = stabilizer_renyi_entropy(
+        backend.kron(state_a, state_b), alpha, backend=backend
+    )
+    backend.assert_allclose(entropy, entropy_a + entropy_b, atol=1e-8)
+
+    state = random_statevector(8, backend=backend)
+    entropy = stabilizer_renyi_entropy(state, alpha, backend=backend)
+
+    # invariance under Clifford operations
+    clifford = random_clifford(3, seed=2, backend=backend)
+    unitary = clifford.unitary(backend=backend)
+    transformed = stabilizer_renyi_entropy(unitary @ state, alpha, backend=backend)
+    backend.assert_allclose(transformed, entropy, atol=1e-8)
+
+    # invariance under global phase
+    phased = stabilizer_renyi_entropy(state * np.exp(1j * 0.3), alpha, backend=backend)
+    backend.assert_allclose(phased, entropy, atol=1e-8)
+
+    # upper bound for pure states
+    assert entropy <= math.log2(8) + PRECISION_TOL

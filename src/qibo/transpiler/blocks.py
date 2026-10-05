@@ -1,7 +1,15 @@
+import math
+
 from qibo import Circuit, gates
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates import Gate
 from qibo.transpiler._exceptions import BlockingError
+from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
+
+# Number of controlled-Z (CZ) gates that implement the two-qubit gates costing more than
+# one. The cost of any other two-qubit gate is taken to be one, which is a lower bound.
+_CZ_COSTS = {gates.SWAP: 3, gates.iSWAP: 2}
 
 
 class Block:
@@ -89,13 +97,54 @@ class Block:
         """
         return not len(set(self.qubits).intersection(block.qubits)) > 0
 
-    # TODO
-    def kak_decompose(self):  # pragma: no cover
-        """Return KAK decomposition of the block.
-        This should be done only if the block is entangled and the number of
-        two qubit gates is higher than the number after the decomposition.
+    def kak_decompose(
+        self, weight: float = math.sqrt(2), backend: Backend = None
+    ) -> list[Gate]:
+        """Return the gates of the block with as few CZ gates as the KAK decomposition allows.
+
+        The KAK (Cartan) decomposition writes the :math:`4 \\times 4` matrix of the
+        block with at most three controlled-Z (CZ) gates and single-qubit
+        :class:`qibo.gates.Unitary` gates [1]. It replaces the gates of the block only
+        if it has fewer CZ gates than the block, where a :class:`qibo.gates.SWAP` gate
+        counts as three CZ gates, an :class:`qibo.gates.iSWAP` gate as two and any other
+        two-qubit gate as one. Otherwise the gates of the block are returned.
+        All the gates of the block must be unitary.
+
+        Args:
+            weight (float, optional): Weight of the imaginary part in the matrix that is
+                diagonalized to find the local gates, see
+                :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+                Defaults to :math:`\\sqrt{2}`.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
+                build the matrix of the block. If ``None``, defaults to the global
+                backend. Defaults to ``None``.
+
+        Returns:
+            list[:class:`qibo.gates.abstract.Gate`]: Gates equivalent to the block.
+
+        References:
+            1. F. Vatan and C. Williams,
+            *Optimal quantum circuits for general two-qubit gates*,
+            `Phys. Rev. A 69, 032315 (2004) <https://doi.org/10.1103/PhysRevA.69.032315>`_.
         """
-        raise_error(NotImplementedError, "KAK decomposition is not available yet.")
+        backend = _check_backend(backend)
+
+        cost = sum(
+            _CZ_COSTS.get(type(gate), 1) for gate in self.gates if len(gate.qubits) == 2
+        )
+        # The decomposition has at least two CZ gates, unless the block is the identity.
+        if cost < 2:
+            return self.gates
+
+        circuit = Circuit(2)
+        circuit.add(self.on_qubits((0, 1)).gates)
+        decomposition = two_qubit_decomposition(
+            *self.qubits, circuit.unitary(backend), backend=backend, weight=weight
+        )
+        if _count_2q_gates(decomposition) < cost:
+            return decomposition
+
+        return self.gates
 
 
 class CircuitBlocks:
