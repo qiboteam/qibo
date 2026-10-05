@@ -1,8 +1,9 @@
 import numpy as np
 import pytest  # type: ignore
 
-from qibo import matrices
+from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
+from qibo.quantum_info._superoperator_transformations import _reshuffling
 from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.quantum_info.superoperator_transformations import (
@@ -21,7 +22,6 @@ from qibo.quantum_info.superoperator_transformations import (
     kraus_to_liouville,
     kraus_to_pauli,
     kraus_to_stinespring,
-    kraus_to_unitaries,
     liouville_to_chi,
     liouville_to_choi,
     liouville_to_kraus,
@@ -197,6 +197,12 @@ def test_batched_vectorization(backend, nqubits, order, statevector):
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
 def test_unvectorization(backend, nqubits, order):
+    with pytest.raises(TypeError):
+        unvectorization(
+            backend.cast(np.zeros((2, 2, 2), dtype=complex)),
+            order=order,
+            backend=backend,
+        )
     with pytest.raises(ValueError):
         unvectorization(
             random_statevector(4**nqubits, backend=backend), order=1, backend=backend
@@ -839,6 +845,16 @@ def test_kraus_to_choi(backend, order):
 
     backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
 
+    # Kraus operators given as a list of gates
+    kraus_gates = [gates.Unitary(matrix, *qubits) for qubits, matrix in test_kraus]
+    choi = kraus_to_choi(kraus_gates, order=order, backend=backend)
+
+    backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
+
+    # Kraus operator shape incompatible with the number of qubits it acts on
+    with pytest.raises(ValueError):
+        kraus_to_choi([((0, 1), test_a0)], order=order, backend=backend)
+
 
 @pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -1355,9 +1371,13 @@ def test_stinespring_to_pauli(
 @pytest.mark.parametrize("stinespring", [test_stinespring])
 def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
     with pytest.raises(TypeError):
-        test = stinespring_to_kraus(stinespring, dim_env=2.0, nqubits=nqubits)
+        test = stinespring_to_kraus(
+            stinespring, dim_env=2.0, nqubits=nqubits, backend=backend
+        )
     with pytest.raises(ValueError):
-        test = stinespring_to_kraus(stinespring, dim_env=-1, nqubits=nqubits)
+        test = stinespring_to_kraus(
+            stinespring, dim_env=-1, nqubits=nqubits, backend=backend
+        )
     with pytest.raises(ValueError):
         state = random_density_matrix(2, pure=True, backend=backend)
         test = stinespring_to_kraus(
@@ -1413,43 +1433,9 @@ def test_stinespring_to_chi(
     backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
 
 
-@pytest.mark.parametrize("order", ["row", "column"])
-def test_kraus_to_unitaries(backend, order):
-    test_a0 = np.sqrt(0.4) * matrices.X
-    test_a1 = np.sqrt(0.6) * matrices.Y
-    test_kraus = [((0,), test_a0), ((0,), test_a1)]
-
-    with pytest.raises(TypeError):
-        kraus_to_unitaries(test_kraus, order, str(PRECISION_TOL), backend=backend)
-    with pytest.raises(ValueError):
-        kraus_to_unitaries(test_kraus, order, -1.0 * PRECISION_TOL, backend=backend)
-
-    target = kraus_to_liouville(test_kraus, order=order, backend=backend)
-
-    unitaries, probabilities = kraus_to_unitaries(
-        test_kraus, order=order, backend=backend
-    )
-    unitaries = np.array(
-        [np.sqrt(prob) * unitary for prob, unitary in zip(probabilities, unitaries)]
-    )
-    unitaries = list(zip([(0,)] * len(unitaries), unitaries))
-
-    operator = kraus_to_liouville(unitaries, backend=backend)
-
-    backend.assert_allclose(target, operator, atol=2 * PRECISION_TOL)
-
-    # warning coverage
-    test_a0 = np.sqrt(0.4) * matrices.X
-    test_a1 = np.sqrt(0.6) * matrices.Z
-    test_kraus = [((0,), test_a0), ((0,), test_a1)]
-    kraus_to_unitaries(test_kraus, order=order, backend=backend)
-
-
 @pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_reshuffling(backend, order, test_superop):
-    from qibo.quantum_info.superoperator_transformations import _reshuffling
-
     with pytest.raises(ValueError):
         _reshuffling(test_superop, "system", backend=backend)
     with pytest.raises(ValueError):
@@ -1477,3 +1463,52 @@ def test_reshuffling(backend, order, test_superop):
     reshuffled = _reshuffling(reshuffled, order, backend=backend)
 
     backend.assert_allclose(reshuffled, test_choi, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_channel_inputs(backend, order):
+    channel = gates.PauliNoiseChannel((0,), [("X", 0.1), ("Z", 0.2)])
+    kwargs = {"order": order, "backend": backend}
+
+    choi = kraus_to_choi(channel, **kwargs)
+    liouville = kraus_to_liouville(channel, **kwargs)
+    pauli = kraus_to_pauli(channel, **kwargs)
+    chi = kraus_to_chi(channel, **kwargs)
+
+    for func, array in (
+        (choi_to_chi, choi),
+        (choi_to_kraus, choi),
+        (choi_to_liouville, choi),
+        (chi_to_choi, chi),
+        (chi_to_kraus, chi),
+        (chi_to_liouville, chi),
+        (chi_to_pauli, chi),
+        (liouville_to_choi, liouville),
+        (liouville_to_pauli, liouville),
+        (pauli_to_liouville, pauli),
+    ):
+        test = func(channel, **kwargs)
+        target = func(array, **kwargs)
+        if isinstance(target, tuple):
+            # Kraus operators are only defined up to a phase,
+            # so only the (unique) coefficients are compared
+            test, target = test[1], target[1]
+        backend.assert_allclose(test, target, atol=PRECISION_TOL)
+
+    for func, target in (
+        (to_choi, choi),
+        (to_liouville, liouville),
+        (to_pauli_liouville, pauli),
+    ):
+        backend.assert_allclose(func(channel, **kwargs), target, atol=PRECISION_TOL)
+
+    # Stinespring dilation depends on the (non-unique) Kraus operators from the SVD
+    test = chi_to_stinespring(channel, **kwargs)
+    target = chi_to_stinespring(chi, **kwargs)
+    assert test.shape == target.shape
+
+    backend.assert_allclose(
+        to_stinespring(channel, backend=backend),
+        kraus_to_stinespring(channel, backend=backend),
+        atol=PRECISION_TOL,
+    )
