@@ -139,7 +139,7 @@ class Block:
         circuit = Circuit(2)
         circuit.add(self.on_qubits((0, 1)).gates)
         decomposition = two_qubit_decomposition(
-            *self.qubits, circuit.unitary(backend), backend, weight=weight
+            *self.qubits, circuit.unitary(backend), backend=backend, weight=weight
         )
         if _count_2q_gates(decomposition) < cost:
             return decomposition
