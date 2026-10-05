@@ -1285,8 +1285,8 @@ def stabilizer_renyi_entropy(
     if not 0.0 < alpha < math.inf:
         raise_error(ValueError, "alpha must be positive and finite.")
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be positive.")
+    if base <= 0.0 or base == 1.0:
+        raise_error(ValueError, "log base must be positive and not equal to 1.")
 
     if not isinstance(check_purity, bool):
         raise_error(
