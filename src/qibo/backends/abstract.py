@@ -456,18 +456,33 @@ class Backend:
         """
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
+    def argmax(self, array: ArrayLike, axis: int | None, **kwargs) -> ArrayLike:
+        """Return the indices of the maximum values in ``array`` along an ``axis``.
+
+        Args:
+            array (ArrayLike): input array.
+            axis (Optional[int], optional): axis along which to find the maximum value(s).
+                If ``None``, the flattened ``array`` is used. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of indices into the ``array``.
+        """
+        return self.engine.argmax(array, axis, **kwargs)
+
     def argsort(self, array: ArrayLike, axis: int | None = None, **kwargs) -> ArrayLike:
         """Return the indices that would sort ``array``.
 
         Args:
-            array (ArrayLike): _description_
+            array (ArrayLike): input array.
             axis (Optional[int], optional): axis along which to sort. If ``None``,
                 the flattened ``array`` is used. Defaults to ``None``.
             kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
-            ArrayLike: _description_
+            ArrayLike: Array of indices that sort ``array`` along the specified axis.
         """
         return self.engine.argsort(array, axis, **kwargs)
 
