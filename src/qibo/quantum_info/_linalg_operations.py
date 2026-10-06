@@ -1,3 +1,5 @@
+"""Protected functions supporting quantum_info/linalg_operations.py"""
+
 from numpy.typing import ArrayLike
 
 from qibo.backends import Backend, CliffordBackend, _check_backend, _get_engine_name
