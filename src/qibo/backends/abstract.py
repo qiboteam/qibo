@@ -513,6 +513,41 @@ class Backend:
         """
         return self.engine.ascontiguousarray(array, **kwargs)
 
+    def base_repr(number: int, base: int = 2, **kwargs) -> str:
+        """Return a string representation of a ``number`` in the given ``base`` system.
+
+        .. note::
+            If ``base==2``, function defaults to the faster
+            :meth:`qibo.bakends.abstract.Backend.binary_repr`.
+
+        Args:
+            number (int): value to convert.
+            base (int, optional): Base system to convert ``number``. Ranges from :math:`2`
+                to :math:`36`. Defaults to :math:`2`.
+
+        Returns:
+            str: String representation of ``number`` in the ``base`` system.
+        """
+        if base == 2:
+            length = kwargs.get("length", None)
+            return self.binary_repr(number, length)
+
+        return self.engine.base_repr(number, base, **kwargs)
+
+    def binary_repr(number: int, length: int | None = None) -> str:
+        """Return the binary representation of the input number as a string.
+
+        Args:
+            number (int): _description_
+            length (int | None, optional): The length of the returned string if ``number``
+                is positive. The length of the two complement if ``number`` is negative.
+                If ``None``, defaults to the shortest length possible. Defaults to ``None``.
+
+        Returns:
+            str: Binary representation of ``number``.
+        """
+        return self.engine.binary_repr(number, length)
+
     def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
         """Assemble an array from a nested list of blocks of ``arrays``.
 
