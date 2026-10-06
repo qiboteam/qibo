@@ -257,6 +257,19 @@ def test_fft_ifft(backend, size):
     backend.assert_allclose(backend.ifft(backend.fft(array)), array)
 
 
+def test_searchsorted(backend):
+    """``backend.searchsorted`` matches ``np.searchsorted``."""
+    array_1 = backend.cast(np.array([1, 3, 5, 7]))
+    array_2 = backend.cast(np.array([2, 4, 6]))
+    result = backend.searchsorted(array_1, array_2)
+    backend.assert_allclose(
+        result, backend.cast(np.searchsorted([1, 3, 5, 7], [2, 4, 6]))
+    )
+    # scalar second argument returns an integer insertion point
+    scalar_result = backend.searchsorted(array_1, backend.cast(np.array(4)))
+    assert int(scalar_result) == int(np.searchsorted([1, 3, 5, 7], 4))
+
+
 @pytest.mark.parametrize("degree", [2, 4])
 def test_poly_roots(backend, degree):
     backend.set_seed(42)
@@ -340,3 +353,18 @@ def test_list_available_backends():
         "qibolab",
         "qibo-cloud-backends",  # , "qibotn", "qiboml"
     )
+
+
+def test_oom_error(backend):
+    """Test that OOM error is caught and re-raised as RuntimeError."""
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+
+    # Mock _execute_circuit to raise MemoryError
+    with (
+        mock.patch.object(
+            type(backend), "_execute_circuit", side_effect=MemoryError("out of memory")
+        ),
+        pytest.raises(RuntimeError, match="State does not fit"),
+    ):
+        backend.execute_circuit(circuit)

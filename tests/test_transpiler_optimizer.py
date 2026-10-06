@@ -36,6 +36,18 @@ def test_preprocessing_error(star_connectivity):
     assert circ.wire_names == wire_names
 
 
+def test_preprocessing_too_many_logical_qubits(star_connectivity):
+    """``Preprocessing`` raises when the logical qubits exceed the physical ones.
+
+    Uses duplicate wire names so that all names are in the connectivity graph
+    while ``nqubits`` is still larger than the number of physical qubits.
+    """
+    circ = Circuit(6, wire_names=[0, 1, 2, 0, 1, 2])
+    preprocesser = Preprocessing(connectivity=star_connectivity())
+    with pytest.raises(ValueError):
+        preprocesser(circuit=circ)
+
+
 def test_preprocessing_same(star_connectivity):
     circ = Circuit(5)
     circ.add(gates.CNOT(0, 1))
