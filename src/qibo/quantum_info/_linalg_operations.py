@@ -121,6 +121,11 @@ def _lie_closure_matrix(
         )
         candidates = backend.reshape(candidates, (-1, dims, dims))
     else:
+        if max_iterations > 0:
+            log.warning(
+                f"Maximum number of iterations ({max_iterations}) reached "
+                + "before the Lie closure was complete."
+            )
         log.warning(
             f"Maximum number of iterations ({max_iterations}) reached "
             + "before the Lie closure was complete."
@@ -192,6 +197,11 @@ def _lie_closure_pauli_strings(
         old_length = basis.shape[0]
         basis = clifford_backend.vstack((basis, candidates[indices]))
     else:
+        if max_iterations > 0:
+            log.warning(
+                f"Maximum number of iterations ({max_iterations}) reached "
+                + "before the Lie closure was complete."
+            )
         log.warning(
             f"Maximum number of iterations ({max_iterations}) reached "
             + "before the Lie closure was complete."
@@ -356,6 +366,11 @@ def _lie_closure_pauli_sums(
         if epoch == 0:
             nb_generators = basis.shape[0]
     else:
+        if max_iterations > 0:
+            log.warning(
+                f"Maximum number of iterations ({max_iterations}) reached "
+                + "before the Lie closure was complete."
+            )
         log.warning(
             f"Maximum number of iterations ({max_iterations}) reached "
             + "before the Lie closure was complete."
