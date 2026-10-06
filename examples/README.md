@@ -18,6 +18,7 @@ physics problems.
 - [Adiabatic evolution for solving an Exact Cover problem](adiabatic-3SAT/README.md)
 - [Quantum autoencoders with enhanced data encoding](EF_QAE/README.md)
 - [Shor's factorization algorithm](shor/README.md)
+- [From block encodings to quantum signal processing and quantum singular value transformation](qsp_qsvt/qsp_qsvt.ipynb)
 - [Determining the proton content with proton with a quantum computer](qPDF/qPDF.ipynb)
 - [Quantum Fourier Iterative Amplitude Estimation](qfiae/qfiae_demo.ipynb)
 - [Maximal violation of Bell inequalities variationally](bell-variational/README.md)
