@@ -2774,6 +2774,9 @@ and the average snapshot over many samples is mapped through the inverse of the
 giving :math:`\hat{\rho} = \mathcal{M}^{-1}(\bar{\sigma})`. Then, :math:`\text{tr}(O \hat{\rho})`
 is an unbiased estimate of :math:`\text{tr}(O \rho)` for any observable :math:`O` [1, 2].
 
+A step-by-step guide to all the options is given in the
+:ref:`classical shadows tutorial <classical-shadows-tutorial>`.
+
 The ensemble of :math:`U` is chosen through the argument ``method``, which defines the frame
 operator. All the ensembles are locally invariant, so :math:`\mathcal{M}` is diagonal in the
 Pauli basis, with :math:`\mathcal{M}(P) = f_{P} P` for each Pauli string :math:`P`:
