@@ -160,7 +160,7 @@ def test_call_estimates(
     terms = _terms(nqubits)
 
     state = backend.execute_circuit(circuit).state()
-    exact = backend.real(backend.dagger(state) @ _matrix(terms) @ state)
+    exact = backend.real(backend.dagger(state) @ _matrix(terms, backend) @ state)
 
     estimate = ClassicalShadow()(
         circuit,
@@ -358,10 +358,10 @@ def test_frame_operator_computational(backend, method, nqubits):
     # Pauli strings are eigenvectors
     for index in range(4**nqubits):
         string = "".join(
-            "IXYZ"[int(digit)] for digit in np.base_repr(index, 4).zfill(nqubits)
+            "IXYZ"[int(digit)] for digit in backend.base_repr(index, 4).zfill(nqubits)
         )
         vector = vectorization(
-            backend.cast(_pauli_matrix(string)), order="row", backend=backend
+            _pauli_matrix(string, backend), order="row", backend=backend
         )
         backend.assert_allclose(frame @ vector, pauli[index] * vector, atol=1e-10)
 
@@ -431,7 +431,7 @@ def test_frame_operator_noisy_calibration(backend, monkeypatch):
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
 @pytest.mark.parametrize("method", ["global-clifford", "local-clifford"])
 def test_frame_operator_pauli(backend, method, nqubits, inverse):
-    weights = _weights(nqubits)
+    weights = _weights(nqubits, backend)
 
     if method == "global-clifford":
         expected = backend.where(weights == 0, 1.0, 1 / (2**nqubits + 1))
@@ -468,7 +468,7 @@ def test_frame_operator_ultra_shallow(backend):
     # the eigenvalue only depends on the support of the Pauli string
     supports = {}
     for index in range(16):
-        digits = np.base_repr(index, 4).zfill(2)
+        digits = backend.base_repr(index, 4).zfill(2)
         supports.setdefault(tuple(int(digit != "0") for digit in digits), []).append(
             frame[index]
         )
@@ -482,7 +482,7 @@ def test_frame_operator_ultra_shallow(backend):
     # without entangling layers it is the local Clifford frame
     local = shadow.frame_operator(2, "ultra-shallow", depth=0, **kwargs)
 
-    backend.assert_allclose(local, 3.0 ** (-_weights(2)), atol=0.07)
+    backend.assert_allclose(local, 3.0 ** (-_weights(2, backend)), atol=0.07)
 
 
 def test_single_qubit_cliffords(backend):
@@ -574,11 +574,11 @@ def _terms(nqubits):
     ]
 
 
-def _weights(nqubits):
+def _weights(nqubits, backend):
     """Number of non-identity factors of each Pauli string, in Pauli-basis order."""
     return np.array(
         [
-            sum(digit != "0" for digit in np.base_repr(index, 4).zfill(nqubits))
+            sum(digit != "0" for digit in backend.base_repr(index, 4).zfill(nqubits))
             for index in range(4**nqubits)
         ]
     )

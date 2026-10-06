@@ -2693,19 +2693,18 @@ obtain the following matrix:
 which provides an estimated representation of the operator :math:`O_l` in the specific system.
 
 This implementation makes use, in particular, of
-:math:`\rho_k \in \{ \ketbra{0}{0}, \ketbra{1}{1}, \ketbra{+}{+}, \ketbra{y+}{y+} \}^{\otimes n}` and
-:math:`M_j \in \{ I, X, Y, Z\}^{\otimes n}` [4], with :math:`n\in\{1,2\}`
-being the number of qubits. However, :math:`\{\tilde{O}_l\}_{jk}` is not yet given in
-the Pauli-Liouville representation (also known as *Pauli Transfer Matrix*).
-To obtain the Pauli-Liouville representation, one needs the two matrices, described below.
-The matrix :math:`\tilde{g}` has its elements :math:`\tilde{g}_{jk}` defined as
+:math:`\rho_k \in \{ \ketbra{0}{0}, \ketbra{1}{1}, \ketbra{+}{+}, \ketbra{y+}{y+} \}^{\otimes n}`
+and :math:`M_j \in \{ I, X, Y, Z\}^{\otimes n}` [4], with :math:`n\in\{1,2\}` being the number of
+qubits. However, :math:`\{\tilde{O}_l\}_{jk}` is not yet given in the Pauli-Liouville
+representation (also known as *Pauli Transfer Matrix*). To obtain the Pauli-Liouville
+representation, one needs the two matrices, described below. The matrix :math:`\tilde{g}` has its
+elements :math:`\tilde{g}_{jk}` defined as
 
 .. math::
    \tilde{g}_{jk} = \text{tr}(M_j\,\rho_k) \, ,
 
-which is obtained by measuring the initial states :math:`\{\rho_k\}` in each basis element :math:`\{M_j\}`
-without any gates' application.
-The *gauge matrix* :math:`T` is given by
+which is obtained by measuring the initial states :math:`\{\rho_k\}` in each basis element
+:math:`\{M_j\}` without any gates' application. The *gauge matrix* :math:`T` is given by
 
 .. math::
     T = \begin{pmatrix}
@@ -2760,12 +2759,12 @@ and the average snapshot over many samples is mapped through the inverse of the
     \mathcal{M}(\rho) = \mathbb{E}_{U} \sum_{b} \bra{b} U \rho U^{\dagger} \ket{b} \,
     U^{\dagger} \ketbra{b}{b} U \, ,
 
-giving :math:`\hat{\rho} = \mathcal{M}^{-1}(\bar{\sigma})`. Then, :math:`\text{tr}(O \hat{\rho})` is
-an unbiased estimate of :math:`\text{tr}(O \rho)` for any observable :math:`O` [1, 2].
+giving :math:`\hat{\rho} = \mathcal{M}^{-1}(\bar{\sigma})`. Then, :math:`\text{tr}(O \hat{\rho})`
+is an unbiased estimate of :math:`\text{tr}(O \rho)` for any observable :math:`O` [1, 2].
 
-The ensemble of :math:`U` is chosen through the argument ``method``, which defines the frame operator.
-All the ensembles are locally invariant, so :math:`\mathcal{M}` is diagonal in the Pauli basis,
-with :math:`\mathcal{M}(P) = f_{P} P` for each Pauli string :math:`P`:
+The ensemble of :math:`U` is chosen through the argument ``method``, which defines the frame
+operator. All the ensembles are locally invariant, so :math:`\mathcal{M}` is diagonal in the
+Pauli basis, with :math:`\mathcal{M}(P) = f_{P} P` for each Pauli string :math:`P`:
 
 * ``"global-clifford"``: :math:`U` is sampled from the Clifford group :math:`\text{Cl}(2^{n})`
   of :math:`n` qubits, and :math:`f_{P} = 1 / (2^{n} + 1)` for any :math:`P \neq I^{\otimes n}`.
@@ -2786,16 +2785,17 @@ with :math:`\mathcal{M}(P) = f_{P} P` for each Pauli string :math:`P`:
   :math:`g` applied to the zero state, whose number is given by ``ncalibration``.
   Hence, if the circuits are noisy, the sampled frame includes the noise [3].
 
-The frame operator is applied in the Pauli basis (default) or in the computational basis, selected by
-the argument ``basis``. In the Pauli basis, the observable must be given as the Pauli strings
-and coefficients :math:`O = \sum_{P} \alpha_{P} P`, and the estimate is
+The frame operator is applied in the Pauli basis (default) or in the computational basis,
+selected by the argument ``basis``. In the Pauli basis, the observable must be given as the
+Pauli strings and coefficients :math:`O = \sum_{P} \alpha_{P} P`, and the estimate is
 
 .. math::
     \hat{o} = \sum_{P} \alpha_{P} \, f_{P}^{-1} \, \text{tr}(P \bar{\sigma}) \, ,
 
-where the coefficients :math:`\text{tr}(P \bar{\sigma})` of all Pauli strings are obtained with a fast
-Hadamard transform, and only the diagonal of the frame is needed. In the computational basis,
-the observable is a Hamiltonian or a matrix, and :math:`\mathcal{M}^{-1}` is a matrix.
+where the coefficients :math:`\text{tr}(P \bar{\sigma})` of all Pauli strings are obtained
+with a fast Hadamard transform, and only the diagonal of the frame is needed.
+In the computational basis, the observable is a Hamiltonian or a matrix, and
+:math:`\mathcal{M}^{-1}` is a matrix.
 
 The samples can be split into batches to use the median-of-means estimator [1],
 which is the empirical average for a single batch. The circuits are generated and executed in
