@@ -190,6 +190,18 @@ Quantum Singular Value Transformation
 .. autofunction:: qibo.models.qsvt.qsvt_circuit
 
 
+Block Encoding
+""""""""""""""
+
+.. autofunction:: qibo.models.block_encoding.block_encoding_circuit
+
+
+Linear Combination of Unitaries
+"""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.lcu.lcu_circuit
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 """""""""""""""""""""""""""""""""""""""""""""
 
@@ -1841,6 +1853,12 @@ Negativity
 .. autofunction:: qibo.quantum_info.negativity
 
 
+Logarithmic negativity
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.logarithmic_negativity
+
+
 Entanglement fidelity
 """""""""""""""""""""
 
@@ -1952,6 +1970,30 @@ Entanglement entropy
 """"""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.entanglement_entropy
+
+
+Conditional entropy
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.conditional_entropy
+
+
+Linear entropy
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.linear_entropy
+
+
+Relative entropy of coherence
+"""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_entropy_of_coherence
+
+
+Stabilizer Rényi entropy
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stabilizer_renyi_entropy
 
 
 Metrics
@@ -2550,18 +2592,6 @@ Stinespring to Chi-matrix
 .. autofunction:: qibo.quantum_info.stinespring_to_chi
 
 
-Kraus operators as probabilistic sum of unitaries
-"""""""""""""""""""""""""""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.kraus_to_unitaries
-
-.. note::
-    It is not guaranteed that a good approximation will be found or that any
-    approximation will be found at all. This functions will find good solutions
-    for a limited set of operators. We leave to the user to decide how to
-    best use this function.
-
-
 Utility Functions
 ^^^^^^^^^^^^^^^^^
 
@@ -2820,8 +2850,32 @@ Gate decomposition
     :member-order: bysource
 
 
+Multi-controlled gate decomposition
+"""""""""""""""""""""""""""""""""""
+
+See :ref:`tutorials_multicontrolled` for examples of all the options.
+
+.. autofunction:: qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition
+
+
 Optimizer
 ^^^^^^^^^
+
+Consolidate blocks
+""""""""""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.ConsolidateBlocks
+    :members:
+    :member-order: bysource
+
+
+Fixed point
+"""""""""""
+
+.. autoclass:: qibo.transpiler.optimizer.FixedPoint
+    :members:
+    :member-order: bysource
+
 
 Inverse cancellation
 """"""""""""""""""""

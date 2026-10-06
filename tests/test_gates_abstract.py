@@ -6,10 +6,9 @@ from math import pi
 
 import pytest
 
-from qibo import gates, matrices
+from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.gates import Gate, abstract
-from qibo.models import Circuit
 
 
 @pytest.mark.parametrize(
@@ -103,12 +102,11 @@ def test_x_decompose_with_few_controls():
     assert isinstance(decomp[0], gates.X)
 
 
-@pytest.mark.parametrize("use_toffolis", [True, False])
-def test_x_decomposition_errors(use_toffolis):
+def test_x_decomposition_errors():
     """Check ``X`` decomposition errors."""
     gate = gates.X(0).controlled_by(1, 2, 3, 4)
     with pytest.raises(ValueError):
-        _ = gate.decompose(2, 3, use_toffolis=use_toffolis)
+        _ = gate.decompose(2, 3)
 
 
 @pytest.mark.parametrize(

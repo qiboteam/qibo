@@ -5,10 +5,10 @@ import math
 import pytest
 from numpy.typing import ArrayLike
 
-from qibo import Circuit, gates
+from qibo import Circuit, gates, models
 from qibo.backends import Backend
 from qibo.models.qsvt import qsvt_circuit, qsvt_phases
-from qibo.quantum_info import random_unitary
+from qibo.quantum_info.random_ensembles import random_unitary
 
 
 @pytest.mark.parametrize("degree", [1, 2, 3, 4, 7, 25])
@@ -69,6 +69,12 @@ def test_qsvt_circuit_errors(backend):
         qsvt_circuit(block_encoding, phases, nancillas=0)
     with pytest.raises(ValueError):
         qsvt_circuit(block_encoding, phases, nancillas=3)
+
+
+def test_qsvt_exports():
+    """The QSVT functions are available from ``qibo.models``."""
+    assert models.qsvt_circuit is qsvt_circuit
+    assert models.qsvt_phases is qsvt_phases
 
 
 @pytest.mark.parametrize("degree", [1, 2, 3, 4, 10, 25, 60])

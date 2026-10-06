@@ -1,4 +1,5 @@
 import os
+from functools import cache
 from importlib import import_module
 
 import networkx as nx
@@ -348,17 +349,12 @@ def construct_backend(backend, **kwargs) -> Backend:
                 + f"package named '{provider}' is installed, and it is exposing valid Qibo "
                 + "backends.",
             )
-        except RuntimeError:
-            # Some providers (e.g. ``qibojit``) auto-select a GPU platform
-            # (e.g. ``cupy``) when no explicit ``platform`` is requested, and
-            # only guard that attempt against ``ImportError``. If the GPU
-            # package is installed but no driver is available, construction
-            # fails with a ``RuntimeError`` (e.g. cupy's ``CUDARuntimeError``)
-            # instead. Retry forcing the CPU platform in that case.
-            if backend == "qibojit" and kwargs.get("platform") is None:
-                kwargs["platform"] = "numba"
-                return module.MetaBackend.load(**kwargs)
-            raise
+
+
+@cache
+def _numpy_backend() -> NumpyBackend:
+    """Cached Numpy backend, for computations that must not use the global backend."""
+    return NumpyBackend()
 
 
 def _check_backend_and_local_state(seed, backend):

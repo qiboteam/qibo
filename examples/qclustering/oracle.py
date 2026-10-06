@@ -1,7 +1,7 @@
 import numpy as np
 
+from qibo import Circuit
 from qibo.gates import Unitary
-from qibo.models import Circuit
 
 
 def f(x, threshold):

@@ -34,6 +34,15 @@ Grover's Algorithm
     tutorials/qfiae/qfiae_demo.ipynb
 
 
+Quantum Signal Processing and Quantum Singular Value Transformation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qsp_qsvt/qsp_qsvt.ipynb
+
+
 Shor's Factorization Algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -68,14 +77,3 @@ Clustering
     :maxdepth: 1
 
     tutorials/qclustering/README.md
-
-
-Diagonalization Algorithms
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. toctree::
-    :maxdepth: 1
-
-    tutorials/dbi/README.md
-
-    tutorials/dbi/dbi_tutorial_basic_intro.ipynb

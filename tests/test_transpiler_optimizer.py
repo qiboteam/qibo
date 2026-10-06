@@ -1,11 +1,15 @@
+import math
+
 import numpy as np
 import pytest
 import sympy
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.gates.special import Barrier
-from qibo.models import Circuit
+from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.optimizer import (
+    ConsolidateBlocks,
+    FixedPoint,
     InverseCancellation,
     Optimize1qGatesDecomposition,
     ParametrizedGateFusion,
@@ -807,8 +811,7 @@ def test_reset_after_measure_simplification(backend):
         "u3",
     ]
 
-    target = np.zeros((4, 4))
-    target[0, 0] = 1.0
+    target = backend.zero_state(2, density_matrix=True)
     for transpiled in (circuit, simplified):
         state = backend.execute_circuit(transpiled).state()
         backend.assert_allclose(state, target, atol=1e-8)
@@ -1125,3 +1128,280 @@ def test_optimize_1q_gates_decomposition_circuit_unchanged(backend):
     assert all(isinstance(gate, gates.FusedGate) is False for gate in circuit.queue)
     assert optimized.density_matrix
     assert [gate.name for gate in optimized.queue] == ["u3", "cx"]
+
+
+def test_consolidate_blocks_equivalence(backend):
+    rng = np.random.default_rng(42)
+    for _ in range(20):
+        nqubits = int(rng.integers(2, 5))
+        circuit = Circuit(nqubits)
+        for _ in range(int(rng.integers(5, 30))):
+            q0, q1 = (int(qubit) for qubit in rng.permutation(nqubits)[:2])
+            angle = float(rng.uniform(0, 3))
+            circuit.add(
+                [
+                    gates.H(q0),
+                    gates.RX(q0, angle),
+                    gates.CZ(q0, q1),
+                    gates.CNOT(q0, q1),
+                    gates.SWAP(q0, q1),
+                    gates.iSWAP(q0, q1),
+                    gates.RZZ(q0, q1, angle),
+                ][int(rng.integers(7))]
+            )
+        consolidated = ConsolidateBlocks()(circuit, backend=backend)
+        backend.assert_allclose(
+            consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+        )
+
+
+def test_consolidate_blocks_fewer_cz_gates(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    consolidated = ConsolidateBlocks()(circuit, backend=backend)
+    assert [gate.name for gate in consolidated.queue if len(gate.qubits) == 2] == [
+        "cz",
+        "cz",
+    ]
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+    # three CNOT gates with the same control and target qubits are only one CNOT
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 0))
+    circuit.add(gates.CNOT(0, 1))
+    consolidated = ConsolidateBlocks()(circuit, backend=backend)
+    assert sum(len(gate.qubits) == 2 for gate in consolidated.queue) == 3
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
+def test_consolidate_blocks_single_qubit_gates_join_block(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.H(2))
+    circuit.add(gates.CZ(1, 0))
+    circuit.add(gates.RX(1, 0.4))
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.CZ(0, 2))
+    circuit.add(gates.H(1))
+    consolidated = ConsolidateBlocks()(circuit, backend=backend)
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+    assert sum(len(gate.qubits) == 2 for gate in consolidated.queue) <= 5
+
+
+def test_consolidate_blocks_unchanged(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.RX(1, 0.3))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.SWAP(0, 1))
+    consolidated = ConsolidateBlocks()(circuit, backend=backend)
+    assert consolidated.queue == circuit.queue
+
+
+def test_consolidate_blocks_uncollectable_gates(backend):
+    x = sympy.Symbol("x")
+    circuit = Circuit(3, density_matrix=True)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.DepolarizingChannel((0,), 0.1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.SWAP(1, 2))
+    circuit.add(gates.RX(2, x))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(Barrier(0, 1, 2))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.M(0, 1))
+    consolidated = ConsolidateBlocks()(circuit, backend=backend)
+    assert consolidated.queue == circuit.queue
+    assert consolidated.density_matrix
+
+
+def test_consolidate_blocks_in_passes(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    pipeline = Passes([ConsolidateBlocks()])
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert sum(len(gate.qubits) == 2 for gate in transpiled.queue) == 2
+    backend.assert_allclose(
+        transpiled.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
+def test_fixed_point(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.RX(0, 0.3))
+    circuit.add(gates.RX(0, 0.4))
+    circuit.add(gates.RX(0, -0.7))
+    circuit.add(gates.CZ(0, 1))
+    optimizers = [InverseCancellation(), Optimize1qGatesDecomposition()]
+
+    assert FixedPoint(optimizers, max_iterations=1)(circuit, backend).ngates == 2
+    assert FixedPoint(optimizers)(circuit, backend).ngates == 0
+    # the optimizers alone stop at the first iteration
+    assert (
+        Optimize1qGatesDecomposition()(
+            InverseCancellation()(circuit, backend), backend
+        ).ngates
+        == 2
+    )
+
+
+def test_fixed_point_stops_when_unchanged(backend):
+    class Counter(Optimizer):
+        def __init__(self):
+            self.calls = 0
+
+        def __call__(self, circuit):
+            self.calls += 1
+            return circuit
+
+    circuit = Circuit(2)
+    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
+    circuit.add(gates.Unitary(backend.matrices.I(4), 0, 1))
+    circuit.add(gates.M(0, 1))
+    counter = Counter()
+    optimized = FixedPoint([counter, counter], max_iterations=5)(circuit, backend)
+    assert counter.calls == 2
+    assert optimized is circuit
+
+
+def test_fixed_point_connectivity(backend, star_connectivity):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 1))
+    padder = Preprocessing()
+    pipeline = Passes(
+        [FixedPoint([padder, InverseCancellation()])],
+        connectivity=star_connectivity(),
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert transpiled.nqubits == 5
+    assert padder.connectivity is pipeline.connectivity
+
+
+def test_fixed_point_errors():
+    with pytest.raises(ValueError):
+        FixedPoint([InverseCancellation()], max_iterations=0)
+
+
+def test_inverse_cancellation_commutation(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.X(1))
+    circuit.add(gates.CNOT(0, 1))
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["rz", "x"]
+    backend.assert_allclose(
+        reduced.unitary(backend), circuit.unitary(backend), atol=1e-12
+    )
+    # the default does not look through the gates in between
+    assert InverseCancellation()(circuit, backend=backend).ngates == 4
+
+
+def test_inverse_cancellation_commutation_blocked(backend):
+    # the Hadamard gate on the target and the rotation around X on the control do
+    # not commute with the CNOT gate
+    for blocker in (gates.H(1), gates.RX(0, 0.3)):
+        circuit = Circuit(2)
+        circuit.add(gates.CNOT(0, 1))
+        circuit.add(blocker)
+        circuit.add(gates.CNOT(0, 1))
+        reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+        assert reduced.ngates == 3
+
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.M(0))
+    circuit.add(gates.CZ(0, 1))
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    assert reduced.ngates == 3
+
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(Barrier(1, 2))
+    circuit.add(gates.CZ(0, 1))
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    assert reduced.ngates == 3
+
+    # a barrier on other qubits does not stop the cancellation
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(Barrier(2))
+    circuit.add(gates.CZ(0, 1))
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["barrier"]
+
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.DepolarizingChannel((0,), 0.1))
+    circuit.add(gates.CZ(0, 1))
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    assert reduced.ngates == 3
+
+
+def test_inverse_cancellation_commutation_many_qubits(backend):
+    # gates in between act on only one of the two qubits of the pair, and the
+    # controlled-Z gate with the qubits swapped commutes with the pair
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.T(0))
+    circuit.add(gates.CZ(1, 0))
+    circuit.add(gates.S(1))
+    circuit.add(gates.CZ(0, 1))
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    assert [gate.qubits for gate in reduced.queue] == [(1, 2), (0,), (1, 0), (1,)]
+    backend.assert_allclose(
+        reduced.unitary(backend), circuit.unitary(backend), atol=1e-12
+    )
+
+
+def test_inverse_cancellation_commutation_random(backend):
+    rng = np.random.default_rng(7)
+    removed = 0
+    for _ in range(30):
+        nqubits = int(rng.integers(2, 5))
+        circuit = Circuit(nqubits)
+        for _ in range(int(rng.integers(5, 30))):
+            q0, q1 = (int(qubit) for qubit in rng.permutation(nqubits)[:2])
+            circuit.add(
+                [
+                    gates.H(q0),
+                    gates.X(q0),
+                    gates.RZ(q0, float(rng.choice([0.3, -0.3]))),
+                    gates.CZ(q0, q1),
+                    gates.CNOT(q0, q1),
+                ][int(rng.integers(5))]
+            )
+        reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+        backend.assert_allclose(
+            reduced.unitary(backend), circuit.unitary(backend), atol=1e-12
+        )
+        removed += InverseCancellation()(circuit, backend=backend).ngates
+        removed -= reduced.ngates
+    assert removed > 0
+
+
+def test_consolidate_blocks_weight(backend):
+    circuit = Circuit(2)
+    circuit.add([gates.CZ(0, 1), gates.CNOT(0, 1), gates.T(1), gates.SWAP(0, 1)])
+
+    assert ConsolidateBlocks().weight == math.sqrt(2)
+    consolidated = ConsolidateBlocks(weight=math.pi)(circuit, backend=backend)
+    assert consolidated.ngates != circuit.ngates
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )

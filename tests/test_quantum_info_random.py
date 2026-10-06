@@ -173,7 +173,7 @@ def test_random_quantum_channel(backend, representation, measure, rank, order):
     with pytest.raises(ValueError):
         random_quantum_channel(4, representation="Choi", backend=backend)
     with pytest.raises(ValueError):
-        random_quantum_channel(4, measure="bcsz", order="system")
+        random_quantum_channel(4, measure="bcsz", order="system", backend=backend)
 
     # All subroutines are already tested elsewhere,
     # so here we only execute them once for coverage

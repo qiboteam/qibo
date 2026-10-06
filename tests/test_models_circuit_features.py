@@ -362,13 +362,15 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
             if nqubits == 1
             else Counter({"11": 664, "01": 162, "10": 166, "00": 32})
         )
-    elif backend.__class__.__name__ in ("CupyBackend", "CuQuantumBackend"):
+    elif backend.__class__.__name__ == "CuQuantumBackend":
         test_frequencies = (
             Counter({"1": 788, "0": 236})
             if nqubits == 1
             else Counter({"11": 637, "10": 156, "01": 183, "00": 48})
         )
     else:
+        # CupyBackend's random_choice now matches numpy's exactly (once
+        # probabilities are correctly normalized), so it falls in here too.
         test_frequencies = (
             Counter({"1": 790, "0": 234})
             if nqubits == 1

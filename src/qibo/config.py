@@ -4,6 +4,7 @@ Define the default circuit, constants and types.
 
 import logging
 import os
+import sys
 
 # Logging level from 0 (all) to 4 (errors)
 # (see https://docs.python.org/3/library/logging.html#logging-levels)
@@ -147,6 +148,11 @@ def set_metropolis_threshold(threshold):
 # Configuration for logging mechanism
 class CustomHandler(logging.StreamHandler):
     """Custom handler for logging algorithm."""
+
+    def __init__(self):
+        # Log to stdout (rather than the default stderr) so that backend
+        # information is captured together with the program output.
+        super().__init__(stream=sys.stdout)
 
     def format(self, record):
         """Format the record with specific format."""
