@@ -34,6 +34,15 @@ Grover's Algorithm
     tutorials/qfiae/qfiae_demo.ipynb
 
 
+Quantum Signal Processing and Quantum Singular Value Transformation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qsp_qsvt/qsp_qsvt.ipynb
+
+
 Shor's Factorization Algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
