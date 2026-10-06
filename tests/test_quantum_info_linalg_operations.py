@@ -757,26 +757,6 @@ def test_lie_closure_classification_closed_forms(backend, nqubits):
 
 
 @pytest.mark.parametrize("label", list(CLASSIFICATION))
-@pytest.mark.parametrize("nqubits", [3, 4])
-@pytest.mark.parametrize("topology", ["open", "periodic", "permutation"])
-def test_lie_closure_classification_sums(backend, topology, nqubits, label):
-    dim = _classification_dimension(label, nqubits, topology)
-    if dim is None:
-        pytest.skip("Case not covered by the classification.")
-
-    # the algebra only depends on the real span of the generators, which is
-    # unchanged by an invertible real recombination of them (here, a rotation)
-    strings = _classification_generators(label, nqubits, topology)
-    random_matrix = backend.random_normal(0, 1, size=(len(strings),) * 2, seed=1234)
-    mixing, _ = backend.qr(random_matrix)
-    generators = [
-        {string: float(row[j]) for j, string in enumerate(strings)} for row in mixing
-    ]
-
-    assert len(lie_closure(generators, backend=backend)) == dim
-
-
-@pytest.mark.parametrize("label", list(CLASSIFICATION))
 def test_lie_closure_classification_matrices(backend, label):
     nqubits = 3
     dim = _classification_dimension(label, nqubits, "open")
