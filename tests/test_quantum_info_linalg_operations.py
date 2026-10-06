@@ -1,3 +1,4 @@
+import logging
 from functools import reduce
 
 import numpy as np
@@ -494,6 +495,25 @@ def test_lie_closure_max_iterations(backend):
     for max_iterations, dim in zip((0, 1, 2, 3), (3, 5, 6, 6)):
         basis = lie_closure(generators, max_iterations=max_iterations, backend=backend)
         assert basis.shape[0] == dim
+
+
+def test_lie_closure_tolerance_warning(backend, caplog):
+    I, X, Z = backend.matrices.I(2), backend.matrices.X, backend.matrices.Z
+    generators = [backend.kron(X, X), backend.kron(Z, I), backend.kron(I, Z)]
+
+    # the residual norm of every new commutator is 1, which is within a factor
+    # of 1e3 of ``tol = 0.5``, as it would be for numerical noise
+    with caplog.at_level(logging.WARNING):
+        basis = lie_closure(generators, tol=0.5, backend=backend)
+
+    assert basis.shape[0] == 6
+    assert "close to ``tol``" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        lie_closure(generators, backend=backend)
+
+    assert "close to ``tol``" not in caplog.text
 
 
 def test_lie_closure_pauli_errors(backend):
