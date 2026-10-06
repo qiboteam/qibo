@@ -1,6 +1,8 @@
 from numpy.typing import ArrayLike
 
-from qibo.backends import Backend, _check_backend
+from qibo.backends import Backend, CliffordBackend, _check_backend, _get_engine_name
+from qibo.backends._clifford_operations import _exponent
+from qibo.config import log, raise_error
 
 
 def _gram_schmidt_process(
