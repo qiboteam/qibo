@@ -11,6 +11,7 @@ from qibo.gates.abstract import SpecialGate
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.decompositions import u3_dec
+from qibo.transpiler.unitary_decompositions import _EULER_BASES, _euler_sequence
 
 # Gates of :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement`, whose
 # matrices are diagonal in the computational basis. A gate stays diagonal when more
@@ -29,19 +30,6 @@ _DIAGONAL_GATES = (
     gates.U1,
     gates.Z,
 )
-
-# Euler bases of :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`. Each
-# name maps to the names of the gates that the basis needs.
-_EULER_BASES = {
-    "U3": ("u3",),
-    "U321": ("u1", "u2", "u3"),
-    "ZYZ": ("rz", "ry"),
-    "ZXZ": ("rz", "rx"),
-    "XZX": ("rx", "rz"),
-    "XYX": ("rx", "ry"),
-    "ZSX": ("rz", "sx"),
-    "ZSXX": ("rz", "sx", "x"),
-}
 
 # Gates of :class:`qibo.transpiler.optimizer.ParametrizedGateFusion` that are merged
 # by composing their angles as the angles of a :class:`qibo.gates.U3` gate.
@@ -666,69 +654,14 @@ class Optimize1qGatesDecomposition(Optimizer):
 
             best = None
             for name in self.euler_bases:
-                # Each step is a gate class followed by its parameters.
-                if name == "U3":
-                    identity_angles = backend.abs(theta) <= self.atol and (
-                        abs(math.remainder(phi + lam, 2 * math.pi)) <= self.atol
-                    )
-                    steps = [] if identity_angles else [(gates.U3, theta, phi, lam)]
-                elif name == "U321" and backend.abs(theta) <= self.atol:
-                    steps = [(gates.U1, phi + lam)]
-                elif name == "U321" and backend.abs(theta - math.pi / 2) <= self.atol:
-                    steps = [(gates.U2, phi, lam)]
-                elif name == "U321":
-                    steps = [(gates.U3, theta, phi, lam)]
-                elif name in ("ZYZ", "ZXZ") and backend.abs(theta) <= self.atol:
-                    steps = [(gates.RZ, phi + lam)]
-                elif name in ("XYX", "XZX") and backend.abs(theta_x) <= self.atol:
-                    steps = [(gates.RX, phi_x + lam_x)]
-                elif name == "ZYZ":
-                    steps = [(gates.RZ, lam), (gates.RY, theta), (gates.RZ, phi)]
-                elif name == "ZXZ":
-                    steps = [
-                        (gates.RZ, lam - math.pi / 2),
-                        (gates.RX, theta),
-                        (gates.RZ, phi + math.pi / 2),
-                    ]
-                elif name == "XYX":
-                    steps = [
-                        (gates.RX, lam_x),
-                        (gates.RY, -theta_x),
-                        (gates.RX, phi_x),
-                    ]
-                elif name == "XZX":
-                    steps = [
-                        (gates.RX, lam_x - math.pi / 2),
-                        (gates.RZ, theta_x),
-                        (gates.RX, phi_x + math.pi / 2),
-                    ]
-                elif backend.abs(theta) <= self.atol:
-                    # ZSX and ZSXX bases, with theta equal to zero.
-                    steps = [(gates.RZ, phi + lam)]
-                elif name == "ZSXX" and backend.abs(theta - math.pi) <= self.atol:
-                    steps = [(gates.RZ, lam + math.pi), (gates.X,), (gates.RZ, phi)]
-                elif backend.abs(theta - math.pi / 2) <= self.atol:
-                    steps = [
-                        (gates.RZ, lam - math.pi / 2),
-                        (gates.SX,),
-                        (gates.RZ, phi + math.pi / 2),
-                    ]
-                else:
-                    steps = [
-                        (gates.RZ, lam),
-                        (gates.SX,),
-                        (gates.RZ, theta + math.pi),
-                        (gates.SX,),
-                        (gates.RZ, phi + math.pi),
-                    ]
-
-                # Rotations by a multiple of 2 pi are left out.
-                sequence = [
-                    step[0](qubit, *step[1:])
-                    for step in steps
-                    if len(step) != 2
-                    or abs(math.remainder(step[1], 2 * math.pi)) > self.atol
-                ]
+                sequence = _euler_sequence(
+                    name,
+                    qubit,
+                    (theta, phi, lam),
+                    (theta_x, phi_x, lam_x),
+                    self.atol,
+                    backend,
+                )
                 if best is not None and len(sequence) >= len(best):
                     continue
 

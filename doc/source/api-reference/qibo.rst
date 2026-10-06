@@ -3079,6 +3079,12 @@ Translate gate
 .. autofunction:: qibo.transpiler.unroller.translate_gate
 
 
+Single-qubit decomposition
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.transpiler.unitary_decompositions.single_qubit_decomposition
+
+
 .. _Parallel:
 
 Parallelism
