@@ -518,7 +518,7 @@ class Backend:
 
         .. note::
             If ``base==2``, function defaults to the faster
-            :meth:`qibo.bakends.abstract.Backend.binary_repr`.
+            :meth:`qibo.backends.abstract.Backend.binary_repr`.
             See that method's documentation for more options.
 
         Args:
@@ -543,7 +543,7 @@ class Backend:
         Args:
             number (int): value to convert.
             length (int | None, optional): The length of the returned string if ``number``
-                is positive. The length of the two complement if ``number`` is negative.
+                is positive. The length of the two's complement if ``number`` is negative.
                 If ``None``, defaults to the shortest length possible. Defaults to ``None``.
 
         Returns:
