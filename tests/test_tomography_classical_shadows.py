@@ -6,21 +6,23 @@ import numpy as np
 import pytest
 from sympy import S
 
-from qibo import Circuit, gates, hamiltonians
+from qibo import Circuit, gates, hamiltonians, matrices
 from qibo.models.encodings import entangling_layer
 from qibo.noise import DepolarizingError, NoiseModel
-from qibo.quantum_info import vectorization
+from qibo.quantum_info import random_density_matrix, vectorization
 from qibo.symbols import X, Y, Z
 from qibo.tomography import ClassicalShadow, Tomography
 from qibo.tomography.classical_shadows import BASES, SINGLE_QUBIT_CLIFFORDS
 
 PAULIS = {
-    "I": np.eye(2),
-    "X": np.array([[0, 1], [1, 0]]),
-    "Y": np.array([[0, -1j], [1j, 0]]),
-    "Z": np.diag([1, -1]),
+    "I": matrices.I,
+    "X": matrices.X,
+    "Y": matrices.Y,
+    "Z": matrices.Z,
 }
+
 SYMBOLS = {"X": X, "Y": Y, "Z": Z}
+
 
 @pytest.mark.parametrize(
     "method,nqubits",
@@ -35,7 +37,7 @@ def test_call_basis_agreement(backend, method, nqubits):
     """Both bases and all observable types share snapshots and frame."""
     circuit = _prepare(nqubits)
     terms = _terms(nqubits)
-    matrix = _matrix(terms)
+    matrix = _matrix(terms, backend)
 
     merged = {}
     for string, coefficient in terms:
@@ -157,8 +159,8 @@ def test_call_estimates(
     circuit = _prepare(nqubits)
     terms = _terms(nqubits)
 
-    state = backend.to_numpy(backend.execute_circuit(circuit).state())
-    exact = np.real(np.conj(state) @ _matrix(terms) @ state)
+    state = backend.execute_circuit(circuit).state()
+    exact = backend.real(backend.dagger(state) @ _matrix(terms) @ state)
 
     estimate = ClassicalShadow()(
         circuit,
@@ -350,32 +352,28 @@ def test_frame_operator_computational(backend, method, nqubits):
     )
 
     assert frame.shape == (4**nqubits, 4**nqubits)
-    np.testing.assert_allclose(frame @ inverse, np.eye(4**nqubits), atol=1e-10)
-    np.testing.assert_allclose(np.linalg.eigvalsh(frame), np.sort(pauli), atol=1e-10)
+    backend.assert_allclose(frame @ inverse, backend.identity(4**nqubits), atol=1e-10)
+    backend.assert_allclose(backend.eigvalsh(frame), backend.sort(pauli), atol=1e-10)
 
     # Pauli strings are eigenvectors
     for index in range(4**nqubits):
         string = "".join(
             "IXYZ"[int(digit)] for digit in np.base_repr(index, 4).zfill(nqubits)
         )
-        vector = backend.to_numpy(
-            vectorization(
-                backend.cast(_pauli_matrix(string)), order="row", backend=backend
-            )
+        vector = vectorization(
+            backend.cast(_pauli_matrix(string)), order="row", backend=backend
         )
-        np.testing.assert_allclose(frame @ vector, pauli[index] * vector, atol=1e-10)
+        backend.assert_allclose(frame @ vector, pauli[index] * vector, atol=1e-10)
 
     if method == "global-clifford":
         # the channel is (rho + tr(rho) I) / (d + 1)
-        rho = np.random.default_rng(1).normal(size=(dim, dim))
+        rho = random_density_matrix(dim, backend=backend)
         rho = rho @ rho.T
-        vector = backend.to_numpy(
-            vectorization(backend.cast(rho), order="row", backend=backend)
-        )
-        identity = np.eye(dim).reshape(-1)
-        np.testing.assert_allclose(
+        vector = vectorization(rho, order="row", backend=backend)
+        identity = backend.reshape(backend.identity(dim), -1)
+        backend.assert_allclose(
             frame @ vector,
-            (vector + np.trace(rho) * identity) / (dim + 1),
+            (vector + backend.trace(rho) * identity) / (dim + 1),
             atol=1e-10,
         )
 
@@ -384,12 +382,10 @@ def test_frame_operator_computational_ultra_shallow(backend):
     shadow = ClassicalShadow()
     kwargs = {"depth": 1, "nsamples": 100, "seed": 2, "backend": backend}
 
-    pauli = backend.to_numpy(shadow.frame_operator(2, "ultra-shallow", **kwargs))
-    frame = backend.to_numpy(
-        shadow.frame_operator(2, "ultra-shallow", basis="computational", **kwargs)
-    )
+    pauli = shadow.frame_operator(2, "ultra-shallow", **kwargs)
+    frame = shadow.frame_operator(2, "ultra-shallow", basis="computational", **kwargs)
 
-    np.testing.assert_allclose(np.linalg.eigvalsh(frame), np.sort(pauli), atol=1e-10)
+    backend.assert_allclose(backend.eigvalsh(frame), backend.sort(pauli), atol=1e-10)
 
 
 def test_frame_operator_errors(backend):
@@ -425,10 +421,10 @@ def test_frame_operator_noisy_calibration(backend, monkeypatch):
             self, [noise.apply(circuit) for circuit in circuits], nshots, backend
         ),
     )
-    noisy = backend.to_numpy(shadow.frame_operator(2, "ultra-shallow", **kwargs))
+    noisy = shadow.frame_operator(2, "ultra-shallow", **kwargs)
 
-    np.testing.assert_allclose(noisy[0], 1.0)
-    assert noisy[1:].sum() < 0.9 * ideal[1:].sum()
+    backend.assert_allclose(noisy[0], 1.0)
+    assert backend.sum(noisy[1:]) < 0.9 * backend.sum(ideal[1:])
 
 
 @pytest.mark.parametrize("inverse", [False, True])
@@ -438,7 +434,7 @@ def test_frame_operator_pauli(backend, method, nqubits, inverse):
     weights = _weights(nqubits)
 
     if method == "global-clifford":
-        expected = np.where(weights == 0, 1.0, 1 / (2**nqubits + 1))
+        expected = backend.where(weights == 0, 1.0, 1 / (2**nqubits + 1))
     else:
         expected = 3.0 ** (-weights)
     if inverse:
@@ -446,7 +442,7 @@ def test_frame_operator_pauli(backend, method, nqubits, inverse):
 
     frame = ClassicalShadow().frame_operator(nqubits, method, inverse, backend=backend)
 
-    assert backend.to_numpy(frame).dtype == np.float64
+    assert frame.dtype == backend.float64
     assert frame.shape == (4**nqubits,)
     backend.assert_allclose(frame, expected)
 
@@ -463,11 +459,11 @@ def test_frame_operator_ultra_shallow(backend):
         shadow.frame_operator(2, "ultra-shallow", True, depth=1, **kwargs)
     )
 
-    assert frame.dtype == np.float64
+    assert frame.dtype == backend.float64
     assert frame.shape == (16,)
-    np.testing.assert_allclose(frame[0], 1.0)
-    np.testing.assert_allclose(frame * inverse, 1.0)
-    assert np.all(frame > 0)
+    backend.assert_allclose(frame[0], 1.0)
+    backend.assert_allclose(frame * inverse, 1.0)
+    assert backend.all(frame > 0)
 
     # the eigenvalue only depends on the support of the Pauli string
     supports = {}
@@ -477,17 +473,16 @@ def test_frame_operator_ultra_shallow(backend):
             frame[index]
         )
     for values in supports.values():
-        np.testing.assert_allclose(values, values[0])
+        backend.assert_allclose(values, values[0])
 
     # exact values for two qubits and one entangling layer, by enumeration of the ensemble
     for support, exact in {(0, 1): 5 / 27, (1, 0): 5 / 27, (1, 1): 17 / 81}.items():
-        np.testing.assert_allclose(supports[support][0], exact, atol=0.07)
+        backend.assert_allclose(supports[support][0], exact, atol=0.07)
 
     # without entangling layers it is the local Clifford frame
-    local = backend.to_numpy(
-        shadow.frame_operator(2, "ultra-shallow", depth=0, **kwargs)
-    )
-    np.testing.assert_allclose(local, 3.0 ** (-_weights(2)), atol=0.07)
+    local = shadow.frame_operator(2, "ultra-shallow", depth=0, **kwargs)
+
+    backend.assert_allclose(local, 3.0 ** (-_weights(2)), atol=0.07)
 
 
 def test_single_qubit_cliffords(backend):
@@ -498,14 +493,12 @@ def test_single_qubit_cliffords(backend):
         circuit = Circuit(1)
         for name in word:
             circuit.add(getattr(gates, name)(0))
-        unitaries.append(
-            backend.to_numpy(circuit.unitary(backend)) if word else np.eye(2)
-        )
+        unitaries.append(circuit.unitary(backend) if word else backend.identity(2))
 
     def key(unitary):
         flat = unitary.reshape(-1)
-        phase = flat[np.argmax(np.abs(flat) > 1e-9)]
-        return tuple(np.round(unitary / (phase / abs(phase)), 6).reshape(-1))
+        phase = flat[backend.argmax(backend.abs(flat) > 1e-9)]
+        return tuple(backend.round(unitary / (phase / abs(phase)), 6).reshape(-1))
 
     # 24 different elements up to a global phase
     keys = {key(unitary) for unitary in unitaries}
@@ -519,9 +512,9 @@ def test_single_qubit_cliffords(backend):
     # and each element maps Pauli matrices to Pauli matrices
     for unitary in unitaries:
         for char in "XYZ":
-            rotated = unitary @ PAULIS[char] @ np.conj(unitary).T
+            rotated = unitary @ PAULIS[char] @ backend.dagger(unitary)
             assert any(
-                np.allclose(rotated, sign * PAULIS[other], atol=1e-10)
+                backend.allclose(rotated, sign * PAULIS[other], atol=1e-10)
                 for other in "XYZ"
                 for sign in (1, -1)
             )
@@ -539,24 +532,24 @@ def test_snapshots(backend, method, nqubits):
 
     assert len(snapshots) == 3
     for snapshot in snapshots:
-        snapshot = backend.to_numpy(snapshot)
         assert snapshot.shape == (2**nqubits, 2**nqubits)
-        np.testing.assert_allclose(snapshot, np.conj(snapshot).T, atol=1e-10)
-        np.testing.assert_allclose(np.trace(snapshot), 1.0, atol=1e-10)
-        assert np.all(np.linalg.eigvalsh(snapshot) > -1e-10)
+        backend.assert_allclose(snapshot, backend.dagger(snapshot), atol=1e-10)
+        backend.assert_allclose(backend.trace(snapshot), 1.0, atol=1e-10)
+        assert backend.all(backend.eigvalsh(snapshot) > -1e-10)
 
     # a single sample is the projector U^dagger |b><b| U
     (snapshot,) = shadow._snapshots(circuit, 1, method, 1, 1, 1, 1, 5, backend)
-    snapshot = backend.to_numpy(snapshot)
-    np.testing.assert_allclose(snapshot @ snapshot, snapshot, atol=1e-10)
+    backend.assert_allclose(snapshot @ snapshot, snapshot, atol=1e-10)
 
 
-def _matrix(terms):
-    return sum(coefficient * _pauli_matrix(string) for string, coefficient in terms)
+def _matrix(terms, backend):
+    return sum(
+        coefficient * _pauli_matrix(string, backend) for string, coefficient in terms
+    )
 
 
-def _pauli_matrix(string):
-    return reduce(np.kron, [PAULIS[char] for char in string])
+def _pauli_matrix(string, backend):
+    return reduce(backend.kron, [PAULIS[char] for char in string])
 
 
 def _prepare(nqubits):
