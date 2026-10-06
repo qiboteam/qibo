@@ -513,7 +513,7 @@ class Backend:
         """
         return self.engine.ascontiguousarray(array, **kwargs)
 
-    def base_repr(number: int, base: int = 2, **kwargs) -> str:
+    def base_repr(self, number: int, base: int = 2, **kwargs) -> str:
         """Return a string representation of a ``number`` in the given ``base`` system.
 
         .. note::
@@ -534,7 +534,7 @@ class Backend:
 
         return self.engine.base_repr(number, base, **kwargs)
 
-    def binary_repr(number: int, length: int | None = None) -> str:
+    def binary_repr(self, number: int, length: int | None = None) -> str:
         """Return the binary representation of the input number as a string.
 
         Args:
