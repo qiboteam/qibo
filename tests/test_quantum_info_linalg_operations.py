@@ -767,8 +767,8 @@ def test_lie_closure_classification_sums(backend, topology, nqubits, label):
     # the algebra only depends on the real span of the generators, which is
     # unchanged by an invertible real recombination of them (here, a rotation)
     strings = _classification_generators(label, nqubits, topology)
-    random_matrix = np.random.default_rng(1234).normal(size=(len(strings),) * 2)
-    mixing, _ = np.linalg.qr(random_matrix)
+    random_matrix = backend.random_normal(0, 1, size=(len(strings),) * 2, seed=1234)
+    mixing, _ = backend.qr(random_matrix)
     generators = [
         {string: float(row[j]) for j, string in enumerate(strings)} for row in mixing
     ]
@@ -802,8 +802,8 @@ def test_lie_closure_pauli_sum_tolerance(backend, tol):
     # the result must not depend on ``tol`` as long as it separates numerical noise
     # from genuinely new operators
     strings = _classification_generators("a11", 4, "open")
-    random_matrix = np.random.default_rng(11).normal(size=(len(strings),) * 2)
-    mixing, _ = np.linalg.qr(random_matrix)
+    random_matrix = backend.random_normal(0, 1, size=(len(strings),) * 2, seed=11)
+    mixing, _ = backend.qr(random_matrix)
     generators = [
         {string: float(row[j]) for j, string in enumerate(strings)} for row in mixing
     ]
