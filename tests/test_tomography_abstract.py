@@ -1,6 +1,7 @@
 import pytest
 
 from qibo import Circuit, gates
+from qibo.tomography.abstract import Tomography
 
 
 class Dummy(Tomography):
