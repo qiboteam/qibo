@@ -1,5 +1,7 @@
 """Protected functions supporting quantum_info/linalg_operations.py"""
 
+import math
+
 from numpy.typing import ArrayLike
 
 from qibo.backends import Backend, CliffordBackend, _check_backend, _get_engine_name
@@ -88,7 +90,7 @@ def _lie_closure_matrix(
     dims = generators[0].shape[0]
     basis = backend.zeros((0, dims, dims), dtype=backend.complex128)
     nb_generators = 0
-    smallest = 1.0
+    smallest = math.inf
     for epoch in range(max_iterations + 1):
         old_length = basis.shape[0]
 
@@ -259,7 +261,7 @@ def _lie_closure_pauli_sums(
 
     basis = clifford_backend.zeros((0, len(words)), dtype=float)
     nb_generators, stop = 0, 0
-    smallest = 1.0
+    smallest = math.inf
     for epoch in range(max_iterations + 1):
         # rows of the basis added in the previous round, which are commuted with
         # each of the original generators in this round

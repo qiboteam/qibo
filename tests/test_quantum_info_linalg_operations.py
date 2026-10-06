@@ -516,6 +516,23 @@ def test_lie_closure_tolerance_warning(backend, caplog):
     assert "close to ``tol``" not in caplog.text
 
 
+@pytest.mark.parametrize("pauli", [False, True])
+def test_lie_closure_tolerance_warning_closed(backend, caplog, pauli):
+    # commuting generators: the algebra is closed without any new operator being added,
+    # so there is no residual norm to compare with ``tol``, however large it is
+    if pauli:
+        generators = ["ZI", {"IZ": 1.0}]
+    else:
+        I, Z = backend.matrices.I(2), backend.matrices.Z
+        generators = [backend.kron(Z, I), backend.kron(I, Z)]
+
+    with caplog.at_level(logging.WARNING):
+        basis = lie_closure(generators, tol=0.5, backend=backend)
+
+    assert len(basis) == 2
+    assert "close to ``tol``" not in caplog.text
+
+
 def test_lie_closure_pauli_errors(backend):
     X = backend.matrices.X
 
