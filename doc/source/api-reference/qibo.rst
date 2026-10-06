@@ -190,6 +190,18 @@ Quantum Singular Value Transformation
 .. autofunction:: qibo.models.qsvt.qsvt_circuit
 
 
+Block Encoding
+""""""""""""""
+
+.. autofunction:: qibo.models.block_encoding.block_encoding_circuit
+
+
+Linear Combination of Unitaries
+"""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.lcu.lcu_circuit
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 """""""""""""""""""""""""""""""""""""""""""""
 

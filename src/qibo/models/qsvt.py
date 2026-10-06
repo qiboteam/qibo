@@ -5,8 +5,8 @@ from numpy.typing import ArrayLike
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
+from qibo.models._signal_processing import _spectral_factor
 from qibo.models.circuit import Circuit
-from qibo.models.qsp import _spectral_factor
 
 
 def qsvt_circuit(block_encoding: Circuit, phases: ArrayLike, nancillas: int) -> Circuit:
