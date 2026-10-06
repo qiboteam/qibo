@@ -7,6 +7,7 @@ from qibo import Circuit, gates
 from qibo.quantum_info import random_unitary
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.asserts import assert_decomposition
+from qibo.transpiler.unitary_decompositions import single_qubit_decomposition
 from qibo.transpiler.unroller import NativeGates, Unroller, translate_gate
 
 
@@ -17,7 +18,7 @@ def test_native_gates_from_gatelist():
 
 def test_native_gates_from_gatelist_fail():
     with pytest.raises(ValueError):
-        NativeGates.from_gatelist([gates.RZ, gates.X(0)])
+        NativeGates.from_gatelist([gates.RZ, gates.SWAP(0, 1)])
 
 
 def test_native_gate_str_list():
@@ -232,9 +233,10 @@ def _native_gate_sets():
             yield natives
 
 
-def _assert_unrolled(circuit, natives, backend, **kwargs):
+def _assert_unrolled(circuit, natives, backend, virtual=True, **kwargs):
     unrolled = Unroller(natives, backend=backend, **kwargs)(circuit)
-    assert_decomposition(unrolled, natives | NativeGates.RZ | NativeGates.Z)
+    allowed = natives | NativeGates.RZ | NativeGates.Z if virtual else natives
+    assert_decomposition(unrolled, allowed)
     target = backend.to_numpy(circuit.unitary(backend))
     result = backend.to_numpy(unrolled.unitary(backend))
     overlap = np.abs(np.trace(target.conj().T @ result)) / target.shape[0]
@@ -255,7 +257,10 @@ def _lie_algebra_dimension(natives, backend):
     generators, conjugators = [], []
     for flag, gate_class, nparams in (
         (NativeGates.RZ, gates.RZ, 1),
+        (NativeGates.RX, gates.RX, 1),
+        (NativeGates.RY, gates.RY, 1),
         (NativeGates.GPI2, gates.GPI2, 1),
+        (NativeGates.PRX, gates.PRX, 2),
         (NativeGates.U3, gates.U3, 3),
     ):
         if not natives & flag:
@@ -277,9 +282,21 @@ def _lie_algebra_dimension(natives, backend):
             generators.extend(
                 [np.kron(derivative, identity), np.kron(identity, derivative)]
             )
-    if natives & NativeGates.Z:
-        z_matrix = to_numpy(gates.Z(0))
-        conjugators.extend([np.kron(z_matrix, identity), np.kron(identity, z_matrix)])
+    for flag, gate_class in (
+        (NativeGates.Z, gates.Z),
+        (NativeGates.X, gates.X),
+        (NativeGates.Y, gates.Y),
+        (NativeGates.H, gates.H),
+        (NativeGates.S, gates.S),
+        (NativeGates.SDG, gates.SDG),
+        (NativeGates.T, gates.T),
+        (NativeGates.TDG, gates.TDG),
+        (NativeGates.SX, gates.SX),
+        (NativeGates.SXDG, gates.SXDG),
+    ):
+        if natives & flag:
+            matrix = to_numpy(gate_class(0))
+            conjugators.extend([np.kron(matrix, identity), np.kron(identity, matrix)])
     swap = to_numpy(gates.SWAP(0, 1))
     for flag, gate in (
         (NativeGates.CZ, gates.CZ(0, 1)),
@@ -435,3 +452,149 @@ def test_unroller_unsupported_gates(backend, gate):
     circuit.add(gate)
     with pytest.raises(DecompositionError):
         Unroller(NativeGates.default(), backend=backend)(circuit)
+
+
+_FLEXIBLE_NATIVES = [
+    [gates.RX, gates.RZ],
+    [gates.RY, gates.RZ],
+    [gates.RX, gates.RY],
+    [gates.RX, gates.RY, gates.RZ],
+    [gates.RZ, gates.H],
+    [gates.RX, gates.H],
+    [gates.RZ, gates.SX],
+    [gates.RZ, gates.SXDG],
+    [gates.RX, gates.S],
+    [gates.RX, gates.T],
+    [gates.RZ, gates.H, gates.T],
+    [gates.PRX],
+]
+_NOT_EXACT_NATIVES = [
+    [gates.RX],
+    [gates.RZ],
+    [gates.RZ, gates.X],
+    [gates.RZ, gates.S],
+    [gates.RZ, gates.T],
+    [gates.H, gates.S],
+    [gates.H, gates.T],
+]
+
+
+@pytest.mark.parametrize("entangler", [gates.CZ, gates.iSWAP, gates.CNOT])
+@pytest.mark.parametrize("single_qubit", _FLEXIBLE_NATIVES)
+def test_native_gates_is_universal_single_qubit_gates(backend, single_qubit, entangler):
+    natives = NativeGates.from_gatelist([*single_qubit, entangler])
+    assert natives.is_universal
+    assert _lie_algebra_dimension(natives, backend) == 15
+
+
+@pytest.mark.parametrize("single_qubit", _NOT_EXACT_NATIVES)
+def test_native_gates_not_universal_single_qubit_gates(backend, single_qubit):
+    natives = NativeGates.from_gatelist([*single_qubit, gates.CZ])
+    assert not natives.is_universal
+    with pytest.raises(DecompositionError):
+        Unroller(natives, backend=backend)
+    # Gates that only generate a dense set, such as H and T, are not decomposed exactly.
+    if single_qubit != [gates.H, gates.T]:
+        assert _lie_algebra_dimension(natives, backend) < 15
+
+
+def test_native_gates_single_qubit_gates():
+    natives = NativeGates.from_gatelist(
+        [gates.CZ, gates.RZ, gates.H, gates.M, gates.U3]
+    )
+    assert set(natives.single_qubit_gates) == {gates.RZ, gates.H, gates.U3}
+    assert NativeGates(0).single_qubit_gates == ()
+
+
+@pytest.mark.parametrize("entangler", [gates.CZ, gates.iSWAP, gates.CNOT])
+@pytest.mark.parametrize("single_qubit", _FLEXIBLE_NATIVES)
+def test_unroller_flexible_single_qubit_gates(backend, single_qubit, entangler):
+    natives = NativeGates.from_gatelist([*single_qubit, entangler])
+    circuit = Circuit(3)
+    circuit.add(
+        [
+            gates.H(0),
+            gates.X(1),
+            gates.Y(2),
+            gates.S(0),
+            gates.T(1),
+            gates.RX(2, 0.3),
+            gates.RY(0, 0.4),
+            gates.RZ(1, 0.5),
+            gates.U3(2, 0.6, 0.7, 0.8),
+            gates.CNOT(0, 1),
+            gates.CZ(1, 2),
+            gates.SWAP(0, 2),
+            gates.iSWAP(0, 1),
+            gates.CRX(1, 2, 0.9),
+        ]
+    )
+    _assert_unrolled(circuit, natives, backend, virtual=False)
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.H(0),
+        gates.S(0),
+        gates.T(0),
+        gates.SX(0),
+        gates.SXDG(0),
+        gates.RX(0, 0.3),
+        gates.RY(0, 0.3),
+        gates.PRX(0, 0.3, 0.4),
+    ],
+)
+def test_unroller_keeps_native_single_qubit_gate(backend, gate):
+    natives = NativeGates.from_gatelist([type(gate), gates.RX, gates.RZ, gates.CZ])
+    circuit = Circuit(1)
+    circuit.add(gate)
+    unrolled = Unroller(natives, backend=backend)(circuit)
+    assert [type(unrolled_gate) for unrolled_gate in unrolled.queue] == [type(gate)]
+
+
+def test_translate_gate_flexible_single_qubit_error(backend):
+    natives = NativeGates.from_gatelist([gates.RZ, gates.CZ])
+    with pytest.raises(DecompositionError):
+        translate_gate(gates.H(0), natives, backend=backend)
+
+
+def test_single_qubit_decomposition_is_consistent_with_is_universal(backend):
+    names = [
+        "Z",
+        "X",
+        "Y",
+        "H",
+        "S",
+        "SDG",
+        "T",
+        "TDG",
+        "SX",
+        "SXDG",
+        "RX",
+        "RY",
+        "RZ",
+        "PRX",
+    ]
+    unitary = random_unitary(2, seed=0, backend=backend)
+    target = backend.to_numpy(unitary)
+    for size in range(1, 4):
+        for combination in itertools.combinations(names, size):
+            natives = NativeGates.from_gatelist(
+                [getattr(gates, name) for name in combination] + [gates.CZ]
+            )
+            if not natives.is_universal:
+                with pytest.raises(DecompositionError):
+                    single_qubit_decomposition(
+                        unitary, 0, natives.single_qubit_gates, backend=backend
+                    )
+                continue
+            circuit = Circuit(1)
+            circuit.add(
+                single_qubit_decomposition(
+                    unitary, 0, natives.single_qubit_gates, backend=backend
+                )
+            )
+            result = backend.to_numpy(circuit.unitary(backend))
+            overlap = np.abs(np.trace(target.conj().T @ result)) / 2
+            backend.assert_allclose(overlap, 1.0, atol=1e-8)

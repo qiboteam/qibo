@@ -2313,6 +2313,38 @@ or the ``on_qubits`` parameter.
     - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
     - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
 
+The single-qubit native gates are not limited to :class:`qibo.gates.U3` and :class:`qibo.gates.GPI2`.
+Any combination of single-qubit gates that implements every single-qubit unitary exactly can be used, which
+holds if it has two rotations with free angles about orthogonal axes, such as :class:`qibo.gates.RX` and
+:class:`qibo.gates.RZ`. The axis of a rotation can also be changed by native gates without parameters, as
+:class:`qibo.gates.H` does for :class:`qibo.gates.RZ`. The property
+:attr:`qibo.transpiler.unroller.NativeGates.is_universal` checks whether a set of native gates can
+implement any unitary, and :class:`qibo.transpiler.unroller.Unroller` raises an error if it cannot.
+
+.. testcode:: python
+
+    from qibo import Circuit, gates
+    from qibo.transpiler.unroller import NativeGates, Unroller
+
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.T(1))
+
+    # RZ rotations and H gates are enough to implement any single-qubit unitary
+    natives = NativeGates.from_gatelist([gates.RZ, gates.H, gates.CZ])
+    print(natives.is_universal)
+    print(NativeGates.from_gatelist([gates.RZ, gates.T, gates.CZ]).is_universal)
+
+    unrolled_circuit = Unroller(natives)(circuit)
+    print(sorted({gate.name for gate in unrolled_circuit.queue}))
+
+.. testoutput:: python
+
+    True
+    False
+    ['cz', 'h', 'rz']
+
 The optimization passes can be combined to simplify the circuit before it is decomposed
 into native gates:
 
