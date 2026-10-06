@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.quantum_info import random_unitary
+from qibo.quantum_info import lie_closure, random_unitary
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.asserts import assert_decomposition
 from qibo.transpiler.unitary_decompositions import single_qubit_decomposition
@@ -248,8 +248,9 @@ def _lie_algebra_dimension(natives, backend):
 
     The gates are universal on two qubits if they generate the whole Lie algebra
     of dimension 15. The generators of the continuous gates are their derivatives
-    with respect to the parameters. They are completed with all commutators and
-    with the conjugations by the gates, until no new direction appears.
+    with respect to the parameters. The Lie algebra that they generate is computed with
+    :func:`qibo.quantum_info.lie_closure` and conjugated with the gates, until it does
+    not grow anymore.
     """
     to_numpy = lambda gate: backend.to_numpy(gate.matrix(backend))
     identity = np.eye(2)
@@ -306,30 +307,26 @@ def _lie_algebra_dimension(natives, backend):
         if natives & flag:
             conjugators.extend([to_numpy(gate), swap @ to_numpy(gate) @ swap])
 
-    pending = [
+    if not generators:
+        return 0
+
+    # the derivatives are made traceless, since the identity does not
+    # contribute to the Lie algebra of the unitaries up to a global phase
+    generators = [
         generator - np.trace(generator) / 4 * np.eye(4) for generator in generators
     ]
-    directions = np.zeros((0, 32))
-    elements = []
-    while pending and len(elements) < 15:
-        candidate = pending.pop()
-        vector = np.concatenate([candidate.real.ravel(), candidate.imag.ravel()])
-        norm = np.linalg.norm(vector)
-        if norm < 1e-9:
-            continue
-        vector = vector / norm
-        vector = vector - directions.T @ (directions @ vector)
-        if np.linalg.norm(vector) < 1e-6:
-            continue
-        directions = np.vstack([directions, vector / np.linalg.norm(vector)])
-        elements.append(candidate)
-        pending.extend(
-            element @ candidate - candidate @ element for element in elements
-        )
-        pending.extend(
-            conjugator @ candidate @ conjugator.conj().T for conjugator in conjugators
-        )
-    return len(elements)
+    conjugators = [np.eye(4), *conjugators]
+    dimension = 0
+    while True:
+        algebra = backend.to_numpy(lie_closure(generators, tol=1e-6, backend=backend))
+        if len(algebra) == dimension:
+            return dimension
+        dimension = len(algebra)
+        generators = [
+            conjugator @ element @ conjugator.conj().T
+            for element in algebra
+            for conjugator in conjugators
+        ]
 
 
 def test_native_gates_is_universal(backend):
