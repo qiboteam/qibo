@@ -1,14 +1,20 @@
+import logging
+from functools import reduce
+
 import numpy as np
 import pytest
 from scipy.linalg import sqrtm
 
 from qibo import Circuit, gates, matrices
-from qibo.quantum_info.linalg_operations import (
+from qibo.quantum_info._linalg_operations import (
     _gram_schmidt_process,
     _vector_projection,
+)
+from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
     lanczos,
+    lie_closure,
     matrix_exponentiation,
     matrix_logarithm,
     matrix_power,
@@ -426,3 +432,491 @@ def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
     target_gs = state - target[0]
     vector = _gram_schmidt_process(state, directions[0], backend=backend)
     backend.assert_allclose(vector, target_gs)
+
+
+def test_lie_closure_errors(backend):
+    X, Z = backend.matrices.X, backend.matrices.Z
+
+    with pytest.raises(TypeError):
+        lie_closure([], backend=backend)
+    with pytest.raises(TypeError):
+        lie_closure([backend.zeros((2, 3))], backend=backend)
+    with pytest.raises(TypeError):
+        lie_closure([X, backend.kron(X, Z)], backend=backend)
+    with pytest.raises(ValueError):
+        lie_closure([backend.cast([[0.0, 1.0], [0.0, 0.0]])], backend=backend)
+
+
+@pytest.mark.parametrize("skew", [False, True])
+@pytest.mark.parametrize("nqubits", [2, 3])
+def test_lie_closure(backend, nqubits, skew):
+    I, X, Z = backend.matrices.I(2), backend.matrices.X, backend.matrices.Z
+
+    # transverse-field Ising chain, whose DLA is so(2 * nqubits)
+    generators = []
+    for qubit in range(nqubits):
+        operators = [I] * nqubits
+        operators[qubit] = Z
+        generators.append(reduce(backend.kron, operators))
+    for qubit in range(nqubits - 1):
+        operators = [I] * nqubits
+        operators[qubit] = X
+        operators[qubit + 1] = X
+        generators.append(reduce(backend.kron, operators))
+
+    if skew:
+        generators = [1j * gen for gen in generators]
+
+    basis = lie_closure(generators, backend=backend)
+    dims = 2**nqubits
+
+    assert basis.shape == (nqubits * (2 * nqubits - 1), dims, dims)
+
+    # basis is Hermitian and orthonormal under the Hilbert-Schmidt inner product
+    flat = backend.reshape(basis, (basis.shape[0], -1))
+    gram = backend.conj(flat) @ backend.transpose(flat)
+    backend.assert_allclose(gram, backend.matrices.I(basis.shape[0]), atol=1e-8)
+    for element in basis:
+        backend.assert_allclose(element, backend.conj(backend.transpose(element)))
+
+    # basis spans the generators and is closed under commutators,
+    # hence adding them (and their commutators) does not enlarge the algebra
+    extended = list(basis)
+    extended.extend(generators)
+    extended.extend(commutator(basis[0], element) for element in basis)
+    assert lie_closure(extended, backend=backend).shape == basis.shape
+
+
+def test_lie_closure_max_iterations(backend):
+    I, X, Z = backend.matrices.I(2), backend.matrices.X, backend.matrices.Z
+    generators = [backend.kron(X, X), backend.kron(Z, I), backend.kron(I, Z)]
+
+    # one extra nesting level at a time: 3 generators, then 5, then 6
+    for max_iterations, dim in zip((0, 1, 2, 3), (3, 5, 6, 6)):
+        basis = lie_closure(generators, max_iterations=max_iterations, backend=backend)
+        assert basis.shape[0] == dim
+
+
+def test_lie_closure_tolerance_warning(backend, caplog):
+    I, X, Z = backend.matrices.I(2), backend.matrices.X, backend.matrices.Z
+    generators = [backend.kron(X, X), backend.kron(Z, I), backend.kron(I, Z)]
+
+    # the residual norm of every new commutator is 1, which is within a factor
+    # of 1e3 of ``tol = 0.5``, as it would be for numerical noise
+    with caplog.at_level(logging.WARNING):
+        basis = lie_closure(generators, tol=0.5, backend=backend)
+
+    assert basis.shape[0] == 6
+    assert "close to ``tol``" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        lie_closure(generators, backend=backend)
+
+    assert "close to ``tol``" not in caplog.text
+
+
+@pytest.mark.parametrize("pauli", [False, True])
+def test_lie_closure_tolerance_warning_closed(backend, caplog, pauli):
+    # commuting generators: the algebra is closed without any new operator being added,
+    # so there is no residual norm to compare with ``tol``, however large it is
+    if pauli:
+        generators = ["ZI", {"IZ": 1.0}]
+    else:
+        I, Z = backend.matrices.I(2), backend.matrices.Z
+        generators = [backend.kron(Z, I), backend.kron(I, Z)]
+
+    with caplog.at_level(logging.WARNING):
+        basis = lie_closure(generators, tol=0.5, backend=backend)
+
+    assert len(basis) == 2
+    assert "close to ``tol``" not in caplog.text
+
+
+def test_lie_closure_pauli_errors(backend):
+    X = backend.matrices.X
+
+    with pytest.raises(TypeError):
+        lie_closure(["XX", X], backend=backend)
+    with pytest.raises(ValueError):
+        lie_closure(["XX", "Z"], backend=backend)
+    with pytest.raises(ValueError):
+        lie_closure(["XA"], backend=backend)
+
+
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_lie_closure_pauli(backend, nqubits):
+    # transverse-field Ising chain (with a repeated generator), whose DLA is so(2 * nqubits)
+    generators = ["I" * q + "Z" + "I" * (nqubits - q - 1) for q in range(nqubits)]
+    generators.extend(
+        "I" * q + "XX" + "I" * (nqubits - q - 2) for q in range(nqubits - 1)
+    )
+    generators.append(generators[0])
+
+    paulis = lie_closure(generators, backend=backend)
+
+    assert len(paulis) == nqubits * (2 * nqubits - 1)
+    assert len(set(paulis)) == len(paulis)
+    assert paulis[: len(generators) - 1] == generators[:-1]
+
+    # same algebra as the one obtained from matrices
+    matrices = {
+        "I": backend.matrices.I(2),
+        "X": backend.matrices.X,
+        "Y": backend.matrices.Y,
+        "Z": backend.matrices.Z,
+    }
+    to_matrix = lambda pauli: reduce(backend.kron, [matrices[p] for p in pauli])
+    basis = lie_closure([to_matrix(gen) for gen in generators], backend=backend)
+    assert basis.shape[0] == len(paulis)
+
+    extended = list(basis)
+    extended.extend(to_matrix(pauli) for pauli in paulis)
+    assert lie_closure(extended, backend=backend).shape == basis.shape
+
+
+def test_lie_closure_pauli_max_iterations(backend):
+    generators = ["XX", "ZI", "IZ"]
+
+    for max_iterations, dim in zip((0, 1, 2, 3), (3, 5, 6, 6)):
+        paulis = lie_closure(generators, max_iterations=max_iterations, backend=backend)
+        assert len(paulis) == dim
+
+    # commuting Pauli strings generate an abelian algebra
+    assert lie_closure(["ZI", "IZ", "ZZ"], backend=backend) == ["ZI", "IZ", "ZZ"]
+    # the identity commutes with everything
+    assert lie_closure(["II", "XX"], backend=backend) == ["II", "XX"]
+
+
+def test_lie_closure_pauli_sum_errors(backend):
+    with pytest.raises(ValueError):
+        lie_closure([{"XX": 1.0j}], backend=backend)
+    with pytest.raises(ValueError):
+        lie_closure([{"XX": 1.0, "Z": 1.0}], backend=backend)
+    with pytest.raises(ValueError):
+        lie_closure([{}], backend=backend)
+    with pytest.raises(TypeError):
+        lie_closure([{"XX": 1.0}, backend.matrices.X], backend=backend)
+
+
+@pytest.mark.parametrize(
+    "generators",
+    [
+        [{"XXI": 1.0, "YYI": 1.0, "ZZI": 1.0}, {"IXX": 1.0, "IYY": 1.0, "IZZ": 1.0}],
+        [{"XXI": 1.0, "YYI": 1.0, "ZZI": 0.7}, {"IXX": 1.0, "IYY": 1.0, "IZZ": 0.7}],
+        [{"ZII": 1.0, "IZI": 1.0, "IIZ": 1.0}, {"XXI": 1.0, "IXX": 1.0}],
+        [{"XI": 0.5, "ZZ": -1.0}, "IY", "ZX"],
+    ],
+)
+def test_lie_closure_pauli_sum(backend, generators):
+    matrices = {
+        "I": backend.matrices.I(2),
+        "X": backend.matrices.X,
+        "Y": backend.matrices.Y,
+        "Z": backend.matrices.Z,
+    }
+    to_matrix = lambda term: sum(
+        coeff * reduce(backend.kron, [matrices[p] for p in pauli])
+        for pauli, coeff in ({term: 1.0} if isinstance(term, str) else term).items()
+    )
+
+    operators = lie_closure(generators, backend=backend)
+    basis = lie_closure([to_matrix(gen) for gen in generators], backend=backend)
+
+    assert len(operators) == basis.shape[0]
+
+    # orthonormal in the coefficient space
+    paulis = sorted({pauli for operator in operators for pauli in operator})
+    coefficients = np.array(
+        [[operator.get(pauli, 0.0) for pauli in paulis] for operator in operators]
+    )
+    np.testing.assert_allclose(
+        coefficients @ coefficients.T, np.eye(len(operators)), atol=1e-8
+    )
+
+    # same algebra as the one obtained from matrices
+    extended = list(basis)
+    extended.extend(to_matrix(operator) for operator in operators)
+    assert lie_closure(extended, backend=backend).shape == basis.shape
+
+
+def test_lie_closure_pauli_sum_max_iterations(backend):
+    generators = [{"XX": 1.0, "ZI": 1.0}, {"IZ": 1.0}]
+
+    # one extra nesting level at a time, until the algebra is closed
+    dims = [
+        len(lie_closure(generators, max_iterations=max_iterations, backend=backend))
+        for max_iterations in range(5)
+    ]
+    assert dims[0] == 2
+    assert dims == sorted(dims)
+    assert dims[-1] == dims[-2] == len(lie_closure(generators, backend=backend))
+
+    # a single Pauli string is the same as a dictionary with unit coefficient
+    operators = lie_closure(["XX", {"ZI": 1.0}, {"IZ": 1.0}], backend=backend)
+    assert len(operators) == 6
+
+
+# Dynamical Lie algebras of translation-invariant 2-local spin chains, classified in
+# R. Wiersema, E. Kokcu, A. F. Kemper and B. N. Bakalov, npj Quantum Inf. 10, 110 (2024).
+# Generating sets of Table I, on pairs of neighbouring qubits.
+CLASSIFICATION = {
+    "a0": ["XX"],
+    "a1": ["XY"],
+    "a2": ["XY", "YX"],
+    "a3": ["XX", "YZ"],
+    "a4": ["XX", "YY"],
+    "a5": ["XY", "YZ"],
+    "a6": ["XX", "YZ", "ZY"],
+    "a7": ["XX", "YY", "ZZ"],
+    "a8": ["XX", "XZ"],
+    "a9": ["XY", "XZ"],
+    "a10": ["XY", "YZ", "ZX"],
+    "a11": ["XY", "YX", "YZ"],
+    "a12": ["XX", "XY", "YZ"],
+    "a13": ["XX", "YY", "YZ"],
+    "a14": ["XX", "YY", "XY"],
+    "a15": ["XX", "XY", "XZ"],
+    "a16": ["XY", "YX", "YZ", "ZY"],
+    "a17": ["XX", "XY", "ZX"],
+    "a18": ["XX", "XZ", "YY", "ZY"],
+    "a19": ["XX", "XY", "ZX", "YZ"],
+    "a20": ["XX", "YY", "ZZ", "ZY"],
+    "a21": ["XX", "YY", "XY", "ZX"],
+    "a22": ["XX", "XY", "XZ", "YX"],
+    "b0": ["XI", "IX"],
+    "b1": ["XX", "XI", "IX"],
+    "b2": ["XY", "XI", "IX"],
+    "b3": ["XI", "YI", "IX", "IY"],
+    "b4": ["XX", "XY", "XZ", "XI", "IX", "IY", "IZ"],
+}
+
+# Bases for three qubits, supplement B V of the same reference
+CLASSIFICATION_BASES = {
+    "open": {
+        "a0": "IXX XXI",
+        "a1": "IXY XYI XZY",
+        "a2": "IXY IYX XYI XZY YXI YZX",
+        "a3": "IXX IYZ XXI XZZ YIY YXZ YYX YZI ZIZ ZXY",
+        "a4": "IXX IYY XXI XZY YYI YZX",
+        "a5": "IXY IYZ XYI XZY YIX YXZ YYY YZI ZIY ZYX",
+        "a7": "IXX IYY IZZ XIX XXI XYZ XZY YIY YXZ YYI YZX ZIZ ZXY ZYX ZZI",
+        "a8": "IIY IXX IXZ IYI IZX IZZ XXI XYX XYZ XZI",
+        "a9": "IIX IXI IXY IXZ XYI XYY XYZ XZI XZY XZZ",
+        "a10": "IXY IYZ IZX XIZ XXX XYI XZY YIX YXZ YYY YZI ZIY ZXI ZYX ZZZ",
+        "a14": "IIZ IXX IXY IYX IYY IZI XXI XYI XZX XZY YXI YYI YZX YZY ZII",
+        "a15": "IIX IIY IIZ IXI IXX IXY IXZ IYI IYX IYY IYZ IZI IZX IZY IZZ XIX XIY XIZ XXI XXX XXY XXZ XYI XYX XYY XYZ XZI XZX XZY XZZ",
+    },
+    "periodic": {
+        "a0": "IXX XIX XXI",
+        "a1": "IXY XYI XZY YIX YXZ ZYX",
+        "a2": "IXY IYX XIY XYI XYZ XZY YIX YXI YXZ YZX ZXY ZYX",
+        "a3": "IIX IXI IXX IYY IYZ IZY IZZ XII XIX XXI XYY XYZ XZY XZZ YIY YIZ YXY YXZ YYI YYX YZI YZX ZIY ZIZ ZXY ZXZ ZYI ZYX ZZI ZZX",
+        "a4": "IXX IYY IZZ XIX XXI XYZ XZY YIY YXZ YYI YZX ZIZ ZXY ZYX ZZI",
+        "a8": "IIY IXX IXZ IYI IYY IZX IZZ XIX XIZ XXI XXY XYX XYZ XZI XZY YII YIY YXX YXZ YYI YZX YZZ ZIX ZIZ ZXI ZXY ZYX ZYZ ZZI ZZY",
+        "a9": "IIX IXI IXY IXZ XII XYI XYY XYZ XZI XZY XZZ YIX YXY YXZ YYX YZX ZIX ZXY ZXZ ZYX ZZX",
+        "a14": "IIZ IXX IXY IYX IYY IZI IZZ XIX XIY XXI XXZ XYI XYZ XZX XZY YIX YIY YXI YXZ YYI YYZ YZX YZY ZII ZIZ ZXX ZXY ZYX ZYY ZZI",
+    },
+}
+
+
+@pytest.mark.parametrize("label", list(CLASSIFICATION))
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("topology", ["open", "periodic", "permutation"])
+def test_lie_closure_classification(backend, topology, nqubits, label):
+    dim = _classification_dimension(label, nqubits, topology)
+    if dim is None:
+        pytest.skip("Case not covered by the classification.")
+
+    generators = _classification_generators(label, nqubits, topology)
+    assert len(lie_closure(generators, backend=backend)) == dim
+
+
+@pytest.mark.parametrize("topology", ["open", "periodic"])
+def test_lie_closure_classification_bases(backend, topology):
+    for label, basis in CLASSIFICATION_BASES[topology].items():
+        generators = _classification_generators(label, 3, topology)
+        assert sorted(lie_closure(generators, backend=backend)) == sorted(basis.split())
+
+
+@pytest.mark.parametrize("nqubits", [3, 4, 5, 6])
+def test_lie_closure_classification_closed_forms(backend, nqubits):
+    def string(i, j, first, last):
+        paulis = ["I"] * nqubits
+        paulis[i : j + 1] = [first] + ["Z"] * (j - i - 1) + [last]
+        return "".join(paulis)
+
+    pairs = [(i, j) for i in range(nqubits) for j in range(i + 1, nqubits)]
+    a_0 = ["I" * j + "XX" + "I" * (nqubits - j - 2) for j in range(nqubits - 1)]
+    a_1 = [string(i, j, "X", "Y") for i, j in pairs]
+    a_2 = a_1 + [string(i, j, "Y", "X") for i, j in pairs]
+
+    for label, basis in (("a0", a_0), ("a1", a_1), ("a2", a_2)):
+        generators = _classification_generators(label, nqubits, "open")
+        assert sorted(lie_closure(generators, backend=backend)) == sorted(basis)
+
+
+@pytest.mark.parametrize("label", list(CLASSIFICATION))
+def test_lie_closure_classification_matrices(backend, label):
+    nqubits = 3
+    dim = _classification_dimension(label, nqubits, "open")
+    if dim is None:
+        pytest.skip("Case not covered by the classification.")
+
+    paulis = {
+        "I": backend.matrices.I(2),
+        "X": backend.matrices.X,
+        "Y": backend.matrices.Y,
+        "Z": backend.matrices.Z,
+    }
+    generators = [
+        reduce(backend.kron, [paulis[pauli] for pauli in string])
+        for string in _classification_generators(label, nqubits, "open")
+    ]
+
+    assert lie_closure(generators, backend=backend).shape[0] == dim
+
+
+@pytest.mark.parametrize("tol", [1e-10, 1e-8, 1e-6])
+def test_lie_closure_pauli_sum_tolerance(backend, tol):
+    # the result must not depend on ``tol`` as long as it separates numerical noise
+    # from genuinely new operators
+    strings = _classification_generators("a11", 4, "open")
+    random_matrix = backend.random_normal(0, 1, size=(len(strings),) * 2, seed=11)
+    mixing, _ = backend.qr(random_matrix)
+    generators = [
+        {string: float(row[j]) for j, string in enumerate(strings)} for row in mixing
+    ]
+
+    assert len(lie_closure(generators, tol=tol, backend=backend)) == 120
+
+
+def _classification_dimension(label: str, nqubits: int, topology: str):
+    """Dimension of the algebras of Theorems IV.1, IV.2 and IV.3 of the reference,
+    ``None`` if the case is not covered."""
+    n = nqubits
+    index = int(label[1:])
+    su = lambda dims: dims**2 - 1
+    so = lambda dims: dims * (dims - 1) // 2
+    sp = lambda dims: dims * (2 * dims + 1)
+
+    if label[0] == "b":
+        dims = {
+            "open": [
+                n,
+                2 * n - 1,
+                sp(2 ** (n - 2)) + 1,
+                3 * n,
+                2 * su(2 ** (n - 1)) + 1,
+            ],
+            "periodic": [n, 2 * n, so(2**n) if n >= 4 else None, 3 * n, su(2**n)],
+            "permutation": [n, n * (n + 1) // 2, None, 3 * n, None],
+        }
+        return dims[topology][index]
+
+    # classes of n modulo 8 (modulo 6) for a_3 (a_5), labelled by min(n % 8, 8 - n % 8)
+    a_3 = {
+        0: 4 * so(2 ** (n - 2)),
+        1: so(2 ** (n - 1)),
+        2: 2 * su(2 ** (n - 2)),
+        3: sp(2 ** (n - 2)),
+        4: 4 * sp(2 ** (n - 3)),
+    }[min(n % 8, 8 - n % 8)]
+    a_5 = {
+        0: 4 * so(2 ** (n - 2)),
+        1: so(2 ** (n - 1)),
+        2: 2 * su(2 ** (n - 2)),
+        3: sp(2 ** (n - 2)),
+    }[min(n % 6, 6 - n % 6)]
+    a_7 = su(2 ** (n - 1)) if n % 2 else 4 * su(2 ** (n - 2))
+    big = n >= 4
+    open_dims = {
+        0: n - 1,
+        1: so(n),
+        2: 2 * so(n),
+        3: a_3,
+        4: 2 * so(n),
+        5: a_5,
+        6: a_7,
+        7: a_7,
+        8: (n - 1) * (2 * n - 1),
+        9: sp(2 ** (n - 2)),
+        10: a_7,
+        11: so(2**n) if big else None,
+        13: 2 * su(2 ** (n - 1)),
+        14: so(2 * n),
+        15: 2 * su(2 ** (n - 1)),
+        16: so(2**n) if big else None,
+        20: 2 * su(2 ** (n - 1)),
+    }
+    open_dims.update({k: su(2**n) if big else None for k in (12, 17, 18, 19, 21, 22)})
+
+    if topology == "open":
+        return open_dims[index]
+
+    if topology == "periodic":
+        if index in (7, 13, 16, 20):
+            return open_dims[index]
+        if index in (12, 15, 17, 18, 19, 21, 22):
+            return su(2**n)
+        periodic_3 = {0: 4 * so(2 ** (n - 2)), 4: 4 * sp(2 ** (n - 3))}
+        periodic_dims = {
+            0: n,
+            1: 2 * so(n),
+            2: 4 * so(n),
+            3: (
+                2 * su(2 ** (n - 1))
+                if n % 2
+                else periodic_3.get(n % 8, 4 * su(2 ** (n - 2)))
+            ),
+            4: so(2 * n) if n % 2 else 4 * so(n),
+            5: (
+                so(2**n)
+                if n % 3
+                else (4 * so(2 ** (n - 2)) if n % 6 == 0 else sp(2 ** (n - 2)))
+            ),
+            6: 2 * su(2 ** (n - 1)) if n % 2 else 4 * su(2 ** (n - 2)),
+            8: 2 * so(2 * n),
+            9: so(2**n) if big else None,
+            10: (
+                su(2**n)
+                if n % 3
+                else (4 * su(2 ** (n - 2)) if n % 6 == 0 else su(2 ** (n - 1)))
+            ),
+            11: so(2**n) if big else None,
+            14: 2 * so(2 * n),
+        }
+        return periodic_dims[index]
+
+    permutation_dims = {
+        0: n * (n - 1) // 2,
+        2: 2 * so(2 ** (n - 1)),
+        4: a_7,
+        6: 2 * su(2 ** (n - 1)),
+        7: a_7,
+        14: 2 * su(2 ** (n - 1)),
+        16: so(2**n) if big else None,
+        20: 2 * su(2 ** (n - 1)),
+        22: su(2**n) if big else None,
+    }
+    return permutation_dims.get(index)
+
+
+def _classification_generators(label: str, nqubits: int, topology: str) -> list[str]:
+    """Generators of the spin chain: on neighbouring qubits for ``open`` and
+    ``periodic`` topologies, and on all pairs of qubits for ``permutation``."""
+    if topology == "permutation":
+        pairs = [(i, j) for i in range(nqubits) for j in range(nqubits) if i != j]
+    else:
+        pairs = [(i, i + 1) for i in range(nqubits - 1)]
+        if topology == "periodic":
+            pairs.append((nqubits - 1, 0))
+
+    generators = []
+    for pair in CLASSIFICATION[label]:
+        for first, second in pairs:
+            paulis = ["I"] * nqubits
+            paulis[first], paulis[second] = pair
+            generators.append("".join(paulis))
+
+    return list(dict.fromkeys(generators))
