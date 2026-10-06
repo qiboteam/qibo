@@ -456,7 +456,7 @@ class Backend:
         """
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
-    def argmax(self, array: ArrayLike, axis: int | None, **kwargs) -> ArrayLike:
+    def argmax(self, array: ArrayLike, axis: int | None = None, **kwargs) -> ArrayLike:
         """Return the indices of the maximum values in ``array`` along an ``axis``.
 
         Args:
