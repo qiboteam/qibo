@@ -5,9 +5,11 @@ import pytest
 from scipy.linalg import sqrtm
 
 from qibo import Circuit, gates, matrices
-from qibo.quantum_info.linalg_operations import (
+from qibo.quantum_info._linalg_operations import (
     _gram_schmidt_process,
     _vector_projection,
+)
+from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
     lanczos,
