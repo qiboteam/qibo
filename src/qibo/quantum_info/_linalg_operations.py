@@ -206,10 +206,6 @@ def _lie_closure_pauli_strings(
                 f"Maximum number of iterations ({max_iterations}) reached "
                 + "before the Lie closure was complete."
             )
-        log.warning(
-            f"Maximum number of iterations ({max_iterations}) reached "
-            + "before the Lie closure was complete."
-        )
 
     # tableau in the Aaronson-Gottesman format: (x | z | phase) plus a scratch row
     tableau = clifford_backend.zeros(

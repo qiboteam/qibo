@@ -588,6 +588,34 @@ def test_lie_closure_pauli_max_iterations(backend):
     assert lie_closure(["II", "XX"], backend=backend) == ["II", "XX"]
 
 
+@pytest.mark.parametrize("nqubits", [32, 33])
+def test_lie_closure_pauli_many_qubits(backend, caplog, nqubits):
+    # 33 qubits exceed the packed integer representation (up to 32 qubits)
+    identity = "I" * (nqubits - 2)
+    generators = ["XI" + identity, "ZI" + identity, "IX" + identity]
+
+    paulis = lie_closure(generators, backend=backend)
+
+    assert paulis == generators + ["YI" + identity]
+
+    # the identity commutes with everything
+    assert lie_closure(["I" * nqubits, generators[0]], backend=backend) == [
+        "I" * nqubits,
+        generators[0],
+    ]
+
+    for max_iterations, dim in zip((0, 1, 2), (3, 4, 4)):
+        caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            paulis = lie_closure(
+                generators, max_iterations=max_iterations, backend=backend
+            )
+
+        assert len(paulis) == dim
+        # the closure is only certified once a round yields no new element
+        assert ("Maximum number of iterations" in caplog.text) == (max_iterations == 1)
+
+
 def test_lie_closure_pauli_sum_errors(backend):
     with pytest.raises(ValueError):
         lie_closure([{"XX": 1.0j}], backend=backend)
