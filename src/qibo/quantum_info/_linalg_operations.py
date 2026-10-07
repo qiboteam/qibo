@@ -127,10 +127,6 @@ def _lie_closure_matrix(
                 f"Maximum number of iterations ({max_iterations}) reached "
                 + "before the Lie closure was complete."
             )
-        log.warning(
-            f"Maximum number of iterations ({max_iterations}) reached "
-            + "before the Lie closure was complete."
-        )
 
     if smallest < 1e3 * tol:
         log.warning(
@@ -444,10 +440,6 @@ def _lie_closure_pauli_sums(
                 f"Maximum number of iterations ({max_iterations}) reached "
                 + "before the Lie closure was complete."
             )
-        log.warning(
-            f"Maximum number of iterations ({max_iterations}) reached "
-            + "before the Lie closure was complete."
-        )
 
     if smallest < 1e3 * tol:
         log.warning(
