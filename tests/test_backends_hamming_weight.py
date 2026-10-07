@@ -32,6 +32,26 @@ def test_global_backend(backend):
     assert hamming_bkd.platform == target
 
 
+def test_circuit_execute_hamming_weight(backend):
+    """``Circuit.execute`` passes the weight to the hamming_weight backend."""
+    construct_hamming_weight_backend(backend)
+    platform = _get_engine_name(backend)
+    set_backend("hamming_weight", platform=platform)
+    try:
+        nqubits = 3
+        weight = 2
+        dim = int(binom(nqubits, weight))
+        initial_state = random_statevector(dim, backend=backend, seed=1237)
+        circuit = Circuit(nqubits)
+        circuit.add(gates.CZ(0, 1))
+        circuit.add(gates.RBS(0, 2, theta=-1.3).controlled_by(1))
+        circuit.add(gates.RZ(2, theta=0.123))
+        result = circuit.execute(weight=weight, initial_state=initial_state)
+        assert result is not None
+    finally:
+        set_backend(backend.name, platform=backend.platform)
+
+
 def get_full_initial_state(state, weight, nqubits, backend):
     if (
         backend._dict_indexes is None

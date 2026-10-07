@@ -456,18 +456,33 @@ class Backend:
         """
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
+    def argmax(self, array: ArrayLike, axis: int | None = None, **kwargs) -> ArrayLike:
+        """Return the indices of the maximum values in ``array`` along an ``axis``.
+
+        Args:
+            array (ArrayLike): input array.
+            axis (Optional[int], optional): axis along which to find the maximum value(s).
+                If ``None``, the flattened ``array`` is used. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of indices into the ``array``.
+        """
+        return self.engine.argmax(array, axis, **kwargs)
+
     def argsort(self, array: ArrayLike, axis: int | None = None, **kwargs) -> ArrayLike:
         """Return the indices that would sort ``array``.
 
         Args:
-            array (ArrayLike): _description_
+            array (ArrayLike): input array.
             axis (Optional[int], optional): axis along which to sort. If ``None``,
                 the flattened ``array`` is used. Defaults to ``None``.
             kwargs (optional): additional options for this function.
                 For more details, see the corresponding engine's documentation.
 
         Returns:
-            ArrayLike: _description_
+            ArrayLike: Array of indices that sort ``array`` along the specified axis.
         """
         return self.engine.argsort(array, axis, **kwargs)
 
@@ -497,6 +512,44 @@ class Backend:
             ArrayLike: Contiguous array of same shape and content as ``array``.
         """
         return self.engine.ascontiguousarray(array, **kwargs)
+
+    def base_repr(self, number: int, base: int = 2, **kwargs) -> str:
+        """Return a string representation of a ``number`` in the given ``base`` system.
+
+        .. note::
+            If ``base==2``, function defaults to the faster
+            :meth:`qibo.backends.abstract.Backend.binary_repr`.
+            See that method's documentation for more options.
+
+        Args:
+            number (int): value to convert.
+            base (int, optional): Base system to convert ``number``. Ranges from :math:`2`
+                to :math:`36`. Defaults to :math:`2`.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            str: String representation of ``number`` in the ``base`` system.
+        """
+        if base == 2:
+            length = kwargs.get("length", None)
+            return self.binary_repr(number, length)
+
+        return self.engine.base_repr(number, base, **kwargs)
+
+    def binary_repr(self, number: int, length: int | None = None) -> str:
+        """Return the binary representation of the input number as a string.
+
+        Args:
+            number (int): value to convert.
+            length (int | None, optional): The length of the returned string if ``number``
+                is positive. The length of the two's complement if ``number`` is negative.
+                If ``None``, defaults to the shortest length possible. Defaults to ``None``.
+
+        Returns:
+            str: Binary representation of ``number``.
+        """
+        return self.engine.binary_repr(number, length)
 
     def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
         """Assemble an array from a nested list of blocks of ``arrays``.

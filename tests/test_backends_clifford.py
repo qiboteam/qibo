@@ -7,6 +7,7 @@ import pytest
 
 from qibo import Circuit, gates, get_backend, set_backend
 from qibo.backends import CliffordBackend, NumpyBackend, _get_engine_name
+from qibo.backends._clifford_operations import _determined_outcome
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
 
@@ -368,3 +369,11 @@ def test_stim(backend):
     backend.assert_allclose(
         result_stim.symplectic_matrix, result_qibo.symplectic_matrix
     )
+
+
+def test_determined_outcome_zero(backend):
+    """``_determined_outcome`` handles a qubit determined to be 0 (empty ``idx``)."""
+    nqubits = 2
+    state = np.zeros((2 * nqubits + 1, nqubits), dtype=np.uint)
+    _, outcome = _determined_outcome(state, 0, nqubits)
+    assert outcome == 0

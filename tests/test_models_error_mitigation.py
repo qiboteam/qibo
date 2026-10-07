@@ -282,6 +282,47 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
 
 
+def test_zne_exact_simulation(backend):
+    """ZNE with ``nshots=None`` uses exact (statevector) simulation."""
+    nqubits = 1
+    noise = get_noise_model(DepolarizingError(0.1), gates.RX)
+    circuit = get_circuit(nqubits)
+    obs = backend.prod([Z(qubit, backend=backend) for qubit in range(nqubits)])
+    obs = SymbolicHamiltonian(obs, backend=backend)
+    estimate = ZNE(
+        circuit=circuit,
+        observable=obs,
+        noise_levels=backend.arange(4),
+        noise_model=noise,
+        nshots=None,
+        insertion_gate="RX",
+        readout=None,
+        backend=backend,
+    )
+    assert np.isfinite(estimate)
+
+
+def test_vncdr_exact_simulation(backend):
+    """vnCDR with ``nshots=None`` uses exact (statevector) simulation."""
+    nqubits = 1
+    noise = get_noise_model(DepolarizingError(0.1), gates.RX)
+    circuit = get_circuit(nqubits)
+    obs = backend.prod([Z(qubit, backend=backend) for qubit in range(nqubits)])
+    obs = SymbolicHamiltonian(obs, backend=backend)
+    estimate = vnCDR(
+        circuit=circuit,
+        observable=obs,
+        noise_levels=range(3),
+        noise_model=noise,
+        nshots=None,
+        n_training_samples=5,
+        insertion_gate="RX",
+        readout=None,
+        backend=backend,
+    )
+    assert np.isfinite(estimate)
+
+
 @pytest.mark.parametrize("nqubits,nmeas", [(3, 2)])
 @pytest.mark.parametrize("method", ["response_matrix", "randomized"])
 @pytest.mark.parametrize("ibu_iters", [None, 10])

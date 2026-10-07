@@ -257,6 +257,19 @@ def test_fft_ifft(backend, size):
     backend.assert_allclose(backend.ifft(backend.fft(array)), array)
 
 
+def test_searchsorted(backend):
+    """``backend.searchsorted`` matches ``np.searchsorted``."""
+    array_1 = backend.cast(np.array([1, 3, 5, 7]))
+    array_2 = backend.cast(np.array([2, 4, 6]))
+    result = backend.searchsorted(array_1, array_2)
+    backend.assert_allclose(
+        result, backend.cast(np.searchsorted([1, 3, 5, 7], [2, 4, 6]))
+    )
+    # scalar second argument returns an integer insertion point
+    scalar_result = backend.searchsorted(array_1, backend.cast(np.array(4)))
+    assert int(scalar_result) == int(np.searchsorted([1, 3, 5, 7], 4))
+
+
 @pytest.mark.parametrize("degree", [2, 4])
 def test_poly_roots(backend, degree):
     backend.set_seed(42)
@@ -282,6 +295,37 @@ def test_poly_matrix(backend, size):
     target = np.poly(backend.to_numpy(matrix))
 
     backend.assert_allclose(backend.poly(matrix), target)
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_argmax(backend, axis):
+    backend.set_seed(42)
+    array = backend.random_normal(0, 1, (4, 5))
+
+    target = np.argmax(backend.to_numpy(array), axis=axis)
+    target = backend.cast(target, dtype=target.dtype)
+
+    backend.assert_allclose(backend.argmax(array, axis=axis), target)
+
+
+@pytest.mark.parametrize("base", [2, 3, 8, 16])
+@pytest.mark.parametrize("number", [0, 5, 37, 255])
+def test_base_repr(backend, number, base):
+    target = np.base_repr(number, base)
+    assert backend.base_repr(number, base) == target
+
+
+def test_base_repr_length(backend):
+    assert backend.base_repr(5, 2, length=6) == np.binary_repr(5, width=6)
+    assert backend.base_repr(5, 3, padding=3) == np.base_repr(5, 3, padding=3)
+
+
+@pytest.mark.parametrize("length", [None, 8])
+@pytest.mark.parametrize("number", [0, 5, 37, -3])
+def test_binary_repr(backend, number, length):
+    target = np.binary_repr(number, width=length)
+
+    assert backend.binary_repr(number, length) == target
 
 
 def test_set_backend_error():
@@ -340,3 +384,18 @@ def test_list_available_backends():
         "qibolab",
         "qibo-cloud-backends",  # , "qibotn", "qiboml"
     )
+
+
+def test_oom_error(backend):
+    """Test that OOM error is caught and re-raised as RuntimeError."""
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+
+    # Mock _execute_circuit to raise MemoryError
+    with (
+        mock.patch.object(
+            type(backend), "_execute_circuit", side_effect=MemoryError("out of memory")
+        ),
+        pytest.raises(RuntimeError, match="State does not fit"),
+    ):
+        backend.execute_circuit(circuit)
