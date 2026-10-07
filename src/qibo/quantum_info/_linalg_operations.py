@@ -365,12 +365,6 @@ def _lie_closure_pauli_sums(
                     ),
                     2,
                 )
-                    clifford_backend.matmul(bits_1[:, :nqubits], bits_2[:, nqubits:].T)
-                    + clifford_backend.matmul(
-                        bits_1[:, nqubits:], bits_2[:, :nqubits].T
-                    ),
-                    2,
-                )
                 rows, cols = clifford_backend.nonzero(anticommute)
                 bits_1, bits_2 = bits_1[rows].astype(int), bits_2[cols].astype(int)
                 exponents = clifford_backend.sum(
