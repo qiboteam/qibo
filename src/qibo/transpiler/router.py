@@ -236,7 +236,7 @@ class Sabre(Router):
         self._memory_map = None
         self._final_measurements = None
         self._temp_added_swaps = []
-        random.seed(seed)
+        self._rng = random.Random(seed)
 
     def __call__(self, circuit: Circuit):
         """Route the circuit.
@@ -393,7 +393,7 @@ class Sabre(Router):
         best_candidates = [
             key for key, value in candidates_evaluation.items() if value == best_cost
         ]
-        best_candidate = random.choice(best_candidates)
+        best_candidate = self._rng.choice(best_candidates)
 
         for qubit in self.circuit_map.logical_pair_to_physical(best_candidate):
             self._delta_register[qubit] += self.delta
@@ -539,7 +539,7 @@ class ShortestPaths(Router):
         self._node_mapping_inv = None
         if seed is None:
             seed = 42
-        random.seed(seed)
+        self._rng = random.Random(seed)
 
     @property
     def added_swaps(self):
@@ -588,7 +588,7 @@ class ShortestPaths(Router):
             for candidate in candidates_evaluation
             if candidate[1] == best_cost
         ]
-        best_candidate = random.choice(best_candidates)
+        best_candidate = self._rng.choice(best_candidates)
         self._add_swaps(best_candidate, self.circuit_map)
 
     def _candidates(self):

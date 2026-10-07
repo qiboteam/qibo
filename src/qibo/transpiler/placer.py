@@ -51,12 +51,15 @@ class StarConnectivityPlacer(Placer):
         self.connectivity = connectivity
         self.middle_qubit = None
 
-    def __call__(self, circuit: Circuit) -> None:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Apply the transpiler transformation on a given circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
                 Only single qubit gates and two qubits gates are supported by the router.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
+                Not used by this placer, it is accepted to be compatible with
+                :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
         assert_placement(circuit, self.connectivity)
         self._check_star_connectivity()
@@ -120,12 +123,15 @@ class Subgraph(Placer):
     def __init__(self, connectivity: nx.Graph | None = None):
         self.connectivity = connectivity
 
-    def __call__(self, circuit: Circuit) -> None:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Find the initial layout of the given circuit using subgraph isomorphism.
         Circuit must contain at least two two-qubit gates to implement subgraph placement.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
+                Not used by this placer, it is accepted to be compatible with
+                :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
         assert_placement(circuit, self.connectivity)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
@@ -168,8 +174,10 @@ class Random(Placer):
 
     Attributes:
         connectivity (:class:`networkx.Graph`): Hardware connectivity.
-        samples (int, optional): Number of random initializations to try.
-            Defaults to :math:`100`.
+        samples (int, optional): Number of random initializations to try. If :math:`0`,
+            no random initialization is tried and the qubits are placed following the order
+            of the nodes of ``connectivity``, i.e. the :math:`i`-th qubit is placed on the
+            :math:`i`-th node. Defaults to :math:`100`.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
