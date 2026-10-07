@@ -60,6 +60,47 @@ def test_clifford_from_circuit(backend, measurement):
         backend.assert_allclose(obj.probabilities(), result.probabilities())
 
 
+def test_clifford_probabilities_unmeasured_qubit(backend):
+    """``probabilities`` raises when asking for a qubit that was not measured."""
+    clifford_backend = construct_clifford_backend(backend)
+    if not clifford_backend:
+        pytest.skip("Clifford backend not available for this engine.")
+    circuit = random_clifford(3, backend=backend)
+    circuit.add(gates.M(0))  # measure only qubit 0
+    obj = Clifford.from_circuit(circuit, platform=_get_engine_name(backend))
+    with pytest.raises(RuntimeError):
+        obj.probabilities(qubits=(1,))
+
+
+def test_cnot_cost_two_qubit(backend):
+    """``_cnot_cost`` works for 2-qubit Cliffords (exercises ``_cnot_cost2``)."""
+    clifford_backend = construct_clifford_backend(backend)
+    if not clifford_backend:
+        pytest.skip("Clifford backend not available for this engine.")
+    platform = _get_engine_name(backend)
+    # A CNOT has r00 == 2, exercising the ``if r00 == 2: return r01`` branch.
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    obj = Clifford.from_circuit(circuit, platform=platform)
+    assert _cnot_cost(obj) == 1
+    # A SWAP has r00 == 0, exercising the ``return r01 + 1 - r00`` branch.
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1))
+    obj = Clifford.from_circuit(circuit, platform=platform)
+    assert _cnot_cost(obj) == 3
+
+
+def test_cnot_cost_too_many_qubits(backend):
+    """``_cnot_cost`` raises for more than 3 qubits."""
+    clifford_backend = construct_clifford_backend(backend)
+    if not clifford_backend:
+        pytest.skip("Clifford backend not available for this engine.")
+    circuit = random_clifford(4, backend=backend)
+    obj = Clifford.from_circuit(circuit, platform=_get_engine_name(backend))
+    with pytest.raises(ValueError):
+        _cnot_cost(obj)
+
+
 @pytest.mark.parametrize("seed", [1, 10])
 @pytest.mark.parametrize("algorithm", ["AG04", "BM20"])
 @pytest.mark.parametrize("nqubits", [1, 3, 10])

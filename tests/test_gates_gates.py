@@ -1,5 +1,7 @@
 """Test gates defined in `qibo/gates/gates.py`."""
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
 
@@ -1678,6 +1680,23 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
 
     backend.assert_allclose(matrix, target, atol=1e-8)
 
+    # test on_qubits
+    gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi)
+    qubit_map = {q: q + 1 for q in qubits_in + qubits_out}
+    new_gate = gate.on_qubits(qubit_map)
+    assert new_gate.init_args[0] == tuple(q + 1 for q in qubits_in)
+    assert new_gate.init_args[1] == tuple(q + 1 for q in qubits_out)
+
+    # test on_qubits with a controlled gate (exercises the ``is_controlled_by`` branch)
+    control = max(qubits_in + qubits_out) + 1
+    controlled_gate = gates.GeneralizedRBS(
+        qubits_in, qubits_out, theta, phi
+    ).controlled_by(control)
+    qubit_map = {q: q + 1 for q in qubits_in + qubits_out + [control]}
+    new_controlled_gate = controlled_gate.on_qubits(qubit_map)
+    assert new_controlled_gate.is_controlled_by
+    assert new_controlled_gate.control_qubits == (control + 1,)
+
 
 @pytest.mark.parametrize("phi", [0.0, 0.4321])
 @pytest.mark.parametrize("controls", [(), (5,)])
@@ -2258,3 +2277,17 @@ def test_gradient_rn(backend, gate):
         -1j * gate.generator_eigenvalue() * (generator @ gate.matrix(backend))
     )
     backend.assert_allclose(gate.gradient(backend).matrix(backend), target_gradient)
+
+
+def test_check_engine_torch():
+    """Test ``_check_engine`` with a mock torch Tensor (covers torch import path)."""
+    # Create a mock Tensor class
+    Tensor = type("Tensor", (), {})
+    tensor = Tensor()
+
+    mock_torch = MagicMock()
+    with patch.dict("sys.modules", {"torch": mock_torch}):
+        from qibo.gates.gates import _check_engine
+
+        engine = _check_engine(tensor)
+        assert engine is mock_torch

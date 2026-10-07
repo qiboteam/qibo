@@ -17,9 +17,18 @@ from qibo.parallel import (
 from qibo.quantum_info.random_ensembles import random_statevector
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
+def _skip_if_darwin_qibojit(backend):
+    """joblib threading segfaults with the qibojit (numba/cupy) backends on darwin.
+
+    The numpy backend is safe, so only the qibojit backends are skipped on Mac.
+    """
+    if sys.platform == "darwin" and backend.platform in ("numba", "cupy", "cuquantum"):
+        pytest.skip("joblib + qibojit backend segfaults on darwin")
+
+
 def test_parallel_states_evaluation(backend):
     """Evaluate circuit for multiple input states."""
+    _skip_if_darwin_qibojit(backend)
     nqubits = 10
     backend.set_seed(0)
     circuit = QFT(nqubits)
@@ -41,10 +50,10 @@ def test_parallel_states_evaluation(backend):
         backend.assert_allclose(x, y)
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 @pytest.mark.parametrize("use_execute_circuits", [False, True])
 def test_parallel_circuit_evaluation(backend, use_execute_circuits):
     """Evaluate multiple circuits in parallel."""
+    _skip_if_darwin_qibojit(backend)
     circuits = [QFT(n) for n in range(1, 11)]
 
     r1 = []
@@ -62,9 +71,9 @@ def test_parallel_circuit_evaluation(backend, use_execute_circuits):
         backend.assert_allclose(final, target)
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_circuit_states_evaluation(backend):
     """Evaluate multiple circuits in parallel with different initial states."""
+    _skip_if_darwin_qibojit(backend)
     circuits = [QFT(nqubits) for nqubits in range(1, 11)]
     states = [
         random_statevector(2**nqubits, backend=backend) for nqubits in range(1, 11)
@@ -90,9 +99,9 @@ def test_parallel_circuit_states_evaluation(backend):
         backend.assert_allclose(final, target)
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
+    _skip_if_darwin_qibojit(backend)
     nqubits = 5
     nlayers = 10
     circuit = Circuit(nqubits)

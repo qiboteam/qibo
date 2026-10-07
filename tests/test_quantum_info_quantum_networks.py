@@ -1,9 +1,12 @@
 """Tests for quantum_info.quantum_networks submodule"""
 
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.backends import construct_backend
 from qibo.quantum_info.quantum_networks import (
     IdentityChannel,
     QuantumChannel,
@@ -88,6 +91,10 @@ def test_errors(backend):
 
     with pytest.raises(TypeError):
         network * "1"
+
+    # ``_run_checks`` rejects a partition that is neither a list nor a tuple.
+    with pytest.raises(TypeError):
+        network._run_checks("not a partition", None, False)
 
     with pytest.raises(TypeError):
         network / "1"
@@ -518,3 +525,59 @@ def test_default_construction(backend):
     channel5 = QuantumChannel(tensor, pure=False, backend=backend)
     assert channel5.partition == (2, 2)
     assert channel5.system_input == (True, False)
+
+
+def test_operator_to_tensor_torch(backend):
+    """Test ``_operator_to_tensor`` with a mock torch Tensor."""
+
+    # Create a mock Tensor class with reshape and permute methods
+    class Tensor:
+        def __init__(self, data):
+            self._data = data
+            self.shape = data.shape
+
+        def reshape(self, shape):
+            return Tensor(self._data.reshape(shape))
+
+        def permute(self, order):
+            return Tensor(self._data.transpose(order))
+
+    # Create a 4x4 matrix (2 qubits)
+    data = backend.identity(4, dtype=backend.complex64)
+    tensor = Tensor(data)
+
+    # Call _operator_to_tensor with the mock Tensor
+    result = QuantumChannel._operator_to_tensor(tensor, partition=[2, 2])
+    assert result is not None
+
+
+def test_tensorflow_backend_order(monkeypatch):
+    """TensorFlow backends default to the ``euclidean`` norm order.
+
+    ``is_hermitian``, ``is_causal`` and ``is_unital`` resolve ``order=None``
+    to ``"euclidean"`` when the backend is a ``TensorflowBackend``, because
+    TensorFlow's norm functions do not support all order options. The norm
+    functions are mocked so the test only verifies the resolved ``order``.
+    """
+    backend = construct_backend("numpy")
+    channel = QuantumChannel(np.eye(4, dtype=complex), backend=backend)
+    comb = QuantumComb(np.eye(4, dtype=complex), backend=backend)
+
+    matrix_norm = MagicMock(return_value=0.0)
+    vector_norm = MagicMock(return_value=0.0)
+    # Make the backend report its class name as ``TensorflowBackend`` so the
+    # class-name check in the source triggers the euclidean default.
+    monkeypatch.setattr(
+        backend, "__class__", type("TensorflowBackend", (backend.__class__,), {})
+    )
+    monkeypatch.setattr(backend, "matrix_norm", matrix_norm)
+    monkeypatch.setattr(backend, "vector_norm", vector_norm)
+
+    assert channel.is_hermitian()
+    assert matrix_norm.call_args.args[1] == "euclidean"
+
+    assert comb.is_causal()
+    assert vector_norm.call_args.kwargs["order"] == "euclidean"
+
+    assert channel.is_unital()
+    assert vector_norm.call_args.kwargs["order"] == "euclidean"
