@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 
@@ -49,6 +51,22 @@ def test_compiling_twice_exception(backend):
     circuit.compile()
     with pytest.raises(RuntimeError):
         circuit.compile(backend)
+
+
+def test_compile_error_paths(backend):
+    """``Circuit.compile`` error paths that are checked before the backend
+    ``compile`` call, so they work on any backend."""
+    # Compiling a circuit without gates raises.
+    empty_circuit = Circuit(2)
+    with pytest.raises(RuntimeError):
+        empty_circuit.compile()
+
+    # Compiling an already-compiled circuit raises.
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.compiled = True
+    with pytest.raises(RuntimeError):
+        circuit.compile()
 
 
 @pytest.mark.linux
@@ -155,3 +173,47 @@ def test_initial_state_shape_error(backend, density_matrix):
     initial_state = random_density_matrix(2, backend=backend)
     with pytest.raises(ValueError):
         backend.execute_circuit(circuit, initial_state=initial_state)
+
+
+def test_compile_with_mock_backend():
+    """Test ``Circuit.compile()`` and compiled ``execute()`` with a mock backend.
+
+    This covers the compile path and the compiled execute path without
+    requiring tensorflow.
+    compiled execute path (lines 1092-1094) without requiring tensorflow.
+    """
+    # --- Case 1: no measurements (covers line 1075) ---
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+
+    mock_backend = MagicMock()
+    mock_backend.name = "mock"
+    mock_backend.platform = "numpy"
+    mock_backend.compile.side_effect = lambda executor: executor
+
+    class MockResult:
+        def state(self):
+            return np.array([0, 0, 1, 0], dtype=complex)
+
+    mock_backend.execute_circuit.return_value = MockResult()
+
+    circuit.compile(backend=mock_backend)
+    assert circuit.compiled is not None
+
+    initial_state = np.array([1, 0, 0, 0], dtype=complex)
+    result = circuit.execute(initial_state=initial_state, nshots=100)
+    assert result is not None
+
+    # --- Case 2: with measurements (covers line 1071) ---
+    circuit2 = Circuit(2)
+    circuit2.add(gates.X(0))
+    circuit2.add(gates.M(0))
+
+    mock_backend2 = MagicMock()
+    mock_backend2.name = "mock"
+    mock_backend2.platform = "numpy"
+    mock_backend2.compile.side_effect = lambda executor: executor
+    mock_backend2.execute_circuit.return_value = MockResult()
+
+    circuit2.compile(backend=mock_backend2)
+    assert circuit2.compiled is not None

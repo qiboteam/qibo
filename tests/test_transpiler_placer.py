@@ -200,6 +200,17 @@ def test_star_connectivity_placer_error(first, star_connectivity):
         placer(circ)
 
 
+def test_star_connectivity_placer_wrong_node_count(star_connectivity):
+    """StarConnectivityPlacer raises when the graph does not have 5 nodes."""
+    chip = nx.Graph()
+    chip.add_edges_from([(0, 1), (1, 2), (2, 3)])  # 4 nodes
+    circ = Circuit(4)
+    circ.add(gates.CZ(0, 1))
+    placer = StarConnectivityPlacer(chip)
+    with pytest.raises(ConnectivityError):
+        placer(circ)
+
+
 def test_star_connectivity_plus_disconnected_edges(star_connectivity):
     connectivity = star_connectivity()
     connectivity.add_edge(5, 6)

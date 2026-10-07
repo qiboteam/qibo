@@ -213,6 +213,29 @@ def test_hamiltonian_matmul(backend, sparse_type):
         backend.assert_allclose(matrix_2, target_2)
 
 
+def test_hamiltonian_matmul_unsupported_type(backend):
+    """``Hamiltonian @ other`` raises for non-tensor, non-Hamiltonian ``other``."""
+    H = Hamiltonian(2, backend.identity(4), backend=backend)
+    with pytest.raises(NotImplementedError):
+        H @ "not a tensor"
+
+
+def test_symbolic_hamiltonian_matmul_qubit_mismatch(backend):
+    """``SymbolicHamiltonian @ state`` raises when the state has a different
+    number of qubits than the Hamiltonian."""
+    H = SymbolicHamiltonian(X(0) + Z(1), nqubits=2, backend=backend)
+    state = backend.ones(8)  # 3-qubit state
+    with pytest.raises(ValueError):
+        H @ state
+
+
+def test_symbolic_hamiltonian_form_setter(backend):
+    """The ``form`` setter rejects non-``sympy`` expressions."""
+    H = SymbolicHamiltonian(X(0) + Z(1), nqubits=2, backend=backend)
+    with pytest.raises(TypeError):
+        H.form = "not a sympy expression"
+
+
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
 def test_hamiltonian_matmul_states(backend, sparse_type):
     """Test matrix multiplication between Hamiltonian and states."""
