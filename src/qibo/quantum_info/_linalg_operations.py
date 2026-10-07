@@ -356,7 +356,15 @@ def _lie_closure_pauli_sums(
                 )[0]
                 columns = clifford_backend.nonzero(gen)[0]
                 bits_1, bits_2 = words[support], words[columns]
+                # symplectic inner product, 1 for anticommuting Paulis; computed in
+                # uint8 and reduced mod 2 (wraparound mod 256 preserves the parity)
                 anticommute = clifford_backend.mod(
+                    clifford_backend.matmul(bits_1[:, :nqubits], bits_2[:, nqubits:].T)
+                    + clifford_backend.matmul(
+                        bits_1[:, nqubits:], bits_2[:, :nqubits].T
+                    ),
+                    2,
+                )
                     clifford_backend.matmul(bits_1[:, :nqubits], bits_2[:, nqubits:].T)
                     + clifford_backend.matmul(
                         bits_1[:, nqubits:], bits_2[:, :nqubits].T
