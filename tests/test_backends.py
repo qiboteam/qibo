@@ -297,6 +297,37 @@ def test_poly_matrix(backend, size):
     backend.assert_allclose(backend.poly(matrix), target)
 
 
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_argmax(backend, axis):
+    backend.set_seed(42)
+    array = backend.random_normal(0, 1, (4, 5))
+
+    target = np.argmax(backend.to_numpy(array), axis=axis)
+    target = backend.cast(target, dtype=target.dtype)
+
+    backend.assert_allclose(backend.argmax(array, axis=axis), target)
+
+
+@pytest.mark.parametrize("base", [2, 3, 8, 16])
+@pytest.mark.parametrize("number", [0, 5, 37, 255])
+def test_base_repr(backend, number, base):
+    target = np.base_repr(number, base)
+    assert backend.base_repr(number, base) == target
+
+
+def test_base_repr_length(backend):
+    assert backend.base_repr(5, 2, length=6) == np.binary_repr(5, width=6)
+    assert backend.base_repr(5, 3, padding=3) == np.base_repr(5, 3, padding=3)
+
+
+@pytest.mark.parametrize("length", [None, 8])
+@pytest.mark.parametrize("number", [0, 5, 37, -3])
+def test_binary_repr(backend, number, length):
+    target = np.binary_repr(number, width=length)
+
+    assert backend.binary_repr(number, length) == target
+
+
 def test_set_backend_error():
     with pytest.raises(ValueError):
         set_backend("non-existing-backend")
