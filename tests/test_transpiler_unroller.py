@@ -1,10 +1,12 @@
 import itertools
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates
 from qibo.quantum_info import lie_closure, random_unitary
+from qibo.transpiler import unroller
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.asserts import assert_decomposition
 from qibo.transpiler.unitary_decompositions import single_qubit_decomposition
@@ -595,3 +597,77 @@ def test_single_qubit_decomposition_is_consistent_with_is_universal(backend):
             result = backend.to_numpy(circuit.unitary(backend))
             overlap = np.abs(np.trace(target.conj().T @ result)) / 2
             backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "natives", [NativeGates.default(), NativeGates.U3 | NativeGates.iSWAP]
+)
+@pytest.mark.parametrize(
+    "gate",
+    [
+        lambda backend: gates.CY(0, 1),
+        lambda backend: gates.ECR(0, 1),
+        lambda backend: gates.RZX(0, 1, 0.3),
+        lambda backend: gates.H(1).controlled_by(0),
+        lambda backend: gates.Unitary(
+            random_unitary(2, backend=backend), 1
+        ).controlled_by(0),
+    ],
+)
+def test_translate_gate_matrix_decomposition_skips_registered_decompositions(
+    backend, monkeypatch, gate, natives
+):
+    """Gates without a registered decomposition (or controlled unitaries) must be
+    routed to the matrix decomposition instead of the registered one. The helper is
+    still called for the native entanglers produced by the matrix decomposition."""
+    helper = Mock(wraps=unroller._translate_two_qubit_gates)
+    monkeypatch.setattr(unroller, "_translate_two_qubit_gates", helper)
+    gate = gate(backend)
+    circuit = Circuit(2)
+    circuit.add(gate)
+    _assert_unrolled(circuit, natives, backend)
+    assert type(gate) not in {type(call.args[0]) for call in helper.call_args_list}
+
+
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.default(),
+        NativeGates.U3 | NativeGates.iSWAP,
+        NativeGates.U3 | NativeGates.CZ | NativeGates.iSWAP,
+    ],
+)
+@pytest.mark.parametrize(
+    "gate",
+    [
+        lambda backend: gates.CNOT(0, 1),
+        lambda backend: gates.SWAP(0, 1),
+        lambda backend: gates.RZZ(0, 1, 0.3),
+        lambda backend: gates.Unitary(random_unitary(4, backend=backend), 0, 1),
+    ],
+)
+def test_translate_gate_registered_decomposition_is_used(
+    backend, monkeypatch, gate, natives
+):
+    helper = Mock(wraps=unroller._translate_two_qubit_gates)
+    monkeypatch.setattr(unroller, "_translate_two_qubit_gates", helper)
+    gate = gate(backend)
+    circuit = Circuit(2)
+    circuit.add(gate)
+    _assert_unrolled(circuit, natives, backend)
+    helper.assert_called()
+
+
+@pytest.mark.parametrize("gate", [gates.CNOT(0, 1), gates.CZ(0, 1), gates.SWAP(0, 1)])
+def test_translate_gate_unrelated_key_error_is_not_swallowed(
+    backend, monkeypatch, gate
+):
+    """A ``KeyError`` raised inside the two-qubit translation must not silently
+    switch to the matrix-based decomposition."""
+    monkeypatch.setattr(
+        unroller,
+        "_translate_two_qubit_gates",
+        Mock(side_effect=[KeyError("unrelated")]),
+    )
+    with pytest.raises(KeyError, match="unrelated"):
+        translate_gate(gate, NativeGates.default(), backend=backend)

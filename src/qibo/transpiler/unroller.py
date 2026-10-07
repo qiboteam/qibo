@@ -297,11 +297,9 @@ def translate_gate(
             f"Cannot decompose {gate.name} acting on {len(gate.qubits)} qubits.",
         )
 
-    try:
-        if gate.is_controlled_by and isinstance(gate, (gates.FusedGate, gates.Unitary)):
-            raise KeyError(gate.__class__)
-        decomposition_2q = _translate_two_qubit_gates(gate, native_gates, backend)
-    except KeyError:
+    if gate.__class__ not in cz_dec.decompositions or (
+        gate.is_controlled_by and isinstance(gate, (gates.FusedGate, gates.Unitary))
+    ):
         # The gate has no registered decomposition, or it is a controlled unitary.
         # Its matrix is decomposed instead.
         circuit = Circuit(2)
@@ -312,6 +310,8 @@ def translate_gate(
         ):
             translated.extend(translate_gate(decomposed_gate, native_gates, backend))
         return translated
+
+    decomposition_2q = _translate_two_qubit_gates(gate, native_gates, backend)
 
     final_decomposition = []
     for decomposed_2q_gate in decomposition_2q:
