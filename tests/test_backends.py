@@ -246,6 +246,15 @@ def test_convolve_mode(backend, mode):
     backend.assert_allclose(backend.convolve(array_1, array_2, mode=mode), target)
 
 
+def test_create_dtype(backend):
+    """``backend.create_dtype`` matches ``numpy.dtype``."""
+    assert backend.create_dtype("uint8") == np.dtype("uint8")
+    void = backend.create_dtype("V3")
+    assert void == np.dtype((np.void, 3)) and void.itemsize == 3
+    packed = backend.packbits(backend.cast(np.eye(4), dtype=backend.uint8), axis=1)
+    assert backend.reshape(packed.view(backend.create_dtype("V1")), (-1,)).shape == (4,)
+
+
 @pytest.mark.parametrize("size", [4, 7])
 def test_fft_ifft(backend, size):
     backend.set_seed(42)
