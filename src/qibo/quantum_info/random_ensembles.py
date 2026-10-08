@@ -206,8 +206,8 @@ def random_iqp(
 
     The circuit is composed of a layer of Hadamard gates on all qubits, followed by a diagonal
     layer, and closed by a second layer of Hadamard gates on all qubits. The diagonal layer is
-    composed of single-qubit :class:`qibo.gates.RZ` rotations on all qubits. Hence,
-    the circuit implements
+    composed of single-qubit :class:`qibo.gates.RZ` rotations on all qubits and two-qubit
+    :class:`qibo.gates.RZZ` gates. Hence, the circuit implements
 
     .. math::
         \\mathcal{U} = H^{\\otimes n} \\, \\exp\\left(
