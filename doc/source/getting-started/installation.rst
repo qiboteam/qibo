@@ -162,7 +162,7 @@ numpy
 The ``qibo`` base package is distributed with a lightweight quantum simulator
 shipped with the qibo base package. No extra packages are required.
 
-This backend is used by default if ``qibojit`` or ``tensorflow`` are not
+This backend is used by default if ``qibojit`` is not
 installed, however, if needed, in order to switch to the ``numpy`` backend
 please do:
 

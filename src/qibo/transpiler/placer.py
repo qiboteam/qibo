@@ -35,7 +35,7 @@ def _find_gates_qubits_pairs(circuit: Circuit) -> list[tuple[int]]:
 
 
 class StarConnectivityPlacer(Placer):
-    """Find an optimized qubit placement for the following connectivity:
+    """Find an optimized qubit placement for the following connectivity::
 
              q
              |
@@ -253,7 +253,7 @@ class ReverseTraversal(Placer):
     """
     Places qubits based on the algorithm proposed in Reference [1].
 
-    Compatible with all the available ``Router``s.
+    Compatible with all the available :class:`qibo.transpiler.abstract.Router` classes.
 
     Args:
         connectivity (:class:`networkx.Graph`): Hardware connectivity.

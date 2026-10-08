@@ -246,6 +246,15 @@ def test_convolve_mode(backend, mode):
     backend.assert_allclose(backend.convolve(array_1, array_2, mode=mode), target)
 
 
+def test_create_dtype(backend):
+    """``backend.create_dtype`` matches ``numpy.dtype``."""
+    assert backend.create_dtype("uint8") == np.dtype("uint8")
+    void = backend.create_dtype("V3")
+    assert void == np.dtype((np.void, 3)) and void.itemsize == 3
+    packed = backend.packbits(backend.cast(np.eye(4), dtype=backend.uint8), axis=1)
+    assert backend.reshape(packed.view(backend.create_dtype("V1")), (-1,)).shape == (4,)
+
+
 @pytest.mark.parametrize("size", [4, 7])
 def test_fft_ifft(backend, size):
     backend.set_seed(42)
@@ -255,6 +264,22 @@ def test_fft_ifft(backend, size):
     backend.assert_allclose(backend.fft(array), np.fft.fft(array_numpy))
     backend.assert_allclose(backend.ifft(array), np.fft.ifft(array_numpy))
     backend.assert_allclose(backend.ifft(backend.fft(array)), array)
+
+
+def test_frombuffer_packbits(backend):
+    """``backend.frombuffer`` and ``backend.packbits`` match their ``numpy`` counterparts."""
+    buffer = b"IXYZ"
+    backend.assert_allclose(
+        backend.frombuffer(buffer, dtype=backend.uint8),
+        backend.cast(np.frombuffer(buffer, dtype=np.uint8), dtype=backend.uint8),
+    )
+
+    bits = np.array([[1, 0, 1, 1, 0, 0, 1, 0, 1], [0, 1, 1, 0, 1, 0, 0, 1, 1]])
+    for axis in (None, 0, 1):
+        backend.assert_allclose(
+            backend.packbits(backend.cast(bits, dtype=backend.uint8), axis=axis),
+            backend.cast(np.packbits(bits, axis=axis), dtype=backend.uint8),
+        )
 
 
 def test_searchsorted(backend):

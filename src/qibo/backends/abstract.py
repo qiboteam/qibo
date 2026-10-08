@@ -231,6 +231,24 @@ class Backend:
         """
         return self.engine.complex128
 
+    def create_dtype(self, dtype: DTypeLike | str | tuple, **kwargs) -> DTypeLike:
+        """Create a data type object.
+
+        .. note::
+            This is not named ``dtype`` because :attr:`Backend.dtype` already stores the
+            default data type of arrays created using the backend.
+
+        Args:
+            dtype (DTypeLike or str or tuple): object to be converted to a data type object,
+                e.g. ``"uint8"``, or ``"V3"`` for a raw-bytes (void) type of :math:`3` bytes.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            DTypeLike: The data type object.
+        """
+        return self.engine.dtype(dtype, **kwargs)
+
     @property
     def float32(self) -> DTypeLike:
         """Single-precision floating-point number type.
@@ -978,6 +996,19 @@ class Backend:
         """
         return self.engine.floor(array, **kwargs)
 
+    def frombuffer(self, buffer: bytes, **kwargs) -> ArrayLike:
+        """Interpret ``buffer`` as a one-dimensional array.
+
+        Args:
+            buffer (bytes): object exposing the buffer interface, e.g. ``bytes``.
+            kwargs (optional): additional options for this function, e.g. ``dtype``.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: One-dimensional array created from the contents of ``buffer``.
+        """
+        return self.engine.frombuffer(buffer, **kwargs)
+
     def full(
         self,
         shape: int | tuple[int, ...] | list[int],
@@ -1340,6 +1371,26 @@ class Backend:
             ArrayLike: The resulting array.
         """
         return self.engine.outer(array_1, array_2)
+
+    def packbits(
+        self, array: ArrayLike, axis: int | None = None, **kwargs
+    ) -> ArrayLike:
+        """Pack the elements of a binary-valued ``array`` into bits of an unsigned integer array.
+
+        Args:
+            array (ArrayLike): array of integers or booleans, whose elements are interpreted
+                as bits according to their truth value.
+            axis (int, optional): axis along which the bits are packed. If ``None``,
+                ``array`` is flattened before packing. Defaults to ``None``.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array of :math:`8`-bit unsigned integers, in which every :math:`8`
+            consecutive elements of ``array`` along ``axis`` are packed into a single element,
+            with zero padding if the size of ``axis`` is not a multiple of :math:`8`.
+        """
+        return self.engine.packbits(array, axis=axis, **kwargs)
 
     def poly(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         """Return the coefficients of the polynomial with the given roots.

@@ -124,6 +124,11 @@ doctest_path = [os.path.abspath("../examples")]
 # -- Autodoc ------------------------------------------------------------------
 #
 autodoc_member_order = "bysource"
+autodoc_default_options = {
+    "members": True,
+    "member-order": "bysource",
+}
+autodoc_typehints = "description"
 
 
 # Adapted this from

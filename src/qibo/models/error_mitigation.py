@@ -99,7 +99,7 @@ def get_noisy_circuit(
         global_unitary_folding (bool): If ``True``, noise is increased by global unitary folding.
             If ``False``, local unitary folding is used. Defaults to ``True``.
         insertion_gate (str, optional): gate to be folded in the local unitary folding.
-            If ``RX``, the gate used is :math:``RX(\\pi / 2)``.
+            If ``RX``, the gate used is :math:`RX(\\pi / 2)`.
             Otherwise, it is the ``CNOT`` gate.
 
     Returns:
@@ -197,9 +197,10 @@ def ZNE(
         global_unitary_folding (bool, optional): If ``True``, noise is increased by global
             unitary folding. If ``False``, local unitary folding is used. Defaults to ``True``.
         insertion_gate (str, optional): gate to be folded in the local unitary folding.
-            If ``RX``, the gate used is :math:``RX(\\pi / 2)``. Otherwise, it is the
+            If ``RX``, the gate used is :math:`RX(\\pi / 2)`. Otherwise, it is the
             :class:`qibo.gates.gates.CNOT` gate.
         readout (dict, optional): a dictionary that may contain the following keys:
+
             *    ncircuits: int, specifies the number of random circuits to use for the
                  randomized method of readout error mitigation.
             *    response_matrix: ``ndarray``, used for applying a pre-computed response
@@ -460,6 +461,7 @@ def CDR(
         full_output (bool, optional): if ``True``, this function returns additional
             information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
         readout (dict, optional): a dictionary that may contain the following keys:
+
             *    ncircuits: int, specifies the number of random circuits to use for the
                  randomized method of readout error mitigation.
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response
@@ -607,11 +609,12 @@ def vnCDR(
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
         n_training_samples (int, optional): number of training circuits to sample.
         insertion_gate (str, optional): gate to be used in the insertion.
-            If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
+            If ``"RX"``, the gate used is :math:`RX(\\pi / 2)`.
             Default is ``"CNOT"``.
         full_output (bool, optional): if ``True``, this function returns additional
             information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
         readout (dict, optional): a dictionary that may contain the following keys:
+
             *    ncircuits: int, specifies the number of random circuits to use for the
                  randomized method of readout error mitigation.
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response
@@ -969,6 +972,7 @@ def get_expectation_val_with_readout_mitigation(
         nshots (int, optional): the number of shots for the circuit execution.
             Defaults to :math:`10^{4}`.
         readout (dict, optional): a dictionary that may contain the following keys:
+
             *    ncircuits: int, specifies the number of random circuits to use for the
                  randomized method of readout error mitigation.
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response
@@ -1219,6 +1223,7 @@ def ICS(
         circuit (:class:`qibo.models.Circuit`): input circuit.
         observable (:class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`): the observable to be measured.
         readout (dict, optional): a dictionary that may contain the following keys:
+
             *    ncircuits: int, specifies the number of random circuits to use for the
                  randomized method of readout error mitigation.
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response

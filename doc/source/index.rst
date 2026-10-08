@@ -71,6 +71,7 @@ Contents
     :maxdepth: 2
     :caption: Main documentation
 
+    concepts/index
     api-reference/index
     developer-guides/index
 

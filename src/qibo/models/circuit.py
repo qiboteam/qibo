@@ -931,29 +931,29 @@ class Circuit:
         the all gates sorted in decreasing number of appearance.
 
         Example:
-            .. code-block:: python
-                from qibo import Circuit, gates
 
-                circuit = Circuit(3)
-                circuit.add(gates.H(0))
-                circuit.add(gates.H(1))
-                circuit.add(gates.CNOT(0, 2))
-                circuit.add(gates.CNOT(1, 2))
-                circuit.add(gates.H(2))
-                circuit.add(gates.TOFFOLI(0, 1, 2))
+        .. code-block:: python
 
-                circuit.summary()
+            from qibo import Circuit, gates
 
-                # Prints
-                '''
-                Circuit depth = 5
-                Total number of gates = 6
-                Number of qubits = 3
-                Most common gates:
-                h: 3
-                cx: 2
-                ccx: 1
-                '''
+            circuit = Circuit(3)
+            circuit.add(gates.H(0))
+            circuit.add(gates.H(1))
+            circuit.add(gates.CNOT(0, 2))
+            circuit.add(gates.CNOT(1, 2))
+            circuit.add(gates.H(2))
+            circuit.add(gates.TOFFOLI(0, 1, 2))
+
+            circuit.summary()
+
+            # Output:
+            # Circuit depth = 5
+            # Total number of gates = 6
+            # Number of qubits = 3
+            # Most common gates:
+            # h: 3
+            # cx: 2
+            # ccx: 1
         """
         sys.stdout.write(self.summary_string() + "\n")
 
@@ -1116,9 +1116,27 @@ class Circuit:
 
     @property
     def raw(self) -> dict:
-        """Serialize to dictionary.
+        """Serialize the circuit to a JSON-compatible dictionary.
 
-        This is a thin wrapper over :meth:`Gate.raw`.
+        This is a thin wrapper over :meth:`qibo.gates.Gate.raw`. The returned
+        dictionary has the following structure:
+
+        .. code-block:: text
+
+            {
+                "queue": [ <gate.raw>, ... ],  # list of serialized gates
+                "nqubits": int,                # number of qubits
+                "density_matrix": bool,        # whether a density matrix is used
+                "wire_names": list | None,     # wire names (or None)
+                "qibo_version": str,           # qibo version used for serialization
+            }
+
+        Each entry of ``queue`` is the output of :meth:`qibo.gates.Gate.raw`.
+        The dictionary can be loaded back into a circuit with
+        :meth:`qibo.models.circuit.Circuit.from_dict`.
+
+        Returns:
+            dict: JSON-compatible representation of the circuit.
         """
         return {
             "queue": [gate.raw for gate in self.queue],

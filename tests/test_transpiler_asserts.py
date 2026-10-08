@@ -121,6 +121,14 @@ def test_assert_decomposition_fail_2q(gate):
         assert_decomposition(circuit, native_gates=NativeGates.default())
 
 
+@pytest.mark.parametrize("gate", [gates.SWAP(0, 1), gates.RXX(0, 1, 0.1)])
+def test_assert_decomposition_fail_not_in_native_gates(gate):
+    circuit = Circuit(2)
+    circuit.add(gate)
+    with pytest.raises(DecompositionError, match="is not a native gate"):
+        assert_decomposition(circuit, native_gates=NativeGates.default())
+
+
 def test_assert_decomposition_fail_3q():
     circuit = Circuit(3)
     circuit.add(gates.TOFFOLI(0, 1, 2))
