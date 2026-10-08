@@ -142,3 +142,6 @@ tmp.npy
 
 # pdf
 bloch.pdf
+
+# patches
+*.patch

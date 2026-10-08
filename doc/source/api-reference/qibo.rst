@@ -2206,6 +2206,12 @@ Lanczos algorithm
 .. autofunction:: qibo.quantum_info.lanczos
 
 
+Lie closure
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.lie_closure
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
