@@ -647,10 +647,7 @@ def vnCDR(
     backend.set_seed(seed)
 
     if model is None:
-        if backend.platform in ("cupy", "cuquantum"):
-            model = lambda x, *params: np.sum(x * np.vstack(params), axis=0)
-        else:
-            model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
+        model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
 
     if readout is None:
         readout = {}

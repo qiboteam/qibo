@@ -1976,7 +1976,20 @@ class _Rnn_(ParametrizedGate):
         return self.__class__(q0, q1, -self.parameters[0])
 
 
-class RXX(_Rnn_):
+class _Rnn_rotation_(_Rnn_):
+    """Abstract class for 2-qubit rotations whose generator has
+    eigenvalues :math:`\\pm 1/2`.
+
+    This covers RXX, RYY, RZZ, and RZX, but not RXXYY, whose
+    generator :math:`(XX + YY) / 4` has eigenvalues
+    :math:`\\{\\pm 1/2, 0, 0\\}`.
+    """
+
+    def generator_eigenvalue(self):
+        return 0.5
+
+
+class RXX(_Rnn_rotation_):
     """Parametric 2-qubit XX interaction, or rotation about XX-axis.
 
     Corresponds to the following unitary matrix
@@ -2012,7 +2025,7 @@ class RXX(_Rnn_):
         return "rxx"
 
 
-class RYY(_Rnn_):
+class RYY(_Rnn_rotation_):
     """Parametric 2-qubit YY interaction, or rotation about YY-axis.
 
     Corresponds to the following unitary matrix
@@ -2047,7 +2060,7 @@ class RYY(_Rnn_):
         return "ryy"
 
 
-class RZZ(_Rnn_):
+class RZZ(_Rnn_rotation_):
     """Parametric 2-qubit ZZ interaction, or rotation about ZZ-axis.
 
     Corresponds to the following unitary matrix
@@ -2083,7 +2096,7 @@ class RZZ(_Rnn_):
         return "rzz"
 
 
-class RZX(_Rnn_):
+class RZX(_Rnn_rotation_):
     """Parametric 2-qubit ZX interaction, or rotation about ZX-axis.
 
     Corresponds to the following unitary matrix

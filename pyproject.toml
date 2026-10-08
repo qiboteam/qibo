@@ -27,7 +27,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://qibo.science/"
 Repository = "https://github.com/qiboteam/qibo/"
-Documentation = "https://qibo.science/docs/qibo/stable"
+Documentation = "https://qibo.science/qibo/stable/"
 
 [project.optional-dependencies]
 qinfo = ["stim>=1.15.0,<2.0.0"]

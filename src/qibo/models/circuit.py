@@ -1116,9 +1116,27 @@ class Circuit:
 
     @property
     def raw(self) -> dict:
-        """Serialize to dictionary.
+        """Serialize the circuit to a JSON-compatible dictionary.
 
-        This is a thin wrapper over :meth:`Gate.raw`.
+        This is a thin wrapper over :meth:`qibo.gates.Gate.raw`. The returned
+        dictionary has the following structure:
+
+        .. code-block:: text
+
+            {
+                "queue": [ <gate.raw>, ... ],  # list of serialized gates
+                "nqubits": int,                # number of qubits
+                "density_matrix": bool,        # whether a density matrix is used
+                "wire_names": list | None,     # wire names (or None)
+                "qibo_version": str,           # qibo version used for serialization
+            }
+
+        Each entry of ``queue`` is the output of :meth:`qibo.gates.Gate.raw`.
+        The dictionary can be loaded back into a circuit with
+        :meth:`qibo.models.circuit.Circuit.from_dict`.
+
+        Returns:
+            dict: JSON-compatible representation of the circuit.
         """
         return {
             "queue": [gate.raw for gate in self.queue],
