@@ -979,7 +979,7 @@ class Backend:
         return self.engine.floor(array, **kwargs)
 
     def frombuffer(self, buffer: bytes, **kwargs) -> ArrayLike:
-        """Interpret ``buffer`` as an one-dimensional array.
+        """Interpret ``buffer`` as a one-dimensional array.
 
         Args:
             buffer (bytes): object exposing the buffer interface, e.g. ``bytes``.
