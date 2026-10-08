@@ -296,6 +296,8 @@ def _lie_closure_pauli_sums(
 
     Operators are coefficient vectors over a table of Pauli strings, which are orthonormal
     under the Hilbert-Schmidt inner product, so that the inner product is the Euclidean one.
+    The vectors are stored as rows of a sparse matrix, and the table only grows by appending
+    new Pauli strings, so that the basis is never copied to re-index its columns.
     Commutators are computed term by term on the tableau rows :math:`(x | z)` of the Paulis:
     :math:`i [P, Q] = 2 \\, i^{e + 1} R` for anticommuting :math:`P` and :math:`Q`, with
     :math:`R` given by the XOR of the rows and :math:`P \\, Q = i^{e} R`.
@@ -306,9 +308,9 @@ def _lie_closure_pauli_sums(
         max_iterations (int): maximum nesting depth of commutators.
         tol (float): threshold on the norm below which a candidate is considered linearly
             dependent on the current basis.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend whose engine
-            is used in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in
+            the execution, which must support sparse matrices in compressed sparse row format.
+            If ``None``, it uses the current backend. Defaults to ``None``.
 
     Returns:
         list[dict]: Orthonormal basis, each element mapping Pauli strings to coefficients.
@@ -318,27 +320,42 @@ def _lie_closure_pauli_sums(
     terms = [{gen: 1.0} if isinstance(gen, str) else gen for gen in generators]
     strings = [string for term in terms for string in term]
     nqubits = len(strings[0])
-    clifford_backend = CliffordBackend(_get_engine_name(backend))
 
     # rows of the tableau are the bit vectors (x | z) of the Pauli strings,
     # phases are dropped as they do not affect the span
-    tableau = clifford_backend.vstack(
-        [clifford_backend._pauli_to_binary(string, nqubits) for string in strings]
+    letters = backend.frombuffer("".join(strings).encode(), dtype=backend.uint8)
+    letters = backend.reshape(letters, (len(strings), nqubits))
+    tableau = backend.cast(
+        backend.hstack(
+            (
+                (letters == ord("X")) | (letters == ord("Y")),
+                (letters == ord("Z")) | (letters == ord("Y")),
+            )
+        ),
+        dtype=backend.uint8,
     )
-    words, inverse = clifford_backend.unique(tableau, axis=0, return_inverse=True)
+    words, inverse = backend.unique(tableau, axis=0, return_inverse=True)
+
+    # each row of the table is also packed into a single fixed-size key, which is much
+    # cheaper to sort than the rows themselves when looking up new Pauli strings
+    key_type = backend.create_dtype(f"V{math.ceil(2 * nqubits / 8)}")
+    keys = backend.reshape(backend.packbits(words, axis=1).view(key_type), (-1,))
 
     # coefficients below this threshold are numerical noise and are dropped to keep
     # the vectors sparse. It is orders of magnitude below ``tol``, otherwise
     # the perturbation of the basis would spoil the linear independence check.
     threshold = 1e-3 * tol
 
-    initial = clifford_backend.zeros((len(terms), len(words)), dtype=float)
-    owners = [index for index, term in enumerate(terms) for _ in term]
-    initial[owners, inverse.reshape(-1)] = [
-        float(coeff) for term in terms for coeff in term.values()
-    ]
+    initial = backend.csr_matrix(
+        (
+            [float(coeff) for term in terms for coeff in term.values()],
+            backend.reshape(inverse, (-1,)),
+            backend.cumsum([0] + [len(term) for term in terms]),
+        ),
+        shape=(len(terms), len(words)),
+    )
 
-    basis = clifford_backend.zeros((0, len(words)), dtype=float)
+    basis = backend.csr_matrix((0, len(words)), dtype=backend.float64)
     nb_generators, stop = 0, 0
     smallest = math.inf
     for epoch in range(max_iterations + 1):
@@ -351,23 +368,26 @@ def _lie_closure_pauli_sums(
                 candidates = initial
             else:
                 new, gen = basis[start:stop], basis[index]
-                support = clifford_backend.nonzero(
-                    clifford_backend.any(new != 0, axis=0)
-                )[0]
-                columns = clifford_backend.nonzero(gen)[0]
-                bits_1, bits_2 = words[support], words[columns]
+                support = backend.unique(new.indices)
+                bits_1, bits_2 = words[support], words[gen.indices]
                 # symplectic inner product, 1 for anticommuting Paulis; computed in
                 # uint8 and reduced mod 2 (wraparound mod 256 preserves the parity)
-                anticommute = clifford_backend.mod(
-                    clifford_backend.matmul(bits_1[:, :nqubits], bits_2[:, nqubits:].T)
-                    + clifford_backend.matmul(
-                        bits_1[:, nqubits:], bits_2[:, :nqubits].T
-                    ),
+                anticommute = backend.mod(
+                    backend.matmul(bits_1[:, :nqubits], bits_2[:, nqubits:].T)
+                    + backend.matmul(bits_1[:, nqubits:], bits_2[:, :nqubits].T),
                     2,
                 )
-                rows, cols = clifford_backend.nonzero(anticommute)
-                bits_1, bits_2 = bits_1[rows].astype(int), bits_2[cols].astype(int)
-                exponents = clifford_backend.sum(
+                rows, cols = backend.nonzero(anticommute)
+                if len(rows) == 0:
+                    continue
+
+                bits_1, bits_2 = bits_1[rows], bits_2[cols]
+                products = bits_1 ^ bits_2
+                # int8 suffices: the engine accumulates the sum over qubits in a wider
+                # integer, and only the exponent mod 4 is needed
+                bits_1 = backend.cast(bits_1, dtype=backend.int8)
+                bits_2 = backend.cast(bits_2, dtype=backend.int8)
+                exponents = backend.sum(
                     _exponent(
                         bits_1[:, :nqubits],
                         bits_1[:, nqubits:],
@@ -376,60 +396,81 @@ def _lie_closure_pauli_sums(
                     ),
                     axis=1,
                 )
-                signs = clifford_backend.where(exponents % 4 == 1, -2.0, 2.0)
+                signs = backend.where(backend.mod(exponents, 4) == 1, -2.0, 2.0)
 
-                table, inverse = clifford_backend.unique(
-                    bits_1 ^ bits_2, axis=0, return_inverse=True
+                # column of each product in the table: products already in the table
+                # keep their column, and new ones are appended at the end of the table
+                products_keys = backend.packbits(products, axis=1).view(key_type)
+                stacked = backend.concatenate(
+                    (keys, backend.reshape(products_keys, (-1,)))
                 )
-                if len(table) == 0:
-                    continue
+                _, first, inverse = backend.unique(
+                    stacked, return_index=True, return_inverse=True
+                )
+                targets = first[inverse[len(keys) :]]
+                fresh = backend.unique(targets[targets >= len(keys)])
+                targets = backend.where(
+                    targets < len(keys),
+                    targets,
+                    len(keys) + backend.searchsorted(fresh, targets),
+                )
+                words = backend.vstack((words, products[fresh - len(keys)]))
+                keys = backend.concatenate((keys, stacked[fresh]))
 
-                candidates = clifford_backend.zeros(
-                    (new.shape[0], len(table)), dtype=float
+                # adjoint action of the generator on the Pauli strings in the support
+                adjoint = backend.csr_matrix(
+                    (gen.data[cols] * signs, (support[rows], targets)),
+                    shape=(basis.shape[1], len(words)),
                 )
-                clifford_backend.add_at(
-                    candidates,
-                    (slice(None), inverse.reshape(-1)),
-                    new[:, support[rows]] * (gen[columns[cols]] * signs),
+                candidates = new @ adjoint
+                basis = backend.csr_matrix(
+                    (basis.data, basis.indices, basis.indptr),
+                    shape=(basis.shape[0], len(words)),
                 )
-
-                # merge the new Pauli strings into the global table
-                merged, inverse = clifford_backend.unique(
-                    clifford_backend.vstack((words, table.astype(words.dtype))),
-                    axis=0,
-                    return_inverse=True,
-                )
-                inverse = inverse.reshape(-1)
-                basis_merged = clifford_backend.zeros(
-                    (basis.shape[0], len(merged)), dtype=float
-                )
-                basis_merged[:, inverse[: len(words)]] = basis
-                candidates_merged = clifford_backend.zeros(
-                    (candidates.shape[0], len(merged)), dtype=float
-                )
-                candidates_merged[:, inverse[len(words) :]] = candidates
-                words, basis, candidates = merged, basis_merged, candidates_merged
 
             # Gram-Schmidt, repeated twice for numerical stability: first against
             # the current basis in one shot, then among the surviving candidates
             for _ in range(2):
                 candidates = candidates - (candidates @ basis.T) @ basis
-            norms = clifford_backend.sqrt(clifford_backend.sum(candidates**2, axis=1))
-            added = clifford_backend.zeros((0, len(words)), dtype=float)
+                candidates.data[backend.abs(candidates.data) <= threshold] = 0.0
+                candidates.eliminate_zeros()
+            norms = backend.sqrt(
+                candidates.multiply(candidates)
+                @ backend.ones(len(words), dtype=backend.float64)
+            )
+
+            # rows are stacked by joining the compressed-sparse-row arrays,
+            # with the row pointers of the bottom matrix shifted
+            added = backend.csr_matrix((0, len(words)), dtype=backend.float64)
             for candidate in candidates[norms > tol]:
                 for _ in range(2):
-                    candidate = candidate - (added @ candidate) @ added
-                norm = clifford_backend.sqrt(clifford_backend.sum(candidate**2))
+                    candidate = candidate - (candidate @ added.T) @ added
+                norm = float(backend.vector_norm(candidate.data, dtype=backend.float64))
                 if norm > tol:
                     if epoch > 0:
-                        smallest = min(smallest, float(norm))
-                    candidate = clifford_backend.where(
-                        clifford_backend.abs(candidate) > threshold,
-                        candidate / norm,
-                        0.0,
+                        smallest = min(smallest, norm)
+                    candidate.data[backend.abs(candidate.data) <= threshold] = 0.0
+                    candidate.eliminate_zeros()
+                    added = backend.csr_matrix(
+                        (
+                            backend.concatenate((added.data, candidate.data / norm)),
+                            backend.concatenate((added.indices, candidate.indices)),
+                            backend.concatenate(
+                                (added.indptr, candidate.indptr[1:] + added.indptr[-1])
+                            ),
+                        ),
+                        shape=(added.shape[0] + 1, len(words)),
                     )
-                    added = clifford_backend.vstack((added, candidate[None, :]))
-            basis = clifford_backend.vstack((basis, added))
+            basis = backend.csr_matrix(
+                (
+                    backend.concatenate((basis.data, added.data)),
+                    backend.concatenate((basis.indices, added.indices)),
+                    backend.concatenate(
+                        (basis.indptr, added.indptr[1:] + basis.indptr[-1])
+                    ),
+                ),
+                shape=(basis.shape[0] + added.shape[0], len(words)),
+            )
 
         if basis.shape[0] == stop:
             break
@@ -450,16 +491,15 @@ def _lie_closure_pauli_sums(
             + "in which case the algebra is overestimated: try a larger ``tol``."
         )
 
-    tableau = clifford_backend.zeros(
-        (len(words) + 1, 2 * nqubits + 1), dtype=clifford_backend.uint8
-    )
-    tableau[:-1, : 2 * nqubits] = words
-    names, _ = clifford_backend.symplectic_matrix_to_generators(tableau)
+    names = backend.frombuffer(b"IXZY", dtype=backend.uint8)[
+        backend.cast(words[:, :nqubits] + 2 * words[:, nqubits:], dtype=backend.int64)
+    ]
+    names = [row.tobytes().decode() for row in names]
 
     return [
         {
-            names[column]: float(element[column])
-            for column in clifford_backend.nonzero(element)[0]
+            names[column]: float(value)
+            for column, value in zip(element.indices, element.data, strict=True)
         }
         for element in basis
     ]

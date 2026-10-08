@@ -557,7 +557,7 @@ def lie_closure(
     and they anticommute if and only if their symplectic inner product is :math:`1`.
     This avoids building :math:`2^{n} \\times 2^{n}` matrices. If all generators are Pauli strings,
     the DLA is itself spanned by Pauli strings. Otherwise, operators are stored as
-    coefficient vectors over the Pauli strings encountered, and commutators are computed
+    sparse coefficient vectors over the Pauli strings encountered, and commutators are computed
     term by term.
 
     Args:
