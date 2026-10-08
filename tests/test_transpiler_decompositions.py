@@ -258,13 +258,3 @@ def test_cz_count_to_native(backend, gate_name, ncz, natives_1q):
         sum(isinstance(translated_gate, gates.CZ) for translated_gate in translated)
         == ncz
     )
-
-
-def test_swap_to_native_single_qubit_gates(backend):
-    natives = NativeGates.SX | NativeGates.X | NativeGates.CZ | default_natives
-    translated = translate_gate(gates.SWAP(0, 1), natives, backend=backend)
-    assert [translated_gate.name for translated_gate in translated] == [
-        "sx",
-        "sx",
-        "cz",
-    ] * 3

@@ -271,8 +271,20 @@ cz_dec = GateDecompositions()
 cz_dec.add(gates.CNOT, [gates.H(1), gates.CZ(0, 1), gates.H(1)])
 cz_dec.add(gates.CZ, [gates.CZ(0, 1)])
 cz_dec.add(gates.CY, [gates.SDG(1), gates.H(1), gates.CZ(0, 1), gates.H(1), gates.S(1)])
-# SWAP is three layers of SX on both qubits followed by CZ, up to a global phase.
-cz_dec.add(gates.SWAP, [gates.SX(0), gates.SX(1), gates.CZ(0, 1)] * 3)
+cz_dec.add(
+    gates.SWAP,
+    [
+        gates.H(1),
+        gates.CZ(0, 1),
+        gates.H(1),
+        gates.H(0),
+        gates.CZ(1, 0),
+        gates.H(0),
+        gates.H(1),
+        gates.CZ(0, 1),
+        gates.H(1),
+    ],
+)
 cz_dec.add(
     gates.iSWAP,
     [
