@@ -257,6 +257,22 @@ def test_fft_ifft(backend, size):
     backend.assert_allclose(backend.ifft(backend.fft(array)), array)
 
 
+def test_frombuffer_packbits(backend):
+    """``backend.frombuffer`` and ``backend.packbits`` match their ``numpy`` counterparts."""
+    buffer = b"IXYZ"
+    backend.assert_allclose(
+        backend.frombuffer(buffer, dtype=backend.uint8),
+        backend.cast(np.frombuffer(buffer, dtype=np.uint8), dtype=backend.uint8),
+    )
+
+    bits = np.array([[1, 0, 1, 1, 0, 0, 1, 0, 1], [0, 1, 1, 0, 1, 0, 0, 1, 1]])
+    for axis in (None, 0, 1):
+        backend.assert_allclose(
+            backend.packbits(backend.cast(bits, dtype=backend.uint8), axis=axis),
+            backend.cast(np.packbits(bits, axis=axis), dtype=backend.uint8),
+        )
+
+
 def test_searchsorted(backend):
     """``backend.searchsorted`` matches ``np.searchsorted``."""
     array_1 = backend.cast(np.array([1, 3, 5, 7]))
