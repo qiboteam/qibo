@@ -231,6 +231,24 @@ class Backend:
         """
         return self.engine.complex128
 
+    def create_dtype(self, dtype: DTypeLike | str | tuple, **kwargs) -> DTypeLike:
+        """Create a data type object.
+
+        .. note::
+            This is not named ``dtype`` because :attr:`Backend.dtype` already stores the
+            default data type of arrays created using the backend.
+
+        Args:
+            dtype (DTypeLike or str or tuple): object to be converted to a data type object,
+                e.g. ``"uint8"``, or ``"V3"`` for a raw-bytes (void) type of :math:`3` bytes.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            DTypeLike: The data type object.
+        """
+        return self.engine.dtype(dtype, **kwargs)
+
     @property
     def float32(self) -> DTypeLike:
         """Single-precision floating-point number type.
