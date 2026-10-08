@@ -8,6 +8,8 @@ from qibo import Circuit, gates, matrices
 from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_unitary
+from qibo.transpiler import Optimize1qGatesDecomposition
+from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.unitary_decompositions import (
     bell_basis,
     calculate_h_vector,
@@ -17,6 +19,7 @@ from qibo.transpiler.unitary_decompositions import (
     cnot_decomposition_light,
     magic_basis,
     magic_decomposition,
+    single_qubit_decomposition,
     to_bell_diagonal,
     two_qubit_decomposition,
 )
@@ -245,3 +248,105 @@ def test_calculate_psi_weight(backend):
             backend.conj(magic).T @ states * eigvals,
             atol=1e-8,
         )
+
+
+@pytest.mark.parametrize(
+    "gate_classes",
+    [
+        (gates.RX, gates.RZ),
+        (gates.RY, gates.RZ),
+        (gates.RX, gates.RY),
+        (gates.RX, gates.RY, gates.RZ),
+        (gates.RZ, gates.H),
+        (gates.RX, gates.H),
+        (gates.RZ, gates.SX),
+        (gates.RZ, gates.SXDG),
+        (gates.RX, gates.S),
+        (gates.RX, gates.T),
+        (gates.RZ, gates.H, gates.T),
+        (gates.PRX,),
+    ],
+)
+def test_single_qubit_decomposition(backend, gate_classes):
+    for seed in range(10):
+        unitary = random_unitary(2, seed=seed, backend=backend)
+        decomposition = single_qubit_decomposition(
+            unitary, 1, gate_classes, backend=backend
+        )
+        assert all(type(gate) in gate_classes for gate in decomposition)
+        assert all(gate.qubits == (1,) for gate in decomposition)
+
+        circuit = Circuit(2)
+        circuit.add(decomposition)
+        result = backend.to_numpy(circuit.unitary(backend))[:2, :2]
+        target = backend.to_numpy(unitary)
+        overlap = np.abs(np.trace(target.conj().T @ result)) / 2
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "gate_classes",
+    [(gates.RX, gates.RZ), (gates.RZ, gates.H), (gates.RZ, gates.SX), (gates.PRX,)],
+)
+def test_single_qubit_decomposition_special_unitaries(backend, gate_classes):
+    # The identity needs no gates, and the Pauli gates are special cases of the rotations
+    identity = backend.matrices.I(2)
+    assert single_qubit_decomposition(identity, 0, gate_classes, backend=backend) == []
+    for gate in (gates.X(0), gates.Y(0), gates.Z(0), gates.H(0), gates.T(0)):
+        circuit = Circuit(1)
+        circuit.add(
+            single_qubit_decomposition(
+                gate.matrix(backend), 0, gate_classes, backend=backend
+            )
+        )
+        result = backend.to_numpy(circuit.unitary(backend))
+        target = backend.to_numpy(gate.matrix(backend))
+        overlap = np.abs(np.trace(target.conj().T @ result)) / 2
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "gate_classes",
+    [
+        (),
+        (gates.RZ,),
+        (gates.RX,),
+        (gates.RZ, gates.X),
+        (gates.RZ, gates.T),
+        (gates.H, gates.T),
+    ],
+)
+def test_single_qubit_decomposition_error(backend, gate_classes):
+    with pytest.raises(DecompositionError):
+        single_qubit_decomposition(backend.matrices.X, 0, gate_classes, backend=backend)
+
+
+@pytest.mark.parametrize(
+    "gate_classes,maximum",
+    [
+        ((gates.RZ, gates.RY), 3),
+        ((gates.RZ, gates.RX), 3),
+        ((gates.RX, gates.RY), 3),
+        ((gates.RZ, gates.SX), 5),
+        ((gates.RZ, gates.SX, gates.X), 5),
+        ((gates.U3,), 1),
+    ],
+)
+def test_single_qubit_decomposition_euler_bases(backend, gate_classes, maximum):
+    """The Euler bases are shared with the single-qubit optimizer, which gives the same gates."""
+    names = [gate_class.__name__.lower() for gate_class in gate_classes]
+    for seed in range(10):
+        unitary = random_unitary(2, seed=seed, backend=backend)
+        decomposition = single_qubit_decomposition(
+            unitary, 0, gate_classes, backend=backend
+        )
+        assert len(decomposition) <= maximum
+
+        circuit = Circuit(1)
+        circuit.add(gates.Unitary(unitary, 0))
+        optimized = Optimize1qGatesDecomposition(basis=names)(circuit, backend=backend)
+        assert [gate.name for gate in optimized.queue] == [
+            gate.name for gate in decomposition
+        ]
+        for gate, optimized_gate in zip(decomposition, optimized.queue):
+            backend.assert_allclose(gate.parameters, optimized_gate.parameters)

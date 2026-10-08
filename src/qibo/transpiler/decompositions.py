@@ -185,9 +185,9 @@ u3_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
 u3_dec.add(
     gates.PRX,
     lambda gate: [
-        gates.RZ(0, gate.parameters[1] - math.pi / 2),
-        gates.RY(0, -gate.parameters[0]),
-        gates.RZ(0, gate.parameters[1] + math.pi / 2),
+        gates.RZ(0, -gate.parameters[1]),
+        gates.U3(0, gate.parameters[0], -math.pi / 2, math.pi / 2),
+        gates.RZ(0, gate.parameters[1]),
     ],
 )
 u3_dec.add(
