@@ -566,6 +566,24 @@ def test_entangling_layer(nqubits, architecture, entangling_gate, closed_boundar
         assert gate.parameters == target.parameters
 
 
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("entangling_gate", ["CNOT", gates.CZ, gates.RBS])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5, 6, 7, 8])
+def test_entangling_layer_all_to_all(nqubits, entangling_gate, closed_boundary):
+    circuit = entangling_layer(nqubits, "all-to-all", entangling_gate, closed_boundary)
+
+    pairs = [gate.qubits for gate in circuit.queue]
+    target_pairs = list(combinations(range(nqubits), 2))
+
+    # every pair of qubits is acted upon exactly once, with the lower index first
+    assert len(pairs) == len(target_pairs)
+    assert sorted(pairs) == target_pairs
+
+    # depth is minimal, i.e. the chromatic index of the complete graph
+    if nqubits > 1:
+        assert circuit.depth == (nqubits - 1 if nqubits % 2 == 0 else nqubits)
+
+
 def _helper_entangling_test(gate, qubit_0, qubit_1=None):
     """Creates two-qubit gate with of without parameters."""
     if qubit_1 is None:

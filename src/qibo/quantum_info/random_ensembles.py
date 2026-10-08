@@ -4,12 +4,13 @@ import math
 import warnings
 
 import numpy as np
-from numpy.typing import DTypeLike
+from numpy.typing import ArrayLike, DTypeLike
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend, _check_backend_and_local_state
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
+from qibo.models.encodings import entangling_layer, phase_encoder
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.clifford import Clifford
 from qibo.quantum_info.superoperator_transformations import (
@@ -191,6 +192,76 @@ def random_hermitian(
         matrix = matrix / backend.matrix_norm(matrix)
 
     return matrix
+
+
+def random_iqp(
+    nqubits: int,
+    architecture: str = "all-to-all",
+    closed_boundary: bool = False,
+    seed: int | ArrayLike | None = None,
+    backend: Backend | None = None,
+    **kwargs,
+) -> Circuit:
+    """Create a random instantaneous quantum polynomial-time (IQP) circuit.
+
+    The circuit is composed of a layer of Hadamard gates on all qubits, followed by a diagonal
+    layer, and closed by a second layer of Hadamard gates on all qubits. The diagonal layer is
+    composed of single-qubit :class:`qibo.gates.RZ` rotations on all qubits. Hence,
+    the circuit implements
+
+    .. math::
+        \\mathcal{U} = H^{\\otimes n} \\, \\exp\\left(
+        -\\frac{i}{2} \\sum_{j} \\theta_{j} \\, Z_{j}
+        -\\frac{i}{2} \\sum_{(j, k) \\in P} \\theta_{j, k} \\, Z_{j} \\, Z_{k}
+        \\right) \\, H^{\\otimes n} \\, ,
+
+    where :math:`P` is the set of pairs of qubits coupled by the chosen ``architecture``.
+    All angles :math:`\\theta_{j}` and :math:`\\theta_{j, k}` are sampled uniformly at
+    random from :math:`[0, 2\\pi)`.
+
+    Args:
+        nqubits (int): number of qubits.
+        architecture (str, optional): architecture of the layer of :class:`qibo.gates.RZZ`
+            gates. For the available options, see
+            :func:`qibo.models.encodings.entangling_layer`. Defaults to ``"all-to-all"``.
+        closed_boundary (bool, optional): If ``True`` and ``architecture not in
+            ["all-to-all", "pyramid", "v", "x"]``, adds a closed-boundary condition to the
+            entangling layer. Defaults to ``False``.
+        seed (int or ArrayLike, optional): either a generator of random numbers or a fixed
+            seed to initialize a generator. If ``None``, a random seed is used.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Random IQP circuit.
+
+    References:
+        1. M. J. Bremner, R. Jozsa, and D. J. Shepherd, *Classical simulation of commuting
+        quantum computations implies collapse of the polynomial hierarchy*,
+        `Proc. R. Soc. A 467, 459 (2011) <https://doi.org/10.1098/rspa.2010.0301>`_.
+    """
+    backend = _check_backend(backend)
+
+    entangling = entangling_layer(
+        nqubits, architecture, "RZZ", closed_boundary, **kwargs
+    )
+    angles = backend.random_uniform(
+        0.0, 2 * math.pi, size=nqubits + len(entangling.queue), seed=seed
+    )
+    entangling.set_parameters(angles[nqubits:])
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.H(qubit) for qubit in range(nqubits))
+    circuit.add(
+        phase_encoder(nqubits, "RZ", angles[:nqubits], backend=backend, **kwargs).queue
+    )
+    circuit.add(entangling.queue)
+    circuit.add(gates.H(qubit) for qubit in range(nqubits))
+
+    return circuit
 
 
 def random_unitary(
