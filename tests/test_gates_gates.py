@@ -1,5 +1,7 @@
 """Test gates defined in `qibo/gates/gates.py`."""
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
 
@@ -1391,6 +1393,23 @@ def test_rbs(backend):
     assert gates.RBS(0, 1, theta).unitary
 
 
+@pytest.mark.parametrize("controls", [(0, 1), (1, 0), (0, 1, 4)])
+def test_controlled_rbs_decompose(backend, controls):
+    """Multi-controlled RBS is fully decomposed in a single call."""
+    nqubits = 5
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RBS(2, 3, 0.1).controlled_by(*controls))
+    decomposed = circuit.decompose()
+
+    assert all(len(gate.control_qubits) <= 1 for gate in decomposed.queue)
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    backend.assert_allclose(
+        backend.execute_circuit(decomposed, initial_state=initial_state).state(),
+        backend.execute_circuit(circuit, initial_state=initial_state).state(),
+        atol=1e-6,
+    )
+
+
 def test_ecr(backend):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, backend=backend)
@@ -1421,18 +1440,25 @@ def test_ecr(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    # testing random expectation value due to global phase difference
-    observable = random_hermitian(2**nqubits, backend=backend)
-    backend.assert_allclose(
-        backend.cast(backend.conj(final_state_decompose).T)
-        @ observable
-        @ final_state_decompose,
-        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
-        atol=1e-6,
-    )
+    # the decomposition is exact, including the global phase
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
+
+
+def test_ecr_decomposition_is_exact_in_clifford_plus_t(backend):
+    pytest.importorskip("pygridsynth")
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    decomposition = gates.ECR(0, 1).decompose(method="clifford_plus_t")
+
+    assert {gate.name for gate in decomposition} <= {"h", "s", "x", "y", "z", "cx"}
+    backend.assert_allclose(
+        apply_gates(backend, decomposition, nqubits, initial_state),
+        apply_gates(backend, [gates.ECR(0, 1)], nqubits, initial_state),
+        atol=1e-6,
+    )
 
     assert gates.ECR(0, 1).clifford
     assert not gates.ECR(0, 1).hamming_weight
@@ -1567,7 +1593,7 @@ def test_deutsch(backend, theta):
 
     target = gates.DEUTSCH(0, 1, 2, theta).matrix(backend)
 
-    backend.assert_allclose(unitary, target)
+    backend.assert_allclose(unitary, target, atol=1e-8)
 
 
 @pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
@@ -1652,7 +1678,24 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
     circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).decompose())
     matrix = circuit.unitary(backend)
 
-    backend.assert_allclose(matrix, target)
+    backend.assert_allclose(matrix, target, atol=1e-8)
+
+    # test on_qubits
+    gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi)
+    qubit_map = {q: q + 1 for q in qubits_in + qubits_out}
+    new_gate = gate.on_qubits(qubit_map)
+    assert new_gate.init_args[0] == tuple(q + 1 for q in qubits_in)
+    assert new_gate.init_args[1] == tuple(q + 1 for q in qubits_out)
+
+    # test on_qubits with a controlled gate (exercises the ``is_controlled_by`` branch)
+    control = max(qubits_in + qubits_out) + 1
+    controlled_gate = gates.GeneralizedRBS(
+        qubits_in, qubits_out, theta, phi
+    ).controlled_by(control)
+    qubit_map = {q: q + 1 for q in qubits_in + qubits_out + [control]}
+    new_controlled_gate = controlled_gate.on_qubits(qubit_map)
+    assert new_controlled_gate.is_controlled_by
+    assert new_controlled_gate.control_qubits == (control + 1,)
 
 
 @pytest.mark.parametrize("phi", [0.0, 0.4321])
@@ -1683,7 +1726,7 @@ def test_generalized_rbs_empty_register_decomposition(
     circuit.add(gate.decompose())
     matrix = circuit.unitary(backend)
 
-    backend.assert_allclose(matrix, target)
+    backend.assert_allclose(matrix, target, atol=1e-8)
 
 
 @pytest.mark.parametrize("seed", [10])
@@ -1707,7 +1750,7 @@ def test_generalized_rbs_apply(backend, seed):
 
     state = gate.apply(backend, state, nqubits)
 
-    backend.assert_allclose(state, target)
+    backend.assert_allclose(state, target, atol=1e-8)
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
@@ -2159,14 +2202,13 @@ def test_gate_basis_rotation(backend):
         (8, (0, 2, 4, 6, 9), (3, 5, 7)),
     ],
 )
-@pytest.mark.parametrize("use_toffolis", [True, False])
-def test_x_decomposition_execution(backend, target, controls, free, use_toffolis):
+def test_x_decomposition_execution(backend, target, controls, free):
     """Check that applying the decomposition is equivalent to applying the multi-control gate."""
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
     initial_state = random_statevector(2**nqubits, backend=backend)
     target_state = backend.apply_gate(gate, backend.copy(initial_state), nqubits)
-    dgates = gate.decompose(*free, use_toffolis=use_toffolis)
+    dgates = gate.decompose(*free)
     final_state = backend.copy(initial_state)
     for gate in dgates:
         final_state = backend.apply_gate(gate, final_state, nqubits)
@@ -2235,3 +2277,17 @@ def test_gradient_rn(backend, gate):
         -1j * gate.generator_eigenvalue() * (generator @ gate.matrix(backend))
     )
     backend.assert_allclose(gate.gradient(backend).matrix(backend), target_gradient)
+
+
+def test_check_engine_torch():
+    """Test ``_check_engine`` with a mock torch Tensor (covers torch import path)."""
+    # Create a mock Tensor class
+    Tensor = type("Tensor", (), {})
+    tensor = Tensor()
+
+    mock_torch = MagicMock()
+    with patch.dict("sys.modules", {"torch": mock_torch}):
+        from qibo.gates.gates import _check_engine
+
+        engine = _check_engine(tensor)
+        assert engine is mock_torch

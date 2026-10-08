@@ -42,7 +42,10 @@ def u3_decomposition(
 
 
 def calculate_psi(
-    unitary: ArrayLike, backend: Backend, magic_basis: ArrayLike = magic_basis
+    unitary: ArrayLike,
+    magic_basis: ArrayLike = magic_basis,
+    weight: float = math.sqrt(2),
+    backend: Backend | None = None,
 ) -> tuple[ArrayLike, ArrayLike]:
     """Solves the eigenvalue problem of :math:`U^{T} U`.
 
@@ -53,19 +56,33 @@ def calculate_psi(
             in the computational basis.
         magic_basis (ArrayLike, optional): basis in which to solve the eigenvalue problem.
             Defaults to ``magic basis``.
-        backend (:class:`qibo.backends.abstract.Backend`): Backend to use for calculations.
+        weight (float, optional): The matrix :math:`M = U^{T} U` written in the magic basis
+            is symmetric and unitary, so its real and imaginary parts have the same
+            eigenvectors. They are found by diagonalizing the real matrix
+            :math:`\\text{Re}(M) + w \\, \\text{Im}(M)`, where :math:`w` is ``weight``.
+            Two different eigenvalues :math:`e^{i \\varphi_{1}}` and
+            :math:`e^{i \\varphi_{2}}` of :math:`M` become equal in this matrix if
+            :math:`\\tan((\\varphi_{1} + \\varphi_{2}) / 2) = w`, and the eigenvectors are
+            then not reliable. The default avoids this for angles that are multiples
+            of :math:`\\pi / 4`, which are common in circuits made of Clifford and
+            :math:`T` gates. Defaults to :math:`\\sqrt{2}`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
 
     Returns:
         Tuple[ArrayLike, ArrayLike]: Eigenvectors in the computational basis
         and eigenvalues of :math:`U^{T} U`.
     """
+    backend = _check_backend(backend)
+
     magic_basis = backend.cast(magic_basis)
     unitary = backend.cast(unitary)
     # write unitary in magic basis
     u_magic = backend.conj(magic_basis).T @ unitary @ magic_basis
     # construct and diagonalize UT_U
     ut_u = u_magic.T @ u_magic
-    ut_u_real = backend.real(ut_u) + backend.imag(ut_u)
+    ut_u_real = backend.real(ut_u) + weight * backend.imag(ut_u)
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
         ut_u_real = backend.round(ut_u_real, decimals=15)
 
@@ -253,12 +270,17 @@ def calculate_diagonal(
 
 
 def magic_decomposition(
-    unitary: ArrayLike, backend: Backend | None = None
+    unitary: ArrayLike,
+    backend: Backend | None = None,
+    weight: float = math.sqrt(2),
 ) -> tuple[ArrayLike, ...]:
-    """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
+    """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050.
+
+    The argument ``weight`` is defined in :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+    """
     backend = _check_backend(backend)
     unitary = backend.cast(unitary, dtype=unitary.dtype)
-    psi, eigvals = calculate_psi(unitary, backend=backend)
+    psi, eigvals = calculate_psi(unitary, backend=backend, weight=weight)
     psi_tilde = backend.conj(backend.sqrt(eigvals)) * backend.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
@@ -355,7 +377,12 @@ def cnot_decomposition_light(
 
 
 def two_qubit_decomposition(
-    q0: int, q1: int, unitary: ArrayLike, backend: Backend, threshold: float = 1e-6
+    q0: int,
+    q1: int,
+    unitary: ArrayLike,
+    threshold: float = 1e-6,
+    weight: float = math.sqrt(2),
+    backend: Backend | None = None,
 ) -> list[Gate]:
     """Performs two qubit unitary gate decomposition.
 
@@ -363,36 +390,44 @@ def two_qubit_decomposition(
         q0 (int): index of the first qubit.
         q1 (int): index of the second qubit.
         unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
-        backend (:class:`qibo.backends.Backend`): Backend to use for calculations.
         threshold (float): Threshold for determining if hz component is zero.
+        weight (float, optional): Weight of the imaginary part in the matrix that is
+            diagonalized to find the local gates, see
+            :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+            Defaults to :math:`\\sqrt{2}`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
 
     Returns:
         list: gates implementing the decomposition
     """
+    backend = _check_backend(backend)
+
     # Handle identity case efficiently
     if backend.allclose(unitary, backend.identity(4)):
         return []
 
-    z_component = _get_z_component(unitary, backend)
+    z_component = _get_z_component(unitary, weight, backend)
     if abs(z_component) < threshold:
-        return _two_qubit_decomposition_without_z(q0, q1, unitary, backend)
-    return _two_qubit_decomposition_with_z(q0, q1, unitary, backend)
+        return _two_qubit_decomposition_without_z(q0, q1, unitary, weight, backend)
+    return _two_qubit_decomposition_with_z(q0, q1, unitary, weight, backend)
 
 
-def _get_z_component(unitary: ArrayLike, backend: Backend) -> float:
+def _get_z_component(unitary: ArrayLike, weight: float, backend: Backend) -> float:
     """Calculates the hz component from a unitary's magic decomposition."""
-    _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
+    _, _, ud, _, _ = magic_decomposition(unitary, backend=backend, weight=weight)
     ud_diag = to_bell_diagonal(ud, backend=backend)
     _, _, hz = calculate_h_vector(ud_diag, backend=backend)
     return float(hz)
 
 
 def _two_qubit_decomposition_without_z(
-    q0: int, q1: int, unitary: ArrayLike, backend: Backend
+    q0: int, q1: int, unitary: ArrayLike, weight: float, backend: Backend
 ) -> list[Gate]:
     """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 case."""
     # Get magic decomposition
-    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
+    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend, weight=weight)
     ud_diag = to_bell_diagonal(ud, backend=backend)
     hx, hy, _ = calculate_h_vector(ud_diag, backend=backend)
     hx, hy = float(hx), float(hy)
@@ -412,11 +447,11 @@ def _two_qubit_decomposition_without_z(
 
 
 def _two_qubit_decomposition_with_z(
-    q0: int, q1: int, unitary: ArrayLike, backend: Backend
+    q0: int, q1: int, unitary: ArrayLike, weight: float, backend: Backend
 ) -> list[Gate]:
     """Implements Theorem 1 decomposition (3 CNOTs) for hz≠0 case."""
     # Get magic decomposition
-    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
+    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend, weight=weight)
     ud_diag = to_bell_diagonal(ud, backend=backend)
     hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
     hx, hy, hz = float(hx), float(hy), float(hz)

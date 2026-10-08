@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import networkx as nx
 
-from qibo.models import Circuit
+from qibo import Circuit
 
 
 class Placer(ABC):
@@ -46,7 +46,8 @@ class Router(ABC):
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
+            tuple(:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final
+            {logical: physical} qubit mapping.
         """
 
 
@@ -61,5 +62,5 @@ class Optimizer(ABC):
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): Optimized circuit.
+            :class:`qibo.models.circuit.Circuit`: Optimized circuit.
         """

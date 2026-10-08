@@ -5,7 +5,7 @@ import math
 import numpy as np
 from numpy.typing import ArrayLike
 
-from qibo.backends import _check_backend
+from qibo.backends import _check_backend, _numpy_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 from qibo.parameter import Parameter
@@ -87,15 +87,14 @@ class X(Gate):
         return gate
 
     def _base_decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+        self, *free: int, method: str = "standard", **kwargs
     ) -> list[Gate]:
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
         Args:
-            free (int): Ids of free qubits to use for the gate decomposition.
-            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
-                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            free (int): Ids of free qubits that can be used as dirty auxiliary qubits,
+                which makes the cost of the decomposition linear in the number of
+                controls. If none is given, no auxiliary qubits are used.
             method (str, optional): Choice of gate set for the decomposition.
                 If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
                 :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
@@ -113,6 +112,10 @@ class X(Gate):
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
                 ``mpmmath_dps`` defaults to :math:`256`.
+                For gates controlled by more than two qubits and ``method = "standard"``,
+                the keyword arguments ``clean``, ``minimize_toffolis`` and
+                ``minimize_depth`` are passed to
+                :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Set of one-qubit, :class:`qibo.gates.CNOT`,
@@ -128,62 +131,32 @@ class X(Gate):
 
         controls = self.control_qubits
         target = self.target_qubits[0]
-        ncontrols = len(controls)
-        if ncontrols < 3:
+        if len(controls) < 3:
             return [self.__class__(target).controlled_by(*controls)]
 
-        decomp_gates = []
-        nqubits = ncontrols + 1 + len(free)
-        if (nqubits >= 2 * ncontrols - 1) and (ncontrols >= 3):
-            gates1 = [
-                TOFFOLI(
-                    controls[ncontrols - 2 - k],
-                    free[ncontrols - 4 - k],
-                    free[ncontrols - 3 - k],
-                ).congruent()
-                for k in range(ncontrols - 3)
-            ]
-            gates2 = TOFFOLI(controls[0], controls[1], free[0]).congruent()
-            first_toffoli = TOFFOLI(
-                controls[ncontrols - 1], free[ncontrols - 3], target
-            )
-
-            decomp_gates.append(first_toffoli)
-            for gates in gates1:
-                decomp_gates.extend(gates)
-            decomp_gates.extend(gates2)
-            for gates in gates1[::-1]:
-                decomp_gates.extend(gates)
-
-        elif len(free) >= 1:
-            m1 = nqubits // 2
-            free1 = controls[m1:] + (target,) + tuple(free[1:])
-            x1 = self.__class__(free[0]).controlled_by(*controls[:m1])
-            part1 = x1._base_decompose(*free1, use_toffolis=use_toffolis, **kwargs)
-
-            free2 = controls[:m1] + tuple(free[1:])
-            controls2 = controls[m1:] + (free[0],)
-            x2 = self.__class__(target).controlled_by(*controls2)
-            part2 = x2._base_decompose(*free2, use_toffolis=use_toffolis, **kwargs)
-
-            decomp_gates = [*part1, *part2]
-
-        else:  # pragma: no cover
-            # impractical case
-            raise_error(
-                NotImplementedError,
-                "``X`` decomposition not implemented for zero free qubits.",
-            )
-
-        decomp_gates.extend(decomp_gates)
-        return decomp_gates
-
-    def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> list[Gate]:
-        return self._base_decompose(
-            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        from qibo.transpiler.multicontrolled_decompositions import (
+            multi_controlled_decomposition,
         )
+
+        backend = _numpy_backend()
+
+        clean = kwargs.get("clean", ())
+        minimize_toffolis = kwargs.get("minimize_toffolis", False)
+        minimize_depth = kwargs.get("minimize_depth", False)
+
+        return multi_controlled_decomposition(
+            unitary=backend.matrices.X,
+            controls=controls,
+            target=target,
+            free=free,
+            clean=clean,
+            minimize_toffolis=minimize_toffolis,
+            minimize_depth=minimize_depth,
+            backend=backend,
+        )
+
+    def decompose(self, *free: int, method: str = "standard", **kwargs) -> list[Gate]:
+        return self._base_decompose(*free, method=method, **kwargs)
 
     def basis_rotation(self) -> Gate:
         return H(self.target_qubits[0])
@@ -319,9 +292,7 @@ class SX(Gate):
     def qasm_label(self) -> str:
         return "sx"
 
-    def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> list[Gate]:
+    def decompose(self, *free: int, method: str = "standard", **kwargs) -> list[Gate]:
         """Decomposition of :math:`\\sqrt{X}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -329,9 +300,7 @@ class SX(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
         """
-        return super().decompose(
-            *free, use_toffolis=use_toffolis, method=method, **kwargs
-        )
+        return super().decompose(*free, method=method, **kwargs)
 
     def _dagger(self) -> Gate:
         return SXDG(self.init_args[0])
@@ -1050,9 +1019,7 @@ class U3(_Un_):
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
-    def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> list[Gate]:
+    def decompose(self, *free: int, method: str = "standard", **kwargs) -> list[Gate]:
         """Decomposition of :math:`U_{3}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -1066,9 +1033,7 @@ class U3(_Un_):
         where :math:`\\text{RZ}` and :math:`\\sqrt{X}` are, respectively,
         :class:`qibo.gates.RZ` and :class`qibo.gates.SX`.
         """
-        return super().decompose(
-            *free, use_toffolis=use_toffolis, method=method, **kwargs
-        )
+        return super().decompose(*free, method=method, **kwargs)
 
     @property
     def hamming_weight(self) -> bool:
@@ -2011,7 +1976,20 @@ class _Rnn_(ParametrizedGate):
         return self.__class__(q0, q1, -self.parameters[0])
 
 
-class RXX(_Rnn_):
+class _Rnn_rotation_(_Rnn_):
+    """Abstract class for 2-qubit rotations whose generator has
+    eigenvalues :math:`\\pm 1/2`.
+
+    This covers RXX, RYY, RZZ, and RZX, but not RXXYY, whose
+    generator :math:`(XX + YY) / 4` has eigenvalues
+    :math:`\\{\\pm 1/2, 0, 0\\}`.
+    """
+
+    def generator_eigenvalue(self):
+        return 0.5
+
+
+class RXX(_Rnn_rotation_):
     """Parametric 2-qubit XX interaction, or rotation about XX-axis.
 
     Corresponds to the following unitary matrix
@@ -2047,7 +2025,7 @@ class RXX(_Rnn_):
         return "rxx"
 
 
-class RYY(_Rnn_):
+class RYY(_Rnn_rotation_):
     """Parametric 2-qubit YY interaction, or rotation about YY-axis.
 
     Corresponds to the following unitary matrix
@@ -2082,7 +2060,7 @@ class RYY(_Rnn_):
         return "ryy"
 
 
-class RZZ(_Rnn_):
+class RZZ(_Rnn_rotation_):
     """Parametric 2-qubit ZZ interaction, or rotation about ZZ-axis.
 
     Corresponds to the following unitary matrix
@@ -2118,7 +2096,7 @@ class RZZ(_Rnn_):
         return "rzz"
 
 
-class RZX(_Rnn_):
+class RZX(_Rnn_rotation_):
     """Parametric 2-qubit ZX interaction, or rotation about ZX-axis.
 
     Corresponds to the following unitary matrix
@@ -2189,18 +2167,14 @@ class RXXYY(_Rnn_):
     def hamming_weight(self) -> bool:
         return True
 
-    def decompose(
-        self, *free, use_toffolis=True, method: str = "standard", **kwargs
-    ) -> list[Gate]:
+    def decompose(self, *free, method: str = "standard", **kwargs) -> list[Gate]:
         """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
 
         This decomposition has a global phase difference with respect to
         the original gate due to a phase difference in
         :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
         """
-        return super().decompose(
-            *free, use_toffolis=use_toffolis, method=method, **kwargs
-        )
+        return super().decompose(*free, method=method, **kwargs)
 
 
 class MS(ParametrizedGate):
@@ -2322,9 +2296,7 @@ class GIVENS(ParametrizedGate):
     def _dagger(self) -> Gate:
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
-    def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> list[Gate]:
+    def decompose(self, *free: int, method: str = "standard", **kwargs) -> list[Gate]:
         """Decomposition of GIVENS gate according to the decomposition of the
         RBS gate in Ref. [1].
 
@@ -2334,9 +2306,7 @@ class GIVENS(ParametrizedGate):
             (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
 
         """
-        return super().decompose(
-            *free, use_toffolis=use_toffolis, method=method, **kwargs
-        )
+        return super().decompose(*free, method=method, **kwargs)
 
 
 class RBS(ParametrizedGate):
@@ -2387,15 +2357,12 @@ class RBS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def _base_decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
+        self, *free: int, method: str = "standard", **kwargs
     ) -> list[Gate]:
         """Decomposition of RBS gate as in Ref. [1].
 
         Args:
             free (int): Ids of free qubits to use for the gate decomposition.
-            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
-                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
             method (str, optional): Choice of gate set for the decomposition.
                 If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
                 :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
@@ -2472,21 +2439,20 @@ class ECR(Gate):
     def clifford(self) -> bool:
         return True
 
-    def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> list[Gate]:
-        """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
+    def decompose(self, *free: int, method: str = "standard", **kwargs) -> list[Gate]:
+        """Decomposition of :math:`\\textup{ECR}` gate.
 
-        A global phase difference exists between the definitions of
-        :math:`\\textup{ECR}` and this decomposition. More precisely,
+        The decomposition is exact, including the global phase. More precisely,
 
         .. math::
-            \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
-                \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0}) \\, .
+            \\textup{ECR} = X(q_{0}) \\, \\textup{CNOT}(q_{0}, q_{1}) \\,
+                R_{X}(q_{1}, \\pi / 2) \\, S(q_{0}) \\, ,
+
+        where :math:`R_{X}(q_{1}, \\pi / 2) = e^{-i \\pi / 4} \\sqrt{X}(q_{1})`.
+        If ``method = "clifford_plus_t"``, :math:`R_{X}(q_{1}, \\pi / 2)` is the product
+        :math:`Z \\, Y \\, S \\, H \\, S` of Clifford gates.
         """
-        return super().decompose(
-            *free, use_toffolis=use_toffolis, method=method, **kwargs
-        )
+        return super().decompose(*free, method=method, **kwargs)
 
 
 class TOFFOLI(Gate):
@@ -2525,18 +2491,13 @@ class TOFFOLI(Gate):
     def qasm_label(self) -> str:
         return "ccx"
 
-    def congruent(self, use_toffolis: bool = True) -> list[Gate]:
+    def congruent(self) -> list[Gate]:
         """Congruent representation of ``TOFFOLI`` gate.
 
-        This is a helper method for the decomposition of multi-control ``X`` gates.
         The congruent representation is based on Sec. 6.2 of
         `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
         The sequence of the gates produced here has the same effect as ``TOFFOLI``
         with the phase of the ``|101>`` state reversed.
-
-        Args:
-            use_toffolis: If ``True`` a single ``TOFFOLI`` gate is returned.
-                If ``False`` the congruent representation is returned.
 
         Returns:
             List with ``RY`` and ``CNOT`` gates that have the same effect as

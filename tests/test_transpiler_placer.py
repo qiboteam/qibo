@@ -1,8 +1,7 @@
 import networkx as nx
 import pytest
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
@@ -198,6 +197,17 @@ def test_star_connectivity_placer_error(first, star_connectivity):
     chip.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4)])
     with pytest.raises(ConnectivityError):
         placer = StarConnectivityPlacer(chip)
+        placer(circ)
+
+
+def test_star_connectivity_placer_wrong_node_count(star_connectivity):
+    """StarConnectivityPlacer raises when the graph does not have 5 nodes."""
+    chip = nx.Graph()
+    chip.add_edges_from([(0, 1), (1, 2), (2, 3)])  # 4 nodes
+    circ = Circuit(4)
+    circ.add(gates.CZ(0, 1))
+    placer = StarConnectivityPlacer(chip)
+    with pytest.raises(ConnectivityError):
         placer(circ)
 
 

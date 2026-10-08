@@ -1,4 +1,9 @@
+from qibo.transpiler.multicontrolled_decompositions import (
+    multi_controlled_decomposition,
+)
 from qibo.transpiler.optimizer import (
+    ConsolidateBlocks,
+    FixedPoint,
     InverseCancellation,
     Optimize1qGatesDecomposition,
     ParametrizedGateFusion,
@@ -22,6 +27,8 @@ from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 __all__ = [
+    "ConsolidateBlocks",
+    "FixedPoint",
     "InverseCancellation",
     "NativeGates",
     "Optimize1qGatesDecomposition",
@@ -43,4 +50,5 @@ __all__ = [
     "Subgraph",
     "TGateRules",
     "Unroller",
+    "multi_controlled_decomposition",
 ]

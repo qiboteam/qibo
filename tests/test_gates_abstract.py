@@ -6,10 +6,9 @@ from math import pi
 
 import pytest
 
-from qibo import gates, matrices
+from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.gates import Gate, abstract
-from qibo.models import Circuit
 
 
 @pytest.mark.parametrize(
@@ -103,12 +102,11 @@ def test_x_decompose_with_few_controls():
     assert isinstance(decomp[0], gates.X)
 
 
-@pytest.mark.parametrize("use_toffolis", [True, False])
-def test_x_decomposition_errors(use_toffolis):
+def test_x_decomposition_errors():
     """Check ``X`` decomposition errors."""
     gate = gates.X(0).controlled_by(1, 2, 3, 4)
     with pytest.raises(ValueError):
-        _ = gate.decompose(2, 3, use_toffolis=use_toffolis)
+        _ = gate.decompose(2, 3)
 
 
 @pytest.mark.parametrize(
@@ -502,6 +500,21 @@ def test_fused_gate():
 
 def test_generator_eigenvalue():
     gate = gates.H(0)
+    with pytest.raises(NotImplementedError):
+        gate.generator_eigenvalue()
+
+
+@pytest.mark.parametrize("gate_cls", ["RXX", "RYY", "RZZ", "RZX"])
+def test_generator_eigenvalue_two_qubit(gate_cls):
+    """Two-qubit rotations share the single-qubit generator eigenvalue of 0.5."""
+    gate = getattr(gates, gate_cls)(0, 1, 0.1)
+    assert gate.generator_eigenvalue() == 0.5
+
+
+def test_generator_eigenvalue_rxxyy_not_implemented():
+    """RXXYY's generator (XX + YY) / 4 has eigenvalues {±1/2, 0, 0}, so the
+    simple parameter-shift eigenvalue does not apply to it."""
+    gate = gates.RXXYY(0, 1, 0.1)
     with pytest.raises(NotImplementedError):
         gate.generator_eigenvalue()
 

@@ -506,7 +506,10 @@ class Circuit:
         """Decomposes circuit's gates to gates supported by OpenQASM.
 
         Args:
-            free (int): Ids of free (work) qubits to use for gate decomposition.
+            free (int): Ids of free (work) qubits that can be used as dirty auxiliary
+                qubits in the decomposition of multi-controlled gates, that is, they
+                can be in any state and are left unchanged. They must not be
+                qubits that the decomposed gates act on.
             method (str, optional): Choice of gate set for the decomposition.
                 If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
                 :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
@@ -517,6 +520,10 @@ class Circuit:
                 :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
                 :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
                 and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
+            kwargs (dict, optional): Additional arguments passed to
+                :meth:`qibo.gates.abstract.Gate.decompose` for each gate. For example,
+                ``clean``, ``minimize_toffolis`` and ``minimize_depth`` select
+                other decompositions of multi-controlled gates.
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: Circuit that contains only

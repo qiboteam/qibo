@@ -254,7 +254,14 @@ def ZNE(
             )
         expected_values.append(val)
 
-    expected_values = backend.cast(expected_values, dtype=type(expected_values[0]))
+    # val is a plain float from get_expectation_val_with_readout_mitigation
+    # (nshots is not None), but a backend-native tensor (e.g. a cupy 0-d
+    # array) when nshots is None; only the former lacks .dtype, and type(x)
+    # is not a valid dtype for the latter.
+    expected_values = backend.cast(
+        expected_values,
+        dtype=getattr(expected_values[0], "dtype", type(expected_values[0])),
+    )
 
     gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
     gamma = backend.cast(gamma, dtype=gamma.dtype)
@@ -521,7 +528,15 @@ def CDR(
     params = backend.random_sample(nparams)
 
     train_val_noisy = train_val["noisy"]
-    train_val_noisy = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
+    # val_noisy is a plain float when it comes from
+    # get_expectation_val_with_readout_mitigation (nshots is not None), but a
+    # backend-native tensor (e.g. a cupy 0-d array) when nshots is None; only
+    # the former lacks .dtype, and type(x) is not a valid dtype for the latter
+    # (e.g. type(cupy.ndarray(...)) is the class cupy.ndarray itself).
+    train_val_noisy = backend.cast(
+        train_val_noisy,
+        dtype=getattr(train_val_noisy[0], "dtype", type(train_val_noisy[0])),
+    )
 
     train_val_noiseless = train_val["noise-free"]
     train_val_noiseless = backend.cast(
@@ -629,10 +644,7 @@ def vnCDR(
     backend.set_seed(seed)
 
     if model is None:
-        if backend.platform in ("cupy", "cuquantum"):
-            model = lambda x, *params: np.sum(x * np.vstack(params), axis=0)
-        else:
-            model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
+        model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
 
     if readout is None:
         readout = {}

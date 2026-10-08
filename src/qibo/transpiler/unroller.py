@@ -2,11 +2,10 @@ from enum import EnumMeta, Flag, auto
 from functools import reduce
 from operator import or_
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates import Gate
-from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.decompositions import (
     cz_dec,
@@ -90,22 +89,30 @@ class NativeGates(Flag, metaclass=FlagMeta):
 
 # TODO: Make setting single-qubit native gates more flexible
 class Unroller:
-    """Decomposes a circuit to native gates."""
+    """Decomposes a circuit to native gates.
+
+    Args:
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
+            Native gates to use in the transpiled circuit.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use for
+            gate matrix. Defaults to ``None``.
+        use_dirty_ancillas (bool, optional): If ``True``, the qubits of the circuit
+            that a multi-controlled gate does not act on are used as dirty auxiliary
+            qubits in its decomposition, which makes the cost of a multi-controlled
+            :class:`qibo.gates.X` linear in the number of controls. They can be in
+            any state and are left unchanged. Not using dirty auxiliary qubits makes
+            the gate count quadratic in the number of controls. Defaults to ``False``.
+    """
 
     def __init__(
         self,
         native_gates: NativeGates,
         backend: Backend | None = None,
+        use_dirty_ancillas: bool = False,
     ):
         self.native_gates = native_gates
         self.backend = backend
-        """Initializes the unroller.
-
-        Args:
-            native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
-                Native gates to use in the transpiled circuit.
-            backend (:class:`qibo.backends.Backend`): Backend to use for gate matrix.
-        """
+        self.use_dirty_ancillas = use_dirty_ancillas
 
     def __call__(self, circuit: Circuit) -> Circuit:
         """Decomposes a circuit to native gates.
@@ -118,11 +125,17 @@ class Unroller:
         """
         translated_circuit = Circuit(**circuit.init_kwargs)
         for gate in circuit.queue:
+            free = (
+                tuple(q for q in range(circuit.nqubits) if q not in gate.qubits)
+                if self.use_dirty_ancillas and gate.is_controlled_by
+                else ()
+            )
             translated_circuit.add(
                 translate_gate(
                     gate,
                     self.native_gates,
                     backend=self.backend,
+                    free=free,
                 )
             )
         return translated_circuit
@@ -132,6 +145,7 @@ def translate_gate(
     gate,
     native_gates: NativeGates,
     backend: Backend | None = None,
+    free: tuple[int, ...] = (),
 ) -> list[Gate]:
     """Maps gates to a hardware-native implementation.
 
@@ -142,6 +156,9 @@ def translate_gate(
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use
             for gate matrix. If ``None``, defaults to the global backend.
             Defaults to ``None``.
+        free (tuple[int, ...], optional): Ids of free qubits that can be used as
+            dirty auxiliary qubits to decompose multi-controlled gates. Defaults
+            to an empty tuple, which uses no auxiliary qubits.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Native gates that decompose the input gate.
@@ -155,6 +172,12 @@ def translate_gate(
         gate.basis_gates = len(gate.basis_gates) * [gates.Z]
         gate.basis = []
         return gate
+
+    if gate.is_controlled_by and len(gate.control_qubits) > 1:
+        translated = []
+        for decomposed_gate in gate.decompose(*free):
+            translated.extend(translate_gate(decomposed_gate, native_gates, backend))
+        return translated
 
     if len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates, backend)

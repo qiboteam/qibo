@@ -11,3 +11,4 @@ the public API.
 
     qibo
     hep
+    ui

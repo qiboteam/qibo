@@ -6,8 +6,7 @@ import math
 
 import numpy as np
 
-from qibo import gates, set_backend
-from qibo.models import Circuit
+from qibo import Circuit, gates, set_backend
 from qibo.models.qcnn import QuantumCNN
 
 num_angles = 21

@@ -86,6 +86,16 @@ Quantum Machine Learning
     tutorials/qclustering/README.md
     tutorials/adiabatic_qml/adiabatic-qml.ipynb
 
+
+Quantum Chemistry
+^^^^^^^^^^^^^^^^^
+
+Qibo can be combined with `Qibochem`_, a quantum chemistry plugin for Qibo,
+to simulate the electronic structure of molecular systems.
+
+.. _`Qibochem`: https://github.com/qiboteam/qibochem
+
+
 Applications by algorithm
 -------------------------
 
@@ -140,14 +150,6 @@ Adiabatic Evolution
     tutorials/adiabatic/README.md
     tutorials/adiabatic3sat/README.md
 
-
-Diagonalization
-^^^^^^^^^^^^^^^
-
-.. toctree::
-    :maxdepth: 1
-
-    tutorials/dbi/dbi_tutorial_basic_intro.ipynb
 
 FALQON
 ^^^^^^

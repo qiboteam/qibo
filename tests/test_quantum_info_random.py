@@ -1,6 +1,7 @@
 """Tests for the quantum_info.random_ensembles module."""
 
 from functools import reduce
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -173,7 +174,7 @@ def test_random_quantum_channel(backend, representation, measure, rank, order):
     with pytest.raises(ValueError):
         random_quantum_channel(4, representation="Choi", backend=backend)
     with pytest.raises(ValueError):
-        random_quantum_channel(4, measure="bcsz", order="system")
+        random_quantum_channel(4, measure="bcsz", order="system", backend=backend)
 
     # All subroutines are already tested elsewhere,
     # so here we only execute them once for coverage
@@ -296,6 +297,9 @@ def test_random_pauli_errors(backend):
         random_pauli(q, depth, backend=backend)
     with pytest.raises(ValueError):
         q, depth, max_qubits = 4, 1, 3
+        random_pauli(q, depth, max_qubits=max_qubits, backend=backend)
+    with pytest.raises(ValueError):
+        q, depth, max_qubits = [0, 5], 1, 3
         random_pauli(q, depth, max_qubits=max_qubits, backend=backend)
     with pytest.raises(TypeError):
         q, depth = 2, 1
@@ -493,3 +497,39 @@ def test_random_stochastic_matrix(backend):
     # tests warning for max_iterations
     dims = 4
     random_stochastic_matrix(dims, bistochastic=True, max_iterations=1, backend=backend)
+
+
+def test_random_pauli_hamiltonian_tensorflow(backend):
+    """Test ``random_pauli_hamiltonian`` with a tensorflow backend to cover
+    the ``to_numpy`` conversion."""
+    # Create a mock backend with platform="tensorflow"
+    mock_backend = MagicMock()
+    mock_backend.platform = "tensorflow"
+    mock_backend.name = "tensorflow"
+    mock_backend.set_seed = MagicMock()
+
+    # eigenvectors returns (eigenvalues, eigenvectors)
+    d = 4  # 2 qubits
+    mock_eigenvalues = np.array([0.0, 1.0, 2.0, 3.0])
+    mock_eigenvectors = np.eye(4)
+    mock_backend.eigenvectors.return_value = (mock_eigenvalues, mock_eigenvectors)
+
+    # to_numpy returns the input as-is
+    mock_backend.to_numpy.side_effect = lambda x: x
+
+    # random_hermitian needs to work - patch it to return a simple matrix
+    mock_hamiltonian = np.eye(d)
+    with (
+        patch(
+            "qibo.quantum_info.random_ensembles.random_hermitian",
+            return_value=mock_hamiltonian,
+        ),
+        patch(
+            "qibo.quantum_info.random_ensembles._check_backend",
+            return_value=mock_backend,
+        ),
+    ):
+        result = random_pauli_hamiltonian(
+            nqubits=2, normalize=False, seed=42, backend=mock_backend
+        )
+        assert result is not None

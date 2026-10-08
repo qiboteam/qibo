@@ -79,8 +79,19 @@ class Hamiltonian(AbstractHamiltonian):
 
     @backend.setter
     def backend(self, new_backend: Backend) -> None:
+        old_backend = self._backend
         self._backend = new_backend
-        self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
+        # bridge through numpy when possible: new_backend.cast can't assume
+        # self._matrix is a tensor type it understands (e.g. a cupy array,
+        # if switching away from a cupy backend). Some backends (e.g.
+        # CliffordBackend) don't implement to_numpy at all, since they're
+        # not meant to hold dense matrices this way; for those, cast
+        # self._matrix directly, matching the pre-existing behavior.
+        try:
+            matrix = old_backend.to_numpy(self._matrix)
+        except NotImplementedError:
+            matrix = self._matrix
+        self._matrix = new_backend.cast(matrix, dtype=new_backend.dtype)
 
     def eigenvalues(self, k: int = 6) -> ArrayLike:
         if self._eigenvalues is None:
@@ -362,9 +373,21 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @backend.setter
     def backend(self, new_backend: Backend) -> None:
+        old_backend = self._backend
         self._backend = new_backend
         if self._matrix is not None:
-            self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
+            # bridge through numpy when possible: new_backend.cast can't
+            # assume self._matrix is a tensor type it understands (e.g. a
+            # cupy array, if switching away from a cupy backend). Some
+            # backends (e.g. CliffordBackend) don't implement to_numpy at
+            # all, since they're not meant to hold dense matrices this way;
+            # for those, cast self._matrix directly, matching the
+            # pre-existing behavior.
+            try:
+                matrix = old_backend.to_numpy(self._matrix)
+            except NotImplementedError:
+                matrix = self._matrix
+            self._matrix = new_backend.cast(matrix, dtype=new_backend.dtype)
 
     @property
     def dense(self) -> Hamiltonian:
