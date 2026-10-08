@@ -14,6 +14,7 @@ from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_gaussian_matrix,
     random_hermitian,
+    random_isometry,
     random_pauli,
     random_pauli_hamiltonian,
     random_quantum_channel,
@@ -137,6 +138,71 @@ def test_random_hermitian(backend):
     backend.assert_allclose(all(eigenvalues <= 1), True)
 
 
+def test_random_isometry_errors(backend):
+    with pytest.raises(TypeError):
+        random_isometry("4", backend=backend)
+    with pytest.raises(TypeError):
+        random_isometry(4, rank=2.0, backend=backend)
+    with pytest.raises(ValueError):
+        random_isometry(0, backend=backend)
+    with pytest.raises(ValueError):
+        random_isometry(4, rank=0, backend=backend)
+    with pytest.raises(ValueError):
+        random_isometry(2, rank=3, backend=backend)
+
+
+@pytest.mark.parametrize("seed", [None, 10])
+@pytest.mark.parametrize("dims,rank", [(4, None), (4, 4), (8, 3), (5, 1)])
+def test_random_isometry(backend, dims, rank, seed):
+    matrix = random_isometry(dims, rank, seed=seed, backend=backend)
+
+    rank = dims if rank is None else rank
+    assert tuple(matrix.shape) == (dims, rank)
+
+    # columns must be orthonormal, i.e. V^dagger V = identity
+    gram = backend.conj(matrix).T @ matrix
+    backend.assert_allclose(gram, backend.identity(rank), atol=PRECISION_TOL)
+
+    # if rank == dims, then V must be a unitary matrix
+    if rank == dims:
+        projector = matrix @ backend.conj(matrix).T
+        backend.assert_allclose(projector, backend.identity(dims), atol=PRECISION_TOL)
+
+
+def test_random_isometry_seed(backend):
+    matrix_1 = random_isometry(6, 2, seed=7, backend=backend)
+    matrix_2 = random_isometry(6, 2, seed=7, backend=backend)
+    matrix_3 = random_isometry(6, 2, seed=8, backend=backend)
+
+    backend.assert_allclose(matrix_1, matrix_2)
+    assert float(backend.matrix_norm(matrix_1 - matrix_3)) > PRECISION_TOL
+
+
+def test_random_isometry_haar_moments(backend):
+    dims, rank, nsamples = 4, 2, 1000
+
+    samples = backend.cast(
+        [
+            random_isometry(dims, rank, seed=seed, backend=backend)
+            for seed in range(nsamples)
+        ]
+    )
+
+    # V V^dagger is the projector onto a random ``rank``-dimensional subspace, and
+    # its average over the Haar measure is (rank / dims) times the identity
+    projectors = backend.einsum("sij,skj->sik", samples, samples.conj())
+    np.testing.assert_allclose(
+        backend.mean(projectors, axis=0),
+        (rank / dims) * backend.identity(dims),
+        atol=5e-2,
+    )
+
+    # marginal distribution of each entry is the same as for Haar unitaries:
+    # |V_ij|^2 ~ Beta(1, dims - 1), whose second moment is 2 / (dims * (dims + 1))
+    moment = backend.mean(backend.abs(samples) ** 4)
+    backend.assert_allclose(moment, 2 / (dims * (dims + 1)), atol=2e-2)
+
+
 @pytest.mark.parametrize("measure", [None, "haar"])
 def test_random_unitary(backend, measure):
     with pytest.raises(ValueError):
@@ -256,6 +322,52 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
                 np.abs(backend.to_numpy(exp_value)) <= normalization
                 for exp_value in state[1:]
             )
+
+
+@pytest.mark.parametrize("metric", ["ginibre", "bures"])
+@pytest.mark.parametrize("rank", [1, 2, 3, 4])
+def test_random_density_matrix_rank(backend, metric, rank):
+    dims = 4
+    state = random_density_matrix(
+        dims, rank=rank, metric=metric, seed=10, backend=backend
+    )
+
+    backend.assert_allclose(backend.trace(state), 1.0, atol=PRECISION_TOL)
+
+    eigenvalues = backend.eigvalsh(backend.to_numpy(state))
+    assert backend.sum(eigenvalues > PRECISION_TOL) == rank
+    assert backend.all(eigenvalues > -PRECISION_TOL)
+
+
+def test_random_density_matrix_rank_errors(backend):
+    with pytest.raises(ValueError):
+        random_density_matrix(4, rank=0, metric="ginibre", backend=backend)
+    with pytest.raises(ValueError):
+        random_density_matrix(4, rank=2, backend=backend)
+
+    # rank equal to dims is allowed for the Hilbert-Schmidt metric
+    random_density_matrix(4, rank=4, metric="hilbert-schmidt", backend=backend)
+
+
+@pytest.mark.parametrize(
+    "metric,expected",
+    [("hilbert-schmidt", 4 / 5), ("ginibre", 4 / 5), ("bures", 7 / 8)],
+)
+def test_random_density_matrix_mean_purity(backend, metric, expected):
+    # average purity over qubit states: 2 * N / (N^2 + 1) for the Hilbert-Schmidt
+    # measure and (5 * N^2 + 1) / (2 * N * (N^2 + 2)) for the Bures measure, with N = 2
+    nsamples = 1000
+    purities = [
+        float(
+            purity(
+                random_density_matrix(2, metric=metric, seed=seed, backend=backend),
+                backend=backend,
+            )
+        )
+        for seed in range(nsamples)
+    ]
+
+    backend.assert_allclose(backend.mean(purities), expected, atol=2e-2)
 
 
 @pytest.mark.parametrize("nqubits,nsamples", zip((1, 2), (int(3e2), int(3e3))))

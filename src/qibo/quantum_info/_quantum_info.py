@@ -261,14 +261,6 @@ def _random_unitary_haar(dims: int):
     return Q @ R
 
 
-def _random_density_matrix_bures(dims: int, rank: int, mean: float, stddev: float):
-    state = ENGINE.identity(dims, dtype=ENGINE.complex128)
-    state += _random_unitary(dims)
-    state = state @ _random_gaussian_matrix(dims, rank, mean, stddev)
-    state = state @ ENGINE.conj(state).T
-    return state / ENGINE.trace(state)
-
-
 def _fill_tril(mat, symmetric):
     """Add symmetric random ints to off-diagonals"""
     dim = mat.shape[0]

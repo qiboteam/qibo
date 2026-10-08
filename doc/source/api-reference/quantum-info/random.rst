@@ -22,6 +22,12 @@ Random Hermitian matrix
 .. autofunction:: qibo.quantum_info.random_hermitian
 
 
+Random isometry
+---------------
+
+.. autofunction:: qibo.quantum_info.random_isometry
+
+
 Random unitary matrix
 ---------------------
 
