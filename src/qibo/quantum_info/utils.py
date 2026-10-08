@@ -642,16 +642,16 @@ def _greedy_pack(matchings: list[list[tuple[int, int]]], m: int):
 
 def decompose_permutation(sigma: list[int] | tuple[int, ...], m: int, backend=None):
     """
-     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
     and a power‑of‑two budget ``m``, this function factors ``sigma``
     into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}` such that:
-        - each layer has at most :math:`m` disjoint transpositions
-        - each layer moves a power‑of‑two number of indices.
+    - each layer has at most :math:`m` disjoint transpositions
+    - each layer moves a power‑of‑two number of indices.
 
     We do this as follows:
-        1) Cycle extraction – split sigma into disjoint cycles.
-        2) Star factorisation – a k‑cycle becomes (k-1) hub–spoke swaps.
-        3) Greedy packing – merge swaps into layers while keeping rules.
+    1) Cycle extraction – split sigma into disjoint cycles.
+    2) Star factorisation – a k‑cycle becomes (k-1) hub–spoke swaps.
+    3) Greedy packing – merge swaps into layers while keeping rules.
 
     Args:
         sigma (list[int] or tuple[int]): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.

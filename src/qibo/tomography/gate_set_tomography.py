@@ -321,6 +321,7 @@ def _gate_tomography(
             the current backend. Defaults to ``None``.
         ancilla (int, optional): Controls whether SWAP gates are applied to replace qubits 0
             and/or 1 with fresh ancilla qubits.
+
             - If `ancilla = 0`, a single SWAP gate is applied on qubit0 and an ancilla qubit
             - If `ancilla = 1`, a single SWAP gate is applied on qubit1 and an ancilla qubit
             - If `ancilla = 2`, SWAP gates are applied between qubit 0 and one ancilla qubit,
@@ -411,20 +412,25 @@ def GST(
     """Run Gate Set Tomography on the input ``gate_set``.
 
     Example 1:
-        Given the following ``gate_set``: ``gate_set = [(gates.RX, [np.pi/3]), gates.Z,
-            (gates.PRX, [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), (gates.Unitary,
-            [np.array([[1, 0], [0, 1]])]), gates.CNOT]``, one can can simply run GST to extract
-            calibration matrices for 1- and 2-qubits (``g_1q`` and ``g_2q`` respectively):
-            ``` python
-            g_1q, g_2q, *gates_GST = GST(gate_set=gate_set,
-                                         nshots=int(1e4),
-                                         include_empty=True,
-                                         backend=NumpyBackend(),
-                                         )
-            ```
-    Other examples:
-        To include 2 examples for 1qb & 2qb basis operation when probabilistic error cancellation
-        is ready.
+        Given the following ``gate_set``:
+
+        .. code-block:: python
+
+            gate_set = [(gates.RX, [np.pi/3]), gates.Z,
+                        (gates.PRX, [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]),
+                        (gates.Unitary, [np.array([[1, 0], [0, 1]])]), gates.CNOT]
+
+        one can simply run GST to extract calibration matrices for 1- and 2-qubits
+        (``g_1q`` and ``g_2q`` respectively):
+
+            .. code-block:: python
+
+                g_1q, g_2q, *gates_GST = GST(gate_set=gate_set,
+                                              nshots=int(1e4),
+                                              include_empty=True,
+                                              backend=NumpyBackend(),
+                                              )
+
     Args:
         gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
             GST on. For instance, ``gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX,
@@ -461,6 +467,7 @@ def GST(
             :math:`2`-qubit gate.)
         ancilla (int, optional): Controls whether SWAP gates are applied to replace qubits 0
             and/or 1 with fresh ancilla qubits.
+
             - If `ancilla = 0`, a single SWAP gate is applied on qubit0 and an ancilla qubit
             - If `ancilla = 1`, a single SWAP gate is applied on qubit1 and an ancilla qubit
             - If `ancilla = 2`, SWAP gates are applied between qubit 0 and one ancilla qubit,

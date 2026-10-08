@@ -931,29 +931,29 @@ class Circuit:
         the all gates sorted in decreasing number of appearance.
 
         Example:
-            .. code-block:: python
-                from qibo import Circuit, gates
 
-                circuit = Circuit(3)
-                circuit.add(gates.H(0))
-                circuit.add(gates.H(1))
-                circuit.add(gates.CNOT(0, 2))
-                circuit.add(gates.CNOT(1, 2))
-                circuit.add(gates.H(2))
-                circuit.add(gates.TOFFOLI(0, 1, 2))
+        .. code-block:: python
 
-                circuit.summary()
+            from qibo import Circuit, gates
 
-                # Prints
-                '''
-                Circuit depth = 5
-                Total number of gates = 6
-                Number of qubits = 3
-                Most common gates:
-                h: 3
-                cx: 2
-                ccx: 1
-                '''
+            circuit = Circuit(3)
+            circuit.add(gates.H(0))
+            circuit.add(gates.H(1))
+            circuit.add(gates.CNOT(0, 2))
+            circuit.add(gates.CNOT(1, 2))
+            circuit.add(gates.H(2))
+            circuit.add(gates.TOFFOLI(0, 1, 2))
+
+            circuit.summary()
+
+            # Output:
+            # Circuit depth = 5
+            # Total number of gates = 6
+            # Number of qubits = 3
+            # Most common gates:
+            # h: 3
+            # cx: 2
+            # ccx: 1
         """
         sys.stdout.write(self.summary_string() + "\n")
 
