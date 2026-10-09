@@ -2933,3 +2933,86 @@ returned as well:
        noise_model = noise_model,
        pauli_liouville = True,
    )
+
+.. _gst_circuit_example:
+
+How to perform Gate Set Tomography on a circuit?
+------------------------------------------------
+
+In order to obtain an estimated representation of a set of quantum gates in a particular
+noisy environment, qibo provides the
+:class:`qibo.tomography.gate_set_tomography.GateSetTomography` protocol in its tomography
+module.
+
+Let's first define the set of gates we want to estimate. Each gate is characterized
+by a circuit, of one or two qubits, that implements it:
+
+.. testcode::
+
+   import math
+
+   from qibo import Circuit, gates
+
+   gate_set = [
+       gates.RX(0, math.pi / 3),
+       gates.Z(0),
+       gates.PRX(0, math.pi / 2, math.pi / 3),
+       gates.GPI(0, math.pi / 7),
+       gates.CNOT(0, 1),
+   ]
+
+   circuits = []
+   for gate in gate_set:
+       circuit = Circuit(len(gate.qubits))
+       circuit.add(gate)
+       circuits.append(circuit)
+
+For simulation purposes we can define a noise model. Naturally this is not needed when
+running on real quantum hardware, which is intrinsically noisy. For example, we can
+suppose that the gates :math:`X`, :math:`H` and :math:`CZ` are noisy:
+
+.. testcode::
+
+   from qibo.noise import NoiseModel, DepolarizingError
+
+   noise_model = NoiseModel()
+   noise_model.add(DepolarizingError(1e-3), gates.X)
+   noise_model.add(DepolarizingError(1e-2), gates.H)
+   noise_model.add(DepolarizingError(3e-2), gates.CZ)
+
+Then the estimated representation of the gates in this noisy environment can be extracted
+by running the GST on each circuit:
+
+.. testcode::
+
+   from qibo.tomography import GateSetTomography
+
+   gst = GateSetTomography()
+   estimated_gates = [
+       gst(circuit, nshots=10000, noise_model=noise_model) for circuit in circuits
+   ]
+
+In some cases the empty circuit matrix :math:`\tilde{g}` can also be useful. It is estimated
+by running the GST on an empty circuit of one and two qubits, respectively:
+
+.. testcode::
+
+   empty_1q = gst(Circuit(1), nshots=10000, noise_model=noise_model)
+   empty_2q = gst(Circuit(2), nshots=10000, noise_model=noise_model)
+
+Similarly, the Pauli-Liouville representation of the gates can be directly
+returned as well. The empty circuit matrix is estimated in this case, and it can be
+provided through the ``gram_matrix`` argument to avoid estimating it for every gate:
+
+.. testcode::
+
+   estimated_gates = [
+       gst(
+           circuit,
+           nshots=10000,
+           noise_model=noise_model,
+           pauli_liouville=True,
+           gram_matrix=empty_1q if circuit.nqubits == 1 else empty_2q,
+       )
+       for circuit in circuits
+   ]

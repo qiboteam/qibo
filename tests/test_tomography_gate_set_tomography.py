@@ -1,16 +1,19 @@
+import math
 from functools import reduce
-from itertools import repeat
+from itertools import product, repeat
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 from sympy import S
 
 from qibo import Circuit, gates
-from qibo.backends import NumpyBackend
+from qibo.backends import NumpyBackend, construct_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
 from qibo.symbols import Z
+from qibo.tomography import GateSetTomography, Tomography
 from qibo.tomography.gate_set_tomography import (
     GST,
     _extract_gate,
@@ -711,3 +714,377 @@ def test_GST_with_transpiler(backend, star_connectivity):
     backend.assert_allclose(empty_2q, T_empty_2q, atol=1e-1)
     for standard, transpiled in zip(approx_gates, T_approx_gates):
         backend.assert_allclose(standard, transpiled, atol=1e-1)
+
+
+GAUGE = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
+"""Gram matrix of the ideal fiducial states and measurements of a single qubit."""
+
+MEASUREMENT_BASES = (gates.Z, gates.X, gates.Y, gates.Z)
+"""Gates of the bases that measure :math:`I`, :math:`X`, :math:`Y` and :math:`Z`."""
+
+PREPARATIONS = ((gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S))
+"""Gates that prepare :math:`|0\\rangle`, :math:`|1\\rangle`, :math:`|+\\rangle`
+and :math:`|y+\\rangle`."""
+
+TARGETS = [
+    (gates.SX, (0,)),
+    (gates.RX, (0, math.pi / 4)),
+    (gates.PRX, (0, math.pi, math.pi / 2)),
+    (gates.Unitary, (np.eye(2), 0)),
+    (gates.CY, (0, 1)),
+]
+"""Gates, and their arguments, characterized in the tests."""
+
+
+@pytest.mark.parametrize(
+    "nqubits, target_gates, auxiliary, ground_truth",
+    [
+        (1, [gates.X(0)], [0], GROUND_TRUTH_GATE_X),
+        (2, [gates.X(0), gates.T(1)], [0], GROUND_TRUTH_GATE_XT_0),
+        (2, [gates.X(0), gates.T(1)], [1], GROUND_TRUTH_GATE_XT_1),
+        (2, [], [0, 1], GROUND_TRUTH_NULL_2),
+        (2, [gates.Unitary(np.eye(4), 0, 1)], [1], GROUND_TRUTH_I_2),
+    ],
+)
+def test_call_auxiliary(backend, nqubits, target_gates, auxiliary, ground_truth):
+    """Auxiliary qubits reset the qubits they replace before the circuit acts."""
+    circuit = Circuit(nqubits)
+    circuit.add(target_gates)
+
+    matrix = GateSetTomography()(
+        circuit, nshots=int(1e4), auxiliary=auxiliary, backend=backend
+    )
+
+    assert matrix.shape == (4**nqubits, 4**nqubits)
+    backend.assert_allclose(matrix, ground_truth, rtol=1e-1, atol=1e-1)
+
+
+def test_call_auxiliary_pauli_liouville(backend):
+    """The Gram matrix is estimated without auxiliary qubits, thus it is invertible."""
+    circuit = Circuit(1)
+    circuit.add(gates.X(0))
+
+    estimate = GateSetTomography()(
+        circuit,
+        nshots=int(1e4),
+        auxiliary=[0],
+        pauli_liouville=True,
+        backend=backend,
+    )
+
+    # reset to the zero state, followed by the X gate
+    target = np.zeros((4, 4))
+    target[0, 0] = 1
+    target[3, 0] = -1
+
+    backend.assert_allclose(estimate, target, atol=1e-1)
+
+
+def test_call_gauge_matrix(backend):
+    """The estimate in the Pauli-Liouville representation is defined up to the gauge."""
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, math.pi / 3))
+
+    target = to_pauli_liouville(
+        circuit.unitary(backend), normalize=True, backend=backend
+    )
+    gauge = backend.cast(GAUGE, dtype=backend.complex128)
+
+    # the exact Gram matrix is given, to isolate the effect of the gauge matrix
+    kwargs = {
+        "nshots": int(1e4),
+        "pauli_liouville": True,
+        "gram_matrix": GAUGE,
+        "backend": backend,
+    }
+    gst = GateSetTomography()
+
+    backend.assert_allclose(gst(circuit, **kwargs), target, atol=1e-1)
+    backend.assert_allclose(
+        gst(circuit, gauge_matrix=GAUGE, **kwargs), target, atol=1e-1
+    )
+    # the identity gauge matrix is a similarity transformation of the default one
+    backend.assert_allclose(
+        gst(circuit, gauge_matrix=np.eye(4), **kwargs),
+        backend.inv(gauge) @ target @ gauge,
+        atol=1e-1,
+    )
+
+
+@pytest.mark.parametrize(
+    "gauge",
+    [
+        np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]]),
+        np.zeros((4, 4)),
+        np.eye(3),
+    ],
+)
+def test_call_gauge_matrix_errors(backend, gauge):
+    """The gauge matrix must be an invertible 4 x 4 matrix."""
+    with pytest.raises(ValueError):
+        GateSetTomography()(
+            Circuit(1), pauli_liouville=True, gauge_matrix=gauge, backend=backend
+        )
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_call_gram_matrix(backend, nqubits):
+    """The matrix of an empty circuit is the Gram matrix of the ideal fiducials."""
+    gram = GateSetTomography()(Circuit(nqubits), nshots=int(1e4), backend=backend)
+
+    ideal = GAUGE if nqubits == 1 else np.kron(GAUGE, GAUGE)
+
+    backend.assert_allclose(gram, ideal, atol=1e-1)
+
+
+def test_call_gram_matrix_argument(backend):
+    """A given Gram matrix is used, instead of estimating it again."""
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, math.pi / 3))
+
+    target = to_pauli_liouville(
+        circuit.unitary(backend), normalize=True, backend=backend
+    )
+
+    gst = GateSetTomography()
+    with patch.object(
+        GateSetTomography,
+        "execute",
+        autospec=True,
+        side_effect=GateSetTomography.execute,
+    ) as execute:
+        estimated = gst(circuit, nshots=int(1e4), pauli_liouville=True, backend=backend)
+        given = gst(
+            circuit,
+            nshots=int(1e4),
+            pauli_liouville=True,
+            gram_matrix=GAUGE,
+            backend=backend,
+        )
+
+    # the Gram matrix and the circuit, then only the circuit
+    assert [len(call.args[1]) for call in execute.call_args_list] == [12, 12, 12]
+    backend.assert_allclose(estimated, target, atol=1e-1)
+    backend.assert_allclose(given, target, atol=1e-1)
+
+
+@pytest.mark.parametrize("gate_class, arguments", TARGETS)
+def test_call_matrix(backend, gate_class, arguments):
+    """The estimate is the Pauli-Liouville matrix in the basis of the fiducials."""
+    gate = gate_class(*arguments)
+    circuit = Circuit(len(gate.qubits))
+    circuit.add(gate)
+
+    matrix = GateSetTomography()(circuit, nshots=int(1e4), backend=backend)
+
+    ideal = GAUGE if circuit.nqubits == 1 else np.kron(GAUGE, GAUGE)
+    target = to_pauli_liouville(gate.matrix(backend), normalize=True, backend=backend)
+
+    assert matrix.shape == (4**circuit.nqubits, 4**circuit.nqubits)
+    backend.assert_allclose(
+        matrix, target @ backend.cast(ideal, dtype=backend.complex128), atol=1e-1
+    )
+
+
+def test_call_noise_model(backend):
+    """A fully depolarizing noise destroys all the information, but the identity."""
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+
+    noise_model = NoiseModel()
+    noise_model.add(DepolarizingError(1.0))
+
+    matrix = GateSetTomography()(
+        circuit, nshots=int(1e4), noise_model=noise_model, backend=backend
+    )
+
+    exact = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+    backend.assert_allclose(matrix, exact, atol=1e-1)
+
+
+@pytest.mark.parametrize(
+    "first, second",
+    [
+        (gates.T(0), gates.TDG(1)),
+        (gates.RX(0, math.pi / 4), gates.RY(1, math.pi / 3)),
+        (gates.Unitary(np.eye(2), 0), gates.Unitary(np.eye(2), 1)),
+    ],
+)
+def test_call_parallel_gates(backend, first, second):
+    """Single-qubit gates on different qubits are characterized simultaneously."""
+    parallel = Circuit(2)
+    parallel.add([first, second])
+
+    joint = Circuit(2)
+    joint.add(
+        gates.Unitary(backend.kron(first.matrix(backend), second.matrix(backend)), 0, 1)
+    )
+
+    gst = GateSetTomography()
+    backend.assert_allclose(
+        gst(parallel, nshots=int(1e4), backend=backend),
+        gst(joint, nshots=int(1e4), backend=backend),
+        atol=1e-1,
+    )
+
+
+@pytest.mark.parametrize("gate_class, arguments", TARGETS)
+def test_call_pauli_liouville(backend, gate_class, arguments):
+    """The estimate agrees with the exact Pauli-Liouville matrix of the gate."""
+    gate = gate_class(*arguments)
+    circuit = Circuit(len(gate.qubits))
+    circuit.add(gate)
+
+    estimate = GateSetTomography()(
+        circuit, nshots=int(1e4), pauli_liouville=True, backend=backend
+    )
+
+    target = to_pauli_liouville(gate.matrix(backend), normalize=True, backend=backend)
+    backend.assert_allclose(estimate, target, atol=1e-1)
+
+
+@pytest.mark.parametrize("pauli_liouville", [False, True])
+@pytest.mark.parametrize("nqubits, ncircuits", [(1, 12), (2, 240)])
+def test_call_qibolab(nqubits, ncircuits, pauli_liouville):
+    """The default transpiler of ``qibolab`` places all the circuits in the same qubits.
+
+    The outcomes of the dummy platform are not physical, so only the execution is tested,
+    and the ideal Gram matrix is given to avoid inverting a random one.
+    """
+    pytest.importorskip("qibolab")
+    backend = construct_backend("qibolab", platform="dummy")
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.X(qubit) for qubit in range(nqubits))
+
+    with patch.object(
+        GateSetTomography,
+        "execute",
+        autospec=True,
+        side_effect=GateSetTomography.execute,
+    ) as execute:
+        matrix = GateSetTomography()(
+            circuit,
+            nshots=10,
+            pauli_liouville=pauli_liouville,
+            gram_matrix=GAUGE if nqubits == 1 else np.kron(GAUGE, GAUGE),
+            backend=backend,
+        )
+
+    executed = execute.call_args_list[-1].args[1]
+    placements = {tuple(map(str, gst_circuit.wire_names)) for gst_circuit in executed}
+
+    assert matrix.shape == (4**nqubits, 4**nqubits)
+    assert len(executed) == ncircuits
+    assert len(placements) == 1
+
+
+def test_call_transpiler(backend, star_connectivity):
+    """Transpiled circuits give the same estimates."""
+    transpiler = Passes(
+        connectivity=star_connectivity(),
+        passes=[
+            Preprocessing(),
+            Random(),
+            Sabre(),
+            Unroller(NativeGates.default(), backend=backend),
+        ],
+    )
+
+    gst = GateSetTomography()
+    for target in (gates.SX(0), gates.CNOT(0, 1)):
+        circuit = Circuit(len(target.qubits))
+        circuit.add(target)
+
+        backend.assert_allclose(
+            gst(circuit, nshots=int(1e4), transpiler=transpiler, backend=backend),
+            gst(circuit, nshots=int(1e4), backend=backend),
+            atol=1e-1,
+        )
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_circuits(nqubits):
+    """Circuits prepare a fiducial state, apply the circuit, and measure a Pauli string."""
+    circuit = Circuit(nqubits)
+    circuit.add(gates.T(qubit) for qubit in range(nqubits))
+    original = list(circuit.queue)
+
+    gst = GateSetTomography()
+    circuits = gst.circuits(circuit)
+
+    digits = tuple(product(range(4), repeat=nqubits))
+    expected = [(state, pauli) for state in digits for pauli in digits[1:]]
+
+    assert isinstance(gst, Tomography)
+    assert len(circuits) == len(expected) == 4**nqubits * (4**nqubits - 1)
+
+    for gst_circuit, (state, pauli) in zip(circuits, expected):
+        preparation = [
+            (gate, (qubit,))
+            for qubit, digit in enumerate(state)
+            for gate in PREPARATIONS[digit]
+        ]
+        operation = [(gates.T, (qubit,)) for qubit in range(nqubits)]
+        queue = [(type(gate), gate.qubits) for gate in gst_circuit.queue]
+
+        assert gst_circuit.nqubits == nqubits
+        assert gst_circuit.density_matrix
+        # the measurements are preceded by the gates of the change of basis
+        assert queue[: len(preparation + operation)] == preparation + operation
+        assert len(gst_circuit.measurements) == nqubits
+        for qubit, measured in enumerate(gst_circuit.measurements):
+            expected_basis = gates.M(qubit, basis=MEASUREMENT_BASES[pauli[qubit]]).basis
+            assert measured.qubits == (qubit,)
+            assert [(type(gate), gate.qubits) for gate in measured.basis] == [
+                (type(gate), gate.qubits) for gate in expected_basis
+            ]
+
+    # the given circuit is not modified
+    assert list(circuit.queue) == original
+    assert not circuit.measurements
+
+
+@pytest.mark.parametrize(
+    "nqubits, auxiliary, swaps",
+    [
+        (1, [0], [(0, 1)]),
+        (2, [0], [(0, 2)]),
+        (2, [1], [(1, 2)]),
+        (2, [0, 1], [(0, 2), (1, 3)]),
+        (2, [1, 0], [(1, 2), (0, 3)]),
+    ],
+)
+def test_circuits_auxiliary(nqubits, auxiliary, swaps):
+    """Auxiliary qubits are appended, and swapped with the qubits they replace."""
+    circuits = GateSetTomography().circuits(Circuit(nqubits), auxiliary)
+
+    assert len(circuits) == 4**nqubits * (4**nqubits - 1)
+    for gst_circuit in circuits:
+        assert gst_circuit.nqubits == nqubits + len(auxiliary)
+        assert [
+            gate.qubits for gate in gst_circuit.queue if isinstance(gate, gates.SWAP)
+        ] == swaps
+        # only the qubits of the circuit are measured
+        assert [gate.qubits for gate in gst_circuit.measurements] == [
+            (qubit,) for qubit in range(nqubits)
+        ]
+
+
+def test_circuits_errors():
+    """The circuit must be on one or two qubits, without measurements."""
+    gst = GateSetTomography()
+
+    measured = Circuit(1)
+    measured.add(gates.M(0))
+    with pytest.raises(ValueError):
+        gst.circuits(measured)
+
+    toffoli = Circuit(3)
+    toffoli.add(gates.TOFFOLI(0, 1, 2))
+    with pytest.raises(ValueError):
+        gst.circuits(toffoli)
+
+    for nqubits, auxiliary in [(1, [1]), (2, [2]), (2, [-1]), (2, [0, 0]), (2, [0.5])]:
+        with pytest.raises(ValueError):
+            gst.circuits(Circuit(nqubits), auxiliary)

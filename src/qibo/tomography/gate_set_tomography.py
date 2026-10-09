@@ -1,7 +1,9 @@
+import math
 from functools import cache
 from inspect import signature
 from itertools import product
 
+import networkx as nx
 import numpy as np
 from numpy.typing import ArrayLike
 from sympy import S
@@ -13,6 +15,7 @@ from qibo.gates.abstract import Gate
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import NoiseModel
 from qibo.symbols import Symbol
+from qibo.tomography.abstract import Tomography
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes
 from qibo.transpiler.placer import Random
@@ -24,6 +27,298 @@ SUPPORTED_NQUBITS = [1, 2]
 
 ANGLES = ["theta", "phi", "lam", "unitary"]
 """Angle names for parametrized gates."""
+
+FIDUCIAL_BASES = (gates.Z, gates.X, gates.Y, gates.Z)
+"""Bases in which the qubits are measured to estimate the Pauli operators
+:math:`I`, :math:`X`, :math:`Y` and :math:`Z`, respectively."""
+
+FIDUCIAL_STATES = ((gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S))
+"""Gates, in order of application, that prepare the fiducial states
+:math:`|0\\rangle\\langle 0|`, :math:`|1\\rangle\\langle 1|`, :math:`|+\\rangle\\langle +|`
+and :math:`|y+\\rangle\\langle y+|` from the zero state."""
+
+GAUGE_MATRIX = ((1, 1, 1, 1), (0, 0, 1, 0), (0, 0, 0, 1), (1, -1, 0, 0))
+"""Default single-qubit gauge matrix. Its columns are the fiducial states in the
+Pauli basis."""
+
+MEASURED_PAULIS = {
+    nqubits: tuple(product(range(4), repeat=nqubits))[1:]
+    for nqubits in SUPPORTED_NQUBITS
+}
+"""Pauli strings measured for each supported number of qubits, as tuples of the digits
+:math:`\\{0, 1, 2, 3\\} \\equiv \\{I, X, Y, Z\\}`. The identity string is excluded, since
+its expectation value is always :math:`1`."""
+
+
+class GateSetTomography(Tomography):
+    """Gate set tomography (GST) of one- and two-qubit circuits by linear inversion.
+
+    Given a circuit implementing an operation :math:`O` on :math:`n \\in \\{1, 2\\}`
+    qubits, each fiducial state
+    :math:`\\rho_{k} \\in \\{ |0\\rangle\\langle 0|, |1\\rangle\\langle 1|,
+    |+\\rangle\\langle +|, |y+\\rangle\\langle y+| \\}^{\\otimes n}` is prepared and
+    :math:`O` is applied. The output is then measured in each Pauli basis
+    :math:`M_{j} \\in \\{ I, X, Y, Z \\}^{\\otimes n}`, which estimates the
+    :math:`4^{n} \\times 4^{n}` matrix
+
+    .. math::
+        \\tilde{O}_{jk} = \\text{tr}(M_{j} \\, O \\, \\rho_{k}) \\, .
+
+    The same experiments for an empty circuit estimate the Gram matrix of the
+    fiducial states and measurements,
+
+    .. math::
+        \\tilde{g}_{jk} = \\text{tr}(M_{j} \\, \\rho_{k}) \\, ,
+
+    which accounts for state preparation and measurement errors. Then,
+    the linear inversion of Ref. [1] (Sec. 3.2) gives the estimate of :math:`O` in the
+    Pauli-Liouville representation, also known as Pauli transfer matrix,
+
+    .. math::
+        O^{\\text{PL}} = T \\, \\tilde{g}^{-1} \\, \\tilde{O} \\, T^{-1} \\, ,
+
+    where :math:`T` is the gauge matrix. The estimate is defined up to a gauge
+    transformation, and the default :math:`T` is the one that corresponds to the ideal
+    fiducial states, which is the best *a priori* choice in Ref. [1] (Sec. 3.2). It is
+    the tensor product of the single-qubit matrix
+
+    .. math::
+        T = \\begin{pmatrix}
+            1 & 1 & 1 & 1 \\\\
+            0 & 0 & 1 & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+            1 & -1 & 0 & 0
+        \\end{pmatrix} \\, .
+
+    .. note::
+        The Gram matrix must be well-conditioned for its inverse not to amplify the
+        statistical error. Its singular values can be inspected before the
+        inversion, by calling the protocol on an empty circuit [1].
+
+    Example:
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.tomography import GateSetTomography
+
+            circuit = Circuit(1)
+            circuit.add(gates.X(0))
+
+            # Pauli-Liouville representation of a Pauli X gate
+            gst = GateSetTomography()
+            estimate = gst(circuit, nshots=1000, pauli_liouville=True)
+
+    References:
+        1. E. Nielsen *et al.*, *Gate set tomography*,
+           `Quantum 5, 557 (2021) <https://doi.org/10.22331/q-2021-10-05-557>`_,
+           `arXiv:2009.07301 <https://arxiv.org/abs/2009.07301>`_.
+        2. R. Blume-Kohout *et al.*, *Robust, self-consistent, closed-form tomography
+           of quantum logic gates on a trapped ion qubit*,
+           `arXiv:1310.4492 <https://arxiv.org/abs/1310.4492>`_.
+        3. D. Greenbaum, *Introduction to quantum gate set tomography*,
+           `arXiv:1509.02921 <https://arxiv.org/abs/1509.02921>`_.
+        4. S. Endo, S. C. Benjamin and Y. Li, *Practical quantum error mitigation for
+           near-future applications*, `Phys. Rev. X 8, 031027 (2018)
+           <https://doi.org/10.1103/PhysRevX.8.031027>`_.
+    """
+
+    def __call__(
+        self,
+        circuit: Circuit,
+        nshots: int = int(1e4),
+        noise_model: NoiseModel | None = None,
+        auxiliary: list[int] | None = None,
+        pauli_liouville: bool = False,
+        gauge_matrix: ArrayLike | None = None,
+        gram_matrix: ArrayLike | None = None,
+        transpiler: Passes | None = None,
+        backend: Backend | None = None,
+    ) -> ArrayLike:
+        """Estimates the matrix of the operation implemented by ``circuit``.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit, on :math:`1` or
+                :math:`2` qubits and without measurements, implementing the operation
+                to be characterized. An empty circuit gives the Gram matrix. Two
+                single-qubit gates acting on different qubits of a :math:`2`-qubit
+                circuit are characterized simultaneously.
+            nshots (int, optional): number of shots per circuit. Defaults to
+                :math:`10^{4}`.
+            noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied
+                to simulate noisy computations. Defaults to ``None``.
+            auxiliary (list[int], optional): qubits of ``circuit`` that are swapped
+                with fresh auxiliary qubits, in the zero state, right after the
+                fiducial state is prepared, i.e. they are reset before ``circuit``
+                acts on them. Then, the columns of the matrix do not depend on the
+                fiducial state of those qubits. The Gram matrix is always estimated
+                without auxiliary qubits. Defaults to ``None``.
+            pauli_liouville (bool, optional): if ``True``, returns the estimate in
+                the Pauli-Liouville representation. Defaults to ``False``.
+            gauge_matrix (ArrayLike, optional): invertible :math:`4 \\times 4` gauge
+                matrix of a single qubit, used if ``pauli_liouville=True``. For
+                :math:`2` qubits, its tensor product with itself is used. If
+                ``None``, it is the matrix of the ideal fiducial states, given in the
+                class description. Defaults to ``None``.
+            gram_matrix (ArrayLike, optional): Gram matrix used if
+                ``pauli_liouville=True``. If ``None``, it is estimated with the same
+                ``nshots``, ``noise_model`` and ``transpiler``. It can be provided to
+                avoid estimating it again when characterizing several circuits.
+                Defaults to ``None``.
+            transpiler (:class:`qibo.transpiler.pipeline.Passes`, optional):
+                transpiler applied to the circuits before their execution. If
+                ``None`` and the backend is ``qibolab``, it uses a transpiler built from
+                the connectivity and the native gates of the backend. The placement is
+                the same for all the circuits. Defaults to ``None``.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+                to be used in the execution. If ``None``, it uses the current
+                backend. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: :math:`4^{n} \\times 4^{n}` matrix :math:`\\tilde{O}`, or
+            :math:`O^{\\text{PL}}` if ``pauli_liouville=True``.
+        """
+        backend = _check_backend(backend)
+
+        if backend.name == "qibolab" and transpiler is None:
+            connectivity = nx.Graph(backend.connectivity)
+            connectivity.add_nodes_from(backend.qubits)
+            transpiler = Passes(
+                connectivity=connectivity,
+                passes=[
+                    Preprocessing(),
+                    Sabre(),
+                    Unroller(NativeGates[backend.natives]),
+                ],
+            )
+
+        circuits = self.circuits(circuit, auxiliary)
+
+        nqubits = circuit.nqubits
+        dim = 4**nqubits
+
+        if pauli_liouville:
+            single_qubit_gauge = backend.cast(
+                GAUGE_MATRIX if gauge_matrix is None else gauge_matrix,
+                dtype=backend.complex128,
+            )
+            if (
+                single_qubit_gauge.shape != (4, 4)
+                or backend.det(single_qubit_gauge) == 0
+            ):
+                raise_error(
+                    ValueError, "``gauge_matrix`` must be an invertible 4 x 4 matrix."
+                )
+
+            gauge = single_qubit_gauge
+            for _ in range(nqubits - 1):
+                gauge = backend.kron(gauge, single_qubit_gauge)
+
+            if gram_matrix is None:
+                gram_matrix = self(
+                    Circuit(nqubits),
+                    nshots,
+                    noise_model,
+                    transpiler=transpiler,
+                    backend=backend,
+                )
+            gram_matrix = backend.cast(gram_matrix, dtype=backend.complex128)
+
+        if noise_model is not None and backend.name != "qibolab":
+            circuits = [noise_model.apply(gst_circuit) for gst_circuit in circuits]
+
+        if transpiler is not None:
+            circuits = [
+                transpiler(gst_circuit, backend=backend)[0] for gst_circuit in circuits
+            ]
+
+        observables = [
+            SymbolicHamiltonian(
+                math.prod(
+                    symbols.Z(qubit, backend=backend)
+                    for qubit, pauli in enumerate(paulis)
+                    if pauli != 0
+                ),
+                nqubits=nqubits,
+                backend=backend,
+            )
+            for paulis in MEASURED_PAULIS[nqubits]
+        ]
+
+        # the results are ordered by fiducial state, and then by measured Pauli string
+        results = iter(self.execute(circuits, nshots, backend))
+        columns = [
+            [1.0] + [next(results).expectation_from_samples(o) for o in observables]
+            for _ in range(dim)
+        ]
+        matrix = backend.transpose(backend.cast(columns, dtype=backend.complex128))
+
+        if pauli_liouville:
+            return gauge @ backend.inv(gram_matrix) @ matrix @ backend.inv(gauge)
+
+        return matrix
+
+    def circuits(
+        self, circuit: Circuit, auxiliary: list[int] | None = None
+    ) -> list[Circuit]:
+        """Builds the circuits that estimate the matrix of ``circuit``.
+
+        Each circuit prepares a fiducial state, applies ``circuit``, and measures all
+        the qubits in the basis of a Pauli string. The qubits are measured in the
+        :math:`Z` basis for the identity, and the outcome is not used.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit, on :math:`1` or
+                :math:`2` qubits and without measurements, implementing the operation
+                to be characterized.
+            auxiliary (list[int], optional): qubits of ``circuit`` that are swapped
+                with fresh auxiliary qubits, appended to the circuit in the same order,
+                right after the fiducial state is prepared. Defaults to ``None``.
+
+        Returns:
+            list: :math:`4^{n} (4^{n} - 1)` circuits, ordered by fiducial state, and
+            then by Pauli string. The identity string is excluded, since its
+            expectation value is always :math:`1`.
+        """
+        self._check_circuit(circuit)
+
+        nqubits = circuit.nqubits
+        if nqubits not in SUPPORTED_NQUBITS:
+            raise_error(
+                ValueError,
+                f"``circuit`` has {nqubits} qubits, but GST supports circuits "
+                + f"of {SUPPORTED_NQUBITS[0]} or {SUPPORTED_NQUBITS[1]} qubits.",
+            )
+
+        auxiliary = [] if auxiliary is None else list(auxiliary)
+        if len(set(auxiliary)) != len(auxiliary) or any(
+            not isinstance(qubit, int) or not 0 <= qubit < nqubits
+            for qubit in auxiliary
+        ):
+            raise_error(
+                ValueError,
+                "``auxiliary`` must be a list of distinct qubits of ``circuit``, "
+                + f"but it is {auxiliary}.",
+            )
+
+        circuits = []
+        for state in product(FIDUCIAL_STATES, repeat=nqubits):
+            for paulis in MEASURED_PAULIS[nqubits]:
+                gst_circuit = Circuit(nqubits + len(auxiliary), density_matrix=True)
+
+                for qubit, preparation in enumerate(state):
+                    gst_circuit.add(gate(qubit) for gate in preparation)
+
+                for index, qubit in enumerate(auxiliary):
+                    gst_circuit.add(gates.SWAP(qubit, nqubits + index))
+
+                gst_circuit.add(circuit.queue)
+                gst_circuit.add(
+                    gates.M(qubit, basis=FIDUCIAL_BASES[pauli])
+                    for qubit, pauli in enumerate(paulis)
+                )
+                circuits.append(gst_circuit)
+
+        return circuits
 
 
 @cache
