@@ -8,12 +8,14 @@ import pytest
 
 from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
+from qibo.models.encodings import entangling_layer
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
     random_clifford,
     random_density_matrix,
     random_gaussian_matrix,
     random_hermitian,
+    random_iqp,
     random_pauli,
     random_pauli_hamiltonian,
     random_quantum_channel,
@@ -135,6 +137,35 @@ def test_random_hermitian(backend):
     eigenvalues = np.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues >= 0), True)
     backend.assert_allclose(all(eigenvalues <= 1), True)
+
+
+@pytest.mark.parametrize("seed", [None, 10])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize(
+    "architecture", ["all-to-all", "diagonal", "even_layer", "pyramid"]
+)
+def test_random_iqp(backend, architecture, closed_boundary, seed):
+    nqubits = 4
+
+    with pytest.raises(NotImplementedError):
+        random_iqp(nqubits, architecture="nonexistent", seed=seed, backend=backend)
+
+    circuit = random_iqp(
+        nqubits, architecture, closed_boundary, seed=seed, backend=backend
+    )
+
+    nentangling = len(
+        entangling_layer(nqubits, architecture, "RZZ", closed_boundary).queue
+    )
+
+    assert len(circuit.get_parameters()) == nqubits + nentangling
+    assert len(circuit.queue) == 3 * nqubits + nentangling
+
+    # Hadamard gates only at the beginning and at the end of the circuit
+    names = [gate.__class__.__name__ for gate in circuit.queue]
+    assert names[:nqubits] == ["H"] * nqubits
+    assert names[-nqubits:] == ["H"] * nqubits
+    assert set(names[nqubits:-nqubits]) == {"RZ", "RZZ"}
 
 
 @pytest.mark.parametrize("measure", [None, "haar"])
