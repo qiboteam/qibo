@@ -89,7 +89,7 @@ def test_gpi2_to_native(backend, natives):
     assert_matrices_allclose(gate, natives=natives | default_natives, backend=backend)
 
 
-@pytest.mark.parametrize("gate_name", ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP"])
+@pytest.mark.parametrize("gate_name", ["CNOT", "CY", "CZ", "SWAP", "iSWAP", "FSWAP"])
 @pytest.mark.parametrize(
     "natives_2q",
     [NativeGates.CZ, NativeGates.iSWAP, NativeGates.CZ | NativeGates.iSWAP],
@@ -237,3 +237,24 @@ def test_count_1q(backend):
 def test_count_2q(backend):
     np.testing.assert_allclose(cz_dec.count_2q(gates.CNOT(0, 1), backend), 1)
     np.testing.assert_allclose(cz_dec.count_2q(gates.CRX(0, 1, 0.1), backend), 2)
+
+
+@pytest.mark.parametrize(
+    "natives_1q",
+    [
+        NativeGates.U3,
+        NativeGates.GPI2,
+        NativeGates.RX | NativeGates.RZ,
+        NativeGates.SX | NativeGates.X,
+    ],
+)
+@pytest.mark.parametrize("gate_name, ncz", [("CY", 1), ("SWAP", 3)])
+def test_cz_count_to_native(backend, gate_name, ncz, natives_1q):
+    natives = natives_1q | NativeGates.CZ | default_natives
+    gate = getattr(gates, gate_name)(0, 1)
+    assert_matrices_allclose(gate, natives=natives, backend=backend)
+    translated = translate_gate(gate, natives, backend=backend)
+    assert (
+        sum(isinstance(translated_gate, gates.CZ) for translated_gate in translated)
+        == ncz
+    )

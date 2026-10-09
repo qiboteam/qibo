@@ -3,8 +3,9 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
-from qibo.transpiler.asserts import assert_placement
-from qibo.transpiler.pipeline import restrict_connectivity_qubits
+from qibo.transpiler.asserts import assert_placement, assert_transpiling
+from qibo.transpiler.optimizer import Preprocessing
+from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
 from qibo.transpiler.placer import (
     Random,
     ReverseTraversal,
@@ -12,7 +13,8 @@ from qibo.transpiler.placer import (
     Subgraph,
     _find_gates_qubits_pairs,
 )
-from qibo.transpiler.router import ShortestPaths
+from qibo.transpiler.router import Sabre, ShortestPaths
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 def star_circuit(names=None):
@@ -226,3 +228,42 @@ def test_incorrect_star_connectivity(star_connectivity):
     error_msg = "This connectivity graph is not a star graph. There is a node with degree different from 1 and 4."
     with pytest.raises(ConnectivityError, match=error_msg):
         placer(Circuit(5))
+
+
+@pytest.mark.parametrize("placer_class", [Random, StarConnectivityPlacer, Subgraph])
+def test_placer_backend_argument(backend, placer_class, star_connectivity):
+    connectivity = star_connectivity()
+    circuit = star_circuit()
+    placer_class(connectivity=connectivity)(circuit, backend=backend)
+    assert_placement(circuit, connectivity)
+
+
+@pytest.mark.parametrize("placer_class", [StarConnectivityPlacer, Subgraph])
+def test_placer_in_passes(backend, placer_class, star_connectivity):
+    connectivity = star_connectivity()
+    circuit = star_circuit()
+    passes = Passes(
+        passes=[
+            Preprocessing(),
+            placer_class(),
+            Sabre(seed=0),
+            Unroller(native_gates=NativeGates.default(), backend=backend),
+        ],
+        connectivity=connectivity,
+        native_gates=NativeGates.default(),
+    )
+    transpiled_circuit, final_layout = passes(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+def test_random_zero_samples(star_connectivity):
+    connectivity = star_connectivity(["A", "B", "C", "D", "E"])
+    circuit = star_circuit(["E", "D", "C", "B", "A"])
+    Random(connectivity=connectivity, samples=0)(circuit)
+    assert circuit.wire_names == ["A", "B", "C", "D", "E"]
+    assert_placement(circuit, connectivity)

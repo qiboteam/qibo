@@ -1,4 +1,5 @@
 import itertools
+import random
 
 import networkx as nx
 import numpy as np
@@ -625,3 +626,16 @@ def test_incorrect_star_connectivity(star_connectivity):
     error_msg = "This connectivity graph is not a star graph. There is a node with degree different from 1 and 4."
     with pytest.raises(ConnectivityError, match=error_msg):
         placer(Circuit(5))
+
+
+@pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
+def test_router_seed_reproducibility(router_class, grid_connectivity):
+    circuit = generate_random_circuit(5, 40)
+    routed_qubits = []
+    for global_seed in (1, 2):
+        # The global state of ``random`` must not change the routing.
+        random.seed(global_seed)
+        router = router_class(connectivity=grid_connectivity(), seed=3)
+        routed_circuit, _ = router(circuit.copy())
+        routed_qubits.append([gate.qubits for gate in routed_circuit.queue])
+    assert routed_qubits[0] == routed_qubits[1]
