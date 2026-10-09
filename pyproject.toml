@@ -51,13 +51,13 @@ docs = [
   "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
   "seaborn>=0.13.2,<0.14.0",
   "ipykernel>=6.29.4,<7.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
 ]
 tests = [
   "pytest>=7.2.1,<10.0.0",
   "pytest-cov>=4.0.0,<5.0.0",
   "matplotlib>=3.7.0,<3.11.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
   "stim>=1.15.0,<2.0.0",
   "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
   "qiskit>=2.2.3,<3.0.0",
@@ -68,13 +68,24 @@ tests = [
 cuda11 = [
   "cupy-cuda11x>=13.1.0,<14.0.0",
   "cuquantum-python-cu11>=24.1.0,<25.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
 ]
 cuda12 = [
   "cupy-cuda12x>=13.1.0,<14.0.0",
   "cuquantum-python-cu12>=24.1.0,<25.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
 ]
+
+[tool.uv]
+# Resolve qibojit's branch-specific qibo dependency against this checkout.
+override-dependencies = ["qibo"]
+
+[tool.uv.sources]
+qibo = { workspace = true }
+
+[tool.uv.sources.qibojit]
+git = "https://github.com/qiboteam/qibojit.git"
+rev = "90ebab8598d5361bd76f9071af2bed1e79f3f5d8"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
