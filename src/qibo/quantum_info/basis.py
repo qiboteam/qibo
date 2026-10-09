@@ -206,7 +206,7 @@ def pauli_to_comp_basis(
             *_get_single_paulis(pauli_order, backend),
             normalization=normalization,
         )
-        # backend-specific implementations may return flattened arrays
+        # the sparse template returns `indexes` flattened; reshape both to (d^2, d)
         shape = (4**nqubits, 2**nqubits)
 
         return backend.reshape(elements, shape), backend.reshape(indexes, shape)
