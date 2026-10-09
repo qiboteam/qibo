@@ -235,8 +235,9 @@ If the chosen gate is parametrized, all phases are set to :math:`0.0`.
 Note that these phases can be updated a posterior by using
 :meth:`qibo.models.Circuit.set_parameters`.
 The possible choices of layer ``architecture`` are the following, in alphabetical order:
-``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``, ``shifted``, ``v``, and ``x``.
-For instance, we show below an example of four of those architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
+``all-to-all``, ``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``,
+``shifted``, ``v``, and ``x``. For instance, we show below an example of four of those
+architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
 
 
 .. image:: ../_static/entangling_layer.png

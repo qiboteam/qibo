@@ -2,6 +2,7 @@
 
 import math
 from inspect import signature
+from itertools import combinations
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -343,16 +344,19 @@ def entangling_layer(
     Args:
         nqubits (int): Total number of qubits in the circuit.
         architecture (str, optional): Architecture of the entangling layer.
-            In alphabetical order, options are ``"diagonal"``, ``"even_layer"``,
-            ``"next_nearest"``, ``"odd_layer"``, ``"pyramid"``, ``"shifted"``,
-            ``"v"``, and ``"x"``. The ``"x"`` architecture is only defined for an even number
-            of qubits. Defaults to ``"diagonal"``.
+            In alphabetical order, options are ``"all-to-all"``, ``"diagonal"``,
+            ``"even_layer"``, ``"next_nearest"``, ``"odd_layer"``, ``"pyramid"``,
+            ``"shifted"``, ``"v"``, and ``"x"``. The ``"all-to-all"`` architecture acts on
+            all pairs of qubits :math:`(j, k)` with :math:`j < k`, ordered such that the depth
+            of the layer is minimal: :math:`n - 1` for even :math:`n` and :math:`n` for odd
+            :math:`n`. The ``"x"`` architecture is only defined for an even number of qubits.
+            Defaults to ``"diagonal"``.
         entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
             in the entangling layer. If ``entangling_gate`` is a parametrized gate,
             all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
         closed_boundary (bool, optional): If ``True`` and ``architecture not in
-            ["pyramid", "v", "x"]``, adds a closed-boundary condition to the entangling layer.
-            Defaults to ``False``.
+            ["all-to-all", "pyramid", "v", "x"]``, adds a closed-boundary condition to the
+            entangling layer. Defaults to ``False``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
@@ -377,6 +381,7 @@ def entangling_layer(
         )
 
     if architecture not in [
+        "all-to-all",
         "diagonal",
         "even_layer",
         "next_nearest",
@@ -436,21 +441,41 @@ def entangling_layer(
 
         circuit = Circuit(nqubits, **kwargs)
 
-        if architecture == "diagonal":
-            qubits = range(nqubits - 1)
-        elif architecture == "even_layer":
-            qubits = range(0, nqubits - 1, 2)
-        elif architecture == "odd_layer":
-            qubits = range(1, nqubits - 1, 2)
+        if architecture == "all-to-all":
+            # Edge colouring of the complete graph: each colour is a set of disjoint pairs
+            # that can be applied in parallel, which minimizes the depth of the layer to
+            # ``nqubits - 1`` (even ``nqubits``) or ``nqubits`` (odd ``nqubits``).
+            modulus = nqubits - 1 if nqubits % 2 == 0 else nqubits
+            pairs = []
+            for color in range(modulus):
+                pairs.extend(
+                    (qubit_0, qubit_1)
+                    for qubit_0, qubit_1 in combinations(range(modulus), 2)
+                    if (qubit_0 + qubit_1) % modulus == color
+                )
+                if nqubits % 2 == 0:
+                    # the qubit left out of this colour is paired with the last qubit
+                    pairs.append((color * (modulus + 1) // 2 % modulus, nqubits - 1))
         else:
-            qubits = tuple(range(0, nqubits - 1, 2)) + tuple(range(1, nqubits - 1, 2))
+            if architecture == "diagonal":
+                qubits = range(nqubits - 1)
+            elif architecture == "even_layer":
+                qubits = range(0, nqubits - 1, 2)
+            elif architecture == "odd_layer":
+                qubits = range(1, nqubits - 1, 2)
+            else:
+                qubits = tuple(range(0, nqubits - 1, 2)) + tuple(
+                    range(1, nqubits - 1, 2)
+                )
+
+            pairs = ((qubit, qubit + 1) for qubit in qubits)
 
         circuit.add(
-            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-            for qubit in qubits
+            _parametrized_two_qubit_gate(gate, qubit_0, qubit_1, parameters)
+            for qubit_0, qubit_1 in pairs
         )
 
-        if closed_boundary:
+        if closed_boundary and architecture != "all-to-all":
             circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
 
     return circuit
