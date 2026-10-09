@@ -425,8 +425,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self._form = form
         self.nqubits = _calculate_nqubits_from_form(form)
         # Drop any cached derived values so they are recomputed from the new form.
-        # The ``cached_property`` cache key is ``name`` on Python 3.12+ but
-        # ``_{name}`` on earlier versions, so clear both.
+        # ``cached_property`` stores its value under the attribute name, so
+        # clearing it here forces recomputation from the new form.
         for name in self._READONLY_DERIVED:
             self.__dict__.pop(name, None)
             self.__dict__.pop(f"_{name}", None)
