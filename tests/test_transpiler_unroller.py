@@ -605,7 +605,6 @@ def test_single_qubit_decomposition_is_consistent_with_is_universal(backend):
 @pytest.mark.parametrize(
     "gate",
     [
-        lambda backend: gates.CY(0, 1),
         lambda backend: gates.ECR(0, 1),
         lambda backend: gates.RZX(0, 1, 0.3),
         lambda backend: gates.H(1).controlled_by(0),

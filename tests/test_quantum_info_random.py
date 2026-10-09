@@ -8,12 +8,14 @@ import pytest
 
 from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
+from qibo.models.encodings import entangling_layer
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
     random_clifford,
     random_density_matrix,
     random_gaussian_matrix,
     random_hermitian,
+    random_iqp,
     random_isometry,
     random_pauli,
     random_pauli_hamiltonian,
@@ -201,6 +203,35 @@ def test_random_isometry_haar_moments(backend):
     # |V_ij|^2 ~ Beta(1, dims - 1), whose second moment is 2 / (dims * (dims + 1))
     moment = backend.mean(backend.abs(samples) ** 4)
     backend.assert_allclose(moment, 2 / (dims * (dims + 1)), atol=2e-2)
+
+
+@pytest.mark.parametrize("seed", [None, 10])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize(
+    "architecture", ["all-to-all", "diagonal", "even_layer", "pyramid"]
+)
+def test_random_iqp(backend, architecture, closed_boundary, seed):
+    nqubits = 4
+
+    with pytest.raises(NotImplementedError):
+        random_iqp(nqubits, architecture="nonexistent", seed=seed, backend=backend)
+
+    circuit = random_iqp(
+        nqubits, architecture, closed_boundary, seed=seed, backend=backend
+    )
+
+    nentangling = len(
+        entangling_layer(nqubits, architecture, "RZZ", closed_boundary).queue
+    )
+
+    assert len(circuit.get_parameters()) == nqubits + nentangling
+    assert len(circuit.queue) == 3 * nqubits + nentangling
+
+    # Hadamard gates only at the beginning and at the end of the circuit
+    names = [gate.__class__.__name__ for gate in circuit.queue]
+    assert names[:nqubits] == ["H"] * nqubits
+    assert names[-nqubits:] == ["H"] * nqubits
+    assert set(names[nqubits:-nqubits]) == {"RZ", "RZZ"}
 
 
 @pytest.mark.parametrize("measure", [None, "haar"])

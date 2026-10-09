@@ -270,6 +270,7 @@ iswap_dec.add(gates.iSWAP, [gates.iSWAP(0, 1)])
 cz_dec = GateDecompositions()
 cz_dec.add(gates.CNOT, [gates.H(1), gates.CZ(0, 1), gates.H(1)])
 cz_dec.add(gates.CZ, [gates.CZ(0, 1)])
+cz_dec.add(gates.CY, [gates.SDG(1), gates.H(1), gates.CZ(0, 1), gates.H(1), gates.S(1)])
 cz_dec.add(
     gates.SWAP,
     [

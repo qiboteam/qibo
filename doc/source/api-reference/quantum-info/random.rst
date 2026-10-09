@@ -22,6 +22,12 @@ Random Hermitian matrix
 .. autofunction:: qibo.quantum_info.random_hermitian
 
 
+Random IQP circuit
+------------------
+
+.. autofunction:: qibo.quantum_info.random_iqp
+
+
 Random isometry
 ---------------
 
