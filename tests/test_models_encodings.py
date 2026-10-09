@@ -2,7 +2,7 @@
 
 import math
 from functools import reduce
-from itertools import combinations
+from itertools import combinations, product
 
 import numpy as np
 import pytest
@@ -15,6 +15,7 @@ from qibo.models._encodings import (
     _ehrlich_algorithm,
     _ehrlich_codewords_up_to_k,
     _get_int_type,
+    _walsh_gray_code,
 )
 from qibo.models.encodings import (
     binary_encoder,
@@ -29,6 +30,7 @@ from qibo.models.encodings import (
     permutation_synthesis,
     phase_encoder,
     sparse_encoder,
+    spin_s_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
     up_to_k_hamming_weight_encoder,
@@ -450,6 +452,155 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
 def test_sparse_encoder_helpers_errors(backend):
     with pytest.raises(ValueError):
         _get_int_type(backend.engine.iinfo(backend.int64).max + 1, backend=backend)
+
+
+@pytest.mark.parametrize("levels", [1, 2, 3, 4])
+@pytest.mark.parametrize("nqudits", [1, 2, 3, 4])
+def test_walsh_gray_code(backend, nqudits, levels):
+    for weight in range(levels * nqudits + 1):
+        compositions = _walsh_gray_code(nqudits, weight, levels, backend=backend)
+        compositions = backend.to_numpy(compositions)
+        target = {
+            string
+            for string in product(range(levels + 1), repeat=nqudits)
+            if sum(string) == weight
+        }
+        assert len(compositions) == len(target)
+        assert {
+            tuple(int(part) for part in string) for string in compositions
+        } == target
+        # Gray property: consecutive compositions differ by e_i - e_j
+        distances = np.sum(np.abs(np.diff(compositions, axis=0)), axis=1)
+        assert np.all(distances == 2)
+    # Table 3 of Zare Harofteh and Nepomechie, Ann. Phys. 538, e70239 (2026)
+    if (nqudits, levels) == (3, 2):
+        table = [
+            [2, 1, 0],
+            [1, 2, 0],
+            [0, 2, 1],
+            [1, 1, 1],
+            [2, 0, 1],
+            [1, 0, 2],
+            [0, 1, 2],
+        ]
+        backend.assert_allclose(
+            _walsh_gray_code(3, 3, 2, backend=backend), backend.cast(table)
+        )
+
+
+def test_spin_s_encoder_errors(backend):
+    with pytest.raises(ValueError):
+        spin_s_encoder(3, 0.3, 2, backend=backend)
+    with pytest.raises(ValueError):
+        spin_s_encoder(3, 1, 7, backend=backend)
+    with pytest.raises(ValueError):
+        spin_s_encoder(3, 1, 2, encoding="ternary", backend=backend)
+
+
+@pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("optimize_controls", [False, True])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("data", [False, True])
+@pytest.mark.parametrize("encoding", ["binary", "unary"])
+@pytest.mark.parametrize(
+    "nqudits,spin,weight",
+    [(1, 1, 1), (2, 0.5, 1), (3, 1, 0), (3, 1, 3), (3, 1.5, 4), (4, 0.5, 2), (2, 2, 3)],
+)
+def test_spin_s_encoder(
+    backend,
+    nqudits,
+    spin,
+    weight,
+    encoding,
+    data,
+    complex_data,
+    optimize_controls,
+    seed,
+):
+    levels = int(2 * spin)
+    width = levels if encoding == "unary" else levels.bit_length()
+    dtype = backend.complex128 if complex_data else backend.float64
+
+    ditstrings = [
+        string
+        for string in product(range(levels + 1), repeat=nqudits)
+        if sum(string) == weight
+    ]
+    indices = [
+        int(
+            "".join(
+                (
+                    "0" * (width - value) + "1" * value
+                    if encoding == "unary"
+                    else format(value, f"0{width}b")
+                )
+                for value in string
+            ),
+            2,
+        )
+        for string in ditstrings
+    ]
+
+    # single-state subspaces are only prepared up to a global phase
+    data = data and len(ditstrings) > 1
+    if data:
+        _data = random_statevector(
+            len(ditstrings), dtype=dtype, seed=seed, backend=backend
+        )
+    else:
+        _data = None
+    target = backend.zeros(2 ** (nqudits * width), dtype=dtype)
+    target[indices] = _data if data else backend.cast([1] + [0] * (len(indices) - 1))
+
+    circuit = spin_s_encoder(
+        nqudits,
+        spin,
+        weight,
+        data=_data,
+        complex_data=complex_data,
+        encoding=encoding,
+        optimize_controls=optimize_controls,
+        backend=backend,
+    )
+    assert circuit.nqubits == nqudits * width
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-7)
+
+
+@pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("nqubits,weight", [(3, 1), (4, 2), (5, 2), (6, 3)])
+def test_spin_s_encoder_spin_half(backend, nqubits, weight, complex_data, seed):
+    """For spin 1/2, ``spin_s_encoder`` reduces to ``hamming_weight_encoder``."""
+    dtype = backend.complex128 if complex_data else backend.float64
+    n_choose_k = int(binom(nqubits, weight))
+    data = random_statevector(n_choose_k, dtype=dtype, seed=seed, backend=backend)
+
+    circuit_farias = hamming_weight_encoder(nqubits, weight, data=data, backend=backend)
+    state_farias = backend.execute_circuit(circuit_farias).state()
+
+    circuits = [
+        spin_s_encoder(
+            nqubits, 0.5, weight, data=data, encoding=encoding, backend=backend
+        )
+        for encoding in ("binary", "unary")
+    ]
+    # binary and unary encodings coincide for spin 1/2
+    assert circuits[0].draw() == circuits[1].draw()
+
+    circuit = circuits[1]
+    assert circuit.nqubits == nqubits
+    names = [gate.name for gate in circuit.queue]
+    # same gate set as the fixed-Hamming-weight encoder: k initial X gates and
+    # one RBS per new amplitude, with no anti-controls (i.e. no further X gates)
+    assert names[:weight] == ["x"] * weight
+    assert "x" not in names[weight:]
+    assert names.count("rbs") == n_choose_k - 1
+    assert set(names[weight:]) <= {"crz", "rbs", "rz"}
+
+    state = backend.execute_circuit(circuit).state()
+    backend.assert_allclose(state, state_farias, atol=1e-7)
 
 
 @pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
