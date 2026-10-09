@@ -1,3 +1,5 @@
+from numpy.typing import ArrayLike
+
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.quantum_info.utils import _get_single_paulis, _pauli_basis_normalization
@@ -11,7 +13,7 @@ def pauli_basis(
     order: str | None = None,
     pauli_order: str = "IXYZ",
     backend: Backend | None = None,
-):
+) -> ArrayLike | tuple[ArrayLike, ArrayLike]:
     """Creates the ``nqubits``-qubit Pauli basis.
 
     Args:
@@ -19,15 +21,15 @@ def pauli_basis(
         normalize (bool, optional): If ``True``, normalized basis is returned.
             Defaults to False.
         vectorize (bool, optional): If ``False``, returns a nested array with
-            all Pauli matrices. If ``True``, retuns an array where every
+            all Pauli matrices. If ``True``, returns an array where every
             row is a vectorized Pauli matrix. Defaults to ``False``.
-        sparse (bool, optional): If ``True``, retuns Pauli basis in a sparse
+        sparse (bool, optional): If ``True``, returns Pauli basis in a sparse
             representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
-            performed. If ``vectorization=False``, then ``order=None`` is
-            forced. Defaults to ``None``.
+            performed. Required when ``vectorize=True`` and ignored when
+            ``vectorize=False``. Defaults to ``None``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
@@ -35,19 +37,17 @@ def pauli_basis(
             the current backend. Defaults to ``None``.
 
     Returns:
-        ndarray or tuple: all Pauli matrices forming the basis. If ``sparse=True``
+        ArrayLike or tuple: all Pauli matrices forming the basis. If ``sparse=True``
             and ``vectorize=True``, tuple is composed of an array of non-zero
             elements and an array with their row-wise indexes.
     """
 
-    if set(pauli_order) != {"I", "X", "Y", "Z"}:
+    if vectorize and order not in ("row", "column", "system"):
         raise_error(
             ValueError,
-            f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
+            "when vectorize=True, order must be 'row', 'column' or 'system'. "
+            f"Got {order} instead.",
         )
-
-    if vectorize and order is None:
-        raise_error(ValueError, "when vectorize=True, order must be specified.")
 
     if sparse and not vectorize:
         raise_error(
@@ -77,20 +77,21 @@ def comp_basis_to_pauli(
     sparse: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
-):
-    """Unitary matrix :math:`U` that converts operators from the Liouville
+    backend: Backend | None = None,
+) -> ArrayLike | tuple[ArrayLike, ArrayLike]:
+    """Matrix :math:`U` that converts operators from the Liouville
     representation in the computational basis to the Pauli-Liouville
     representation.
 
-    The unitary :math:`U` is given by
+    The matrix :math:`U` is given by
 
     .. math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, |k)(P_{k}| \\,\\, ,
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, |b_{k})(P_{k}| \\, ,
 
     where :math:`|P_{k})` is the vectorization of the :math:`k`-th
-    Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
+    Pauli operator :math:`P_{k}`, and :math:`|b_{k})` is the vectorization
     of the :math:`k`-th computational basis element.
+    :math:`U` is unitary only if the Pauli basis is normalized, i.e. ``normalize=True``.
     For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Example:
@@ -100,14 +101,14 @@ def comp_basis_to_pauli(
             nqubits = 2
             d = 2**nqubits
             rho = random_density_matrix(d)
-            U_c2p = comp_basis_to_pauli(nqubits)
+            U_c2p = comp_basis_to_pauli(nqubits, normalize=True, order="system")
             rho_liouville = vectorization(rho, order="system")
             rho_pauli_liouville = U_c2p @ rho_liouville
 
     Args:
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
-            Pauli basis. Defaults to ``False``.
+            normalized Pauli basis. Defaults to ``False``.
         sparse (bool, optional): If ``True``, returns unitary matrix in
             sparse representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
@@ -121,26 +122,11 @@ def comp_basis_to_pauli(
             the current backend. Defaults to ``None``.
 
     Returns:
-        ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
+        ArrayLike or tuple: Matrix :math:`U`. If ``sparse=True``,
             tuple is composed of array of non-zero elements and an
             array with their row-wise indexes.
-
     """
     backend = _check_backend(backend)
-
-    if sparse:
-        elements, indexes = pauli_basis(
-            nqubits,
-            normalize,
-            vectorize=True,
-            sparse=sparse,
-            order=order,
-            pauli_order=pauli_order,
-            backend=backend,
-        )
-        elements = backend.conj(elements)
-
-        return elements, indexes
 
     unitary = pauli_basis(
         nqubits,
@@ -152,9 +138,12 @@ def comp_basis_to_pauli(
         backend=backend,
     )
 
-    unitary = backend.conj(unitary)
+    if sparse:
+        elements, indexes = unitary
 
-    return unitary
+        return backend.conj(elements), indexes
+
+    return backend.conj(unitary)
 
 
 def pauli_to_comp_basis(
@@ -163,26 +152,27 @@ def pauli_to_comp_basis(
     sparse: bool = False,
     order: str = "row",
     pauli_order: str = "IXYZ",
-    backend=None,
-):
-    """Unitary matrix :math:`U` that converts operators from the
+    backend: Backend | None = None,
+) -> ArrayLike | tuple[ArrayLike, ArrayLike]:
+    """Matrix :math:`U` that converts operators from the
     Pauli-Liouville representation to the Liouville representation
     in the computational basis.
 
-    The unitary :math:`U` is given by
+    The matrix :math:`U` is given by
 
     .. math::
         U = \\sum_{k = 0}^{d^{2} - 1} \\, |P_{k})(b_{k}| \\, ,
 
     where :math:`|P_{k})` is the vectorization of the :math:`k`-th
-    Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
+    Pauli operator :math:`P_{k}`, and :math:`|b_{k})` is the vectorization
     of the :math:`k`-th computational basis element.
+    :math:`U` is unitary only if the Pauli basis is normalized, i.e. ``normalize=True``.
     For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Args:
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
-            Pauli basis. Defaults to ``False``.
+            normalized Pauli basis. Defaults to ``False``.
         sparse (bool, optional): If ``True``, returns unitary matrix in
             sparse representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
@@ -196,20 +186,30 @@ def pauli_to_comp_basis(
             the current backend. Defaults to ``None``.
 
     Returns:
-        ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
+        ArrayLike or tuple: Matrix :math:`U`. If ``sparse=True``,
             tuple is composed of array of non-zero elements and an
             array with their row-wise indexes.
     """
     backend = _check_backend(backend)
 
     if sparse:
+        if order not in ("row", "column", "system"):
+            raise_error(
+                ValueError,
+                f"order must be 'row', 'column' or 'system'. Got {order} instead.",
+            )
+
         normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
         func = getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")
-        return func(
+        elements, indexes = func(
             nqubits,
             *_get_single_paulis(pauli_order, backend),
             normalization=normalization,
         )
+        # backend-specific implementations may return flattened arrays
+        shape = (4**nqubits, 2**nqubits)
+
+        return backend.reshape(elements, shape), backend.reshape(indexes, shape)
 
     return pauli_basis(
         nqubits,

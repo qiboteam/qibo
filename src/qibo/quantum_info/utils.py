@@ -13,6 +13,12 @@ from qibo.config import PRECISION_TOL, raise_error
 
 @cache
 def _get_single_paulis(order: str, backend: Backend):
+    if len(order) != 4 or set(order) != {"I", "X", "Y", "Z"}:
+        raise_error(
+            ValueError,
+            f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {order} instead.",
+        )
+
     pauli_labels = {"I": backend.matrices.I()}
     pauli_labels.update(
         {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
