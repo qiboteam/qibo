@@ -410,7 +410,7 @@ def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
     # testing several projections
     target = backend.cast(
         [
-            backend.dot(backend.conj(state), direction) * direction
+            backend.dot(backend.conj(direction), state) * direction
             for direction in directions
         ]
     )
@@ -948,3 +948,114 @@ def _classification_generators(label: str, nqubits: int, topology: str) -> list[
             generators.append("".join(paulis))
 
     return list(dict.fromkeys(generators))
+
+
+def _block_diagonal_hermitian(backend):
+    rng = np.random.default_rng(3)
+    blocks = []
+    for size in (2, 3):
+        block = rng.normal(size=(size, size)) + 1j * rng.normal(size=(size, size))
+        blocks.append(block + block.conj().T)
+    matrix = np.zeros((5, 5), dtype=complex)
+    matrix[:2, :2], matrix[2:, 2:] = blocks
+    initial_vector = np.zeros(5, dtype=complex)
+    initial_vector[:2] = [1, 1j]
+
+    return matrix, initial_vector / np.linalg.norm(initial_vector)
+
+
+@pytest.mark.parametrize("case", ["diagonal", "block-diagonal", "zero"])
+def test_lanczos_breakdown(backend, case):
+    # the Lanczos vectors are restarted when an invariant subspace is found
+    if case == "diagonal":
+        matrix = np.diag([1.0, 2.0, 3.0, 4.0]).astype(complex)
+        initial_vector = np.array([1, 0, 0, 0], dtype=complex)
+    elif case == "block-diagonal":
+        matrix, initial_vector = _block_diagonal_hermitian(backend)
+    else:
+        matrix, initial_vector = np.zeros((6, 6), dtype=complex), None
+
+    dims = matrix.shape[0]
+    if initial_vector is not None:
+        initial_vector = backend.cast(initial_vector)
+
+    for steps in range(2, dims + 1):
+        tridiagonal, vectors = lanczos(
+            backend.cast(matrix),
+            steps=steps,
+            initial_vector=initial_vector,
+            seed=7,
+            backend=backend,
+        )
+        tridiagonal, vectors = backend.to_numpy(tridiagonal), backend.to_numpy(vectors)
+
+        np.testing.assert_allclose(vectors.conj().T @ vectors, np.eye(steps), atol=1e-8)
+        np.testing.assert_allclose(
+            tridiagonal, vectors.conj().T @ matrix @ vectors, atol=1e-8
+        )
+
+
+def test_lanczos_arguments(backend):
+    matrix = random_hermitian(6, seed=1, backend=backend)
+
+    for steps in (0, -1, 7):
+        with pytest.raises(ValueError):
+            lanczos(matrix, steps=steps, backend=backend)
+
+    # the initial vector is normalized
+    initial_vector = backend.cast(np.arange(1, 7), dtype=complex)
+    tridiagonal, vectors = lanczos(
+        matrix, initial_vector=initial_vector, seed=1, backend=backend
+    )
+    vectors = backend.to_numpy(vectors)
+    np.testing.assert_allclose(vectors.conj().T @ vectors, np.eye(6), atol=1e-8)
+    np.testing.assert_allclose(
+        backend.to_numpy(tridiagonal),
+        vectors.conj().T @ backend.to_numpy(matrix) @ vectors,
+        atol=1e-8,
+    )
+
+
+@pytest.mark.parametrize("function", [commutator, anticommutator])
+def test_commutators_require_matrices(backend, function):
+    vector = backend.cast(np.array([1.0, 2.0]))
+    with pytest.raises(TypeError):
+        function(vector, vector)
+
+
+def test_matrix_exponentiation_default_phase(backend):
+    matrix = random_hermitian(4, seed=1, backend=backend)
+
+    default = matrix_exponentiation(matrix, backend=backend)
+    explicit = matrix_exponentiation(matrix, phase=1, backend=backend)
+
+    backend.assert_allclose(default, explicit)
+
+
+def test_schmidt_decomposition_arguments(backend):
+    state = random_statevector(8, seed=3, backend=backend)
+
+    # the Schmidt coefficients reconstruct the matrix of coefficients
+    u_mat, singular_values, vh_mat = schmidt_decomposition(
+        state, [0, 2], backend=backend
+    )
+    coefficients = backend.to_numpy(state).reshape(2, 2, 2).transpose(0, 2, 1)
+    coefficients = coefficients.reshape(4, 2)
+    rank = len(singular_values)
+    reconstructed = (
+        backend.to_numpy(u_mat)[:, :rank]
+        * backend.to_numpy(singular_values)
+        @ backend.to_numpy(vh_mat)[:rank]
+    )
+    np.testing.assert_allclose(reconstructed, coefficients, atol=1e-10)
+
+    # density matrices are not supported
+    with pytest.raises(TypeError):
+        schmidt_decomposition(
+            random_density_matrix(4, backend=backend), [0], backend=backend
+        )
+    # invalid partitions
+    with pytest.raises(ValueError):
+        schmidt_decomposition(state, [0, 0], backend=backend)
+    with pytest.raises(ValueError):
+        schmidt_decomposition(state, [3], backend=backend)
