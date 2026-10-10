@@ -128,42 +128,31 @@ def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
 @pytest.mark.parametrize("validate", [False, True])
 def test_hellinger(backend, validate, kind):
     with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)
-        prob_q = np.random.rand(1, 5)
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.random_sample((1, 2))
+        prob_q = backend.random_sample((1, 5))
         hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)[0]
+        prob = backend.random_sample((1, 2))[0]
         prob_q = np.array([])
-        prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
         hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.array([-1, 2.0])
-        prob_q = np.random.rand(1, 5)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([-1, 2.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 5))[0]
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.random.rand(1, 2)[0]
-        prob_q = np.array([1.0, 0.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.random_sample((1, 2))[0]
+        prob_q = backend.cast([1.0, 0.0], dtype=backend.float64)
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.array([1.0, 0.0])
-        prob_q = np.random.rand(1, 2)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([1.0, 0.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 2))[0]
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
-    prob_p = np.random.rand(10)
-    prob_q = np.random.rand(10)
-    prob_p /= np.sum(prob_p)
-    prob_q /= np.sum(prob_q)
-    prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
-    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+    prob_p = backend.random_sample(10)
+    prob_q = backend.random_sample(10)
+    prob_p /= backend.sum(prob_p)
+    prob_q /= backend.sum(prob_q)
 
     target = float(
         backend.vector_norm(backend.sqrt(prob_p) - backend.sqrt(prob_q)) / np.sqrt(2)
@@ -179,8 +168,8 @@ def test_hellinger(backend, validate, kind):
     distance = hellinger_distance(prob_p, prob_q, validate=validate, backend=backend)
     fidelity = hellinger_fidelity(prob_p, prob_q, validate=validate, backend=backend)
 
-    assert distance == target
-    assert fidelity == (1 - target**2) ** 2
+    backend.assert_allclose(distance, target)
+    backend.assert_allclose(fidelity, (1 - target**2) ** 2)
 
 
 @pytest.mark.parametrize("kind", [None, list])
