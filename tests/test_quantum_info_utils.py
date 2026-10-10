@@ -138,7 +138,7 @@ def test_hellinger(backend, validate, kind):
         hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = backend.cast([-1, 2.0], dtype=backend.float64)
-        prob_q = backend.random_sample((1, 5))[0]
+        prob_q = backend.random_sample((1, 2))[0]
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = backend.random_sample((1, 2))[0]
@@ -208,30 +208,22 @@ def test_hellinger_shot_error(backend, validate, kind):
 @pytest.mark.parametrize("validate", [False, True])
 def test_total_variation_distance(backend, validate, kind):
     with pytest.raises(ValueError):
-        prob = np.array([-1, 2.0])
-        prob_q = np.random.rand(1, 5)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([-1, 2.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 2))[0]
         total_variation_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.random.rand(1, 2)[0]
-        prob_q = np.array([1.0, 0.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.random_sample((1, 2))[0]
+        prob_q = backend.cast([1.0, 0.0], dtype=backend.float64)
         total_variation_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.array([1.0, 0.0])
-        prob_q = np.random.rand(1, 2)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([1.0, 0.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 2))[0]
         total_variation_distance(prob, prob_q, validate=True, backend=backend)
 
-    prob_p = np.random.rand(10)
-    prob_q = np.random.rand(10)
-    prob_p /= np.sum(prob_p)
-    prob_q /= np.sum(prob_q)
-    prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
-    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+    prob_p = backend.random_sample(10)
+    prob_q = backend.random_sample(10)
+    prob_p /= backend.sum(prob_p)
+    prob_q /= backend.sum(prob_q)
 
     target = float(backend.vector_norm(prob_p - prob_q, order=1) / 2)
 
@@ -245,7 +237,7 @@ def test_total_variation_distance(backend, validate, kind):
     tvd = total_variation_distance(prob_p, prob_q, validate, backend)
     distance = hellinger_distance(prob_p, prob_q, validate, backend)
 
-    assert tvd == target
+    backend.assert_allclose(tvd, target)
     assert tvd <= np.sqrt(2) * distance
     assert tvd >= distance**2
 
@@ -366,6 +358,10 @@ def test_total_variation_distance_dims(backend):
             backend.cast(np.full((2, 2), 0.25)),
             backend.cast(np.full((2, 2), 0.25)),
             backend=backend,
+        )
+    with pytest.raises(TypeError):
+        total_variation_distance(
+            backend.cast(np.array([])), backend.cast(np.array([])), backend=backend
         )
 
 
