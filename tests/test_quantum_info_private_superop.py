@@ -11,9 +11,16 @@ from qibo.quantum_info import (
     pauli_to_liouville,
 )
 from qibo.quantum_info._superoperator_transformations import (
+    _check_pauli_order,
     _check_pauli_superoperator_shape,
     _reshuffling,
 )
+
+
+@pytest.mark.parametrize("pauli_order", ["IXY", "IXYZI", "IXYY", "ABCD", ""])
+def test_check_pauli_order(pauli_order):
+    with pytest.raises(ValueError, match="pauli_order has to contain 4 symbols"):
+        _check_pauli_order(pauli_order)
 
 
 @pytest.mark.parametrize("function", [liouville_to_pauli, pauli_to_liouville])
