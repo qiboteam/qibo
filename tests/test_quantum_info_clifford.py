@@ -415,7 +415,7 @@ def test_one_qubit_paulis_string_product(pauli_1, pauli_2):
         "ZX": "iY",
         "YX": "-iZ",
         "ZY": "-iX",
-        "XZ": "iY",
+        "XZ": "-iY",
         "XX": "I",
         "ZZ": "I",
         "YY": "I",
@@ -437,7 +437,7 @@ def test_one_qubit_paulis_string_product(pauli_1, pauli_2):
     ["operators", "target"],
     [
         [["X", "Y", "Z"], "iI"],
-        [["Z", "X", "Y", "X", "Z"], "-Y"],
+        [["Z", "X", "Y", "X", "Z"], "Y"],
         [["Z", "I", "Z"], "I"],
         [["Y", "X"], "-iZ"],
         [["iY", "iX"], "iZ"],
@@ -450,3 +450,49 @@ def test_string_product(operators, target):
 
 def test_1q_paulis_string_product():
     assert "-iZ" == _one_qubit_paulis_string_product("iX", "iY")
+
+
+@pytest.mark.parametrize("from_matrix", [False, True])
+def test_clifford_no_measurements(backend, from_matrix):
+    construct_clifford_backend(backend)
+    platform = _get_engine_name(backend)
+
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    clifford = Clifford.from_circuit(circuit, platform=platform)
+    if from_matrix:
+        clifford = Clifford(clifford.symplectic_matrix, platform=platform)
+
+    for method in (clifford.samples, clifford.frequencies, clifford.probabilities):
+        with pytest.raises(RuntimeError, match="No measurement provided"):
+            method()
+    with pytest.raises(RuntimeError, match="No measurement provided"):
+        _ = clifford.measurement_gate
+
+
+def test_clifford_samples_binary_flag(backend):
+    construct_clifford_backend(backend)
+
+    nshots = 20
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(0, 1, 2))
+    clifford = Clifford.from_circuit(
+        circuit, nshots=nshots, platform=_get_engine_name(backend)
+    )
+
+    assert tuple(clifford.samples(binary=True).shape) == (nshots, 3)
+    assert tuple(clifford.samples(binary=False).shape) == (nshots,)
+
+
+def test_clifford_from_circuit_does_not_modify_class(backend):
+    construct_clifford_backend(backend)
+
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    Clifford.from_circuit(circuit, platform=_get_engine_name(backend))
+    Clifford(circuit, platform=_get_engine_name(backend))
+
+    assert Clifford.__dict__["_backend"] is None

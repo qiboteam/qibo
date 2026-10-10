@@ -148,9 +148,9 @@ def test_entanglement_fidelity(backend, nqubits):
             backend=backend,
         )
 
-    # test on maximally entangled state
+    # test on maximally entangled state: 1 - lam + lam / d^2, with lam = 0.5 and d = 4
     ent_fid = entanglement_fidelity(channel, nqubits=nqubits, backend=backend)
-    backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
+    backend.assert_allclose(ent_fid, 0.53125, atol=PRECISION_TOL)
 
     # test with a state vector
     state = backend.plus_state(nqubits)
@@ -228,3 +228,100 @@ def test_entangling_capability(backend, seed):
     ent_mw3 = entangling_capability(c3, samples, seed=seed, backend=backend)
 
     backend.assert_allclose(ent_mw3 < ent_mw1 < ent_mw2, True)
+
+
+@pytest.mark.parametrize("base", [2, 10, math.e])
+def test_entanglement_of_formation_known_states(backend, base):
+    # Bell state: one ebit, concurrence equal to one
+    bell = np.array([1, 0, 0, 1]) / np.sqrt(2)
+    bell = backend.cast(bell, dtype=bell.dtype)
+    concur = concurrence(bell, [0], backend=backend)
+    ent_form = entanglement_of_formation(bell, [0], base=base, backend=backend)
+    backend.assert_allclose(concur, 1.0, atol=PRECISION_TOL)
+    backend.assert_allclose(ent_form, 1 / np.log2(base), atol=PRECISION_TOL)
+
+    # GHZ state: one ebit across any cut with a single-qubit subsystem
+    ghz = np.zeros(8)
+    ghz[0] = ghz[-1] = 1 / np.sqrt(2)
+    ghz = backend.cast(ghz, dtype=ghz.dtype)
+    for bipartition in ([0], [1], [0, 1], [1, 2]):
+        ent_form = entanglement_of_formation(
+            ghz, bipartition, base=base, backend=backend
+        )
+        backend.assert_allclose(ent_form, 1 / np.log2(base), atol=PRECISION_TOL)
+
+
+def test_entanglement_of_formation_not_implemented(backend):
+    # maximally entangled state of two 2-qubit subsystems
+    state = np.eye(4).reshape(-1) / 2
+    state = backend.cast(state, dtype=state.dtype)
+    with pytest.raises(NotImplementedError):
+        entanglement_of_formation(state, [2, 3], backend=backend)
+
+
+@pytest.mark.parametrize("gamma", [0.1, 0.4, 0.9])
+@pytest.mark.parametrize("nqubits", [2, 4])
+def test_entanglement_fidelity_default_state(backend, nqubits, gamma):
+    # for the maximally entangled state, the entanglement fidelity of the
+    # amplitude damping channel is |tr(K_0) / 2|^2 + |tr(K_1) / 2|^2
+    channel = gates.AmplitudeDampingChannel(0, gamma)
+    ent_fid = entanglement_fidelity(channel, nqubits, backend=backend)
+    target = ((1 + np.sqrt(1 - gamma)) / 2) ** 2
+    backend.assert_allclose(ent_fid, target, atol=PRECISION_TOL)
+
+    # same result with the explicit maximally entangled state
+    dim = 2 ** (nqubits // 2)
+    state = np.eye(dim).reshape(-1) / np.sqrt(dim)
+    state = backend.cast(state, dtype=state.dtype)
+    state_copy = backend.cast(state, copy=True)
+    ent_fid = entanglement_fidelity(channel, nqubits, state=state, backend=backend)
+    backend.assert_allclose(ent_fid, target, atol=PRECISION_TOL)
+    # input state must not be modified
+    backend.assert_allclose(state, state_copy, atol=PRECISION_TOL)
+
+
+def test_entanglement_fidelity_invalid_arguments(backend):
+    channel = gates.AmplitudeDampingChannel(0, 0.1)
+    # default state needs an even number of qubits
+    with pytest.raises(ValueError):
+        entanglement_fidelity(channel, nqubits=3, backend=backend)
+    # state dimension must match nqubits
+    with pytest.raises(ValueError):
+        entanglement_fidelity(
+            channel, nqubits=3, state=backend.zero_state(2), backend=backend
+        )
+
+
+def test_meyer_wallach_pure_and_mixed(backend):
+    # GHZ state
+    ghz = np.zeros(8)
+    ghz[0] = ghz[-1] = 1 / np.sqrt(2)
+    ghz = backend.cast(ghz, dtype=ghz.dtype)
+    backend.assert_allclose(
+        meyer_wallach_entanglement(ghz, backend=backend), 1.0, atol=PRECISION_TOL
+    )
+    # density matrix of a pure state
+    ghz = backend.outer(ghz, backend.conj(ghz))
+    backend.assert_allclose(
+        meyer_wallach_entanglement(ghz, backend=backend), 1.0, atol=PRECISION_TOL
+    )
+
+    # mixed states are not supported (maximally mixed state is separable)
+    with pytest.raises(NotImplementedError):
+        meyer_wallach_entanglement(backend.maximally_mixed_state(2), backend=backend)
+
+
+def test_entangling_capability_normalization(backend):
+    with pytest.raises(ValueError):
+        entangling_capability(Circuit(1), samples=0, backend=backend)
+    with pytest.raises(ValueError):
+        entangling_capability(Circuit(1), samples=-1, backend=backend)
+
+    # local rotations on a Bell state do not change the entanglement:
+    # the entangling capability is the average of Q, which is bounded by 1
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RX(0, 0, trainable=True))
+    ent = entangling_capability(circuit, samples=10, seed=10, backend=backend)
+    backend.assert_allclose(ent, 1.0, atol=PRECISION_TOL)
