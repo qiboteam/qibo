@@ -53,6 +53,16 @@ def test_symbolic_hamiltonian_form_setter(backend):
     assert h.nqubits == 4
 
 
+def test_symbolic_hamiltonian_readonly_derived(backend):
+    h = SymbolicHamiltonian(
+        Z(0, backend=backend) * Z(1, backend=backend), backend=backend
+    )
+    # Derived attributes are computed from ``form`` and must not be reassigned.
+    for name in ("terms", "simple_terms", "diagonal_terms", "diagonal_simple_terms"):
+        with pytest.raises(AttributeError):
+            setattr(h, name, None)
+
+
 def test_symbolic_hamiltonian_dense(backend):
     target_matrix = backend.cast(
         Z(0, backend=backend).matrix @ Z(0, backend=backend).matrix

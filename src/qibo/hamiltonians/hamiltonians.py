@@ -342,6 +342,15 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             Defaults to ``None``.
     """
 
+    # Derived, read-only attributes computed from ``form``; reassigning them
+    # would desynchronise them from ``form``, so block the write.
+    _READONLY_DERIVED = (
+        "terms",
+        "simple_terms",
+        "diagonal_terms",
+        "diagonal_simple_terms",
+    )
+
     def __init__(
         self,
         form: sympy.Expr,
@@ -363,6 +372,13 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             _calculate_nqubits_from_form(form) if nqubits is None else nqubits
         )
         self._matrix = None
+
+    def __setattr__(self, name, value):
+        if name in self._READONLY_DERIVED:
+            raise AttributeError(
+                f"Cannot set read-only attribute {name!r}; it is derived from ``form``."
+            )
+        super().__setattr__(name, value)
 
     def __repr__(self) -> str:
         return str(self.form)
@@ -408,6 +424,12 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             )
         self._form = form
         self.nqubits = _calculate_nqubits_from_form(form)
+        # Drop any cached derived values so they are recomputed from the new form.
+        # ``cached_property`` stores its value under the attribute name, so
+        # clearing it here forces recomputation from the new form.
+        for name in self._READONLY_DERIVED:
+            self.__dict__.pop(name, None)
+            self.__dict__.pop(f"_{name}", None)
 
     @cached_property
     def terms(self) -> list:
