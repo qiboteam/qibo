@@ -9,6 +9,7 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.models.encodings import entangling_layer
+from qibo.quantum_info.basis import pauli_to_comp_basis
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
     random_clifford,
@@ -564,3 +565,88 @@ def test_random_pauli_hamiltonian_tensorflow(backend):
             nqubits=2, normalize=False, seed=42, backend=mock_backend
         )
         assert result is not None
+
+
+@pytest.mark.parametrize(
+    "function",
+    [
+        lambda seed, backend: random_gaussian_matrix(3, seed=seed, backend=backend),
+        lambda seed, backend: random_hermitian(3, seed=seed, backend=backend),
+        lambda seed, backend: random_unitary(3, seed=seed, backend=backend),
+        lambda seed, backend: random_statevector(4, seed=seed, backend=backend),
+        lambda seed, backend: random_density_matrix(4, seed=seed, backend=backend),
+        lambda seed, backend: random_quantum_channel(4, seed=seed, backend=backend),
+        lambda seed, backend: random_pauli(
+            2, 2, return_circuit=False, seed=seed, backend=backend
+        ),
+        lambda seed, backend: random_pauli_hamiltonian(2, seed=seed, backend=backend)[
+            0
+        ],
+    ],
+)
+def test_random_functions_accept_generator_seed(backend, function):
+    first = function(np.random.default_rng(1234), backend)
+    second = function(np.random.default_rng(1234), backend)
+    other = function(np.random.default_rng(4321), backend)
+
+    backend.assert_allclose(first, second)
+    assert not np.allclose(backend.to_numpy(first), backend.to_numpy(other))
+
+    # integer seeds are unchanged
+    backend.assert_allclose(function(7, backend), function(7, backend))
+
+
+@pytest.mark.parametrize("metric", ["ginibre", "bures"])
+@pytest.mark.parametrize("rank", [1, 2, 4])
+def test_random_density_matrix_rank(backend, metric, rank):
+    state = random_density_matrix(4, rank=rank, metric=metric, seed=3, backend=backend)
+    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(state))
+
+    assert np.sum(eigenvalues > 1e-10) == rank
+    backend.assert_allclose(np.trace(backend.to_numpy(state)), 1.0, atol=1e-10)
+
+
+def test_random_density_matrix_rank_errors(backend):
+    with pytest.raises(ValueError):
+        random_density_matrix(4, rank=2, metric="hilbert-schmidt", backend=backend)
+    with pytest.raises(ValueError):
+        random_density_matrix(4, rank=0, metric="ginibre", backend=backend)
+
+    # the rank equal to the dimension is the default for the Hilbert-Schmidt metric
+    random_density_matrix(4, rank=4, backend=backend)
+
+
+def test_random_density_matrix_pauli_basis_default_order(backend):
+    default = random_density_matrix(4, basis="pauli", seed=5, backend=backend)
+    explicit = random_density_matrix(4, basis="pauli-IXYZ", seed=5, backend=backend)
+
+    backend.assert_allclose(default, explicit)
+
+
+def test_random_quantum_channel_invalid_measure(backend):
+    with pytest.raises(ValueError):
+        random_quantum_channel(4, measure="invalid", backend=backend)
+
+
+@pytest.mark.parametrize("nqubits", [2, 3])
+@pytest.mark.parametrize("max_eigenvalue", [1.2, 1.5, 3.0, 10.0])
+def test_random_pauli_hamiltonian_spectrum(backend, nqubits, max_eigenvalue):
+    hamiltonian, eigenvalues = random_pauli_hamiltonian(
+        nqubits, max_eigenvalue=max_eigenvalue, normalize=True, seed=2, backend=backend
+    )
+    dims = 2**nqubits
+
+    # back to the computational basis
+    vector = backend.to_numpy(
+        pauli_to_comp_basis(nqubits, normalize=True, backend=backend)
+    ) @ backend.to_numpy(hamiltonian)
+    matrix = vector.reshape(dims, dims)
+    matrix = (matrix + matrix.conj().T) / 2
+    spectrum = np.sort(np.linalg.eigvalsh(matrix))
+
+    # returned eigenvalues are the spectrum of the Hamiltonian, with unit gap
+    np.testing.assert_allclose(
+        spectrum, np.sort(backend.to_numpy(eigenvalues).real), atol=1e-8
+    )
+    np.testing.assert_allclose(spectrum[:2], [0.0, 1.0], atol=1e-8)
+    np.testing.assert_allclose(spectrum[-1], max_eigenvalue, atol=1e-8)
