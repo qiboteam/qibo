@@ -600,7 +600,7 @@ def bures_angle(
     backend = _check_backend(backend)
 
     # the fidelity can exceed one due to rounding errors
-    sqrt_fid = min(backend.sqrt(fidelity(state, target, backend=backend)), 1.0)
+    sqrt_fid = backend.clip(backend.sqrt(fidelity(state, target, backend=backend)), 0.0, 1.0)
     angle = backend.arccos(sqrt_fid)
 
     return angle
@@ -631,7 +631,7 @@ def bures_distance(
     backend = _check_backend(backend)
 
     # the fidelity can exceed one due to rounding errors
-    sqrt_fid = min(backend.sqrt(fidelity(state, target, backend=backend)), 1.0)
+    sqrt_fid = backend.clip(backend.sqrt(fidelity(state, target, backend=backend)), 0.0, 1.0)
     distance = backend.sqrt(2 * (1 - sqrt_fid))
 
     return distance
