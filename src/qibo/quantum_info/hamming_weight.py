@@ -1,6 +1,10 @@
-"Module with the object that stores results from circuit execution using the HammingWeightBackend."
+"""Module with the object that stores results from circuit execution using the
+HammingWeightBackend."""
+
+from collections import Counter
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from qibo.backends import HammingWeightBackend
 from qibo.config import raise_error
@@ -12,7 +16,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
     :class:`qibo.backends.hamming_weight.HammingWeightBackend`.
 
     Args:
-        state (ndarray): statevector with a fixed Hamming weight.
+        state (ArrayLike): statevector with a fixed Hamming weight.
             The dimension of the state is :math:`d = \\binom{n}{k}`, where
             :math:`n` is the number of qubits and :math:`k` is the Hamming weight.
             The components of the state are ordered in lexicographical order.
@@ -22,21 +26,22 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             Defaults to ``None``.
         nshots (int, optional): number of shots used for sampling the measurements.
             Defaults to :math:`1000`.
-        engine (str, optional): engine to use in the execution of the
+        platform (str, optional): platform to use in the execution of the
             :class:`qibo.backends.HammingWeightBackend`. It accepts ``"numpy"``, ``"numba"``,
-            ``"cupy"``, and ``"cuquantum"``. If ``None``, defaults to the corresponding engine
+            ``"cupy"``, and ``"cuquantum"``. If ``None``, defaults to the corresponding platform
             from the current backend. Defaults to ``None``.
     """
 
     def __init__(
         self,
-        state,
+        state: ArrayLike,
         weight: int,
         nqubits: int,
-        measurements=None,
+        measurements: list | None = None,
         nshots: int = 1000,
-        platform=None,
+        platform: str | None = None,
     ):
+        measurements = [] if measurements is None else measurements
 
         backend = HammingWeightBackend(platform)
         QuantumState.__init__(self, state, backend)
@@ -47,14 +52,16 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         self._state = state
 
-    def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
+    def symbolic(
+        self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20
+    ) -> str:
         """Dirac notation representation of the state in the computational basis.
 
         Args:
             decimals (int, optional): Number of decimals for the amplitudes.
                 Defaults to :math:`5`.
             cutoff (float, optional): Amplitudes with absolute value smaller than the
-                cutoff are ignored from the representation. Defaults to  :math:`1e-10`.
+                cutoff are ignored from the representation. Defaults to ``1e-10``.
             max_terms (int, optional): Maximum number of terms to print. If the state
                 contains more terms they will be ignored. Defaults to :math:`20`.
 
@@ -66,7 +73,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         )
         return " + ".join(terms)
 
-    def full_state(self):
+    def full_state(self) -> ArrayLike:
         """Tensor representation of ``state`` in the entire computational basis.
 
         .. note::
@@ -86,7 +93,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         return state
 
-    def probabilities(self, qubits: list | set | None = None):
+    def probabilities(self, qubits: list | set | None = None) -> ArrayLike:
         """Calculate the probabilities of the measured qubits.
 
         If the number of shots is :math:`0` or no measurements were performed,
@@ -96,26 +103,27 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         Args:
             qubits (list or set, optional): Set of qubits that are measured.
                 If ``None``, ``qubits`` equates the total number of qubits.
-                Defauts to ``None``.
+                Defaults to ``None``.
+
         Returns:
-            ndarray: Probabilities over the input qubits.
+            ArrayLike: Probabilities over the input qubits.
         """
 
-        if self.nshots is None or len(self.measurements) == 0:
+        if not self.nshots or len(self.measurements) == 0:
             return self._exact_probabilities(qubits)
 
         return self._probabilities_from_samples(qubits)
 
-    def _exact_probabilities(self, qubits: list | set | None = None):
+    def _exact_probabilities(self, qubits: list | set | None = None) -> ArrayLike:
         """Calculate measurement probabilities by tracing out qubits.
 
         Args:
             qubits (list or set, optional): Set of qubits that are measured.
                 If ``None``, ``qubits`` equates the total number of qubits.
-                Defauts to ``None``.
+                Defaults to ``None``.
 
         Returns:
-            ndarray: Probabilities over the input qubits.
+            ArrayLike: Probabilities over the input qubits.
         """
 
         if qubits is None:
@@ -125,16 +133,18 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self._state, qubits, self.weight, self.nqubits
         )
 
-    def _probabilities_from_samples(self, qubits: list | set | None = None):
+    def _probabilities_from_samples(
+        self, qubits: list | set | None = None
+    ) -> ArrayLike:
         """Calculate the probabilities as ``frequencies / nshots``.
 
         Args:
             qubits (list or set, optional): Set of qubits that are measured.
                 If ``None``, ``qubits`` equates the total number of qubits.
-                Defauts to ``None``.
+                Defaults to ``None``.
 
         Returns:
-            ndarray: Array containing the probabilities of the measured qubits.
+            ArrayLike: Array containing the probabilities of the measured qubits.
         """
         if qubits is None:
             qubits = self.measurement_gate.qubits
@@ -162,7 +172,9 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self.backend.sqrt(probs), qubits, nqubits
         )
 
-    def samples(self, binary: bool = True, registers: bool = False):
+    def samples(
+        self, binary: bool = True, registers: bool = False
+    ) -> ArrayLike | dict[str, ArrayLike]:
         """Returns raw measurement samples.
 
         Args:
@@ -195,7 +207,9 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         self._probs = self._exact_probabilities(self.measurement_gate.qubits)
         return super().samples(binary=binary, registers=registers)
 
-    def frequencies(self, binary: bool = True, registers: bool = False):
+    def frequencies(
+        self, binary: bool = True, registers: bool = False
+    ) -> Counter | dict[str, Counter]:
         """Return the frequencies of measured samples.
 
         Args:
@@ -211,7 +225,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
             If ``binary`` is ``True``
                 the keys of the :class:`collections.Counter` are in binary form,
-                as strings of :math:`0` and :math`1`.
+                as strings of :math:`0` and :math:`1`.
             If ``binary`` is ``False``
                 the keys of the :class:`collections.Counter` are integers.
             If ``registers`` is ``True``
