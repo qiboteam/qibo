@@ -110,7 +110,7 @@ def trace_distance(
     distance = backend.conj(distance.T) @ distance
     distance = backend.matrix_sqrt(distance)
 
-    return backend.trace(distance) / 2
+    return backend.real(backend.trace(distance)) / 2
 
 
 def hilbert_schmidt_inner_product(
@@ -212,8 +212,8 @@ def fidelity(
         F(\\rho, \\sigma) = \\text{tr}(\\rho \\, \\sigma)
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
         precision_tol (float, optional): precision tolerance in :func:`qibo.quantum_info.impurity`
             used to decide if ``state`` and ``target`` are pure or mixed states.
             Defaults to :math:`10^{-8}`.
@@ -366,7 +366,7 @@ def n_fidelity(
 
     .. math::
         F_{\\text{N}}(\\rho, \\, \\sigma) = \\text{tr}(\\rho \\, \\sigma) +
-            \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, ,
+            \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, \\sqrt{1 - \\text{tr}(\\sigma^{2})} \\, ,
 
     where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
     a quantum state :math:`\\varrho`.
@@ -428,12 +428,12 @@ def chen_fidelity(
         F_{\\text{C}}(\\rho, \\, \\sigma) = \\frac{1 - r}{2} + \\frac{1 + r}{2} \\,
             F_{\\text{N}}(\\rho, \\, \\sigma)  \\, ,
 
-    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
-    a quantum state :math:`\\varrho`.
+    where :math:`r = 1 / (d - 1)`, with :math:`d` being the dimension of the quantum states,
+    and :math:`F_{\\text{N}}` is the :func:`qibo.quantum_info.n_fidelity`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ArrayLike): statevector or density matrix.
+        target (ArrayLike): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -599,7 +599,11 @@ def bures_angle(
     """
     backend = _check_backend(backend)
 
-    angle = backend.arccos(backend.sqrt(fidelity(state, target, backend=backend)))
+    # the fidelity can exceed one due to rounding errors
+    sqrt_fid = backend.clip(
+        backend.sqrt(fidelity(state, target, backend=backend)), 0.0, 1.0
+    )
+    angle = backend.arccos(sqrt_fid)
 
     return angle
 
@@ -628,7 +632,9 @@ def bures_distance(
     """
     backend = _check_backend(backend)
 
-    sqrt_fid = backend.sqrt(fidelity(state, target, backend=backend))
+    # the fidelity can exceed one due to rounding errors
+    fidelity_value = backend.clip(fidelity(state, target, backend=backend), 0.0, 1.0)
+    sqrt_fid = backend.sqrt(fidelity_value)
     distance = backend.sqrt(2 * (1 - sqrt_fid))
 
     return distance
@@ -680,7 +686,7 @@ def process_fidelity(
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
             norm_target = float(
-                backend.vector_norm(
+                backend.matrix_norm(
                     (backend.conj(target.T) @ target) - backend.identity(dim**2)
                 )
             )
@@ -748,7 +754,8 @@ def average_gate_fidelity(
         F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\,
             F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
 
-    where :math:`d` is the dimension of the channels and
+    where :math:`d` is the dimension of the Hilbert space that the channels act on,
+    i.e. the Liouville representation of a channel has shape :math:`(d^{2}, \\, d^{2})`, and
     :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
     :meth:`~qibo.metrics.process_fidelily` of channel
     :math:`\\mathcal{E}` with respect to the unitary
@@ -769,7 +776,7 @@ def average_gate_fidelity(
         and target unitary channel :math:`\\mathcal{U}`.
     """
 
-    dim = channel.shape[0]
+    dim = int(np.sqrt(channel.shape[0]))
 
     process_fid = process_fidelity(
         channel, target, check_unitary=check_unitary, backend=backend
@@ -877,7 +884,7 @@ def diamond_norm(
         )
 
     if target is not None:
-        channel -= target
+        channel = channel - target
 
     # `CVXPY` only works with `numpy`, so this function has to
     # convert any channel to the `numpy` backend by default
@@ -992,6 +999,12 @@ def expressibility(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
+    if power_t < 1 or samples < 1:
+        raise_error(
+            ValueError,
+            f"power_t and samples must be positive, but they are {power_t} and {samples}.",
+        )
+
     from qibo.quantum_info.utils import (
         haar_integral,
         pqc_integral,
@@ -1022,17 +1035,22 @@ def frame_potential(
 
     .. math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\,
-            \\text{d}U \\, \\text{d}V \\, \\bigl| \\, \\text{tr}(U^{\\dagger} \\, V)
+            \\text{d}U \\, \\text{d}V \\, \\bigl| \\, \\text{tr}(U^{\\dagger} \\, V) \\, / \\, d
             \\, \\bigr|^{2t} \\, ,
+
+    where :math:`d = 2^{n}`, i.e. the unitaries are normalized by :math:`d^{-1/2}`, hence
+    the frame potential of the Haar measure is :math:`t! \\, / \\, d^{2t}`.
 
     where :math:`\\mathcal{U}` is the group of unitaries defined by the parametrized circuit.
     The frame potential is approximated by the average
 
     .. math::
-        \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\,
-            \\sum_{k=1}^{N} \\, \\bigl| \\, \\text{tr}(U_{k}^{\\dagger} \\, V_{k}) \\, \\bigr|^{2t} \\, ,
+        \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N^{2}} \\,
+            \\sum_{j, k=1}^{N} \\, \\bigl| \\, \\text{tr}(U_{j}^{\\dagger} \\, V_{k}) \\, / \\, d
+            \\, \\bigr|^{2t} \\, ,
 
-    where :math:`N` is the number of ``samples``.
+    where :math:`N` is the number of ``samples``, and :math:`U_{j}` and :math:`V_{k}` are
+    independently sampled from the circuit.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Parametrized circuit.
@@ -1057,6 +1075,12 @@ def frame_potential(
     if not isinstance(samples, int):
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
+        )
+
+    if power_t < 1 or samples < 1:
+        raise_error(
+            ValueError,
+            f"power_t and samples must be positive, but they are {power_t} and {samples}.",
         )
 
     backend = _check_backend(backend)
@@ -1085,7 +1109,7 @@ def frame_potential(
                 backend.trace(backend.dagger(unitary_1) @ unitary_2)
             ) ** (2 * power_t)
 
-    return potential / samples**2
+    return float(potential / samples**2)
 
 
 def quantum_fisher_information_matrix(
@@ -1114,10 +1138,10 @@ def quantum_fisher_information_matrix(
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): parametrized circuit :math:`U(\\theta)`.
-        parameters (ndarray, optional): parameters whose QFIM to calculate.
+        parameters (ArrayLike, optional): parameters whose QFIM to calculate.
             If ``None``, QFIM is calculated with the paremeters from ``circuit``, i.e.
             ``parameters = circuit.get_parameters()``. Defaults to ``None``.
-        initial_state (ndarray, optional): Initial configuration. It can be specified
+        initial_state (ArrayLike, optional): Initial configuration. It can be specified
             by the setting the state vector using an array or a circuit. If ``None``,
             the initial state is :math:`\\ket{0}^{\\otimes n}`. Defaults to ``None``.
         return_complex (bool, optional): If ``True``, calculates the Jacobian matrix
@@ -1128,7 +1152,7 @@ def quantum_fisher_information_matrix(
             Defaults to ``None``.
 
     Returns:
-        ndarray: Quantum Fisher Information :math:`\\mathbf{F}`.
+        ArrayLike: Quantum Fisher Information :math:`\\mathbf{F}`.
     """
     backend = _check_backend(backend)
 
