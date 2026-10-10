@@ -516,7 +516,9 @@ def lanczos(
         steps = dims
 
     if not isinstance(steps, int):
-        raise_error(TypeError, f"``steps`` must be type int, but it is type {type(steps)}.")
+        raise_error(
+            TypeError, f"``steps`` must be type int, but it is type {type(steps)}."
+        )
     if not 1 <= steps <= dims:
         raise_error(
             ValueError,
