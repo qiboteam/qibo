@@ -1,3 +1,4 @@
+import logging
 import math
 from functools import reduce
 from itertools import product, repeat
@@ -1088,3 +1089,13 @@ def test_circuits_errors():
     for nqubits, auxiliary in [(1, [1]), (2, [2]), (2, [-1]), (2, [0, 0]), (2, [0.5])]:
         with pytest.raises(ValueError):
             gst.circuits(Circuit(nqubits), auxiliary)
+
+
+def test_gst_deprecated(backend, caplog):
+    """The old ``GST`` function logs a warning that points to the new class."""
+    with caplog.at_level(logging.WARNING):
+        matrices = GST([gates.X], nshots=int(1e2), backend=backend)
+
+    assert "deprecated" in caplog.text
+    assert "GateSetTomography" in caplog.text
+    assert len(matrices) == 1

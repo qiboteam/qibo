@@ -10,7 +10,7 @@ from sympy import S
 
 from qibo import Circuit, gates, symbols
 from qibo.backends import Backend, _check_backend, construct_backend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.gates.abstract import Gate
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import NoiseModel
@@ -706,6 +706,10 @@ def GST(
 ):
     """Run Gate Set Tomography on the input ``gate_set``.
 
+    .. warning::
+        This function is deprecated and will be removed in a future release. Use
+        :class:`qibo.tomography.gate_set_tomography.GateSetTomography` instead.
+
     Example 1:
         Given the following ``gate_set``:
 
@@ -772,6 +776,12 @@ def GST(
     Returns:
         List[ArrayLike]: Input ``gate_set`` represented by matrices estimaded via GST.
     """
+
+    log.warning(
+        "``GST`` is deprecated and will be removed in a future release. "
+        + "Use ``qibo.tomography.GateSetTomography`` instead, which characterizes "
+        + "a circuit, e.g. ``GateSetTomography()(circuit, nshots, ...)``."
+    )
 
     backend = _check_backend(backend)
     if backend.name == "qibolab" and transpiler is None:  # pragma: no cover
