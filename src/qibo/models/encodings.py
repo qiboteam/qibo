@@ -1130,13 +1130,18 @@ def spin_s_encoder(
             dtype=backend.complex128 if complex_data else backend.float64,
         )
     else:
+        if len(data) != dims:
+            raise_error(
+                ValueError,
+                f"Data dimension should be {dims}, passed data has dims {len(data)}.",
+            )
         complex_data = bool("complex" in str(data.dtype))
 
     # sort data such that the encoding is performed in lexicographical order
     # ditstrings as integers in base 2s + 1 to find their lexicographical ranks
     powers = (levels + 1) ** backend.flip(backend.arange(nqudits, dtype=backend.int64))
     ranks = backend.argsort(backend.sum(ditstrings * powers, axis=1))
-    data = data[backend.argsort(ranks)]
+    data = data[ranks]
 
     circuit = Circuit(nqudits * width, **kwargs)
     circuit.add(gates.X(int(qubit)) for qubit in backend.flatnonzero(bitstrings[0]))
