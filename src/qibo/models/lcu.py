@@ -297,7 +297,7 @@ def lcu_select(
     elif not isinstance(nauxiliary, int):
         raise_error(
             TypeError,
-            f"``nauxiliary`` must be a positive integer, but it is {type(nauxiliary)}."
+            f"``nauxiliary`` must be a positive integer, but it is {type(nauxiliary)}.",
         )
     elif nauxiliary < minimum:
         raise_error(
