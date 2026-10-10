@@ -21,7 +21,7 @@ from qibo.models.encodings import (
 from qibo.models.error_mitigation import CDR, ICS, ZNE, vnCDR
 from qibo.models.evolution import AdiabaticEvolution, StateEvolution
 from qibo.models.grover import Grover
-from qibo.models.lcu import lcu_circuit
+from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
 from qibo.models.qft import QFT
 from qibo.models.qsp import qsp_circuit, qsp_phases
 from qibo.models.qsvt import qsvt_circuit, qsvt_phases
@@ -52,6 +52,8 @@ __all__ = [
     "hep",
     "ladder_synthesis",
     "lcu_circuit",
+    "lcu_prepare",
+    "lcu_select",
     "permutation_synthesis",
     "phase_encoder",
     "qsp_circuit",
