@@ -281,15 +281,15 @@ def _fill_tril(mat, symmetric):
         if symmetric:
             mat[0, 1] = mat[1, 0]
         if dim > 2:
-            mat[2, 0] = ENGINE.random_integers(2, dtype=np.uint8)
-            mat[2, 1] = ENGINE.random_integers(2, dtype=np.uint8)
+            mat[2, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
+            mat[2, 1] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
             if symmetric:
                 mat[0, 2] = mat[2, 0]
                 mat[1, 2] = mat[2, 1]
         if dim > 3:
-            mat[3, 0] = ENGINE.random_integers(2, dtype=np.uint8)
-            mat[3, 1] = ENGINE.random_integers(2, dtype=np.uint8)
-            mat[3, 2] = ENGINE.random_integers(2, dtype=np.uint8)
+            mat[3, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
+            mat[3, 1] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
+            mat[3, 2] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
             if symmetric:
                 mat[0, 3] = mat[3, 0]
                 mat[1, 3] = mat[3, 1]
@@ -368,10 +368,10 @@ def _sample_from_quantum_mallows_distribution(
         (:class:`numpy.typing.ArrayLike`, :class:`numpy.typing.ArrayLike`): tuple of binary
         :class:`numpy.typing.ArrayLike` and :class:`numpy.typing.ArrayLike` of indexes.
 
-    Reference:
+    References:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
-            structure of the Clifford group*.
-            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
+           structure of the Clifford group*.
+           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
     exponents = ENGINE.arange(nqubits, 0, -1, dtype=ENGINE.int64)
     powers = 4**exponents
@@ -393,7 +393,7 @@ def _sample_from_quantum_mallows_distribution(
 
 
 def _super_op_from_bcsz_measure_preamble(
-    dims: int, rank: int
+    dims: int, rank: int, subscripts: str
 ) -> tuple[ArrayLike, ArrayLike]:
     super_op = _random_gaussian_matrix(
         dims**2,
@@ -403,7 +403,7 @@ def _super_op_from_bcsz_measure_preamble(
     )
     super_op = super_op @ ENGINE.conj(super_op).T
     # partial trace implemented with einsum
-    super_op_reduced = ENGINE.einsum("ijik->jk", ENGINE.reshape(super_op, (dims,) * 4))
+    super_op_reduced = ENGINE.einsum(subscripts, ENGINE.reshape(super_op, (dims,) * 4))
     eigenvalues, eigenvectors = ENGINE.eigh(super_op_reduced)
     eigenvalues = ENGINE.sqrt(1.0 / eigenvalues)
     eigenvectors = eigenvectors.T
@@ -415,13 +415,15 @@ def _super_op_from_bcsz_measure_preamble(
 
 
 def _super_op_from_bcsz_measure_row(dims: int, rank: int) -> ArrayLike:
-    operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
+    # in row-vectorization the output is the first subsystem, which is traced out
+    operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank, "ijik->jk")
     operator = ENGINE.kron(ENGINE.identity(dims, dtype=operator.dtype), operator)
     return operator @ super_op @ operator
 
 
 def _super_op_from_bcsz_measure_column(dims: int, rank: int) -> ArrayLike:
-    operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
+    # in column-vectorization the output is the second subsystem, which is traced out
+    operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank, "ijkj->ik")
     operator = ENGINE.kron(operator, ENGINE.identity(dims, dtype=operator.dtype))
     return operator @ super_op @ operator
 
@@ -440,11 +442,8 @@ def _kraus_to_stinespring(
 def _stinespring_to_kraus(
     stinespring: ArrayLike, initial_state_env: ArrayLike, dim: int, dim_env: int
 ) -> ArrayLike:
+    # indices: (system out, environment out, system in, environment in)
     stinespring = ENGINE.reshape(stinespring, (dim, dim_env, dim, dim_env))
-    stinespring = ENGINE.swapaxes(stinespring, 1, 2)
-    alphas = ENGINE.identity(dim_env, dtype=stinespring.dtype)
-    stinespring = (alphas @ stinespring).reshape(dim, dim_env, dim + dim_env)
-    stinespring = ENGINE.vstack(
-        (stinespring[:, :, :dim_env], stinespring[:, :, dim_env:])
-    )
-    return (stinespring @ initial_state_env).reshape(dim, dim_env, dim_env)
+    # the Kraus operator ``e`` is the action of the isometry on the initial state of
+    # the environment, projected on the state ``e`` of the environment
+    return ENGINE.einsum("aebf,f->eab", stinespring, ENGINE.conj(initial_state_env))

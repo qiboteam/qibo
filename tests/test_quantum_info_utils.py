@@ -128,42 +128,31 @@ def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
 @pytest.mark.parametrize("validate", [False, True])
 def test_hellinger(backend, validate, kind):
     with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)
-        prob_q = np.random.rand(1, 5)
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.random_sample((1, 2))
+        prob_q = backend.random_sample((1, 5))
         hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)[0]
+        prob = backend.random_sample((1, 2))[0]
         prob_q = np.array([])
-        prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
         hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.array([-1, 2.0])
-        prob_q = np.random.rand(1, 5)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([-1, 2.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 2))[0]
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.random.rand(1, 2)[0]
-        prob_q = np.array([1.0, 0.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.random_sample((1, 2))[0]
+        prob_q = backend.cast([1.0, 0.0], dtype=backend.float64)
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.array([1.0, 0.0])
-        prob_q = np.random.rand(1, 2)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([1.0, 0.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 2))[0]
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
-    prob_p = np.random.rand(10)
-    prob_q = np.random.rand(10)
-    prob_p /= np.sum(prob_p)
-    prob_q /= np.sum(prob_q)
-    prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
-    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+    prob_p = backend.random_sample(10)
+    prob_q = backend.random_sample(10)
+    prob_p /= backend.sum(prob_p)
+    prob_q /= backend.sum(prob_q)
 
     target = float(
         backend.vector_norm(backend.sqrt(prob_p) - backend.sqrt(prob_q)) / np.sqrt(2)
@@ -179,8 +168,8 @@ def test_hellinger(backend, validate, kind):
     distance = hellinger_distance(prob_p, prob_q, validate=validate, backend=backend)
     fidelity = hellinger_fidelity(prob_p, prob_q, validate=validate, backend=backend)
 
-    assert distance == target
-    assert fidelity == (1 - target**2) ** 2
+    backend.assert_allclose(distance, target)
+    backend.assert_allclose(fidelity, (1 - target**2) ** 2)
 
 
 @pytest.mark.parametrize("kind", [None, list])
@@ -219,30 +208,22 @@ def test_hellinger_shot_error(backend, validate, kind):
 @pytest.mark.parametrize("validate", [False, True])
 def test_total_variation_distance(backend, validate, kind):
     with pytest.raises(ValueError):
-        prob = np.array([-1, 2.0])
-        prob_q = np.random.rand(1, 5)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([-1, 2.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 2))[0]
         total_variation_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.random.rand(1, 2)[0]
-        prob_q = np.array([1.0, 0.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.random_sample((1, 2))[0]
+        prob_q = backend.cast([1.0, 0.0], dtype=backend.float64)
         total_variation_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
-        prob = np.array([1.0, 0.0])
-        prob_q = np.random.rand(1, 2)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        prob = backend.cast([1.0, 0.0], dtype=backend.float64)
+        prob_q = backend.random_sample((1, 2))[0]
         total_variation_distance(prob, prob_q, validate=True, backend=backend)
 
-    prob_p = np.random.rand(10)
-    prob_q = np.random.rand(10)
-    prob_p /= np.sum(prob_p)
-    prob_q /= np.sum(prob_q)
-    prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
-    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+    prob_p = backend.random_sample(10)
+    prob_q = backend.random_sample(10)
+    prob_p /= backend.sum(prob_p)
+    prob_q /= backend.sum(prob_q)
 
     target = float(backend.vector_norm(prob_p - prob_q, order=1) / 2)
 
@@ -256,7 +237,7 @@ def test_total_variation_distance(backend, validate, kind):
     tvd = total_variation_distance(prob_p, prob_q, validate, backend)
     distance = hellinger_distance(prob_p, prob_q, validate, backend)
 
-    assert tvd == target
+    backend.assert_allclose(tvd, target)
     assert tvd <= np.sqrt(2) * distance
     assert tvd >= distance**2
 
@@ -314,3 +295,103 @@ def test_decompose_permutation_errors(sigma, backend):
         decompose_permutation([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):
         decompose_permutation(sigma, m=3, backend=backend)
+
+
+@pytest.mark.parametrize("implementation", ["regular", "fast"])
+def test_hadamard_transform_does_not_modify_backend(backend, implementation):
+    hadamard = backend.to_numpy(backend.matrices.H).copy()
+
+    # for one qubit, the cached Hadamard matrix must not be modified in place
+    hadamard_transform(
+        backend.cast(np.array([1.0, 0.0])),
+        implementation=implementation,
+        backend=backend,
+    )
+    hadamard_transform(
+        backend.cast(np.eye(2)), implementation=implementation, backend=backend
+    )
+    np.testing.assert_allclose(backend.to_numpy(backend.matrices.H), hadamard)
+
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    state = backend.to_numpy(backend.execute_circuit(circuit).state())
+    np.testing.assert_allclose(np.linalg.norm(state), 1.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_hadamard_transform_implementations_agree(backend, nqubits):
+    dim = 2**nqubits
+    rng = np.random.default_rng(1234)
+    vector = backend.cast(rng.normal(size=dim) + 1j * rng.normal(size=dim))
+    matrix = backend.cast(rng.normal(size=(dim, dim)) + 0j)
+
+    for array in (vector, matrix):
+        fast = hadamard_transform(array, "fast", backend=backend)
+        regular = hadamard_transform(array, "regular", backend=backend)
+        backend.assert_allclose(fast, regular, atol=PRECISION_TOL)
+
+    with pytest.raises(TypeError):
+        hadamard_transform(backend.cast(np.ones((4, 8))), backend=backend)
+
+
+@pytest.mark.parametrize(
+    "function",
+    [
+        hellinger_distance,
+        hellinger_fidelity,
+        total_variation_distance,
+        lambda p, q, backend: hellinger_shot_error(p, q, 100, backend=backend),
+    ],
+)
+def test_probability_distances_shape_errors(backend, function):
+    uniform = [0.25] * 4
+
+    with pytest.raises(ValueError):
+        function(uniform, [1.0], backend=backend)
+    with pytest.raises(ValueError):
+        function(uniform, [0.5, 0.25, 0.25], backend=backend)
+
+
+def test_total_variation_distance_dims(backend):
+    with pytest.raises(TypeError):
+        total_variation_distance(
+            backend.cast(np.full((2, 2), 0.25)),
+            backend.cast(np.full((2, 2), 0.25)),
+            backend=backend,
+        )
+    with pytest.raises(TypeError):
+        total_variation_distance(
+            backend.cast(np.array([])), backend.cast(np.array([])), backend=backend
+        )
+
+
+@pytest.mark.parametrize("value", [0, -1])
+def test_integrals_non_positive_arguments(backend, value):
+    with pytest.raises(ValueError):
+        haar_integral(1, value, backend=backend)
+    with pytest.raises(ValueError):
+        haar_integral(1, 1, samples=value, backend=backend)
+
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, 0.1, trainable=True))
+    with pytest.raises(ValueError):
+        pqc_integral(circuit, value, 2, backend=backend)
+    with pytest.raises(ValueError):
+        pqc_integral(circuit, 1, value, backend=backend)
+
+
+def test_pqc_integral_preserves_circuit_representation(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, 0.1, trainable=True))
+    circuit.add(gates.CNOT(0, 1))
+    assert circuit.density_matrix is False
+
+    pqc_integral(circuit, 1, 3, backend=backend)
+
+    assert circuit.density_matrix is False
+
+
+@pytest.mark.parametrize("budget", [0, -1, -2, 3, 6])
+def test_decompose_permutation_invalid_budget(backend, budget):
+    with pytest.raises(ValueError):
+        decompose_permutation([1, 0, 3, 2], budget, backend=backend)

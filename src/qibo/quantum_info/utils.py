@@ -6,6 +6,7 @@ from math import factorial
 from re import finditer
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
@@ -31,10 +32,12 @@ def _pauli_basis_normalization(nqubits: int):
     return float(np.sqrt(2**nqubits))
 
 
-def hamming_weight(bitstring: int | str | list | tuple, return_indexes: bool = False):
+def hamming_weight(
+    bitstring: int | str | list | tuple, return_indexes: bool = False
+) -> int | list[int]:
     """Calculates the Hamming weight of a bitstring.
 
-    The Hamming weight of a bistring is the number of :math:'1's that the bistring contains.
+    The Hamming weight of a bitstring is the number of :math:`1`'s that the bitstring contains.
 
     Args:
         bitstring (int or str or tuple or list): bitstring to calculate the
@@ -69,14 +72,14 @@ def hamming_distance(
     bitstring_1: int | str | list | tuple,
     bitstring_2: int | str | list | tuple,
     return_indexes: bool = False,
-):
-    """Calculates the Hamming distance between two bistrings.
+) -> int | list[int]:
+    """Calculates the Hamming distance between two bitstrings.
 
     This is done by calculating the Hamming weight
     (:func:`qibo.quantum_info.utils.hamming_weight`) of ``| bitstring_1 - bitstring_2 |``.
 
     Args:
-        bitstring_1 (int or str or list or tuple): fisrt bistring.
+        bitstring_1 (int or str or list or tuple): first bitstring.
         bitstring_2 (int or str or list or tuple): second bitstring.
         return_indexes (bool, optional): If ``True``, returns the indexes of the
             non-zero elements. Defaults to ``False``.
@@ -117,7 +120,9 @@ def hamming_distance(
     return hamming_weight(difference, return_indexes=return_indexes)
 
 
-def hadamard_transform(array, implementation: str = "fast", backend=None):
+def hadamard_transform(
+    array: ArrayLike, implementation: str = "fast", backend: Backend | None = None
+) -> ArrayLike:
     """Calculates the (fast) Hadamard Transform :math:`\\text{HT}` of a
     :math:`2^{n}`-dimensional vector or :math:`2^{n} \\times 2^{n}` matrix :math:`A`,
     where :math:`n` is the number of qubits in the system. If :math:`A` is a vector, then
@@ -131,7 +136,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
         \\text{HT}(A) = \\frac{1}{2^{n}} \\, H^{\\otimes n} \\, A \\, H^{\\otimes n} \\, .
 
     Args:
-        array (ndarray): array or matrix.
+        array (ArrayLike): array or matrix.
         implementation (str, optional): if ``"regular"``, it uses the straightforward
             implementation of the algorithm with computational complexity of
             :math:`\\mathcal{O}(2^{2n})` for vectors and :math:`\\mathcal{O}(2^{3n})`
@@ -142,7 +147,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
             Defaults to ``None``.
 
     Returns:
-        ndarray: (Fast) Hadamard Transform of ``array``.
+        ArrayLike: (Fast) Hadamard Transform of ``array``.
     """
     backend = _check_backend(backend)
 
@@ -153,7 +158,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
             len(array.shape) == 2
             and (
                 np.log2(array.shape[0]).is_integer() is False
-                or np.log2(array.shape[1]).is_integer() is False
+                or array.shape[0] != array.shape[1]
             )
         )
     ):
@@ -176,8 +181,9 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
     if implementation == "regular":
         nqubits = int(np.log2(array.shape[0]))
+        # not in place: for one qubit, ``reduce`` returns the cached Hadamard matrix itself
         hadamards = reduce(backend.kron, [backend.real(backend.matrices.H)] * nqubits)
-        hadamards /= 2 ** (nqubits / 2)
+        hadamards = hadamards / 2 ** (nqubits / 2)
 
         array = hadamards @ array
 
@@ -197,7 +203,12 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
     return array
 
 
-def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
+def hellinger_distance(
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
+    validate: bool = False,
+    backend: Backend | None = None,
+) -> float:
     """Calculates the Hellinger distance :math:`H` between two discrete probability distributions.
 
     For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
@@ -209,8 +220,8 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
     where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ArrayLike or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ArrayLike or list): discrete probability distribution :math:`q`.
         validate (bool, optional): If ``True``, checks if :math:`p` and :math:`q` are proper
             probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -218,7 +229,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
             the current backend. Defaults to ``None``.
 
     Returns:
-        (float): Hellinger distance :math:`H(p, q)`.
+        float: Hellinger distance :math:`H(p, q)`.
     """
     backend = _check_backend(backend)
 
@@ -236,6 +247,13 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
 
     if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
         raise_error(TypeError, "At least one of the arrays is empty.")
+
+    if prob_dist_p.shape != prob_dist_q.shape:
+        raise_error(
+            ValueError,
+            "Probability arrays must have the same length, but have "
+            + f"lengths {len(prob_dist_p)} and {len(prob_dist_q)}.",
+        )
 
     if validate:
         if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
@@ -259,7 +277,12 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
     return distance
 
 
-def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
+def hellinger_fidelity(
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
+    validate: bool = False,
+    backend: Backend | None = None,
+) -> float:
     """Calculates the Hellinger fidelity between two discrete probability distributions.
 
     For probabilities :math:`p` and :math:`q`, the fidelity is defined as
@@ -270,8 +293,8 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
     where :math:`H(p, q)` is the :func:`qibo.quantum_info.hellinger_distance`.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ArrayLike or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ArrayLike or list): discrete probability distribution :math:`q`.
         validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
             probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -290,8 +313,12 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
 
 
 def hellinger_shot_error(
-    prob_dist_p, prob_dist_q, nshots: int, validate: bool = False, backend=None
-):
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
+    nshots: int,
+    validate: bool = False,
+    backend: Backend | None = None,
+) -> float:
     """Calculates the Hellinger fidelity error between two discrete probability distributions estimated from finite statistics.
 
     It is calculated propagating the probability error of each state of the system.
@@ -306,8 +333,8 @@ def hellinger_shot_error(
     :func:`qibo.quantum_info.hellinger_fidelity`.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ArrayLike or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ArrayLike or list): discrete probability distribution :math:`q`.
         nshots (int): number of shots we used to run the circuit to obtain :math:`p` and :math:`q`.
         validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
             probability distributions. Defaults to ``False``.
@@ -339,8 +366,11 @@ def hellinger_shot_error(
 
 
 def total_variation_distance(
-    prob_dist_p, prob_dist_q, validate: bool = False, backend=None
-):
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
+    validate: bool = False,
+    backend: Backend | None = None,
+) -> float:
     """Calculate the total variation distance between two discrete probability distributions.
 
     For probabilities :math:`p` and :math:`q`, the total variation distance is defined as
@@ -349,11 +379,11 @@ def total_variation_distance(
         \\operatorname{TVD}(p, \\, q) = \\frac{1}{2} \\, \\|p - q\\|_{1}
             = \\frac{1}{2} \\, \\sum_{x} \\, \\left|p(x) - q(x)\\right| \\, ,
 
-    where :math:`\\|\\cdot\\|_{1}` detones the :math:`\\ell_{1}`-norm.
+    where :math:`\\|\\cdot\\|_{1}` denotes the :math:`\\ell_{1}`-norm.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ArrayLike or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ArrayLike or list): discrete probability distribution :math:`q`.
         validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
             probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -370,6 +400,23 @@ def total_variation_distance(
 
     if isinstance(prob_dist_q, list):
         prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
+        raise_error(
+            TypeError,
+            "Probability arrays must have dims (k,) but have "
+            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
+        )
+
+    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
+        raise_error(TypeError, "At least one of the arrays is empty.")
+
+    if prob_dist_p.shape != prob_dist_q.shape:
+        raise_error(
+            ValueError,
+            "Probability arrays must have the same length, but have "
+            + f"lengths {len(prob_dist_p)} and {len(prob_dist_q)}.",
+        )
 
     if validate:
         if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
@@ -394,8 +441,8 @@ def haar_integral(
     nqubits: int,
     power_t: int,
     samples: int | None = None,
-    backend=None,
-):
+    backend: Backend | None = None,
+) -> ArrayLike:
     """Returns the integral over pure states over the Haar measure.
 
     .. math::
@@ -413,10 +460,10 @@ def haar_integral(
             the current backend. Defaults to ``None``.
 
     Returns:
-        array: Estimation of the Haar integral.
+        ArrayLike: Estimation of the Haar integral.
 
     .. note::
-        The ``exact=True`` method is implemented using Lemma 34 of
+        The exact method (``samples=None``) is implemented using Lemma 34 of
         `Kliesch and Roth (2020) <https://arxiv.org/abs/2010.05925>`_.
     """
 
@@ -434,6 +481,12 @@ def haar_integral(
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
+
+    if power_t < 1:
+        raise_error(ValueError, f"power_t must be positive, but it is {power_t}.")
+
+    if samples is not None and samples < 1:
+        raise_error(ValueError, f"samples must be positive, but it is {samples}.")
 
     backend = _check_backend(backend)
 
@@ -483,7 +536,9 @@ def haar_integral(
     return integral
 
 
-def pqc_integral(circuit, power_t: int, samples: int, backend=None):
+def pqc_integral(
+    circuit, power_t: int, samples: int, backend: Backend | None = None
+) -> ArrayLike:
     """Returns the integral over pure states generated by uniformly sampling
     in the parameter space described by a parameterized circuit.
 
@@ -500,7 +555,7 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
             the current backend. Defaults to ``None``.
 
     Returns:
-        ndarray: Estimation of the integral.
+        ArrayLike: Estimation of the integral.
     """
 
     if isinstance(power_t, int) is False:
@@ -513,8 +568,15 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
+    if power_t < 1:
+        raise_error(ValueError, f"power_t must be positive, but it is {power_t}.")
+
+    if samples < 1:
+        raise_error(ValueError, f"samples must be positive, but it is {samples}.")
+
     backend = _check_backend(backend)
 
+    density_matrix = circuit.density_matrix
     circuit.density_matrix = True
     dim = 2**circuit.nqubits
 
@@ -526,6 +588,8 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
         circuit.set_parameters(params)
         rho = backend.execute_circuit(circuit).state()
         rand_unit_density = rand_unit_density + reduce(backend.kron, [rho] * power_t)
+
+    circuit.density_matrix = density_matrix
 
     integral = rand_unit_density / samples
 
@@ -646,7 +710,9 @@ def _greedy_pack(matchings: list[list[tuple[int, int]]], m: int):
     return layers
 
 
-def decompose_permutation(sigma: list[int] | tuple[int, ...], m: int, backend=None):
+def decompose_permutation(
+    sigma: list[int] | tuple[int, ...], m: int, backend: Backend | None = None
+) -> list[list[tuple[int, int]]]:
     """
     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
     and a power‑of‑two budget ``m``, this function factors ``sigma``
@@ -684,7 +750,7 @@ def decompose_permutation(sigma: list[int] | tuple[int, ...], m: int, backend=No
             ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
         )
 
-    if m > 0 and (m & (m - 1)) != 0:
+    if m < 1 or (m & (m - 1)) != 0:
         raise_error(ValueError, "budget m must be a power‑of‑two")
 
     matchings = [l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
