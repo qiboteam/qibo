@@ -1,4 +1,5 @@
-"""Module definig the Clifford object, which allows phase-space representation of Clifford circuits and stabilizer states."""
+"""Module defining the Clifford object, which allows phase-space representation of
+Clifford circuits and stabilizer states."""
 
 from dataclasses import dataclass, field
 from functools import reduce
@@ -22,7 +23,7 @@ class Clifford:
     :class:`qibo.backends.clifford.CliffordBackend`.
 
     Args:
-        data (ndarray or :class:`qibo.models.circuit.Circuit`): If ``ndarray``, it is the
+        data (ArrayLike or :class:`qibo.models.circuit.Circuit`): If ``ArrayLike``, it is the
             symplectic matrix of the stabilizer state in phase-space representation.
             If :class:`qibo.models.circuit.Circuit`, it is a circuit composed only of Clifford
             gates and computational-basis measurements.
@@ -31,10 +32,10 @@ class Clifford:
             Defaults to ``None``.
         nshots (int, optional): number of shots used for sampling the measurements.
             Defaults to :math:`1000`.
-        engine (str, optional): engine to use in the execution of the
+        platform (str, optional): platform to use in the execution of the
             :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
             ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
-            If ``None``, defaults to the corresponding engine
+            If ``None``, defaults to the corresponding platform
             from the current backend. Defaults to ``None``.
     """
 
@@ -46,8 +47,8 @@ class Clifford:
     platform: str | None = None
 
     _backend: CliffordBackend | None = field(default=None, repr=False)
-    _measurement_gate: M = field(default=None, repr=False)
-    _samples: int | None = field(default=None, repr=False)
+    _measurement_gate: M | None = field(default=None, repr=False)
+    _samples: ArrayLike | None = field(default=None, repr=False)
 
     def __post_init__(self):
         if self._backend is None:
@@ -82,12 +83,13 @@ class Clifford:
         initial_state: ArrayLike | None = None,
         nshots: int = 1000,
         platform: str | None = None,
-    ):
-        """Allows to create a :class:`qibo.quantum_info.clifford.Clifford` object by executing the input circuit.
+    ) -> "Clifford":
+        """Allows to create a :class:`qibo.quantum_info.clifford.Clifford` object by
+        executing the input circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Clifford circuit to run.
-            initial_state (ndarray, optional): symplectic matrix of the initial state.
+            initial_state (ArrayLike, optional): symplectic matrix of the initial state.
                 If ``None``, defaults to the symplectic matrix of the zero state.
                 Defaults to ``None``.
             nshots (int, optional): number of measurement shots to perform
@@ -99,13 +101,14 @@ class Clifford:
                 from the current backend. Defaults to ``None``.
 
         Returns:
-            (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.
+            :class:`qibo.quantum_info.clifford.Clifford`: Object storing the result of the
+            circuit execution.
         """
-        cls._backend = CliffordBackend(platform)
+        backend = CliffordBackend(platform)
 
-        return cls._backend.execute_circuit(circuit, initial_state, nshots)
+        return backend.execute_circuit(circuit, initial_state, nshots)
 
-    def to_circuit(self, algorithm: str | None = "AG04", **kwargs) -> Circuit:
+    def to_circuit(self, algorithm: str = "AG04", **kwargs) -> Circuit:
         """Converts symplectic matrix into a Clifford circuit.
 
         Args:
@@ -140,7 +143,7 @@ class Clifford:
         """Extracts the generators of stabilizers and destabilizers.
 
         Args:
-            return_array (bool, optional): If ``True`` returns the generators as ``ndarray``.
+            return_array (bool, optional): If ``True`` returns the generators as ``ArrayLike``.
                 If ``False``, their representation as strings is returned. Defaults to ``False``.
 
         Returns:
@@ -160,11 +163,11 @@ class Clifford:
                 that correspond to the :math:`n` generators of the :math:`2^{n}` total stabilizers,
                 independently of ``return_array``.
             return_array (bool, optional): To be used when ``symplectic = False``.
-                If ``True`` returns the stabilizers as ``ndarray``.
+                If ``True`` returns the stabilizers as ``ArrayLike``.
                 If ``False``, returns stabilizers as strings. Defaults to ``False``.
 
         Returns:
-            (ndarray or list): Stabilizers of the state.
+            (ArrayLike or list): Stabilizers of the state.
         """
         if not symplectic:
             generators, phases = self.generators(return_array)
@@ -186,12 +189,12 @@ class Clifford:
                 that correspond to the :math:`n` generators of the :math:`2^{n}` total
                 destabilizers, independently of ``return_array``.
             return_array (bool, optional): To be used when ``symplectic = False``.
-                If ``True`` returns the destabilizers as ``ndarray``.
+                If ``True`` returns the destabilizers as ``ArrayLike``.
                 If ``False``, their representation as strings is returned.
                 Defaults to ``False``.
 
         Returns:
-            (ndarray or list): Destabilizers of the state.
+            (ArrayLike or list): Destabilizers of the state.
         """
         if not symplectic:
             generators, phases = self.generators(return_array)
@@ -209,7 +212,7 @@ class Clifford:
             This method is inefficient in runtime and memory for a large number of qubits.
 
         Returns:
-            (ndarray): Density matrix of the state.
+            ArrayLike: Density matrix of the state.
         """
         stabilizers = self.stabilizers(return_array=True)
 
@@ -221,6 +224,9 @@ class Clifford:
 
         Useful for sampling all measured qubits at once when simulating.
         """
+        if not self.measurements:
+            raise_error(RuntimeError, "No measurement provided.")
+
         if self._measurement_gate is None:
             for gate in self.measurements:
                 if self._measurement_gate is None:
@@ -234,8 +240,8 @@ class Clifford:
         """Returns raw measurement samples.
 
         Args:
-            binary (bool, optional): If ``False``, return samples in binary form.
-                If ``True``, returns samples in decimal form. Defalts to ``True``.
+            binary (bool, optional): If ``True``, returns samples in binary form.
+                If ``False``, returns samples in decimal form. Defaults to ``True``.
             registers (bool, optional): If ``True``, groups samples according to registers.
                 Defaults to ``False``.
 
@@ -253,9 +259,6 @@ class Clifford:
                 a single tensor is returned which contains samples from all the
                 measured qubits, independently of their registers.
         """
-        if not self.measurements:
-            raise_error(RuntimeError, "No measurement provided.")
-
         measured_qubits = self.measurement_gate.qubits
 
         if self._samples is None:
@@ -316,7 +319,7 @@ class Clifford:
 
             If ``binary`` is ``True``
                 the keys of the :class:`collections.Counter` are in binary form,
-                as strings of :math:`0` and :math`1`.
+                as strings of :math:`0` and :math:`1`.
             If ``binary`` is ``False``
                 the keys of the :class:`collections.Counter` are integers.
             If ``registers`` is ``True``
@@ -361,7 +364,7 @@ class Clifford:
             qubits (tuple or list, optional): Qubits for which to compute the probabilities.
 
         Returns:
-            ndarray: Measured probabilities.
+            ArrayLike: Measured probabilities.
         """
         if isinstance(qubits, list):
             qubits = tuple(qubits)
@@ -419,8 +422,8 @@ class Clifford:
         """Helper function to construct all the operators from their generators.
 
         Args:
-            generators (list or ndarray): generators.
-            phases (list or ndarray): phases of the generators.
+            generators (list or ArrayLike): generators.
+            phases (list or ArrayLike): phases of the generators.
 
         Returns:
             list: All operators generated by the generators of the stabilizer group.
