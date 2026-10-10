@@ -294,6 +294,11 @@ def lcu_select(
     minimum = max((len(unitaries) - 1).bit_length(), 1)
     if nauxiliary is None:
         nauxiliary = minimum
+    elif not isinstance(nauxiliary, int):
+        raise_error(
+            TypeError,
+            f"``nauxiliary`` must be a positive integer, but it is {type(nauxiliary)}."
+        )
     elif nauxiliary < minimum:
         raise_error(
             ValueError,
