@@ -198,8 +198,8 @@ def hadamard_transform(
 
 
 def hellinger_distance(
-    prob_dist_p: ArrayLike | list,
-    prob_dist_q: ArrayLike | list,
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
     validate: bool = False,
     backend: Backend | None = None,
 ) -> float:
@@ -272,8 +272,8 @@ def hellinger_distance(
 
 
 def hellinger_fidelity(
-    prob_dist_p: ArrayLike | list,
-    prob_dist_q: ArrayLike | list,
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
     validate: bool = False,
     backend: Backend | None = None,
 ) -> float:
@@ -307,8 +307,8 @@ def hellinger_fidelity(
 
 
 def hellinger_shot_error(
-    prob_dist_p: ArrayLike | list,
-    prob_dist_q: ArrayLike | list,
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
     nshots: int,
     validate: bool = False,
     backend: Backend | None = None,
@@ -360,8 +360,8 @@ def hellinger_shot_error(
 
 
 def total_variation_distance(
-    prob_dist_p: ArrayLike | list,
-    prob_dist_q: ArrayLike | list,
+    prob_dist_p: ArrayLike,
+    prob_dist_q: ArrayLike,
     validate: bool = False,
     backend: Backend | None = None,
 ) -> float:
