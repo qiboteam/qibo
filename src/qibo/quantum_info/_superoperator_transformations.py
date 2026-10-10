@@ -27,16 +27,25 @@ def _check_pauli_transform_method(method: str | None) -> str:
 
 def _check_pauli_superoperator_shape(super_op: ArrayLike, name: str) -> tuple[int, int]:
     """Validate the shape of a Pauli or Liouville superoperator."""
-    dim = math.sqrt(len(super_op))
-    nqubits = math.log2(dim)
+    shape = tuple(super_op.shape)
 
-    if super_op.shape[0] != super_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
+    # exponent of the dimension, which has to be a power of 4 with n >= 1
+    exponent = shape[0].bit_length() - 1 if len(shape) == 2 else 0
+    if (
+        len(shape) != 2
+        or shape[0] != shape[1]
+        or 2**exponent != shape[0]
+        or exponent == 0
+        or exponent % 2 != 0
+    ):
         raise_error(
             ValueError,
             f"{name} must be of shape (4^n, 4^n), but it is {super_op.shape}",
         )
 
-    return int(dim), int(nqubits)
+    nqubits = exponent // 2
+
+    return 2**nqubits, nqubits
 
 
 def _fast_walsh_hadamard_transform(
@@ -179,7 +188,7 @@ def _check_pauli_order(pauli_order: str) -> None:
         "X",
         "Y",
         "Z",
-    }:  # pragma: no cover
+    }:
         raise_error(
             ValueError,
             f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
@@ -464,10 +473,7 @@ def _reshuffling(
         order (str, optional): If ``"row"``, reshuffling is performed
             with respect to row-wise vectorization. If ``"column"``,
             reshuffling is performed with respect to column-wise
-            vectorization. If ``"system"``, operator is converted to
-            a representation based on row vectorization, reshuffled,
-            and then converted back to its representation with
-            respect to system-wise vectorization. Defaults to ``"row"``.
+            vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
@@ -500,7 +506,7 @@ def _reshuffling(
 
 def _set_gate_and_target_qubits(
     kraus_ops: list | Channel, backend: Backend | None = None
-):
+) -> tuple[tuple, tuple]:
     """Returns Kraus operators as a set of gates acting on
     their respective ``target qubits``.
 
@@ -540,6 +546,9 @@ def _set_gate_and_target_qubits(
                     ),
                 )
             )
+
+    if len(kraus_ops) == 0:
+        raise_error(ValueError, "``kraus_ops`` must contain at least one operator.")
 
     if isinstance(kraus_ops[0], Gate):
         gates = tuple(kraus_ops)
