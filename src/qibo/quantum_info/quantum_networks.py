@@ -1018,9 +1018,29 @@ def link_product(
         subscripts, *tensors, optimize=False, einsum_call=True
     )
 
-    inds, idx_rm, einsum_str, _, _ = contracrtion_list[0]
+    # the einsum_path contraction tuple changed from 5 to 3 elements in
+    # numpy 2.4: numpy <= 2.3 returns
+    # (contract_inds, idx_removed, einsum_str, remaining, do_blas), while
+    # numpy >= 2.4 returns (contract_inds, einsum_str, remaining)
+    contraction = contracrtion_list[0]
+    if len(contraction) == 5:
+        inds, idx_rm, einsum_str, _, _ = contraction
+    elif len(contraction) == 3:
+        inds, einsum_str, _ = contraction
+    else:
+        raise ValueError(
+            "Unexpected einsum_path contraction tuple "
+            f"of length {len(contraction)}: {contraction}"
+        )
+
     input_str, results_index = einsum_str.split("->")
     inputs = input_str.split(",")
+
+    if len(contraction) == 3:
+        # `idx_removed` was dropped in numpy 2.4: reconstruct it as the
+        # indices appearing on the left-hand side of `einsum_str` that do not
+        # appear on the right-hand side (its exact former definition)
+        idx_rm = set(input_str.replace(",", "")) - set(results_index)
 
     # Warning if the same index connects two input or two output systems
     if not surpress_warning:
