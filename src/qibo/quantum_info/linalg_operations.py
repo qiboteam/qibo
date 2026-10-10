@@ -515,6 +515,10 @@ def lanczos(
     if steps is None:
         steps = dims
 
+    if not isinstance(steps, int):
+        raise_error(
+            TypeError, f"``steps`` must be type int, but it is type {type(steps)}."
+        )
     if not 1 <= steps <= dims:
         raise_error(
             ValueError,
@@ -524,7 +528,10 @@ def lanczos(
     if initial_vector is None:
         vector = random_statevector(dims, seed=seed, backend=backend)
     else:
-        vector = initial_vector / backend.vector_norm(initial_vector)
+        norm = backend.vector_norm(initial_vector)
+        if norm == 0:
+            raise_error(ValueError, "``initial_vector`` must have non-zero norm.")
+        vector = initial_vector / norm
 
     omega_prime = matrix @ vector
     alpha = backend.conj(omega_prime.T) @ vector
