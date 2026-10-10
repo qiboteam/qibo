@@ -633,9 +633,7 @@ def bures_distance(
     backend = _check_backend(backend)
 
     # the fidelity can exceed one due to rounding errors
-    fidelity_value = backend.clip(
-        fidelity(state, target, backend=backend)), 0.0, 1.0
-    )
+    fidelity_value = backend.clip(fidelity(state, target, backend=backend), 0.0, 1.0)
     sqrt_fid = backend.sqrt(fidelity_value)
     distance = backend.sqrt(2 * (1 - sqrt_fid))
 
