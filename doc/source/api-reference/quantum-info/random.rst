@@ -28,6 +28,12 @@ Random IQP circuit
 .. autofunction:: qibo.quantum_info.random_iqp
 
 
+Random isometry
+---------------
+
+.. autofunction:: qibo.quantum_info.random_isometry
+
+
 Random unitary matrix
 ---------------------
 
