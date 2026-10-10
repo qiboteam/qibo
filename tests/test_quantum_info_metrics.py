@@ -448,3 +448,103 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
         params = backend.cast(params, dtype=params.dtype)
         with pytest.raises(NotImplementedError):
             quantum_fisher_information_matrix(circuit, params, backend=backend)
+
+
+def test_trace_distance_is_real(backend):
+    state = random_density_matrix(4, seed=1, backend=backend)
+    target = random_density_matrix(4, seed=2, backend=backend)
+
+    distance = backend.to_numpy(trace_distance(state, target, backend=backend))
+
+    assert not np.iscomplexobj(distance)
+    reference = (
+        0.5
+        * np.linalg.svd(
+            backend.to_numpy(state) - backend.to_numpy(target), compute_uv=False
+        ).sum()
+    )
+    np.testing.assert_allclose(distance, reference, atol=1e-10)
+
+
+@pytest.mark.parametrize("dims", [2, 4, 8])
+def test_bures_identical_states(backend, dims):
+    # the fidelity of identical states can exceed one by rounding errors
+    for seed in range(20):
+        state = random_density_matrix(dims, seed=seed, backend=backend)
+
+        angle = float(bures_angle(state, state, backend=backend))
+        distance = float(bures_distance(state, state, backend=backend))
+
+        assert not np.isnan(angle)
+        assert not np.isnan(distance)
+        assert angle < 1e-6
+        assert distance < 1e-6
+
+
+@pytest.mark.parametrize("dims", [2, 4])
+def test_average_gate_fidelity_unitary(backend, dims):
+    unitary = backend.to_numpy(random_unitary(dims, seed=3, backend=backend))
+    liouville = backend.cast(np.kron(unitary, unitary.conj()))
+    identity = backend.identity(dims**2, dtype=backend.complex128)
+
+    # F_avg = (|tr(U)|^2 + d) / (d (d + 1)) for the identity target
+    target = (abs(np.trace(unitary)) ** 2 + dims) / (dims * (dims + 1))
+
+    average = average_gate_fidelity(liouville, identity, backend=backend)
+    backend.assert_allclose(average, target, atol=1e-10)
+    backend.assert_allclose(
+        gate_error(liouville, identity, backend=backend), 1 - target, atol=1e-10
+    )
+
+
+def test_average_gate_fidelity_depolarizing(backend):
+    pauli = [
+        np.eye(2),
+        np.array([[0, 1], [1, 0]]),
+        np.array([[0, -1j], [1j, 0]]),
+        np.diag([1, -1]),
+    ]
+    probability = 0.2
+    kraus = [np.sqrt(1 - probability) * pauli[0]] + [
+        np.sqrt(probability / 3) * matrix for matrix in pauli[1:]
+    ]
+    liouville = backend.cast(sum(np.kron(k, k.conj()) for k in kraus))
+    identity = backend.identity(4, dtype=backend.complex128)
+
+    # F_pro = 1 - p, and F_avg = (d F_pro + 1) / (d + 1) with d = 2
+    process = 1 - probability
+    backend.assert_allclose(
+        process_fidelity(liouville, identity, backend=backend), process, atol=1e-10
+    )
+    backend.assert_allclose(
+        average_gate_fidelity(liouville, identity, backend=backend),
+        (2 * process + 1) / 3,
+        atol=1e-10,
+    )
+
+
+@pytest.mark.parametrize("function", [expressibility, frame_potential])
+@pytest.mark.parametrize("arguments", [(0, 10), (1, 0), (-1, 10), (1, -3)])
+def test_circuit_metrics_non_positive_arguments(backend, function, arguments):
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, 0.1, trainable=True))
+
+    with pytest.raises(ValueError):
+        function(circuit, *arguments, backend=backend)
+
+
+def test_diamond_norm_does_not_modify_inputs(backend):
+    pytest.importorskip("cvxpy")
+
+    pauli_x = np.array([[0, 1], [1, 0]], dtype=complex)
+    channel = backend.cast(np.kron(pauli_x, pauli_x.conj()))
+    target = backend.identity(4, dtype=backend.complex128)
+    channel_copy = backend.cast(channel, copy=True)
+    target_copy = backend.cast(target, copy=True)
+
+    norm = diamond_norm(channel, target, backend=backend)
+
+    # the diamond distance between the identity and a bit flip is two
+    np.testing.assert_allclose(norm, 2.0, atol=1e-4)
+    backend.assert_allclose(channel, channel_copy)
+    backend.assert_allclose(target, target_copy)
