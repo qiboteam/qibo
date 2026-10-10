@@ -7,7 +7,6 @@ from numpy.typing import ArrayLike
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.quantum_info._linalg_operations import (
-    _gram_schmidt_process,
     _lie_closure_matrix,
     _lie_closure_pauli_strings,
     _lie_closure_pauli_sums,
@@ -30,9 +29,9 @@ def commutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
         ArrayLike: Commutator of ``operator_1`` and ``operator_2``.
     """
     if (
-        (len(operator_1.shape) >= 3)
+        (len(operator_1.shape) != 2)
         or (len(operator_1) == 0)
-        or (len(operator_1.shape) == 2 and operator_1.shape[0] != operator_1.shape[1])
+        or (operator_1.shape[0] != operator_1.shape[1])
     ):
         raise_error(
             TypeError,
@@ -40,9 +39,9 @@ def commutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
         )
 
     if (
-        (len(operator_2.shape) >= 3)
+        (len(operator_2.shape) != 2)
         or (len(operator_2) == 0)
-        or (len(operator_2.shape) == 2 and operator_2.shape[0] != operator_2.shape[1])
+        or (operator_2.shape[0] != operator_2.shape[1])
     ):
         raise_error(
             TypeError,
@@ -75,9 +74,9 @@ def anticommutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
         ArrayLike: Anticommutator of ``operator_1`` and ``operator_2``.
     """
     if (
-        (len(operator_1.shape) >= 3)
+        (len(operator_1.shape) != 2)
         or (len(operator_1) == 0)
-        or (len(operator_1.shape) == 2 and operator_1.shape[0] != operator_1.shape[1])
+        or (operator_1.shape[0] != operator_1.shape[1])
     ):
         raise_error(
             TypeError,
@@ -85,9 +84,9 @@ def anticommutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
         )
 
     if (
-        (len(operator_2.shape) >= 3)
+        (len(operator_2.shape) != 2)
         or (len(operator_2) == 0)
-        or (len(operator_2.shape) == 2 and operator_2.shape[0] != operator_2.shape[1])
+        or (operator_2.shape[0] != operator_2.shape[1])
     ):
         raise_error(
             TypeError,
@@ -166,10 +165,10 @@ def partial_transpose(
         partition (Union[List[int], Tuple[int, ...]]): indices of qubits to be transposed.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            it uses the current backend. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
-        ArrayLike: Partially transposed operator(s) :math:`\\O^{T_{B}}`.
+        ArrayLike: Partially transposed operator(s) :math:`O^{T_{B}}`.
     """
     backend = _check_backend(backend)
 
@@ -237,9 +236,9 @@ def matrix_exponentiation(
 
     Args:
         matrix (ArrayLike): matrix to be exponentiated.
-        phase (float or int or complex): phase that multiplies the matrix.
+        phase (float or int or complex, optional): phase that multiplies the matrix.
             If ``None``, defaults to :math:`1`. Defaults to ``None``.
-        eigenvectors (ArrayLike, optional): _if not ``None``, eigenvectors are used
+        eigenvectors (ArrayLike, optional): if not ``None``, eigenvectors are used
             to calculate ``matrix`` exponentiation as part of diagonalization.
             Must be used together with ``eigenvalues``. Defaults to ``None``.
         eigenvalues (ArrayLike, optional): if not ``None``, eigenvalues are used
@@ -250,9 +249,11 @@ def matrix_exponentiation(
             the current backend. Defaults to ``None``.
 
     Returns:
-        ArrayLike: matrix exponential of :math:`-i \\, \\theta \\, H`.
+        ArrayLike: matrix exponential :math:`\\exp\\left(\\theta \\, H \\right)`.
     """
     backend = _check_backend(backend)
+
+    phase = 1 if phase is None else phase
 
     return backend.matrix_exp(matrix, phase, eigenvectors, eigenvalues)
 
@@ -269,14 +270,14 @@ def matrix_logarithm(
     Given a ``matrix`` :math:`A` and a log base :math:`b`, it returns the logarithm of the form
 
     .. math::
-        \\log_{b}\\left(\\theta \\, H \\right) \\, .
+        \\log_{b}\\left(A\\right) \\, .
 
     If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
     is used for the calculation.
 
     Args:
         matrix (ArrayLike): matrix to be logarithmed.
-        eigenvectors (ArrayLike, optional): _if not ``None``, eigenvectors are used
+        eigenvectors (ArrayLike, optional): if not ``None``, eigenvectors are used
             to calculate the ``matrix`` logarithm as part of diagonalization.
             Must be used together with ``eigenvalues``. Defaults to ``None``.
         eigenvalues (ArrayLike, optional): if not ``None``, eigenvalues are used
@@ -287,7 +288,7 @@ def matrix_logarithm(
             the current backend. Defaults to ``None``.
 
     Returns:
-        ArrayLike: Matrix logarithm :math:`\\log_{b}(H)`.
+        ArrayLike: Matrix logarithm :math:`\\log_{b}(A)`.
     """
     backend = _check_backend(backend)
 
@@ -342,7 +343,7 @@ def singular_value_decomposition(
 
     Given an :math:`M \\times N` complex matrix :math:`A`, its SVD is given by
 
-    .. math:
+    .. math::
         A = U \\, S \\, V^{\\dagger} \\, ,
 
     where :math:`U` and :math:`V` are, respectively, an :math:`M \\times M`
@@ -385,18 +386,20 @@ def schmidt_decomposition(
     :math:`\\{c_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}` are real, non-negative, and unique
     up to re-ordering.
 
-    The decomposition is calculated using :func:`qibo.quantum_info.singular_value_decomposition`,
+    The decomposition is calculated using :func:`qibo.quantum_info.singular_value_decomposition`
+    of the :math:`a \\times b` matrix of coefficients :math:`C`, with
+    :math:`\\ket{\\psi} = \\sum_{jk} \\, C_{jk} \\, \\ket{j} \\otimes \\ket{k}`,
     resulting in
 
     .. math::
-        \\ketbra{\\psi}{\\psi} = U \\, S \\, V^{\\dagger} \\, ,
+        C = U \\, S \\, V^{\\dagger} \\, ,
 
     where :math:`U` is an :math:`a \\times a` unitary matrix, :math:`V` is an :math:`b \\times b`
-    unitary matrix, and :math:`S` is an :math:`a \\times b` positive semidefinite diagonal matrix
-    that contains the singular values of :math:`\\ketbra{\\psi}{\\psi}`.
+    unitary matrix, and :math:`S` is the array of singular values of :math:`C`, i.e. the
+    Schmidt coefficients :math:`c_{k}`.
 
     Args:
-        state (ArrayLike): stevector or density matrix.
+        state (ArrayLike): statevector.
         partition (Union[List[int], Tuple[int, ...]]): indices of qubits in one of the two
             partitions. The other partition is inferred as the remaining qubits.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
@@ -404,16 +407,31 @@ def schmidt_decomposition(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ArrayLike, ArrayLike, ArrayLike: Respectively, the matrices :math:`U`, :math:`S`,
-        and :math:`V^{\\dagger}`.
+        ArrayLike, ArrayLike, ArrayLike: Respectively, the unitary matrix :math:`U`, the array
+        :math:`S` of Schmidt coefficients, and the unitary matrix :math:`V^{\\dagger}`.
     """
     backend = _check_backend(backend)
+
+    if len(state.shape) != 1:
+        raise_error(
+            TypeError,
+            f"``state`` must be a statevector with dims (k,), but has dims {state.shape}.",
+        )
 
     nqubits = math.log2(state.shape[-1])
     if not nqubits.is_integer():
         raise_error(ValueError, "dimensions of ``state`` must be a power of 2.")
 
     nqubits = int(nqubits)
+
+    if len(set(partition)) != len(partition) or not set(partition) <= set(
+        range(nqubits)
+    ):
+        raise_error(
+            ValueError,
+            f"``partition`` must contain distinct qubits in [0, {nqubits}), "
+            + f"but it is {partition}.",
+        )
     partition_2 = partition.__class__(set(range(nqubits)) ^ set(partition))
 
     tensor = backend.reshape(state, [2] * nqubits)
@@ -461,10 +479,10 @@ def lanczos(
 
     Args:
         matrix (ArrayLike): square Hermitian matrix to be tridiagonalized.
-        steps (int, optional): number of iterations :math:`m`. If ``None``,
-            defaults to the size of ``matrix``. Defaults to ``None``.
+        steps (int, optional): number of iterations :math:`m`, between :math:`1` and the size
+            of ``matrix``. If ``None``, defaults to the size of ``matrix``. Defaults to ``None``.
         initial_vector (ArrayLike, optional): vector to be used as the initial Lanczos vector
-            :math:`\\ket{v_{1}}`. If ``None``, array is uniformly sampled.
+            :math:`\\ket{v_{1}}`, which is normalized. If ``None``, array is uniformly sampled.
             Defaults to ``None``.
         precision_tol (float, optional): precision threshold such that for :math:`\\beta_{j}`
             smaller than ``precision_tol``, it is considered to be zero.
@@ -497,11 +515,16 @@ def lanczos(
     if steps is None:
         steps = dims
 
-    vector = (
-        random_statevector(dims, seed=seed, backend=backend)
-        if initial_vector is None
-        else initial_vector
-    )
+    if not 1 <= steps <= dims:
+        raise_error(
+            ValueError,
+            f"``steps`` must be an integer in [1, {dims}], but it is {steps}.",
+        )
+
+    if initial_vector is None:
+        vector = random_statevector(dims, seed=seed, backend=backend)
+    else:
+        vector = initial_vector / backend.vector_norm(initial_vector)
 
     omega_prime = matrix @ vector
     alpha = backend.conj(omega_prime.T) @ vector
@@ -512,12 +535,15 @@ def lanczos(
         norm = backend.vector_norm(omega)
         if norm > precision_tol:
             vector = omega / norm
-        else:  # pragma: no cover
-            # this part is tested separatedly
-            vector = random_statevector(dims, seed=seed, backend=backend)
-            vector = _gram_schmidt_process(
-                vector, backend.cast(lanczos_vectors).T, backend=backend
-            )
+        else:
+            # breakdown: restart with a new random vector, drawn from the stream
+            # seeded above, that is orthogonal to the previous ones
+            vector = backend.qinfo._random_statevector(dims)
+            previous = backend.cast(lanczos_vectors)
+            # Gram-Schmidt, repeated twice for numerical stability
+            for _ in range(2):
+                vector = vector - previous.T @ (backend.conj(previous) @ vector)
+            vector = vector / backend.vector_norm(vector)
 
         lanczos_vectors.append(vector)
 
