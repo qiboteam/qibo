@@ -562,6 +562,19 @@ def test_spin_s_encoder(
     target = backend.zeros(2 ** (nqudits * width), dtype=dtype)
     target[indices] = _data if data else backend.cast([1] + [0] * (len(indices) - 1))
 
+    if data:
+        with pytest.raises(ValueError):
+            circuit = spin_s_encoder(
+                nqudits,
+                spin,
+                weight,
+                data=_data[:-1],
+                complex_data=complex_data,
+                encoding=encoding,
+                optimize_controls=optimize_controls,
+                backend=backend,
+            )
+
     circuit = spin_s_encoder(
         nqudits,
         spin,
