@@ -504,7 +504,17 @@ def test_spin_s_encoder_errors(backend):
 @pytest.mark.parametrize("encoding", ["binary", "unary"])
 @pytest.mark.parametrize(
     "nqudits,spin,weight",
-    [(1, 1, 1), (2, 0.5, 1), (3, 1, 0), (3, 1, 3), (3, 1.5, 4), (4, 0.5, 2), (2, 2, 3)],
+    [
+        (1, 1, 1),
+        (2, 0.5, 1),
+        (3, 1, 0),
+        (3, 1, 3),
+        (3, 1.5, 4),
+        (4, 0.5, 2),
+        (2, 2, 3),
+        (4, 1, 3),
+        (6, 0.5, 3),
+    ],
 )
 def test_spin_s_encoder(
     backend,

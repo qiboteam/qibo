@@ -1138,9 +1138,10 @@ def spin_s_encoder(
         complex_data = bool("complex" in str(data.dtype))
 
     # sort data such that the encoding is performed in lexicographical order
-    # ditstrings as integers in base 2s + 1 to find their lexicographical ranks
+    # ditstrings as integers in base 2s + 1 to find their lexicographical ranks,
+    # i.e. the position of each Gray-code ditstring in lexicographical order
     powers = (levels + 1) ** backend.flip(backend.arange(nqudits, dtype=backend.int64))
-    ranks = backend.argsort(backend.sum(ditstrings * powers, axis=1))
+    ranks = backend.argsort(backend.argsort(backend.sum(ditstrings * powers, axis=1)))
     data = data[ranks]
 
     circuit = Circuit(nqudits * width, **kwargs)
