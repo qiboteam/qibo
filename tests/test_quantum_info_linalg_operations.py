@@ -998,9 +998,15 @@ def test_lanczos_breakdown(backend, case):
 def test_lanczos_arguments(backend):
     matrix = random_hermitian(6, seed=1, backend=backend)
 
+    with pytest.raises(TypeError):
+        lanczos(matrix, steps="1", backend=backend)
+
     for steps in (0, -1, 7):
         with pytest.raises(ValueError):
             lanczos(matrix, steps=steps, backend=backend)
+
+    with pytest.raises(ValueError):
+        lanczos(matrix, initial_vector=backend.zeros(len(matrix)), backend=backend)
 
     # the initial vector is normalized
     initial_vector = backend.cast(np.arange(1, 7), dtype=complex)
