@@ -1977,6 +1977,79 @@ def _v_layer(
     return circuit
 
 
+def _walsh_gray_code(
+    nqudits: int, weight: int, levels: int, backend: Backend | None = None
+) -> ArrayLike:
+    """Return Walsh's Gray code for bounded integer compositions.
+
+    Generates all compositions :math:`(g_{1}, \\, \\ldots, \\, g_{n})` of ``weight``
+    :math:`k` into :math:`n` parts bounded as :math:`0 \\leq g_{i} \\leq 2s`, ordered such that
+    consecutive compositions differ by :math:`\\hat{e}_{i} - \\hat{e}_{j}` for some
+    :math:`i \\neq j`. The list starts at the lexicographically largest composition and ends
+    at the lexicographically smallest one. This is the non-recursive :math:`\\mathcal{O}(n)`
+    algorithm reviewed in Appendix A of Ref. [1], originally presented in Sec. 2 of Ref. [2].
+
+    Args:
+        nqudits (int): number of parts :math:`n`.
+        weight (int): integer :math:`k` to be composed.
+        levels (int): upper bound :math:`2s` of each part.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+
+    Returns:
+        ArrayLike: array of shape :math:`(D, n)` with the compositions in Gray-code order,
+        where :math:`D` is the number of bounded compositions.
+
+    References:
+        1. N. Zare Harofteh and R. I. Nepomechie, *Spin-s U(1)-eigenstate preparation*,
+        `Ann. Phys. (Berlin) 538, e70239 (2026) <https://doi.org/10.1002/andp.70239>`_.
+
+        2. T. R. Walsh, *Loop-free sequencing of bounded integer compositions*,
+        J. Comb. Math. Comb. Comp. 33, 323 (2000).
+    """
+    backend = _check_backend(backend)
+
+    # lexicographically largest composition
+    composition = backend.zeros(nqudits, dtype=backend.int64)
+    remainder = weight
+    for index in range(nqudits):
+        composition[index] = min(levels, remainder)
+        remainder -= min(levels, remainder)
+
+    prefix_capacities = levels * backend.arange(nqudits, dtype=backend.int64)
+    floor = backend.zeros(nqudits, dtype=backend.int64)
+    ceiling = floor + levels
+
+    compositions = [backend.copy(composition)]
+    while True:
+        # suffix sums S_{i}, and first and last values of each part relative to S_{i}
+        suffix_sums = backend.flip(backend.cumsum(backend.flip(composition)))
+        suffix_sums = suffix_sums - composition
+        lower = backend.maximum(floor, weight - suffix_sums - prefix_capacities)
+        upper = backend.minimum(ceiling, weight - suffix_sums)
+        last = backend.where(suffix_sums % 2 == 0, upper, lower)
+
+        pivots = backend.flatnonzero(composition[1:] != last[1:])
+        if len(pivots) == 0:
+            break
+        pivot = int(pivots[0]) + 1
+        composition[pivot] += 1 if int(suffix_sums[pivot]) % 2 == 0 else -1
+
+        suffix_sums = backend.flip(backend.cumsum(backend.flip(composition)))
+        suffix_sums = suffix_sums - composition
+        lower = backend.maximum(floor, weight - suffix_sums - prefix_capacities)
+        upper = backend.minimum(ceiling, weight - suffix_sums)
+        first = backend.where(suffix_sums % 2 == 0, lower, upper)
+
+        second = int(backend.flatnonzero(composition[:pivot] != first[:pivot])[-1])
+        composition[second] = first[second]
+        compositions.append(backend.copy(composition))
+
+    return backend.reshape(
+        backend.concatenate(compositions), (len(compositions), nqudits)
+    )
+
+
 def _x_layer(
     nqubits: int, gate: Gate, parameters: list[int] | tuple[int, ...], **kwargs
 ) -> Circuit:
