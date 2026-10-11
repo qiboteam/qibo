@@ -81,3 +81,62 @@ def test_pauli_basis(
 
         comp_basis_to_pauli(nqubits, normalize, sparse, order, pauli_order, backend)
         pauli_to_comp_basis(nqubits, normalize, sparse, order, pauli_order, backend)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "ZYXI"])
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_basis_change_matrices(backend, nqubits, order, pauli_order):
+    dim = 2**nqubits
+    kwargs = {"order": order, "pauli_order": pauli_order, "backend": backend}
+
+    comp_to_pauli = comp_basis_to_pauli(nqubits, normalize=True, **kwargs)
+    pauli_to_comp = pauli_to_comp_basis(nqubits, normalize=True, **kwargs)
+
+    identity = backend.cast(np.eye(dim**2), dtype=comp_to_pauli.dtype)
+    backend.assert_allclose(comp_to_pauli @ pauli_to_comp, identity, atol=PRECISION_TOL)
+    backend.assert_allclose(pauli_to_comp @ comp_to_pauli, identity, atol=PRECISION_TOL)
+    backend.assert_allclose(
+        pauli_to_comp, backend.conj(comp_to_pauli).T, atol=PRECISION_TOL
+    )
+
+    # the Pauli-Liouville representation of a Hermitian operator is real
+    state = backend.cast(np.diag(np.arange(1, dim + 1) / np.sum(np.arange(1, dim + 1))))
+    state = backend.cast(state, dtype=comp_to_pauli.dtype)
+    state_pauli = comp_to_pauli @ vectorization(state, order=order, backend=backend)
+    backend.assert_allclose(backend.to_numpy(state_pauli).imag, 0.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "ZYXI"])
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("function", [comp_basis_to_pauli, pauli_to_comp_basis])
+def test_basis_change_matrices_sparse(backend, function, normalize, order, pauli_order):
+    nqubits = 2
+    kwargs = {"order": order, "pauli_order": pauli_order, "backend": backend}
+
+    dense = backend.to_numpy(function(nqubits, normalize, **kwargs))
+    elements, indexes = function(nqubits, normalize, sparse=True, **kwargs)
+    elements, indexes = backend.to_numpy(elements), backend.to_numpy(indexes)
+
+    assert elements.shape == indexes.shape == (4**nqubits, 2**nqubits)
+
+    from_sparse = np.zeros(dense.shape, dtype=dense.dtype)
+    np.put_along_axis(from_sparse, indexes.astype(int), elements, axis=1)
+    np.testing.assert_allclose(from_sparse, dense, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("sparse", [False, True])
+@pytest.mark.parametrize("function", [comp_basis_to_pauli, pauli_to_comp_basis])
+def test_basis_invalid_arguments(backend, function, sparse):
+    with pytest.raises(ValueError):
+        function(1, sparse=sparse, order="invalid", backend=backend)
+    with pytest.raises(ValueError):
+        function(1, sparse=sparse, pauli_order="IXYZZ", backend=backend)
+    with pytest.raises(ValueError):
+        function(1, sparse=sparse, pauli_order="XXYZ", backend=backend)
+
+    with pytest.raises(ValueError):
+        pauli_basis(1, vectorize=True, order="invalid", backend=backend)
+    with pytest.raises(ValueError):
+        pauli_basis(1, pauli_order="IIXYZ", backend=backend)

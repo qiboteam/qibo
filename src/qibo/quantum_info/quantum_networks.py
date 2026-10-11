@@ -6,7 +6,7 @@ from operator import mul
 
 import numpy as np
 
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 
 log = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class QuantumNetwork:
     to a quantum channel of the form :math:`J: n' \\to m'`.
 
     Args:
-        tensor (ndarray): input Choi operator.
+        tensor (ArrayLike): input Choi operator.
         partition (List[int] or Tuple[int]): partition of ``tensor``.
         system_input (List[bool] or Tuple[bool], optional): mask on the output system of the
             Choi operator. If ``None``, defaults to
@@ -46,13 +46,13 @@ class QuantumNetwork:
     def __init__(
         self,
         tensor,
-        partition: list[int] | tuple[int] | None = None,
-        system_input: list[bool] | tuple[bool] | None = None,
+        partition: list[int] | tuple[int, ...] | None = None,
+        system_input: list[bool] | tuple[bool, ...] | None = None,
         pure: bool = False,
-        backend=None,
+        backend: Backend | None = None,
     ):
         self._tensor = tensor
-        self.partition = tuple(partition)
+        self.partition = partition
         self.system_input = system_input
         self._pure = pure
         self._backend = backend
@@ -67,7 +67,7 @@ class QuantumNetwork:
     def _order_tensor_to_operator(dims: int):
         """Returns the order to reshape a tensor into an operator.
 
-        Given a tenosr of ``2 * dims`` leads, the order is
+        Given a tensor of ``2 * dims`` leads, the order is
         :math:`[0, 2, 4, ..., 1, 3, 5, ...]`.
 
         Args:
@@ -123,19 +123,19 @@ class QuantumNetwork:
     def from_operator(
         cls,
         operator,
-        partition: list[int] | tuple[int] | None = None,
-        system_input: list[bool] | tuple[bool] | None = None,
+        partition: list[int] | tuple[int, ...] | None = None,
+        system_input: list[bool] | tuple[bool, ...] | None = None,
         pure: bool = False,
-        backend=None,
+        backend: Backend | None = None,
     ):
-        """Construct a :class:`qibo.quantum_info.QuantumNetwork` object from a ndarray.
+        """Construct a :class:`qibo.quantum_info.QuantumNetwork` object from an ``ArrayLike``.
 
         This method converts a Choi operator to the internal representation of
         :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`.
         The input array can be a pure state, a Choi operator, a unitary operator, etc.
 
         Args:
-            arr (ndarray): input numpy array.
+            arr (ArrayLike): input numpy array.
             partition (List[int] or Tuple[int], optional): partition of ``arr``. If ``None``,
                 defaults to the shape of ``arr``. Defaults to ``None``.
             system_input (List[bool] or Tuple[bool], optional): mask on the input system of the
@@ -178,7 +178,7 @@ class QuantumNetwork:
             ):
                 raise_error(
                     ValueError,
-                    "The opertor must be a square operator where the first half of the shape "
+                    "The operator must be a square operator where the first half of the shape "
                     + "is the same as the second half of the shape. "
                     + f"However, the shape of the input is {operator.shape}. "
                     + "If the input is pure, set `pure=True`.",
@@ -212,7 +212,7 @@ class QuantumNetwork:
                 object. Defaults to ``None``.
 
         Returns:
-            ndarray: Choi operator of the quantum network.
+            ArrayLike: Choi operator of the quantum network.
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
@@ -220,7 +220,7 @@ class QuantumNetwork:
         if self.is_pure() and not full:
             return backend.cast(self._tensor, dtype=self._tensor.dtype)
 
-        tensor = self.full(backend) if self.is_pure() else self._tensor
+        tensor = self.full(backend=backend) if self.is_pure() else self._tensor
 
         n = len(self.partition)
         order = self._order_tensor_to_operator(n)
@@ -242,18 +242,18 @@ class QuantumNetwork:
                 object. Defaults to ``None``.
 
         Returns:
-            ndarray: Choi operator of the quantum network.
+            ArrayLike: Choi operator of the quantum network.
         """
         return self.operator(full=True, backend=backend).reshape((self.dims, self.dims))
 
     def is_pure(self):
-        """Returns bool indicading if the Choi operator of the network is pure."""
+        """Returns bool indicating if the Choi operator of the network is pure."""
         return self._pure
 
     def is_hermitian(self, order: int | str | None = None, precision_tol: float = 1e-8):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` is Hermitian.
 
-        Hermicity is calculated as distance between :math:`\\mathcal{J}` and
+        Hermiticity is calculated as distance between :math:`\\mathcal{J}` and
         :math:`\\mathcal{J}^{\\dagger}` with respect to a given norm.
         Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
 
@@ -267,7 +267,7 @@ class QuantumNetwork:
         Args:
             order (str or int, optional): order of the norm. Defaults to ``None``.
             precision_tol (float, optional): threshold :math:`\\epsilon` that defines if
-                Choi operator of the network is :math:`\\epsilon`-close to Hermicity in
+                Choi operator of the network is :math:`\\epsilon`-close to Hermiticity in
                 the norm given by ``order``. Defaults to :math:`10^{-8}`.
 
         Returns:
@@ -305,8 +305,7 @@ class QuantumNetwork:
             precision_tol (float, optional): threshold value used to check if eigenvalues of
                 the Choi operator :math:`\\mathcal{J}` are such that
                 :math:`\\textup{eigenvalues}(\\mathcal{J}) >= - \\textup{precision_tol}`.
-                Note that this parameter can be set to negative values.
-                Defaults to :math:`0.0`.
+                It must be non-negative. Defaults to :math:`10^{-8}`.
 
         Returns:
             bool: Positive-semidefinite condition.
@@ -395,7 +394,7 @@ class QuantumNetwork:
             raise_error(
                 TypeError,
                 "It is not possible to add a object of type ``QuantumNetwork`` "
-                + f"and and object of type ``{type(second_network)}``.",
+                + f"and an object of type ``{type(second_network)}``.",
             )
 
         if self.full().shape != second_network.full().shape:
@@ -483,13 +482,20 @@ class QuantumNetwork:
                 "It is not possible to divide a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        number = np.sqrt(number) if self.is_pure() and number > 0.0 else number
+        if self.is_pure() and number > 0.0:
+            return QuantumNetwork(
+                self._tensor / np.sqrt(number),
+                partition=self.partition,
+                system_input=self.system_input,
+                pure=True,
+                backend=self._backend,
+            )
 
         return QuantumNetwork(
-            self._tensor / number,
+            self.full() / number,
             partition=self.partition,
             system_input=self.system_input,
-            pure=self.is_pure(),
+            pure=False,
             backend=self._backend,
         )
 
@@ -661,7 +667,7 @@ class QuantumNetwork:
                 Defaults to ``None``.
 
         Returns:
-            ndarray: full reprentation of the quantum network.
+            ArrayLike: full representation of the quantum network.
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
@@ -670,8 +676,6 @@ class QuantumNetwork:
         conj = backend.conj
 
         if self.is_pure():
-            # Reshapes input matrix based on purity.
-            tensor.reshape(self.dims)
             tensor = self._tensordot(tensor, conj(tensor), axes=0)
             tensor = self._operator_to_tensor(tensor, self.partition)
 
@@ -696,7 +700,7 @@ class QuantumComb(QuantumNetwork):
     system and one output system.
 
     Args:
-        tensor (ndarray): the tensor representations of the quantum Comb.
+        tensor (ArrayLike): the tensor representations of the quantum Comb.
         partition (List[int] or Tuple[int]): partition of ``matrix``.
         system_input (List[bool] or Tuple[bool], optional): mask on the input system of the
             Choi operator. If ``None``, defaults to
@@ -712,10 +716,10 @@ class QuantumComb(QuantumNetwork):
     def __init__(
         self,
         tensor,
-        partition: list[int] | tuple[int] | None = None,
-        system_input: list[bool] | tuple[bool] | None = None,
+        partition: list[int] | tuple[int, ...] | None = None,
+        system_input: list[bool] | tuple[bool, ...] | None = None,
         pure: bool = False,
-        backend=None,
+        backend: Backend | None = None,
     ):
         if partition is None:
             if pure:
@@ -790,7 +794,7 @@ class QuantumComb(QuantumNetwork):
     ):
         comb = super().from_operator(operator, partition, None, pure, backend)
         if inverse:
-            # Convert mathmetical convention of Choi operator to physical convention
+            # Convert mathematical convention of Choi operator to physical convention
             comb.partition = comb.partition[::-1]
             comb._tensor = comb._tensor.T
         return comb
@@ -809,7 +813,7 @@ class QuantumChannel(QuantumComb):
     It is important to specify `inverse=True` when constructing by `QuantumNetwork.from_nparray`.
 
     Args:
-        tensor (ndarray): the tensor representations of the quantum comb.
+        tensor (ArrayLike): the tensor representations of the quantum comb.
         partition (List[int] or Tuple[int], optional): partition of ``matrix``.
             If not provided and `system_input` is `None`, assume the input is a quantum state,
             whose input is a trivial system. If `system_input` is set to `True`,
@@ -827,10 +831,10 @@ class QuantumChannel(QuantumComb):
     def __init__(
         self,
         tensor,
-        partition: list[int] | tuple[int] | None = None,
-        system_input: list[bool] | tuple[bool] | None = None,
+        partition: list[int] | tuple[int, ...] | None = None,
+        system_input: list[bool] | tuple[bool, ...] | None = None,
         pure: bool = False,
-        backend=None,
+        backend: Backend | None = None,
     ):
         if isinstance(partition, int):
             partition = (partition,)
@@ -929,9 +933,8 @@ class QuantumChannel(QuantumComb):
                 given by ``order``. Defaults to :math:`10^{-8}`.
             precision_tol_psd (float, optional): threshold value used to check if eigenvalues of
                 the Choi operator :math:`\\mathcal{E}` are such that
-                :math:`\\textup{eigenvalues}(\\mathcal{E}) >= \\textup{precision_tol_psd}`.
-                Note that this parameter can be set to negative values.
-                Defaults to :math:`0.0`.
+                :math:`\\textup{eigenvalues}(\\mathcal{E}) >= - \\textup{precision_tol_psd}`.
+                It must be non-negative. Defaults to :math:`10^{-8}`.
 
         Returns:
             bool: Channel condition.
@@ -946,10 +949,10 @@ class QuantumChannel(QuantumComb):
         It is assumed that ``state`` :math:`\\varrho` is a density matrix.
 
         Args:
-            state (ndarray): density matrix of a ``state``.
+            state (ArrayLike): density matrix of a ``state``.
 
         Returns:
-            ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
+            ArrayLike: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
         operator = self.copy().operator()
         conj = self._backend.conj
@@ -957,7 +960,7 @@ class QuantumChannel(QuantumComb):
         if self.is_pure():
             return self._einsum("ij,lk,il", operator, conj(operator), state)
 
-        return self._einsum("ijkl, jl", operator, state)
+        return self._einsum("ijkl,ik->jl", operator, state)
 
 
 def link_product(
@@ -1069,7 +1072,8 @@ class IdentityChannel(QuantumChannel):
             Defaults to ``None``.
     """
 
-    def __init__(self, dim: int, backend=None):
+    def __init__(self, dim: int, backend: Backend | None = None):
+        backend = _check_backend(backend)
 
         identity = np.eye(dim, dtype=complex)
         identity = backend.cast(identity, dtype=identity.dtype)
@@ -1086,7 +1090,8 @@ class TraceOperation(QuantumNetwork):
             Defaults to ``None``.
     """
 
-    def __init__(self, dim: int, backend=None):
+    def __init__(self, dim: int, backend: Backend | None = None):
+        backend = _check_backend(backend)
 
         identity = np.eye(dim, dtype=complex)
         identity = backend.cast(identity, dtype=identity.dtype)

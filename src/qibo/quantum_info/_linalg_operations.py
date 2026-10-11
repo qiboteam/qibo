@@ -18,8 +18,8 @@ def _gram_schmidt_process(
     Args:
         vector (ArrayLike): vector to be orthogonalized.
         directions (ArrayLike): either an :math:`1`-dimensional array corresponding to the
-            direction of projection or an array of arrays corresponding to several
-            directions.
+            direction of projection or an array of arrays, one per row, corresponding to
+            several mutually orthogonal directions.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
@@ -513,8 +513,8 @@ def _vector_projection(
     Args:
         vector (ArrayLike): vector to be projected.
         directions (ArrayLike): either an :math:`1`-dimensional array corresponding to the
-            direction of projection or an array of arrays corresponding to several
-            directions.
+            direction of projection or an array of arrays, one per row, corresponding to
+            several directions.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
@@ -522,19 +522,20 @@ def _vector_projection(
     Returns:
         ArrayLike: Either one vector projection or a list of several projections.
     """
+    backend = _check_backend(backend)
+
     if isinstance(directions, list):
         directions = backend.cast(directions, dtype=directions[0].dtype)
 
+    # the coefficient of the projection on :math:`d` is :math:`\\braket{d | v}`
     if len(directions.shape) == 1:
         return (
-            backend.dot(backend.conj(vector), directions)
+            backend.dot(backend.conj(directions), vector)
             * directions
             / backend.dot(backend.conj(directions), directions)
         )
 
-    dot_products = backend.einsum("j,kj", backend.conj(vector), directions)
-    inner_prods = backend.diag(
-        backend.einsum("jk,lk", backend.conj(directions), directions)
-    )
+    dot_products = backend.einsum("kj,j->k", backend.conj(directions), vector)
+    inner_prods = backend.einsum("kj,kj->k", backend.conj(directions), directions)
 
     return backend.reshape(dot_products / inner_prods, (-1, 1)) * directions

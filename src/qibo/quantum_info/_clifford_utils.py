@@ -2,14 +2,19 @@
 
 from functools import reduce
 from itertools import product
+from typing import TYPE_CHECKING
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from qibo import Circuit, gates
 from qibo.config import raise_error
 
+if TYPE_CHECKING:  # pragma: no cover
+    from qibo.quantum_info.clifford import Clifford
 
-def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
+
+def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str) -> str:
     """Calculate the product of two single-qubit Paulis represented as strings.
 
     Args:
@@ -17,24 +22,25 @@ def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
         pauli_2 (str): Second Pauli operator.
 
     Returns:
-        (str): Product of the two Pauli operators.
+        str: Product of the two Pauli operators.
     """
     products = {
-        "XY": "iZ",
-        "YZ": "iX",
-        "ZX": "iY",
-        "YX": "-iZ",
-        "ZY": "-iX",
-        "XZ": "iY",
-        "XX": "I",
-        "ZZ": "I",
-        "YY": "I",
-        "XI": "X",
-        "IX": "X",
-        "YI": "Y",
+        "II": "I",
         "IY": "Y",
-        "ZI": "Z",
         "IZ": "Z",
+        "IX": "X",
+        "XI": "X",
+        "XX": "I",
+        "XY": "iZ",
+        "XZ": "-iY",
+        "YI": "Y",
+        "YX": "-iZ",
+        "YY": "I",
+        "YZ": "iX",
+        "ZI": "Z",
+        "ZX": "iY",
+        "ZY": "-iX",
+        "ZZ": "I",
     }
     prod = products[
         "".join([p.replace("i", "").replace("-", "") for p in (pauli_1, pauli_2)])
@@ -56,14 +62,14 @@ def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
     return "".join([sign, i, prod.replace("i", "").replace("-", "")])
 
 
-def _string_product(operators: list):
+def _string_product(operators: list[str]) -> str:
     """Calculates the tensor product of a list of operators represented as strings.
 
     Args:
         operators (list): list of operators.
 
     Returns:
-        (str): String representing the tensor product of the operators.
+        str: String representing the tensor product of the operators.
     """
     # calculate global sign
     phases = len([True for op in operators if "-" in op])
@@ -100,7 +106,7 @@ def _string_product(operators: list):
     return f"{phases}{result}"
 
 
-def _apply_clifford_gate(clifford, gate: str, *args):
+def _apply_clifford_gate(clifford: "Clifford", gate: str, *args) -> None:
     """Apply a ``_clifford_operations`` gate to ``clifford.symplectic_matrix`` in place.
 
     The callers keep live views of the symplectic matrix and read them again after
@@ -119,7 +125,7 @@ def _apply_clifford_gate(clifford, gate: str, *args):
         getattr(backend._platform, gate)(clifford.symplectic_matrix, *args)
 
 
-def _decomposition_AG04(clifford, **kwargs):
+def _decomposition_AG04(clifford: "Clifford", **kwargs) -> Circuit:
     """Returns a Clifford object decomposed into a circuit based on Aaronson-Gottesman method.
 
     Args:
@@ -166,7 +172,7 @@ def _decomposition_AG04(clifford, **kwargs):
     return circuit.invert()
 
 
-def _decomposition_BM20(clifford, **kwargs):
+def _decomposition_BM20(clifford: "Clifford", **kwargs) -> Circuit:
     """Optimal CNOT-cost decomposition of a Clifford operator on :math:`n \\in \\{2, 3 \\}`
     into a circuit based on Bravyi-Maslov method.
 
@@ -183,12 +189,13 @@ def _decomposition_BM20(clifford, **kwargs):
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
     nqubits = clifford.nqubits
-    clifford_copy = clifford.copy(deep=True)
 
     if nqubits > 3:
         raise_error(
             ValueError, "This method can only be implemented for ``nqubits <= 3``."
         )
+
+    clifford_copy = clifford.copy(deep=True)
 
     if nqubits == 1:
         return _single_qubit_clifford_decomposition(
@@ -226,11 +233,13 @@ def _decomposition_BM20(clifford, **kwargs):
     return circuit
 
 
-def _single_qubit_clifford_decomposition(symplectic_matrix, **kwargs):
+def _single_qubit_clifford_decomposition(
+    symplectic_matrix: ArrayLike, **kwargs
+) -> Circuit:
     """Decompose symplectic matrix of a single-qubit Clifford into a Clifford circuit.
 
     Args:
-        symplectic_matrix (ndarray): Symplectic matrix to be decomposed.
+        symplectic_matrix (ArrayLike): Symplectic matrix to be decomposed.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
@@ -264,7 +273,7 @@ def _single_qubit_clifford_decomposition(symplectic_matrix, **kwargs):
     return circuit
 
 
-def _set_qubit_x_to_true(clifford, circuit: Circuit, qubit: int):
+def _set_qubit_x_to_true(clifford: "Clifford", circuit: Circuit, qubit: int) -> None:
     """Set a :math:`X`-destabilizer to ``True``.
 
     This is done by permuting columns ``l > qubit`` or, if necessary, applying a Hadamard.
@@ -298,7 +307,7 @@ def _set_qubit_x_to_true(clifford, circuit: Circuit, qubit: int):
             return
 
 
-def _set_row_x_to_zero(clifford, circuit: Circuit, qubit: int):
+def _set_row_x_to_zero(clifford: "Clifford", circuit: Circuit, qubit: int) -> None:
     """Set :math:`X`-destabilizer to ``False`` for all ``k > qubit``.
 
     This is done by applying CNOTs, assuming ``k <= N`` and ``clifford.symplectic_matrix[k][k]=1``.
@@ -334,7 +343,7 @@ def _set_row_x_to_zero(clifford, circuit: Circuit, qubit: int):
         circuit.add(gates.S(qubit))
 
 
-def _set_row_z_to_zero(clifford, circuit: Circuit, qubit: int):
+def _set_row_z_to_zero(clifford: "Clifford", circuit: Circuit, qubit: int) -> None:
     """Set :math:`Z`-stabilizer to ``False`` for all ``i > qubit``.
 
     Implemented by applying (reverse) CNOTs.
@@ -370,7 +379,7 @@ def _set_row_z_to_zero(clifford, circuit: Circuit, qubit: int):
         circuit.add(gates.H(qubit))
 
 
-def _cnot_cost(clifford):
+def _cnot_cost(clifford: "Clifford") -> int:
     """Returns the number of CNOT gates required for Clifford decomposition.
 
     Args:
@@ -388,7 +397,7 @@ def _cnot_cost(clifford):
     return _cnot_cost2(clifford)
 
 
-def _rank_2(a: bool, b: bool, c: bool, d: bool):
+def _rank_2(a: bool, b: bool, c: bool, d: bool) -> int:
     """Returns rank of 2x2 boolean matrix."""
     if (a & d) ^ (b & c):
         return 2
@@ -399,7 +408,7 @@ def _rank_2(a: bool, b: bool, c: bool, d: bool):
     return 0
 
 
-def _cnot_cost2(clifford):
+def _cnot_cost2(clifford: "Clifford") -> int:
     """Returns CNOT cost of a two-qubit Clifford.
 
     Args:
@@ -429,7 +438,7 @@ def _cnot_cost2(clifford):
     return r01 + 1 - r00
 
 
-def _cnot_cost3(clifford):  # pragma: no cover
+def _cnot_cost3(clifford: "Clifford") -> int:  # pragma: no cover
     """Return CNOT cost of a 3-qubit clifford.
 
     Args:
@@ -516,13 +525,20 @@ def _cnot_cost3(clifford):  # pragma: no cover
     return 4
 
 
-def _reduce_cost(clifford, inverse_circuit: Circuit, cost: int):  # pragma: no cover
+def _reduce_cost(
+    clifford: "Clifford", inverse_circuit: Circuit, cost: int
+) -> tuple["Clifford", Circuit, int]:  # pragma: no cover
     """Step that tries to reduce the two-qubit cost of a Clifford circuit.
 
     Args:
         clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit object.
+        inverse_circuit (:class:`qibo.models.circuit.Circuit`): circuit object that
+            accumulates the gates applied to ``clifford``.
         cost (int): initial cost.
+
+    Returns:
+        tuple: Clifford object after the cost-reducing step, ``inverse_circuit`` with the
+        gates of the step appended, and the new cost.
     """
     nqubits = clifford.nqubits
 
