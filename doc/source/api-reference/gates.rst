@@ -392,6 +392,13 @@ Fusion gate
     :members:
     :member-order: bysource
 
+Parametrized fusion gate
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.ParametrizedFusedGate
+    :members:
+    :member-order: bysource
+
 IONQ Native gates
 -----------------
 
