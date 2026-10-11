@@ -59,7 +59,7 @@ def _fast_walsh_hadamard_transform(
     array = backend.swapaxes(array, axis, -1)
 
     dim = array.shape[-1]
-    if dim & (dim - 1):  # pragma: no cover
+    if dim & (dim - 1):
         raise_error(
             ValueError, "Walsh-Hadamard transform dimension must be a power of 2."
         )

@@ -13,8 +13,15 @@ from qibo.quantum_info import (
 from qibo.quantum_info._superoperator_transformations import (
     _check_pauli_order,
     _check_pauli_superoperator_shape,
+    _fast_walsh_hadamard_transform,
     _reshuffling,
 )
+
+
+def test_fast_walsh_hadamard_transform_errors(backend):
+    array = backend.ones((3, 3), dtype=backend.complex128)
+    with pytest.raises(ValueError, match="must be a power of 2"):
+        _fast_walsh_hadamard_transform(array, backend=backend)
 
 
 @pytest.mark.parametrize("pauli_order", ["IXY", "IXYZI", "IXYY", "ABCD", ""])
