@@ -16,6 +16,46 @@ following abstract class.
     :special-members: __call__
 
 
+.. _StateTomography:
+
+State Tomography
+----------------
+
+Vanilla state tomography reconstructs the density matrix :math:`\rho` of :math:`n` qubits by
+linear inversion of Pauli measurements [1, 2]. In the Pauli basis,
+
+.. math::
+    \rho = \frac{1}{2^{n}} \sum_{P} \text{tr}(P \, \rho) \, P \, ,
+
+where the sum runs over the :math:`4^{n}` Pauli strings :math:`P`. Each qubit is measured in the
+basis :math:`X`, :math:`Y`, or :math:`Z`, which gives :math:`3^{n}` settings, each one executed
+for ``nshots`` shots. The Walsh-Hadamard transform of the outcome probabilities of a setting
+gives the expectation values of the :math:`2^{n}` Pauli strings that it measures, i.e. those
+that have the measured Pauli, or the identity, on each qubit. A Pauli string with :math:`w`
+non-identity factors is measured by :math:`3^{n - w}` settings, and the estimates of all of them
+are averaged. The coefficients of all Pauli strings are then mapped to :math:`\hat{\rho}` with a
+fast Hadamard transform.
+
+The estimate is Hermitian, with unit trace, and unbiased, but it is not positive semidefinite
+in general, because of the statistical errors. The number of circuits grows as :math:`3^{n}`,
+so the protocol is meant for few qubits. A step-by-step guide is given in the
+:ref:`state tomography tutorial <state-tomography-tutorial>`.
+
+References:
+    1. M. A. Nielsen and I. L. Chuang, *Quantum Computation and Quantum Information*,
+    Cambridge University Press (2010), Sec. 8.4.2.
+
+    2. D. F. V. James, P. G. Kwiat, W. J. Munro and A. G. White,
+    *Measurement of qubits* (2001),
+    `Physical Review A 64, 052312 <https://doi.org/10.1103/PhysRevA.64.052312>`_.
+
+
+.. autoclass:: qibo.tomography.state_tomography.StateTomography
+    :members:
+    :member-order: bysource
+    :special-members: __call__
+
+
 Gate Set Tomography
 -------------------
 
