@@ -229,6 +229,17 @@ with a fast Hadamard transform, and only the diagonal of the frame is needed.
 In the computational basis, the observable is a Hamiltonian or a matrix, and
 :math:`\mathcal{M}^{-1}` is a matrix.
 
+If ``robust=True``, the frame of ``"local-clifford"`` is also sampled from ``ncalibration``
+circuits applied to the zero state, in the same way as for ``"ultra-shallow"``, instead of taking
+the analytical eigenvalues :math:`3^{-w}`. The sampled frame includes the noise of the measurement
+circuits, so the estimator remains unbiased under noise that is the same in the calibration and the
+measurement circuits, which is the robust shadow estimation of Ref. [4]. The frame of
+``"global-clifford"`` has no robust version.
+
+The method :meth:`~qibo.tomography.classical_shadows.ClassicalShadow.density_matrix` returns the
+estimated state :math:`\hat{\rho}` itself, instead of the expectation value of an observable. It is
+Hermitian, with unit trace and unbiased, but not positive semidefinite in general.
+
 The samples can be split into batches to use the median-of-means estimator [1],
 which is the empirical average for a single batch. The circuits are generated and executed in
 chunks, which bounds the memory they use, and each batch is processed as soon as it is complete.
@@ -244,6 +255,9 @@ References:
     3. R. M. S. Farias, R. D. Peddinti, I. Roth and L. Aolita,
     *Robust ultra-shallow shadows*,
     `Quantum Science and Technology 10, 025044 <https://doi.org/10.1088/2058-9565/adc14f>`_.
+
+    4. S. Chen, W. Yu, P. Zeng and S. T. Flammia, *Robust shadow estimation* (2021),
+    `PRX Quantum 2, 030348 <https://doi.org/10.1103/PRXQuantum.2.030348>`_.
 
 
 .. autoclass:: qibo.tomography.classical_shadows.ClassicalShadow
