@@ -445,5 +445,6 @@ def _stinespring_to_kraus(
     # indices: (system out, environment out, system in, environment in)
     stinespring = ENGINE.reshape(stinespring, (dim, dim_env, dim, dim_env))
     # the Kraus operator ``e`` is the action of the isometry on the initial state of
-    # the environment, projected on the state ``e`` of the environment
-    return ENGINE.einsum("aebf,f->eab", stinespring, ENGINE.conj(initial_state_env))
+    # the environment, projected on the state ``e`` of the environment. No conjugation
+    # here: the bra of the isometry already holds the conjugated initial state
+    return ENGINE.einsum("aebf,f->eab", stinespring, initial_state_env)
