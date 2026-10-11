@@ -263,6 +263,8 @@ def test_lcu_select_errors(backend):
 
     with pytest.raises(ValueError):
         lcu_select([], backend=backend)
+    with pytest.raises(TypeError):
+        lcu_select([unitary] * 3, nauxiliary=2.0, backend=backend)
     with pytest.raises(ValueError):
         lcu_select([unitary, other], backend=backend)
     with pytest.raises(ValueError):
