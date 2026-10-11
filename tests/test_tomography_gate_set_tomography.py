@@ -944,16 +944,40 @@ def test_call_pauli_liouville(backend, gate_class, arguments):
     backend.assert_allclose(estimate, target, atol=1e-1)
 
 
+@pytest.mark.parametrize("platform", ["dummy", "simulated"])
 @pytest.mark.parametrize("pauli_liouville", [False, True])
 @pytest.mark.parametrize("nqubits, ncircuits", [(1, 12), (2, 240)])
-def test_call_qibolab(nqubits, ncircuits, pauli_liouville):
+def test_call_qibolab(nqubits, ncircuits, pauli_liouville, platform):
     """The default transpiler of ``qibolab`` places all the circuits in the same qubits.
 
     The outcomes of the dummy platform are not physical, so only the execution is tested,
-    and the ideal Gram matrix is given to avoid inverting a random one.
+    and the ideal Gram matrix is given to avoid inverting a random one. The simulated
+    platform is a simulator that exposes the qubits, connectivity and native gates of a
+    ``qibolab`` backend, so that the default transpiler is tested without ``qibolab``.
     """
-    pytest.importorskip("qibolab")
-    backend = construct_backend("qibolab", platform="dummy")
+    if platform == "dummy":
+        pytest.importorskip("qibolab")
+        backend = construct_backend("qibolab", platform="dummy")
+    else:
+
+        class SimulatedBackend(NumpyBackend):
+            def __init__(self):
+                super().__init__()
+                self.name = "qibolab"
+
+            @property
+            def connectivity(self):
+                return [("A1", "A2"), ("A2", "A3")]
+
+            @property
+            def natives(self):
+                return ["CZ", "GPI2"]
+
+            @property
+            def qubits(self):
+                return ["A1", "A2", "A3"]
+
+        backend = SimulatedBackend()
 
     circuit = Circuit(nqubits)
     circuit.add(gates.X(qubit) for qubit in range(nqubits))
