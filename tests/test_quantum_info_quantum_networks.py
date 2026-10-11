@@ -581,3 +581,70 @@ def test_tensorflow_backend_order(monkeypatch):
 
     assert channel.is_unital()
     assert vector_norm.call_args.kwargs["order"] == "euclidean"
+
+
+def test_pure_network_is_not_modified_by_conversions(backend):
+    unitary = random_unitary(2, seed=1, backend=backend)
+    network = QuantumNetwork(unitary, partition=(2, 2), pure=True, backend=backend)
+    shape = tuple(network._tensor.shape)
+
+    network.matrix()
+    network.operator(full=True)
+    network.full()
+
+    assert network.is_pure()
+    assert tuple(network._tensor.shape) == shape
+
+
+def test_quantum_network_constructors_default_arguments(backend):
+    with pytest.raises(TypeError):
+        QuantumNetwork(backend.cast(np.eye(4)), backend=backend)
+
+    # the default backend is the global one
+    identity = IdentityChannel(2)
+    assert identity.partition == (2, 2)
+    assert TraceOperation(2).partition == (2,)
+
+
+@pytest.mark.parametrize("number", [2.0, -2.0, 0.5, -0.5])
+def test_truediv_pure_network(backend, number):
+    unitary = random_unitary(2, seed=1, backend=backend)
+    network = QuantumNetwork(unitary, partition=(2, 2), pure=True, backend=backend)
+
+    divided = network / number
+
+    backend.assert_allclose(divided.full(), network.full() / number, atol=1e-10)
+    # only a positive number can be absorbed in the pure representation
+    assert divided.is_pure() is (number > 0)
+
+
+@pytest.mark.parametrize("pure", [False, True])
+@pytest.mark.parametrize("kind", ["unitary", "amplitude-damping"])
+def test_apply_matches_kraus_action(backend, kind, pure):
+    if kind == "unitary":
+        kraus = [backend.to_numpy(random_unitary(2, seed=1, backend=backend))]
+    else:
+        gamma = 0.3
+        kraus = [
+            np.array([[1, 0], [0, np.sqrt(1 - gamma)]], dtype=complex),
+            np.array([[0, np.sqrt(gamma)], [0, 0]], dtype=complex),
+        ]
+    if pure and len(kraus) > 1:
+        pytest.skip("only a single Kraus operator has a pure representation")
+
+    state = random_density_matrix(2, seed=5, backend=backend)
+    target = sum(k @ backend.to_numpy(state) @ k.conj().T for k in kraus)
+
+    if pure:
+        operator = backend.cast(kraus[0])
+    else:
+        operator = backend.cast(
+            sum(np.outer(k.reshape(-1), k.reshape(-1).conj()) for k in kraus)
+        )
+    network = QuantumChannel.from_operator(
+        operator, (2, 2), pure=pure, backend=backend, inverse=True
+    )
+
+    np.testing.assert_allclose(
+        backend.to_numpy(network.apply(state)), target, atol=1e-10
+    )
