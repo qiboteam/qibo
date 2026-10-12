@@ -14,4 +14,5 @@ different topics and quantum algorithms:
     advancedexamples
     classical-shadows
     state-tomography
+    process-tomography
     applications
