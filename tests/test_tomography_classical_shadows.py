@@ -1,5 +1,6 @@
 """Tests for :class:`qibo.tomography.classical_shadows.ClassicalShadow`."""
 
+import math
 from functools import reduce
 
 import numpy as np
@@ -242,6 +243,81 @@ def test_call_reproducibility(backend):
     assert float(estimate(5)) != float(estimate(6))
 
 
+def test_call_robust(backend):
+    """Without noise, the sampled frame gives the estimates of the analytical one."""
+    circuit = Circuit(1)
+    circuit.add(gates.RY(0, math.pi / 3))
+    exact = math.cos(math.pi / 3)
+
+    shadow = ClassicalShadow()
+    kwargs = {"seed": 2, "backend": backend}
+
+    analytical = shadow(circuit, [("Z", 1.0)], 600, "local-clifford", **kwargs)
+    sampled = shadow(
+        circuit,
+        [("Z", 1.0)],
+        600,
+        "local-clifford",
+        ncalibration=3000,
+        robust=True,
+        **kwargs,
+    )
+
+    # same snapshots, so they only differ by the statistical error of the frame
+    backend.assert_allclose(sampled, analytical, atol=0.15)
+    backend.assert_allclose(sampled, exact, atol=0.4)
+
+    # the frame of ``"ultra-shallow"`` is always sampled, so ``robust`` has no effect
+    ultra_shallow = {"ncalibration": 100, "depth": 1, **kwargs}
+    backend.assert_allclose(
+        shadow(circuit, [("Z", 1.0)], 30, "ultra-shallow", **ultra_shallow),
+        shadow(
+            circuit, [("Z", 1.0)], 30, "ultra-shallow", robust=True, **ultra_shallow
+        ),
+    )
+
+    with pytest.raises(NotImplementedError):
+        shadow(circuit, [("Z", 1.0)], 10, "global-clifford", robust=True, **kwargs)
+
+
+def test_call_robust_noise(backend, monkeypatch):
+    """Noise in the measurement circuits biases the analytical frame, not the sampled."""
+    noise = NoiseModel()
+    noise.add(DepolarizingError(0.15), gates.H)
+    noise.add(DepolarizingError(0.15), gates.S)
+    execute = Tomography.execute
+    monkeypatch.setattr(
+        Tomography,
+        "execute",
+        lambda self, circuits, nshots=1000, backend=None: execute(
+            self, [noise.apply(circuit) for circuit in circuits], nshots, backend
+        ),
+    )
+
+    # the state preparation has no ``H`` or ``S`` gates, so it is noiseless
+    circuit = Circuit(1)
+    circuit.add(gates.RY(0, math.pi / 3))
+    exact = math.cos(math.pi / 3)
+
+    shadow = ClassicalShadow()
+    kwargs = {"seed": 4, "backend": backend}
+
+    biased = shadow(circuit, [("Z", 1.0)], 600, "local-clifford", **kwargs)
+    robust = shadow(
+        circuit,
+        [("Z", 1.0)],
+        600,
+        "local-clifford",
+        ncalibration=1500,
+        robust=True,
+        **kwargs,
+    )
+
+    # the noise shrinks the estimate, by a factor of 0.6 on average
+    assert exact - float(biased) > 0.05
+    backend.assert_allclose(robust, exact, atol=0.2)
+
+
 @pytest.mark.parametrize(
     "method,nqubits,depth",
     [
@@ -332,6 +408,138 @@ def test_circuits_errors(backend):
     measured.add(gates.M(0))
     with pytest.raises(ValueError):
         shadow.circuits(measured, 1, "local-clifford", backend=backend)
+
+
+@pytest.mark.parametrize(
+    "method,robust",
+    [
+        ("local-clifford", False),
+        ("local-clifford", True),
+        ("global-clifford", False),
+        ("ultra-shallow", False),
+    ],
+)
+def test_density_matrix(backend, method, robust):
+    """Both bases give the same Hermitian, unit trace estimate of the state."""
+    circuit = _prepare(2)
+    shadow = ClassicalShadow()
+    kwargs = {
+        "nsamples": 40,
+        "method": method,
+        "chunksize": 25,
+        "depth": 1,
+        "ncalibration": 150,
+        "robust": robust,
+        "seed": 7,
+        "backend": backend,
+    }
+
+    pauli = shadow.density_matrix(circuit, **kwargs)
+    computational = shadow.density_matrix(circuit, basis="computational", **kwargs)
+
+    assert pauli.shape == (4, 4)
+    backend.assert_allclose(pauli, computational, atol=1e-8)
+    backend.assert_allclose(pauli, backend.dagger(pauli), atol=1e-10)
+    backend.assert_allclose(backend.trace(pauli), 1.0, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "method,nqubits,nsamples,ncalibration,robust,atol",
+    [
+        ("local-clifford", 1, 1500, None, False, 0.15),
+        ("local-clifford", 2, 600, None, False, 0.3),
+        ("local-clifford", 2, 600, 1500, True, 0.3),
+        ("global-clifford", 2, 600, None, False, 0.3),
+        ("ultra-shallow", 2, 600, 1500, False, 0.3),
+    ],
+)
+def test_density_matrix_estimate(
+    backend, method, nqubits, nsamples, ncalibration, robust, atol
+):
+    """The estimate approaches the density matrix prepared by the circuit."""
+    circuit = _prepare(nqubits)
+
+    state = backend.execute_circuit(circuit).state()
+    exact = backend.outer(state, backend.conj(state))
+
+    estimate = ClassicalShadow().density_matrix(
+        circuit,
+        nsamples,
+        method,
+        depth=1,
+        ncalibration=ncalibration,
+        robust=robust,
+        seed=11,
+        backend=backend,
+    )
+
+    backend.assert_allclose(estimate, exact, atol=atol)
+
+
+@pytest.mark.parametrize(
+    "method,robust",
+    [
+        ("local-clifford", False),
+        ("local-clifford", True),
+        ("global-clifford", False),
+        ("ultra-shallow", False),
+    ],
+)
+def test_density_matrix_expectation(backend, method, robust):
+    """Expectation values of the estimate are those returned by ``__call__``."""
+    circuit = _prepare(2)
+    terms = _terms(2)
+    shadow = ClassicalShadow()
+    kwargs = {
+        "nsamples": 40,
+        "method": method,
+        "nshots": 2,
+        "chunksize": 25,
+        "depth": 1,
+        "ncalibration": 150,
+        "robust": robust,
+        "seed": 7,
+        "backend": backend,
+    }
+
+    estimate = shadow.density_matrix(circuit, **kwargs)
+    expected = shadow(circuit, terms, **kwargs)
+
+    backend.assert_allclose(
+        backend.real(backend.trace(estimate @ _matrix(terms, backend))),
+        expected,
+        atol=1e-8,
+    )
+
+
+def test_density_matrix_errors(backend):
+    circuit = _prepare(2)
+    shadow = ClassicalShadow()
+    kwargs = {"method": "local-clifford", "backend": backend}
+
+    for nsamples in (0, -1, 2.5):
+        with pytest.raises(ValueError):
+            shadow.density_matrix(circuit, nsamples, **kwargs)
+
+    for chunksize in (0, -1, 2.5):
+        with pytest.raises(ValueError):
+            shadow.density_matrix(circuit, 10, chunksize=chunksize, **kwargs)
+
+    with pytest.raises(ValueError):
+        shadow.density_matrix(circuit, 10, "xyz", backend=backend)
+
+    with pytest.raises(ValueError):
+        shadow.density_matrix(circuit, 10, basis="xyz", **kwargs)
+
+    with pytest.raises(NotImplementedError):
+        shadow.density_matrix(
+            circuit, 10, "global-clifford", robust=True, backend=backend
+        )
+
+    measured = _prepare(2)
+    measured.add(gates.M(0, 1))
+    with pytest.raises(ValueError):
+        shadow.density_matrix(measured, 10, **kwargs)
 
 
 @pytest.mark.parametrize("method", ["global-clifford", "local-clifford"])
@@ -445,6 +653,107 @@ def test_frame_operator_pauli(backend, method, nqubits, inverse):
     assert frame.dtype == backend.float64
     assert frame.shape == (4**nqubits,)
     backend.assert_allclose(frame, expected)
+
+
+def test_frame_operator_robust(backend):
+    """Without noise, the sampled local Clifford frame is the analytical one."""
+    shadow = ClassicalShadow()
+    kwargs = {"nsamples": 1500, "seed": 1, "backend": backend}
+
+    frame = backend.to_numpy(
+        shadow.frame_operator(2, "local-clifford", robust=True, **kwargs)
+    )
+    inverse = backend.to_numpy(
+        shadow.frame_operator(2, "local-clifford", True, robust=True, **kwargs)
+    )
+
+    assert frame.dtype == backend.float64
+    assert frame.shape == (16,)
+    backend.assert_allclose(frame[0], 1.0)
+    backend.assert_allclose(frame * inverse, 1.0)
+    backend.assert_allclose(frame, 3.0 ** (-_weights(2, backend)), atol=0.07)
+
+    # the eigenvalue only depends on the support of the Pauli string
+    supports = {}
+    for index in range(16):
+        digits = backend.base_repr(index, 4).zfill(2)
+        supports.setdefault(tuple(int(digit != "0") for digit in digits), []).append(
+            frame[index]
+        )
+    for values in supports.values():
+        backend.assert_allclose(values, values[0])
+
+    computational = shadow.frame_operator(
+        2, "local-clifford", basis="computational", robust=True, **kwargs
+    )
+    backend.assert_allclose(
+        backend.eigvalsh(computational), backend.sort(frame), atol=1e-10
+    )
+
+    # the analytical frame does not depend on the number of samples
+    backend.assert_allclose(
+        shadow.frame_operator(2, "local-clifford", nsamples=1, seed=1, backend=backend),
+        shadow.frame_operator(
+            2, "local-clifford", nsamples=100, seed=2, backend=backend
+        ),
+    )
+
+    with pytest.raises(NotImplementedError):
+        shadow.frame_operator(2, "global-clifford", robust=True, backend=backend)
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_frame_operator_robust_noise(backend, monkeypatch, nqubits):
+    """Noise in the calibration circuits is included in the sampled frame."""
+    lam = 0.15
+    noise = NoiseModel()
+    noise.add(DepolarizingError(lam), gates.H)
+    noise.add(DepolarizingError(lam), gates.S)
+    execute = Tomography.execute
+    monkeypatch.setattr(
+        Tomography,
+        "execute",
+        lambda self, circuits, nshots=1000, backend=None: execute(
+            self, [noise.apply(circuit) for circuit in circuits], nshots, backend
+        ),
+    )
+
+    # Depolarizing noise multiplies the Bloch vector by ``1 - lam`` after each gate,
+    # so the eigenvalue of a single qubit is the average over the Cliffords that
+    # map ``Z`` to ``+-Z``, of ``(1 - lam)`` to the number of gates of the Clifford.
+    pauli_z = backend.cast(matrices.Z, dtype=backend.complex128)
+    exact = 0.0
+    for word in SINGLE_QUBIT_CLIFFORDS:
+        circuit = Circuit(1)
+        for name in word:
+            circuit.add(getattr(gates, name)(0))
+        unitary = circuit.unitary(backend) if word else backend.identity(2)
+        rotated = unitary @ pauli_z @ backend.dagger(unitary)
+        if backend.allclose(rotated, pauli_z) or backend.allclose(rotated, -pauli_z):
+            exact += (1 - lam) ** len(word)
+    exact /= len(SINGLE_QUBIT_CLIFFORDS)
+
+    # the frame of the product ensemble is the product of those of each qubit
+    frame = backend.to_numpy(
+        ClassicalShadow().frame_operator(
+            nqubits,
+            "local-clifford",
+            nsamples=3000,
+            robust=True,
+            seed=4,
+            backend=backend,
+        )
+    )
+
+    backend.assert_allclose(frame[0], 1.0)
+    for index in range(1, 4**nqubits):
+        weight = sum(
+            digit != "0" for digit in backend.base_repr(index, 4).zfill(nqubits)
+        )
+        backend.assert_allclose(frame[index], exact**weight, atol=0.05)
+
+    # the noiseless eigenvalue is at least 0.07 above for a weight one string
+    assert frame[1] < 1 / 3 - 0.07
 
 
 def test_frame_operator_ultra_shallow(backend):
