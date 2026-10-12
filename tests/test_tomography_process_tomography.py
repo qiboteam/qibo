@@ -211,7 +211,11 @@ def test_call_seed(backend):
 def test_call_errors(backend):
     circuit, _ = _process(backend, "unitary", 1)
 
-    for nshots in (0, -1, 2.5, True, "10"):
+    for nshots in (True, "10", 10.25):
+        with pytest.raises(TypeError):
+            ProcessTomography()(circuit, nshots=nshots, backend=backend)
+
+    for nshots in (0, -1):
         with pytest.raises(ValueError):
             ProcessTomography()(circuit, nshots=nshots, backend=backend)
 
