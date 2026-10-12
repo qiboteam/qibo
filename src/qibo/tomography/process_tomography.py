@@ -100,7 +100,7 @@ class ProcessTomography(Tomography):
         Returns:
             ArrayLike: :math:`4^{n} \\times 4^{n}` estimated process, in ``representation``.
         """
-        if not isinstance(nshots, int):
+        if not isinstance(nshots, int) or isinstance(nshots, bool):
             raise_error(
                 TypeError, f"``nshots`` must be type int, but it is {type(nshots)}."
             )
