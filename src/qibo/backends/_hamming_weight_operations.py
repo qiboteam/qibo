@@ -236,9 +236,9 @@ def _get_basis_strings(self, nqubits: int, weight: int) -> list[str]:
     """Return cached lexicographically sorted basis strings."""
     self._ensure_basis_cache(nqubits, weight)
     key = (nqubits, weight)
-    if key not in self._basis_strings_cache:  # pragma: no cover
+    if key not in self._basis_strings_cache:
         self._basis_strings_cache[key] = list(
-            self._global_fixed_weight_strings(nqubits, weight, self)
+            _global_fixed_weight_strings(nqubits, weight, self)
         )
     return self._basis_strings_cache[key]
 

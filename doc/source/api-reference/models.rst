@@ -140,6 +140,10 @@ Linear Combination of Unitaries
 
 .. autofunction:: qibo.models.lcu.lcu_circuit
 
+.. autofunction:: qibo.models.lcu.lcu_prepare
+
+.. autofunction:: qibo.models.lcu.lcu_select
+
 
 Iterative Quantum Amplitude Estimation (IQAE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -328,6 +332,16 @@ Sparse encoder
 ^^^^^^^^^^^^^^
 
 .. autofunction:: qibo.models.encodings.sparse_encoder
+
+
+Spin-:math:`s` fixed-magnetization Encoder
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Generalization of the fixed Hamming-weight encoder to chains of :math:`n` spin-:math:`s` sites,
+loading data into the eigenspace of total magnetization :math:`S^{z}`. Each site is mapped
+into qubits via either a unary or a binary encoding.
+
+.. autofunction:: qibo.models.encodings.spin_s_encoder
 
 
 Unary Encoder
