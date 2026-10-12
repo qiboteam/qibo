@@ -13,6 +13,8 @@ from qibo.quantum_info._linalg_operations import (
 from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
+    double_commutator,
+    group_commutator,
     lanczos,
     lie_closure,
     matrix_exponentiation,
@@ -67,6 +69,77 @@ def test_commutator(backend):
 
     comm = commutator(X, Z)
     backend.assert_allclose(comm, -2j * Y)
+
+
+def test_double_commutator(backend):
+    I, X, Y = backend.matrices.I(2), backend.matrices.X, backend.matrices.Y
+    zeros = backend.zeros((2, 2))
+
+    # [X, [X, Y]] = [X, 2i Z] = 4 Y and [[X, X], Y] = 0
+    backend.assert_allclose(double_commutator(X, X, Y), 4 * Y)
+    backend.assert_allclose(double_commutator(X, X, Y, nesting="right"), 4 * Y)
+    backend.assert_allclose(double_commutator(X, X, Y, nesting="left"), zeros)
+
+    # [X, [Y, Y]] = 0 and [[X, Y], Y] = [2i Z, Y] = 4 X
+    backend.assert_allclose(double_commutator(X, Y, Y), zeros)
+    backend.assert_allclose(double_commutator(X, Y, Y, nesting="left"), 4 * X)
+
+    backend.assert_allclose(double_commutator(I, X, Y), zeros)
+    backend.assert_allclose(double_commutator(X, Y, I, nesting="left"), zeros)
+
+    matrix_1, matrix_2, matrix_3 = (
+        random_hermitian(4, seed=seed, backend=backend) for seed in (1, 2, 3)
+    )
+
+    # definitions
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3),
+        commutator(matrix_1, commutator(matrix_2, matrix_3)),
+    )
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="left"),
+        commutator(commutator(matrix_1, matrix_2), matrix_3),
+    )
+
+    # antisymmetry in the last (first) two arguments for right (left) nesting
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3),
+        -double_commutator(matrix_1, matrix_3, matrix_2),
+    )
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="left"),
+        -double_commutator(matrix_2, matrix_1, matrix_3, nesting="left"),
+    )
+
+    # Jacobi identity relates both nestings: [[A, B], C] = [A, [B, C]] - [B, [A, C]]
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="left"),
+        double_commutator(matrix_1, matrix_2, matrix_3)
+        - double_commutator(matrix_2, matrix_1, matrix_3),
+        atol=1e-10,
+    )
+
+    # default third operator: [A, [A, B]] (right) or [[A, B], B] (left)
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2),
+        commutator(matrix_1, commutator(matrix_1, matrix_2)),
+    )
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, nesting="left"),
+        commutator(commutator(matrix_1, matrix_2), matrix_2),
+    )
+    backend.assert_allclose(double_commutator(X, Y), 4 * Y)
+    backend.assert_allclose(double_commutator(X, Y, nesting="left"), 4 * X)
+    backend.assert_allclose(double_commutator(X, X), zeros)
+
+    with pytest.raises(ValueError):
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="center")
+    with pytest.raises(TypeError):
+        double_commutator(matrix_1, matrix_2, backend.cast(np.random.rand(3, 3)))
+    with pytest.raises(TypeError):
+        double_commutator(
+            matrix_1, matrix_2, backend.cast(np.random.rand(3, 3)), nesting="left"
+        )
 
 
 def test_anticommutator(backend):
@@ -1022,7 +1095,7 @@ def test_lanczos_arguments(backend):
     )
 
 
-@pytest.mark.parametrize("function", [commutator, anticommutator])
+@pytest.mark.parametrize("function", [commutator, anticommutator, group_commutator])
 def test_commutators_require_matrices(backend, function):
     vector = backend.cast(np.array([1.0, 2.0]))
     with pytest.raises(TypeError):

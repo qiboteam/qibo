@@ -10,6 +10,7 @@ from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.double_bracket import DoubleBracketIteration
 from qibo.quantum_info import (
     commutator,
+    double_commutator,
     random_gaussian_matrix,
     random_hermitian,
 )
@@ -78,6 +79,23 @@ def test_short_step_derivative(backend):
     after = dbi.off_diagonal_norm**2
 
     assert math.isclose((after - before) / step, expected, rel_tol=1e-3)
+
+
+def test_heisenberg_equation(backend):
+    """A short double-bracket rotation follows ``dH/ds = [[D, H], H]``."""
+    hamiltonian = hamiltonians.Ising(
+        3, 1.0, (1.0, 0.7), closed_boundary=False, backend=backend
+    )
+    dbi = DoubleBracketIteration(hamiltonian, backend=backend)
+    diagonal = backend.diag(backend.diag(hamiltonian.matrix))
+    derivative = double_commutator(diagonal, hamiltonian.matrix, nesting="left")
+
+    step = 1e-6
+    dbi.step(step)
+
+    backend.assert_allclose(
+        (dbi.hamiltonian - hamiltonian.matrix) / step, derivative, atol=1e-3
+    )
 
 
 @pytest.mark.parametrize("rotation", ["double_bracket", "group_commutator"])
