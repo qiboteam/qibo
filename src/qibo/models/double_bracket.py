@@ -335,6 +335,7 @@ class DoubleBracketIteration:
         """Unitary implementing one rotation of the iteration."""
         from qibo.quantum_info.linalg_operations import (  # circular import
             commutator,
+            group_commutator,
             matrix_exponentiation,
         )
 
@@ -356,9 +357,12 @@ class DoubleBracketIteration:
         if step_duration < 0:
             diag_matrix = -diag_matrix
 
-        forward = matrix_exponentiation(diag_matrix, 1j * time, backend=self.backend)
+        # the factor exp(i t H) removes a term commuting with H from the group commutator
+        # without changing the iterated Hamiltonian, as in the reduced group commutator
         evolution = matrix_exponentiation(
             self.hamiltonian, 1j * time, backend=self.backend
         )
 
-        return forward @ evolution @ self.backend.conj(forward)
+        return evolution @ group_commutator(
+            -time * self.hamiltonian, time * diag_matrix, backend=self.backend
+        )
