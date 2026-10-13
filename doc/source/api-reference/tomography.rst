@@ -21,8 +21,8 @@ following abstract class.
 State Tomography
 ----------------
 
-Vanilla state tomography reconstructs the density matrix :math:`\rho` of :math:`n` qubits by
-linear inversion of Pauli measurements [1, 2]. In the Pauli basis,
+State tomography reconstructs the density matrix :math:`\rho` of :math:`n` qubits from Pauli
+measurements [1, 2]. In the Pauli basis,
 
 .. math::
     \rho = \frac{1}{2^{n}} \sum_{P} \text{tr}(P \, \rho) \, P \, ,
@@ -36,9 +36,25 @@ non-identity factors is measured by :math:`3^{n - w}` settings, and the estimate
 are averaged. The coefficients of all Pauli strings are then mapped to :math:`\hat{\rho}` with a
 fast Hadamard transform.
 
-The estimate is Hermitian, with unit trace, and unbiased, but it is not positive semidefinite
-in general, because of the statistical errors. The number of circuits grows as :math:`3^{n}`,
-so the protocol is meant for few qubits. A step-by-step guide is given in the
+The outcomes can be turned into a state with four estimators, selected with the argument
+``method``:
+
+* ``"linear-inversion"``, the default, inserts the estimated expectation values in the expansion
+  above. The estimate is Hermitian, with unit trace, and unbiased, but it is not positive
+  semidefinite in general, because of the statistical errors.
+* ``"physical-linear-inversion"`` is the density matrix closest to the linear inversion
+  estimate in the Frobenius norm, obtained by projecting its eigenvalues onto the probability
+  simplex [3].
+* ``"least-squares"`` is the physical state that minimizes the sum of the squared differences
+  between the observed and the predicted probabilities, found with an accelerated projected
+  gradient method [3, 6].
+* ``"mle"`` is the maximum likelihood estimate, found with the diluted iterative algorithm of
+  Refs. [4, 5]. It is physical, and biased towards states with low rank.
+
+The readout errors of the device can be mitigated in all of them by giving the response matrix
+of the readout in the argument ``response_matrix``, e.g. the one returned by
+:func:`qibo.models.error_mitigation.get_response_matrix` [7]. The number of circuits grows as
+:math:`3^{n}`, so the protocol is meant for few qubits. A step-by-step guide is given in the
 :ref:`state tomography tutorial <state-tomography-tutorial>`.
 
 References:
@@ -48,6 +64,26 @@ References:
     2. D. F. V. James, P. G. Kwiat, W. J. Munro and A. G. White,
     *Measurement of qubits* (2001),
     `Physical Review A 64, 052312 <https://doi.org/10.1103/PhysRevA.64.052312>`_.
+
+    3. J. A. Smolin, J. M. Gambetta and G. Smith,
+    *Efficient method for computing the maximum-likelihood quantum state from measurements with
+    additive Gaussian noise* (2012),
+    `Physical Review Letters 108, 070502 <https://doi.org/10.1103/PhysRevLett.108.070502>`_.
+
+    4. Z. Hradil, *Quantum-state estimation* (1997),
+    `Physical Review A 55, R1561 <https://doi.org/10.1103/PhysRevA.55.R1561>`_.
+
+    5. A. I. Lvovsky, *Iterative maximum-likelihood reconstruction in quantum homodyne
+    tomography* (2004),
+    `Journal of Optics B 6, S556 <https://doi.org/10.1088/1464-4266/6/6/014>`_.
+
+    6. A. Beck and M. Teboulle, *A fast iterative shrinkage-thresholding algorithm for linear
+    inverse problems* (2009),
+    `SIAM Journal on Imaging Sciences 2, 183 <https://doi.org/10.1137/080716542>`_.
+
+    7. S. Bravyi, S. Sheldon, A. Kandala, D. C. Mckay and J. M. Gambetta,
+    *Mitigating measurement errors in multiqubit experiments* (2021),
+    `Physical Review A 103, 042605 <https://doi.org/10.1103/PhysRevA.103.042605>`_.
 
 
 .. autoclass:: qibo.tomography.state_tomography.StateTomography
