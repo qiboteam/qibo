@@ -123,8 +123,9 @@ class DoubleBracketIteration:
         V_{K}` and :math:`V_{K} |\mu\rangle` approximates an eigenstate of :math:`H_{0}`
         for a computational basis state :math:`|\mu\rangle`. It only contains evolutions
         under :math:`H_{0}` and under the diagonal operators, and its number of evolutions
-        under :math:`H_{0}` is :math:`(3^{K} - 1) / 2`. It reproduces the iteration exactly when
-        the ``"group_commutator"`` rotation was used.
+        under :math:`H_{0}` is :math:`(3^{K} - 1) / 2`. It reproduces the iteration exactly,
+        and therefore is only available when the ``"group_commutator"`` rotation was used in
+        all steps.
 
         Args:
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend used to
@@ -133,17 +134,33 @@ class DoubleBracketIteration:
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: Circuit implementing :math:`V_{K}`.
+
+        Raises:
+            ValueError: If the dimension of the Hamiltonian is not a power of two, or if any
+                step of the iteration did not use the ``"group_commutator"`` rotation.
         """
         from qibo.quantum_info.linalg_operations import (  # circular import
             matrix_exponentiation,
         )
 
         backend = self.backend if backend is None else _check_backend(backend)
-        nqubits = int(math.log2(self.initial_hamiltonian.shape[0]))
+
+        dim = self.initial_hamiltonian.shape[0]
+        if dim & (dim - 1) != 0:
+            raise_error(ValueError, "``hamiltonian`` dimension must be a power of two.")
+
+        if any(rotation != "group_commutator" for _, _, rotation in self.history):
+            raise_error(
+                ValueError,
+                "``circuit`` is only available if all steps used the 'group_commutator' "
+                + "rotation.",
+            )
+
+        nqubits = int(math.log2(dim))
         qubits = list(range(nqubits))
 
         circuit = Circuit(nqubits)
-        for duration, diagonal in self.history:
+        for duration, diagonal, _ in self.history:
             time = math.sqrt(abs(duration))
             sign = 1 if duration >= 0 else -1
             phases = backend.exp(1j * sign * time * diagonal)
@@ -180,7 +197,7 @@ class DoubleBracketIteration:
 
         Args:
             diagonal (ArrayLike, optional): diagonal operator :math:`D_{k}`, given either as the
-                vector of its diagonal entries or as a diagonal matrix. If ``None``, the
+                vector of its real diagonal entries or as a real diagonal matrix. If ``None``, the
                 dephasing of the current Hamiltonian is used. Defaults to ``None``.
             rotation (str, optional): either ``"double_bracket"`` or ``"group_commutator"``.
                 Defaults to ``"double_bracket"``.
@@ -234,9 +251,9 @@ class DoubleBracketIteration:
 
         Args:
             nsteps (int): number of recursion steps.
-            diagonals (list[ArrayLike], optional): candidate diagonal operators :math:`D_{k}`,
-                e.g. products of Pauli-:math:`Z` operators, to be considered in addition to the
-                canonical bracket in every step. Defaults to ``None``.
+            diagonals (list[ArrayLike], optional): candidate real diagonal operators
+                :math:`D_{k}`, e.g. products of Pauli-:math:`Z` operators, to be considered in
+                addition to the canonical bracket in every step. Defaults to ``None``.
             rotation (str, optional): either ``"double_bracket"`` or ``"group_commutator"``.
                 Defaults to ``"double_bracket"``.
             step_max (float, optional): see :meth:`optimize_step`. Defaults to ``None``.
@@ -270,7 +287,7 @@ class DoubleBracketIteration:
         Args:
             step_duration (float): step duration :math:`s_{k}`.
             diagonal (ArrayLike, optional): diagonal operator :math:`D_{k}`, given either as the
-                vector of its diagonal entries or as a diagonal matrix. If ``None``, the
+                vector of its real diagonal entries or as a real diagonal matrix. If ``None``, the
                 dephasing of the current Hamiltonian is used. Defaults to ``None``.
             rotation (str, optional): either ``"double_bracket"`` or ``"group_commutator"``.
                 Defaults to ``"double_bracket"``.
@@ -285,7 +302,7 @@ class DoubleBracketIteration:
             self.backend.conj(rotation_unitary.T) @ self.hamiltonian @ rotation_unitary
         )
         self.unitary = self.unitary @ rotation_unitary
-        self.history.append((step_duration, diagonal))
+        self.history.append((step_duration, diagonal, rotation))
 
         return self.hamiltonian
 
@@ -320,6 +337,9 @@ class DoubleBracketIteration:
                 ValueError,
                 f"``diagonal`` must have {dim} entries, but has shape {diagonal.shape}.",
             )
+
+        if self.backend.max(self.backend.abs(self.backend.imag(diagonal))) > 1e-10:
+            raise_error(ValueError, "``diagonal`` must be real-valued.")
 
         return self.backend.real(diagonal)
 

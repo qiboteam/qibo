@@ -219,3 +219,16 @@ def test_errors(backend):
 
     with pytest.raises(ValueError):
         dbi.step(0.1, diagonal=backend.ones((4, 4)))
+
+    with pytest.raises(ValueError):
+        dbi.step(0.1, diagonal=1j * backend.ones(4))
+
+    dbi.step(0.1, rotation="double_bracket")
+    with pytest.raises(ValueError):
+        dbi.circuit()
+
+    dbi = DoubleBracketIteration(
+        random_hermitian(3, seed=1, backend=backend), backend=backend
+    )
+    with pytest.raises(ValueError):
+        dbi.circuit()
