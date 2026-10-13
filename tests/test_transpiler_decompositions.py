@@ -5,6 +5,7 @@ from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.asserts import assert_decomposition
+from qibo.transpiler.decompositions import standard_decompositions
 from qibo.transpiler.unroller import NativeGates, cz_dec, translate_gate
 
 default_natives = NativeGates.Z | NativeGates.RZ | NativeGates.M | NativeGates.I
@@ -258,3 +259,27 @@ def test_cz_count_to_native(backend, gate_name, ncz, natives_1q):
         sum(isinstance(translated_gate, gates.CZ) for translated_gate in translated)
         == ncz
     )
+
+
+def test_static_decomposition_copies_gates():
+    gate = gates.CNOT(0, 1)
+
+    first = standard_decompositions(gate)
+    second = standard_decompositions(gate)
+
+    assert first[0] is not second[0]
+    assert first[0] is not standard_decompositions.decompositions[gates.CNOT][0]
+
+
+@pytest.mark.parametrize("controls,target", [([0, 1], 2), ([3, 1], 0)])
+def test_function_decomposition_qubits(controls, target):
+    angles = np.random.default_rng(1).uniform(-np.pi, np.pi, 2 ** len(controls))
+    gate = gates.Multiplexor(controls, target, angles)
+
+    decomposed = standard_decompositions(gate)
+
+    assert len(decomposed) == 2 ** (len(controls) + 1)
+    for rotation, cnot in zip(decomposed[::2], decomposed[1::2]):
+        assert rotation.target_qubits == (target,)
+        assert cnot.target_qubits == (target,)
+        assert cnot.control_qubits[0] in controls
