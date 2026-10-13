@@ -85,7 +85,7 @@ qibo = { workspace = true }
 
 [tool.uv.sources.qibojit]
 git = "https://github.com/qiboteam/qibojit.git"
-branch = "main"
+rev = "32fac546c49d6039f771ec72a592f1c88911a344"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
