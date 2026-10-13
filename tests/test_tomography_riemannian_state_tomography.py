@@ -107,6 +107,32 @@ def test_call_exact(backend, monkeypatch, nqubits, nobservables, rank, mixed):
     backend.assert_allclose(estimate, exact, atol=1e-6)
 
 
+def test_call_no_descent(backend, monkeypatch):
+    """Data without information leave no descent direction, so the estimate is zero.
+
+    The Pauli strings are fixed to exclude the identity, which is the only one with a
+    non-zero expectation value, and the outcomes are uniform, so that the data vanish.
+    The iterations then stop, *i.e.* the line search does not divide zero by zero.
+    """
+
+    def execute(self, circuits, nshots=1000, backend=None):
+        uniform = dict(enumerate([0.25] * 4))
+        return [SimpleNamespace(frequencies=lambda binary=False: uniform)] * len(
+            circuits
+        )
+
+    monkeypatch.setattr(Tomography, "execute", execute)
+    monkeypatch.setattr(
+        backend,
+        "random_choice",
+        lambda *args, **kwargs: backend.cast(list(range(1, 9)), dtype=backend.int64),
+    )
+
+    estimate = RiemannianStateTomography()(_prepare(2), 1, 8, 1, backend=backend)
+
+    backend.assert_allclose(estimate, backend.zeros((4, 4), dtype=backend.complex128))
+
+
 def test_call_nobservables(backend, monkeypatch):
     """One circuit is executed for each Pauli string."""
     calls = []
