@@ -1098,8 +1098,15 @@ def test_lanczos_arguments(backend):
 @pytest.mark.parametrize("function", [commutator, anticommutator, group_commutator])
 def test_commutators_require_matrices(backend, function):
     vector = backend.cast(np.array([1.0, 2.0]))
-    with pytest.raises(TypeError):
+    matrix_2 = backend.cast(np.random.rand(2, 2))
+    matrix_3 = backend.cast(np.random.rand(3, 3))
+
+    with pytest.raises(TypeError, match="``operator_1`` must have shape"):
         function(vector, vector)
+    with pytest.raises(TypeError, match="``operator_2`` must have shape"):
+        function(matrix_2, vector)
+    with pytest.raises(TypeError, match="must have the same shape"):
+        function(matrix_2, matrix_3)
 
 
 def test_matrix_exponentiation_default_phase(backend):

@@ -201,11 +201,12 @@ def group_commutator(
     """
     backend = _check_backend(backend)
 
-    for operator in (operator_1, operator_2):
+    for index, operator in enumerate((operator_1, operator_2), start=1):
         if len(operator.shape) != 2 or operator.shape[0] != operator.shape[1]:
             raise_error(
                 TypeError,
-                f"Operators must have shape (k,k), but have shape {operator.shape}.",
+                f"``operator_{index}`` must have shape (k,k), "
+                + f"but have shape {operator.shape}.",
             )
 
     if operator_1.shape != operator_2.shape:
