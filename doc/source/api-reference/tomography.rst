@@ -92,6 +92,54 @@ References:
     :special-members: __call__
 
 
+.. _RiemannianStateTomography:
+
+Riemannian State Tomography
+---------------------------
+
+Most states of interest have a low rank :math:`r`, which makes them determined by far fewer than
+:math:`d^{2}` parameters, with :math:`d = 2^{n}`. The protocol draws :math:`m` distinct Pauli
+strings :math:`S_{i}` at random, and estimates each expectation value
+:math:`\text{tr}(S_{i} \, \rho)` from ``nshots`` shots, which gives the data :math:`y` of the
+sensing map
+
+.. math::
+    \mathcal{A}(X)_{i} = \sqrt{\frac{d}{m}} \, \text{tr}(S_{i} \, X) \, ,
+
+whose adjoint is :math:`\mathcal{A}^{\dagger}(y) = \sqrt{d / m} \sum_{i} y_{i} S_{i}`. The state is
+estimated by minimizing :math:`\| y - \mathcal{A}(X) \|_{2}^{2} / 2` over the matrices of rank at
+most :math:`r` with Riemannian gradient descent [1, 2]. The first iterate is the rank-:math:`r`
+truncation of :math:`\mathcal{A}^{\dagger}(y)`. At each iteration, the gradient is projected onto
+the tangent space of the rank-:math:`r` matrices at the current estimate, the estimate moves along
+the projection with the step size that minimizes the objective exactly, and it is truncated to
+rank :math:`r` again. The truncation keeps the :math:`r` largest eigenvalues and sets the negative
+ones to zero, which differs from the singular value truncation of Ref. [2], and the unit trace is
+not enforced, so the estimate is a positive semidefinite matrix of rank at most :math:`r`.
+
+The contraction factor of the error does not depend on the condition number of :math:`\rho`, so the
+number of iterations grows only logarithmically with the target error [2]. The guarantees of
+Ref. [2] need enough Pauli strings and shots. Measuring between 20% and 40% of the :math:`4^{n}`
+strings was enough in its numerical experiments, but fewer strings can leave several low-rank
+states that fit the data, particularly for states with few non-zero Pauli expectation values,
+*e.g.* GHZ states. Each Pauli string is measured with its own circuit.
+
+References:
+    1. K. Wei, J.-F. Cai, T. F. Chan and S. Leung,
+    *Guarantees of Riemannian optimization for low rank matrix recovery* (2016),
+    `SIAM Journal on Matrix Analysis and Applications 37, 1198
+    <https://doi.org/10.1137/15M1050525>`_.
+
+    2. M.-C. Hsu, E.-J. Kuo, W.-H. Yu, J.-F. Cai and M.-H. Hsieh,
+    *Quantum state tomography via non-convex Riemannian gradient descent* (2024),
+    `Physical Review Letters 132, 240804 <https://doi.org/10.1103/PhysRevLett.132.240804>`_.
+
+
+.. autoclass:: qibo.tomography.RiemannianStateTomography
+    :members:
+    :member-order: bysource
+    :special-members: __call__
+
+
 .. _ProcessTomography:
 
 Process Tomography

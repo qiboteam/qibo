@@ -206,7 +206,9 @@ The number of circuits grows exponentially with the number of qubits: for
 :math:`n = 1, 2, 3, 4, 5, 6, 8` there are :math:`3, 9, 27, 81, 243, 729, 6561` circuits, and the
 reconstruction also needs memory and time that grow as :math:`4^{n}` or faster. This is why
 the protocol is meant for few qubits. To estimate many observables of a larger state, use
-:ref:`classical shadows <classical-shadows-tutorial>`.
+:ref:`classical shadows <classical-shadows-tutorial>`, and to exploit that the state has a low
+rank, with a fraction of the Pauli strings, use
+:class:`qibo.tomography.RiemannianStateTomography`.
 
 
 Readout errors
