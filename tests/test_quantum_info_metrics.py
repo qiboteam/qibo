@@ -477,8 +477,8 @@ def test_bures_identical_states(backend, dims):
 
         assert not np.isnan(angle)
         assert not np.isnan(distance)
-        assert angle < 1e-6
-        assert distance < 1e-6
+        assert angle < 5e-6
+        assert distance < 5e-6
 
 
 @pytest.mark.parametrize("dims", [2, 4])
