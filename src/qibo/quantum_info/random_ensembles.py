@@ -69,7 +69,7 @@ def uniform_sampling_U3(
         )
 
     if ngates <= 0:
-        raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
+        raise_error(ValueError, f"ngates must be positive, but it is {ngates}.")
 
     backend = _check_backend(backend)
 
@@ -102,7 +102,7 @@ def random_gaussian_matrix(
     Gaussian matrices are matrices where each entry is
     sampled from a Gaussian probability distribution
 
-    .. math::"haar",
+    .. math::
         p(x) = \\frac{1}{\\sqrt{2 \\, \\pi} \\, \\sigma} \\,
             \\exp{\\left(-\\frac{(x - \\mu)^{2}}{2\\,\\sigma^{2}}\\right)}
 
@@ -262,6 +262,72 @@ def random_iqp(
     circuit.add(gates.H(qubit) for qubit in range(nqubits))
 
     return circuit
+
+
+def random_isometry(
+    dims: int,
+    rank: int | None = None,
+    seed: int | None = None,
+    backend: Backend | None = None,
+):
+    """Returns a Haar-random isometry :math:`V`, i.e. a matrix with orthonormal columns
+    such that :math:`V^{\\dagger} \\, V = \\mathbb{I}_{r}`, where :math:`r` is ``rank``.
+
+    An isometry is a distance-preserving map from a :math:`r`-dimensional Hilbert space
+    to a :math:`d`-dimensional one, with :math:`r \\leq d`, where :math:`d` is ``dims``.
+    It is sampled from the unique probability measure that is invariant under left
+    multiplication by :math:`d \\times d` unitaries. Isometries are the building blocks of
+    Stinespring dilations of quantum channels and of Naimark dilations of POVMs.
+    If ``rank == dims``, then :math:`V` is a Haar-random unitary matrix, as in
+    :func:`qibo.quantum_info.random_unitary` with ``measure="haar"``.
+
+    The isometry is obtained from the (reduced) QR decomposition of a
+    :func:`qibo.quantum_info.random_gaussian_matrix`, after fixing the phases of the
+    diagonal of :math:`R` to guarantee that the distribution is the Haar one [1].
+
+    Args:
+        dims (int): dimension :math:`d` of the target space, i.e. number of rows of the matrix.
+        rank (int, optional): dimension :math:`r` of the source space, i.e. number of
+            columns of the matrix. Must satisfy ``rank <= dims``. If ``None``, then
+            ``rank == dims``. Defaults to ``None``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
+            random numbers or a fixed seed to initialize a generator. If ``None``,
+            initializes a generator with a random seed. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ndarray: Isometry :math:`V` with dimensions ``(dims, rank)``.
+
+    References:
+        1. F. Mezzadri, *How to generate random matrices from the classical compact groups*,
+           Notices of the AMS **54**, 592 (2007).
+           `arXiv:math-ph/0609050 <https://arxiv.org/abs/math-ph/0609050>`_.
+    """
+    if not isinstance(dims, int):
+        raise_error(TypeError, f"dims must be an integer, but got {type(dims)}.")
+
+    if rank is None:
+        rank = dims
+    elif not isinstance(rank, int):
+        raise_error(TypeError, f"rank must be an integer, but got {type(rank)}.")
+
+    if dims <= 0 or rank <= 0:
+        raise_error(ValueError, "dims and rank must be positive integers.")
+
+    if rank > dims:
+        raise_error(ValueError, f"rank ({rank}) cannot be greater than dims ({dims}).")
+
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
+
+    matrix = backend.qinfo._random_gaussian_matrix(dims, rank, 0.0, 1.0)
+    Q, R = backend.qr(matrix)
+    phases = backend.diag(R)
+    phases = phases / backend.abs(phases)
+
+    return Q * phases
 
 
 def random_unitary(
@@ -524,12 +590,14 @@ def random_density_matrix(
     Args:
         dims (int): dimension of the matrix.
         rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``.
+            Ignored when ``pure=True``. Note that, by definition, ``rank`` must be
+            ``None`` (or equal to ``dims``) when ``metric=="hilbert-schmidt"``.
             Defaults to ``None``.
         pure (bool, optional): if ``True``, returns a pure state. Defaults to ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
-            ``"hilbert-schmidt"``, ``"ginibre"``, and ``"bures"``.
-            Note that, by definition, ``rank`` defaults to ``None``
-            when ``metric=="hilbert-schmidt"``. Defaults to ``"hilbert-schmidt"``.
+            ``"hilbert-schmidt"``, ``"ginibre"``, and ``"bures"``. For ``"bures"``,
+            states are sampled with the algorithm of Reference [1].
+            Defaults to ``"hilbert-schmidt"``.
         basis (str, optional): if ``None``, returns random density matrix in the
             computational basis. If ``"pauli-<pauli_order>"``, (e.g. ``"pauli-IZXY"``),
             returns it in the Pauli basis with the corresponding order of single-qubit
@@ -551,10 +619,26 @@ def random_density_matrix(
 
     Returns:
         ndarray: Random density matrix :math:`\\rho`.
+
+    References:
+        1. V. A. Osipov, H.-J. Sommers, and K. Życzkowski, *Random Bures mixed states and
+           the distribution of their purity*, J. Phys. A: Math. Theor. **43**, 055302 (2010).
+           `arXiv:0909.5094 [quant-ph] <https://arxiv.org/abs/0909.5094>`_.
     """
 
     if rank is not None and rank > dims:
         raise_error(ValueError, f"rank ({rank}) cannot be greater than dims ({dims}).")
+
+    if rank is not None and rank < 1:
+        raise_error(ValueError, f"rank ({rank}) must be a positive integer.")
+
+    if rank is not None and metric == "hilbert-schmidt" and rank != dims:
+        raise_error(
+            ValueError,
+            f"rank ({rank}) must be None or equal to dims ({dims}) when "
+            + "metric='hilbert-schmidt'. Use metric='ginibre' or metric='bures' "
+            + "to sample states of lower rank.",
+        )
 
     if metric not in ["hilbert-schmidt", "ginibre", "bures"]:
         raise_error(ValueError, f"metric {metric} not implemented.")
@@ -576,15 +660,23 @@ def random_density_matrix(
     backend = _check_backend(backend)
     backend.set_seed(seed)
 
+    rank = dims if rank is None else rank
+
     if pure:
         state = backend.qinfo._random_density_matrix_pure(dims)
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = backend.qinfo._random_density_matrix_hs_ginibre(
-                dims, dims, 0.0, 1.0
+                dims, rank, 0.0, 1.0
             )
         else:
-            state = backend.qinfo._random_density_matrix_bures(dims, dims, 0.0, 1.0)
+            # Bures measure: rho = (1 + U) G G^dagger (1 + U^dagger) / Tr(...), where
+            # G is a Ginibre matrix and U is Haar-random (Reference [1])
+            unitary = backend.qinfo._random_unitary_haar(dims)
+            matrix = backend.qinfo._random_gaussian_matrix(dims, rank, 0.0, 1.0)
+            matrix = (backend.identity(dims) + unitary) @ matrix
+            state = matrix @ backend.transpose(backend.conj(matrix), (1, 0))
+            state = state / backend.trace(state)
 
     if basis is not None:
         pauli_order = basis.split("-")[1]
@@ -1004,7 +1096,7 @@ def random_stochastic_matrix(
         if not isinstance(max_iterations, int):
             raise_error(
                 TypeError,
-                f"max_iterations must be type int, but it is type {type(precision_tol)}.",
+                f"max_iterations must be type int, but it is type {type(max_iterations)}.",
             )
         if max_iterations <= 0.0:
             raise_error(ValueError, "max_iterations must be a positive int.")
