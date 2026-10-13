@@ -618,8 +618,11 @@ def two_qubit_decomposition(
                     ),
                 ]
 
+    # ``hz`` is defined up to multiples of pi, which only change the global phase of the
+    # unitary. Its representative depends on the choice of the degenerate eigenvectors
+    # in the magic decomposition, e.g. for iSWAP, hence it is compared modulo pi.
     z_component = _get_z_component(unitary, weight, backend)
-    if abs(z_component) < threshold:
+    if abs(math.remainder(z_component, math.pi)) < threshold:
         return _two_qubit_decomposition_without_z(q0, q1, unitary, weight, backend)
     return _two_qubit_decomposition_with_z(q0, q1, unitary, weight, backend)
 
@@ -858,12 +861,12 @@ def _get_z_component(unitary: ArrayLike, weight: float, backend: Backend) -> flo
 def _two_qubit_decomposition_without_z(
     q0: int, q1: int, unitary: ArrayLike, weight: float, backend: Backend
 ) -> list[Gate]:
-    """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 case."""
+    """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 (modulo pi) case."""
     # Get magic decomposition
     u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend, weight=weight)
     ud_diag = to_bell_diagonal(ud, backend=backend)
-    hx, hy, _ = calculate_h_vector(ud_diag, backend=backend)
-    hx, hy = float(hx), float(hy)
+    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
+    hx, hy, hz = float(hx), float(hy), float(hz)
 
     # Get light decomposition
     gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
@@ -873,7 +876,9 @@ def _two_qubit_decomposition_without_z(
     gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
 
     g0, g1 = gatelist[-2:]
-    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+    # A shift of ``hz`` by pi multiplies the unitary by a global phase of -1.
+    phase = (-1) ** round(hz / math.pi)
+    gatelist[-2] = gates.Unitary(phase * u4 @ g0.parameters[0], q0)
     gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
 
     return gatelist

@@ -226,6 +226,30 @@ def test_two_qubit_decomposition_cz_count(backend, gate_name, ncz, seed):
     backend.assert_allclose(result.unitary(backend), matrix, atol=1e-6)
 
 
+@pytest.mark.parametrize("seed", [5, 70, 298])
+def test_two_qubit_decomposition_iswap_hz_modulo_pi(backend, seed):
+    """The ``hz`` component of iSWAP can be a multiple of pi, which is a global phase.
+
+    The eigenvectors of the magic decomposition are degenerate for iSWAP, so the
+    representative of ``hz`` depends on the linear algebra library. For these seeds it
+    is pi with the default LAPACK, and the decomposition must still use two CZ gates.
+    """
+    circuit = Circuit(2)
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed, backend=backend), 0))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 10, backend=backend), 1))
+    circuit.add(gates.iSWAP(0, 1))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 20, backend=backend), 0))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 30, backend=backend), 1))
+    matrix = circuit.unitary(backend)
+
+    decomposition = two_qubit_decomposition(0, 1, matrix, backend=backend)
+    result = Circuit(2)
+    result.add(decomposition)
+
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == 2
+    backend.assert_allclose(result.unitary(backend), matrix, atol=1e-6)
+
+
 @pytest.mark.parametrize("seed", [None, 5])
 def test_two_qubit_decomposition_product_of_single_qubit_gates(backend, seed):
     """A tensor product of single-qubit gates, with its phase, needs no CZ gate."""
