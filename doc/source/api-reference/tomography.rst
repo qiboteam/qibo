@@ -56,6 +56,49 @@ References:
     :special-members: __call__
 
 
+.. _ProcessTomography:
+
+Process Tomography
+------------------
+
+Vanilla process tomography characterizes the process :math:`\mathcal{E}` implemented by a circuit
+of :math:`n` qubits by linear inversion [1, 2]. The process is described by its Pauli transfer
+matrix
+
+.. math::
+    R_{ij} = \frac{1}{2^{n}} \text{tr}\left(P_{i} \, \mathcal{E}(P_{j})\right) \, ,
+
+which maps the Pauli coefficients :math:`s_{j} = \text{tr}(P_{j} \, \rho)` of a state to those
+of its output, :math:`o_{i} = \sum_{j} R_{ij} \, s_{j}`. The process is probed with the
+:math:`4^{n}` product states in which each qubit is in :math:`|0\rangle`, :math:`|1\rangle`,
+:math:`|+\rangle`, or :math:`|{+i}\rangle`, which are linearly independent. The output of each
+of them is reconstructed with :ref:`state tomography <StateTomography>`, which needs
+:math:`3^{n}` settings, so there are :math:`12^{n}` circuits. If :math:`S` and :math:`O` have
+the coefficients of the inputs and of the outputs in their rows, then :math:`O = S R^{T}`, and
+the estimate is :math:`\hat{R} = (S^{-1} O)^{T}`. It can also be returned in the Liouville, or
+Choi, representation of :mod:`qibo.quantum_info`.
+
+The estimate is unbiased, and it preserves the trace exactly, but it is not completely positive
+in general, because of the statistical errors. The number of circuits grows as :math:`12^{n}`, so
+the protocol is meant for few qubits, and the errors in the preparation of the inputs and in the
+measurements are part of the reconstructed process. A step-by-step guide is given in the
+:ref:`process tomography tutorial <process-tomography-tutorial>`.
+
+References:
+    1. I. L. Chuang and M. A. Nielsen, *Prescription for experimental determination of the
+    dynamics of a quantum black box* (1997),
+    `Journal of Modern Optics 44, 2455 <https://doi.org/10.1080/09500349708231894>`_.
+
+    2. M. A. Nielsen and I. L. Chuang, *Quantum Computation and Quantum Information*,
+    Cambridge University Press (2010), Sec. 8.4.2.
+
+
+.. autoclass:: qibo.tomography.process_tomography.ProcessTomography
+    :members:
+    :member-order: bysource
+    :special-members: __call__
+
+
 Gate Set Tomography
 -------------------
 
