@@ -70,6 +70,12 @@ Cosine-Sine decomposition
 .. autofunction:: qibo.quantum_info.cosine_sin_decomposition
 
 
+Schur decomposition
+-------------------
+
+.. autofunction:: qibo.quantum_info.schur_decomposition
+
+
 Singular value decomposition
 ----------------------------
 
