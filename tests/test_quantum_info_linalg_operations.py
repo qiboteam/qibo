@@ -384,6 +384,16 @@ def test_cosine_sin_decomposition_errors(backend):
     with pytest.raises(ValueError):
         cosine_sin_decomposition(random_unitary(3, backend=backend), backend=backend)
 
+    unitary = random_unitary(4, backend=backend)
+    for block_nrows, block_ncols in [(0, 2), (4, 2), (2, 0), (2, 4), (-1, 2)]:
+        with pytest.raises(ValueError):
+            cosine_sin_decomposition(
+                unitary,
+                block_nrows=block_nrows,
+                block_ncols=block_ncols,
+                backend=backend,
+            )
+
 
 def test_schmidt_decomposition(backend):
     with pytest.raises(ValueError):

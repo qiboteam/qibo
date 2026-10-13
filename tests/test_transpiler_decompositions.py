@@ -272,7 +272,7 @@ def test_static_decomposition_copies_gates():
 
 
 @pytest.mark.parametrize("controls,target", [([0, 1], 2), ([3, 1], 0)])
-def test_function_decomposition_qubits(controls, target):
+def test_function_decomposition_qubits(backend, controls, target):
     angles = np.random.default_rng(1).uniform(-np.pi, np.pi, 2 ** len(controls))
     gate = gates.Multiplexor(controls, target, angles)
 
@@ -283,3 +283,13 @@ def test_function_decomposition_qubits(controls, target):
         assert rotation.target_qubits == (target,)
         assert cnot.target_qubits == (target,)
         assert cnot.control_qubits[0] in controls
+
+    nqubits = max(controls + [target]) + 1
+    reference = Circuit(nqubits)
+    reference.add(gate)
+    circuit = Circuit(nqubits)
+    circuit.add(decomposed)
+
+    backend.assert_allclose(
+        circuit.unitary(backend), reference.unitary(backend), atol=1e-8
+    )

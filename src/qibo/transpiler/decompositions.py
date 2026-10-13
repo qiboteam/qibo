@@ -60,7 +60,8 @@ class GateDecompositions:
 
         # Decompositions given as functions create new gates in every call, which
         # already act on the right qubits if the gate acts on ``0, ..., n - 1``.
-        # The gates of static decompositions are shared between calls, so they are copied.
+        # The gates of static decompositions are shared between calls, so they are
+        # copied. The copy also remaps them onto the actual qubits of the gate.
         creates_gates = callable(self.decompositions[gate.__class__])
         if creates_gates and gate.qubits == tuple(range(len(gate.qubits))):
             return decomposition

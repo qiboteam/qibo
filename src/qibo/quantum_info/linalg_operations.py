@@ -402,6 +402,14 @@ def cosine_sin_decomposition(
     block_nrows = dims // 2 if block_nrows is None else block_nrows
     block_ncols = dims // 2 if block_ncols is None else block_ncols
 
+    if not (0 < block_nrows < dims and 0 < block_ncols < dims):
+        raise_error(
+            ValueError,
+            "``block_nrows`` and ``block_ncols`` must be in the range "
+            + f"1..{dims - 1} for a matrix of dimension {dims}, "
+            + f"got {block_nrows} and {block_ncols}.",
+        )
+
     return backend.cosine_sin_decomposition(matrix, block_nrows, block_ncols)
 
 
