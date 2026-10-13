@@ -683,6 +683,22 @@ class Backend:
         """
         return self.engine.cos(array, **kwargs)
 
+    def cosine_sin_decomposition(
+        self, array: ArrayLike, block_nrows: int, block_ncols: int
+    ) -> tuple[ArrayLike, ArrayLike, ArrayLike]:  # pragma: no cover
+        """Calculate the Cosine-Sine Decomposition of a unitary ``array``.
+
+        Args:
+            array (ArrayLike): unitary matrix to be decomposed.
+            block_nrows (int): number of rows of the upper left block of ``array``.
+            block_ncols (int): number of columns of the upper left block of ``array``.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike, ArrayLike]: Block-diagonal left unitary,
+            cosine-sine matrix, and block-diagonal right unitary, in that order.
+        """
+        raise_error(NotImplementedError)
+
     def count_nonzero(self, array: ArrayLike, **kwargs) -> ArrayLike:
         """Count the number of non-zero elements in ``array``.
 
@@ -2860,6 +2876,8 @@ class Backend:
             )
         elif name == "FanOut":
             _matrix = _matrix(*gate.init_args)
+        elif name == "Multiplexor":
+            _matrix = _matrix(angles=gate.parameters[0], axis=gate.init_kwargs["axis"])
         else:
             _matrix = _matrix(*gate.parameters)
 
