@@ -336,6 +336,75 @@ def matrix_sqrt(matrix: ArrayLike, backend: Backend | None = None) -> ArrayLike:
     return matrix_power(matrix, power=0.5, backend=backend)
 
 
+def cosine_sin_decomposition(
+    matrix: ArrayLike,
+    block_nrows: int | None = None,
+    block_ncols: int | None = None,
+    backend: Backend | None = None,
+) -> tuple[ArrayLike, ArrayLike, ArrayLike]:
+    """Calculate the Cosine-Sine Decomposition (CSD) of a unitary ``matrix``.
+
+    Given an :math:`N \\times N` unitary matrix :math:`U`, partitioned into blocks such that
+    the upper left block has shape :math:`n_{r} \\times n_{c}`, with :math:`n_{r}` given by
+    ``block_nrows`` and :math:`n_{c}` by ``block_ncols``, its CSD is given by
+
+    .. math::
+        U = L \\, M \\, R^{\\dagger} \\, ,
+
+    where :math:`L = L_{1} \\oplus L_{2}` and :math:`R = R_{1} \\oplus R_{2}` are block-diagonal
+    unitary matrices, with :math:`L_{1}`, :math:`L_{2}`, :math:`R_{1}`, and :math:`R_{2}` of
+    shapes :math:`n_{r} \\times n_{r}`, :math:`(N - n_{r}) \\times (N - n_{r})`,
+    :math:`n_{c} \\times n_{c}`, and :math:`(N - n_{c}) \\times (N - n_{c})`, respectively.
+    :math:`M` is an :math:`N \\times N` orthogonal matrix built from the diagonal matrices
+    :math:`C = \\text{diag}(\\cos\\theta_{j})` and :math:`S = \\text{diag}(\\sin\\theta_{j})`,
+    with :math:`0 \\leq \\theta_{j} \\leq \\pi / 2`. For :math:`n_{r} = n_{c} = N / 2`,
+
+    .. math::
+        M = \\begin{pmatrix} C & -S \\\\ S & C \\end{pmatrix} \\, .
+
+    For other partitions, :math:`M` also contains identity blocks, which are described in the
+    documentation of :func:`scipy.linalg.cossin`.
+
+    Args:
+        matrix (ArrayLike): unitary matrix whose CSD to calculate.
+        block_nrows (int, optional): number of rows of the upper left block of ``matrix``.
+            If ``None``, defaults to :math:`N / 2`. Defaults to ``None``.
+        block_ncols (int, optional): number of columns of the upper left block of ``matrix``.
+            If ``None``, defaults to :math:`N / 2`. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        Tuple[ArrayLike, ArrayLike, ArrayLike]: Cosine-Sine decomposition of :math:`U`, i.e.
+        :math:`L`, :math:`M`, and :math:`R^{\\dagger}`, in that order.
+
+    References:
+        1. C. C. Paige and M. Wei, *History and generality of the CS decomposition*,
+        `Linear Algebra Appl. 208-209, 303 (1994) <https://doi.org/10.1016/0024-3795(94)90446-4>`_.
+    """
+    backend = _check_backend(backend)
+
+    matrix = backend.cast(matrix)
+    if len(matrix.shape) != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise_error(
+            ValueError, f"``matrix`` must be a square matrix, got shape {matrix.shape}."
+        )
+
+    dims = matrix.shape[0]
+    if (block_nrows is None or block_ncols is None) and dims % 2 != 0:
+        raise_error(
+            ValueError,
+            "``block_nrows`` and ``block_ncols`` must be given for a matrix "
+            + f"of odd dimension {dims}.",
+        )
+
+    block_nrows = dims // 2 if block_nrows is None else block_nrows
+    block_ncols = dims // 2 if block_ncols is None else block_ncols
+
+    return backend.cosine_sin_decomposition(matrix, block_nrows, block_ncols)
+
+
 def singular_value_decomposition(
     matrix: ArrayLike, backend: Backend | None = None
 ) -> tuple[ArrayLike, ArrayLike, ArrayLike]:
