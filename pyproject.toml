@@ -76,16 +76,9 @@ cuda12 = [
   "qibojit",
 ]
 
-[tool.uv]
-# Resolve qibojit's branch-specific qibo dependency against this checkout.
-override-dependencies = ["qibo"]
-
-[tool.uv.sources]
-qibo = { workspace = true }
-
 [tool.uv.sources.qibojit]
 git = "https://github.com/qiboteam/qibojit.git"
-rev = "32fac546c49d6039f771ec72a592f1c88911a344"
+branch = "main"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
