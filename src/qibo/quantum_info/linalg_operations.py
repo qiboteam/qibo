@@ -13,6 +13,51 @@ from qibo.quantum_info._linalg_operations import (
 )
 
 
+def anticommutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
+    """Returns the anticommutator of ``operator_1`` and ``operator_2``.
+
+    The anticommutator of two matrices :math:`A` and :math:`B` is given by
+
+    .. math::
+        \\{A, B\\} = A \\, B + B \\, A \\,.
+
+    Args:
+        operator_1 (ArrayLike): First operator.
+        operator_2 (ArrayLike): Second operator.
+
+    Returns:
+        ArrayLike: Anticommutator of ``operator_1`` and ``operator_2``.
+    """
+    if (
+        (len(operator_1.shape) != 2)
+        or (len(operator_1) == 0)
+        or (operator_1.shape[0] != operator_1.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"``operator_1`` must have shape (k,k), but have shape {operator_1.shape}.",
+        )
+
+    if (
+        (len(operator_2.shape) != 2)
+        or (len(operator_2) == 0)
+        or (operator_2.shape[0] != operator_2.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"``operator_2`` must have shape (k,k), but have shape {operator_2.shape}.",
+        )
+
+    if operator_1.shape != operator_2.shape:
+        raise_error(
+            TypeError,
+            "``operator_1`` and ``operator_2`` must have the same shape, "
+            + f"but {operator_1.shape} != {operator_2.shape}",
+        )
+
+    return operator_1 @ operator_2 + operator_2 @ operator_1
+
+
 def commutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
     """Returns the commutator of ``operator_1`` and ``operator_2``.
 
@@ -58,40 +103,111 @@ def commutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
     return operator_1 @ operator_2 - operator_2 @ operator_1
 
 
-def anticommutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
-    """Returns the anticommutator of ``operator_1`` and ``operator_2``.
+def double_commutator(
+    operator_1: ArrayLike,
+    operator_2: ArrayLike,
+    operator_3: ArrayLike | None = None,
+    nesting: str = "right",
+) -> ArrayLike:
+    """Returns the double commutator of ``operator_1``, ``operator_2``, and ``operator_3``.
 
-    The anticommutator of two matrices :math:`A` and :math:`B` is given by
+    The double commutator of three matrices :math:`A`, :math:`B`, and :math:`C` can be nested
+    to the right,
 
     .. math::
-        \\{A, B\\} = A \\, B + B \\, A \\,.
+        [A, [B, C]] = A \\, [B, C] - [B, C] \\, A \\, ,
+
+    or to the left,
+
+    .. math::
+        [[A, B], C] = [A, B] \\, C - C \\, [A, B] \\, .
+
+    The latter is the generator of the Heisenberg equation of a double-bracket rotation [1].
+    If ``operator_3`` is ``None``, only two operators are involved and the result is
+    :math:`[A, [A, B]]` for right nesting and :math:`[[A, B], B]` for left nesting.
 
     Args:
         operator_1 (ArrayLike): First operator.
         operator_2 (ArrayLike): Second operator.
+        operator_3 (ArrayLike, optional): Third operator. If ``None``, the result is
+            :math:`[A, [A, B]]` or :math:`[[A, B], B]` for ``nesting="right"`` or
+            ``nesting="left"``, respectively. Defaults to ``None``.
+        nesting (str, optional): either ``"right"``, for :math:`[A, [B, C]]`, or ``"left"``,
+            for :math:`[[A, B], C]`. Defaults to ``"right"``.
 
     Returns:
-        ArrayLike: Anticommutator of ``operator_1`` and ``operator_2``.
+        ArrayLike: Double commutator of the three operators.
+
+    References:
+        1. M. Gluza, *Double-bracket quantum algorithms for diagonalization*,
+        `Quantum (2024) <https://doi.org/10.22331/q-2024-04-08-1316>`_,
+        `arXiv:2206.11772 <https://arxiv.org/abs/2206.11772>`_.
     """
-    if (
-        (len(operator_1.shape) != 2)
-        or (len(operator_1) == 0)
-        or (operator_1.shape[0] != operator_1.shape[1])
-    ):
+    if nesting not in ("left", "right"):
         raise_error(
-            TypeError,
-            f"``operator_1`` must have shape (k,k), but have shape {operator_1.shape}.",
+            ValueError,
+            f"``nesting`` must be either 'left' or 'right', but is {nesting}.",
         )
 
-    if (
-        (len(operator_2.shape) != 2)
-        or (len(operator_2) == 0)
-        or (operator_2.shape[0] != operator_2.shape[1])
-    ):
-        raise_error(
-            TypeError,
-            f"``operator_2`` must have shape (k,k), but have shape {operator_2.shape}.",
-        )
+    if nesting == "left":
+        operator_3 = operator_2 if operator_3 is None else operator_3
+
+        return commutator(commutator(operator_1, operator_2), operator_3)
+
+    if operator_3 is None:
+        return commutator(operator_1, commutator(operator_1, operator_2))
+
+    return commutator(operator_1, commutator(operator_2, operator_3))
+
+
+def group_commutator(
+    operator_1: ArrayLike, operator_2: ArrayLike, backend: Backend | None = None
+) -> ArrayLike:
+    """Returns the group commutator of two hermitian operators.
+
+    The group commutator of two hermitian matrices :math:`A` and :math:`B` is the unitary
+
+    .. math::
+        V(A, B) = e^{i \\, A} \\, e^{i \\, B} \\, e^{-i \\, A} \\, e^{-i \\, B} \\, .
+
+    It is a product formula that approximates the evolution generated by the commutator
+    of :math:`A` and :math:`B` [1, 2],
+
+    .. math::
+        e^{-[A, B]} = V(A, B) + E \\, , \\quad
+        \\|E\\| \\leq \\|[A, [A, B]]\\| + \\|[B, [B, A]]\\| \\, ,
+
+    in any unitarily invariant norm. Hence, :math:`V(\\sqrt{s} \\, A, \\sqrt{s} \\, B)`
+    approximates :math:`e^{-s \\, [A, B]}` with an error of order :math:`s^{3/2}`.
+
+    Args:
+        operator_1 (ArrayLike): First hermitian operator :math:`A`.
+        operator_2 (ArrayLike): Second hermitian operator :math:`B`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ArrayLike: Group commutator :math:`V(A, B)`.
+
+    References:
+        1. M. Gluza, *Double-bracket quantum algorithms for diagonalization*,
+        `Quantum (2024) <https://doi.org/10.22331/q-2024-04-08-1316>`_,
+        `arXiv:2206.11772 <https://arxiv.org/abs/2206.11772>`_.
+
+        2. Y.-A. Chen, A. M. Childs, M. Hafezi, Z. Jiang, H. Kim, and Y. Xu,
+        *Efficient product formulas for commutators and applications to quantum simulation*,
+        `Phys. Rev. Research 4, 013191 (2022) <https://doi.org/10.1103/PhysRevResearch.4.013191>`_.
+    """
+    backend = _check_backend(backend)
+
+    for index, operator in enumerate((operator_1, operator_2), start=1):
+        if len(operator.shape) != 2 or operator.shape[0] != operator.shape[1]:
+            raise_error(
+                TypeError,
+                f"``operator_{index}`` must have shape (k,k), "
+                + f"but have shape {operator.shape}.",
+            )
 
     if operator_1.shape != operator_2.shape:
         raise_error(
@@ -100,7 +216,10 @@ def anticommutator(operator_1: ArrayLike, operator_2: ArrayLike) -> ArrayLike:
             + f"but {operator_1.shape} != {operator_2.shape}",
         )
 
-    return operator_1 @ operator_2 + operator_2 @ operator_1
+    unitary_1 = matrix_exponentiation(operator_1, 1j, backend=backend)
+    unitary_2 = matrix_exponentiation(operator_2, 1j, backend=backend)
+
+    return unitary_1 @ unitary_2 @ backend.dagger(unitary_1) @ backend.dagger(unitary_2)
 
 
 def partial_trace(
