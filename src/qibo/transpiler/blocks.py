@@ -132,7 +132,8 @@ class Block:
         cost = sum(
             _CZ_COSTS.get(type(gate), 1) for gate in self.gates if len(gate.qubits) == 2
         )
-        # The decomposition has at least two CZ gates, unless the block is the identity.
+        # A block with a single two-qubit gate is kept, since the cost of any gate
+        # other than SWAP and iSWAP is taken to be one.
         if cost < 2:
             return self.gates
 

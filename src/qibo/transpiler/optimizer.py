@@ -1,5 +1,6 @@
 import heapq
 import math
+import random
 from inspect import signature
 
 import networkx as nx
@@ -7,7 +8,7 @@ import networkx as nx
 from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
-from qibo.gates.abstract import SpecialGate
+from qibo.gates.abstract import Gate, SpecialGate
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.decompositions import u3_dec
@@ -87,9 +88,11 @@ class ConsolidateBlocks(Optimizer):
     The matrix of a block with several two-qubit gates is decomposed with the KAK
     (Cartan) decomposition (see :meth:`qibo.transpiler.blocks.Block.kak_decompose`)
     into at most three CZ gates and single-qubit gates, and it replaces the block if
-    it has fewer CZ gates. A :class:`qibo.gates.SWAP` gate counts as three CZ gates
-    and an :class:`qibo.gates.iSWAP` gate as two, which makes this pass useful after
-    routing, where SWAP gates meet the gates of the circuit.
+    it has fewer CZ gates. Blocks that are locally equivalent to the identity or to a
+    single CZ gate are written with none or one CZ gate, respectively. A
+    :class:`qibo.gates.SWAP` gate counts as three CZ gates and an
+    :class:`qibo.gates.iSWAP` gate as two, which makes this pass useful after routing,
+    where SWAP gates meet the gates of the circuit.
 
     Measurements, alignments, barriers, noise channels, fused gates, gates with sympy
     parameters and gates acting on more than two qubits are not part of any block and
@@ -277,9 +280,11 @@ class FixedPoint(Optimizer):
                 new.__class__ is old.__class__
                 and new.qubits == old.qubits
                 and new.control_qubits == old.control_qubits
+                and new.symbolic_parameters == old.symbolic_parameters
                 and all(
                     backend.allclose(x, y)
-                    for x, y in zip(new.parameters, old.parameters)
+                    for i, (x, y) in enumerate(zip(new.parameters, old.parameters))
+                    if i not in new.symbolic_parameters
                 )
                 for new, old in zip(circuit.queue, previous.queue)
             )
@@ -306,10 +311,18 @@ class InverseCancellation(Optimizer):
     The product must equal the identity itself, not merely the identity times a global
     phase, because for gates built with ``controlled_by`` a phase on the target matrix
     is a relative phase on the control qubits. Measurements, alignments, barriers, noise
-    channels and fused gates are never cancelled and stop the cancellation across
-    them on their qubits. Gates are compared through their matrices at their current parameter
-    values, so a cancelled pair of parametrized gates is not tracked by the returned
-    circuit anymore.
+    channels and fused gates are never cancelled and stop the cancellation across them
+    on their qubits. Gates are compared through their matrices at their current
+    parameter values, so a cancelled pair of parametrized gates is not tracked by the
+    returned circuit anymore.
+
+    Gates with sympy parameters take part like any other gate. Their symbols are given
+    fixed random values, the same in all gates, before the matrices are compared. Hence
+    :class:`qibo.gates.RX` gates with angles :math:`x` and :math:`-x` cancel, and a
+    :class:`qibo.gates.RZ` gate with angle :math:`x` is skipped over by a controlled-NOT
+    gate on its control qubit if ``commutation`` is ``True``, while gates with angles
+    :math:`x` and :math:`y` do not cancel. A gate whose parameters are not real numbers
+    at these values is never cancelled and stops the cancellation on its qubits.
 
     Args:
         atol (float, optional): Tolerance on the Frobenius norm (square root of the sum
@@ -401,9 +414,12 @@ class InverseCancellation(Optimizer):
         # ``kept`` holds the surviving gates in order (cancelled ones are set to
         # ``None``) and ``stacks`` holds, for each qubit, the positions in ``kept``
         # of the surviving gates acting on it. The last position is the latest gate.
+        # ``kept_numeric`` holds the same gates with numbers instead of sympy parameters,
+        # which are the ones whose matrices are compared.
         kept = []
+        kept_numeric = []
         stacks = {qubit: [] for qubit in range(circuit.nqubits)}
-        for gate in circuit.queue:
+        for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
             index = None
             visited = None
             # The surviving gates that share qubits with ``gate`` are visited from the
@@ -416,9 +432,13 @@ class InverseCancellation(Optimizer):
                     continue
                 visited = position
                 partner = kept[position]
+                partner_numeric = kept_numeric[position]
 
-                blocked = isinstance(gate, uncancellable) or isinstance(
-                    partner, uncancellable
+                blocked = (
+                    isinstance(gate, uncancellable)
+                    or isinstance(partner, uncancellable)
+                    or numeric is None
+                    or partner_numeric is None
                 )
                 cancels = (
                     not blocked
@@ -426,8 +446,8 @@ class InverseCancellation(Optimizer):
                     and partner.control_qubits == gate.control_qubits
                 )
                 if cancels:
-                    first = partner.matrix(backend)
-                    second = gate.matrix(backend)
+                    first = partner_numeric.matrix(backend)
+                    second = numeric.matrix(backend)
                     cancels = first.shape == second.shape and (
                         backend.matrix_norm(
                             second @ first - backend.matrices.I(first.shape[0]),
@@ -451,9 +471,13 @@ class InverseCancellation(Optimizer):
                     )
                 }
                 forward = Circuit(len(relabel))
-                forward.add([partner.on_qubits(relabel), gate.on_qubits(relabel)])
+                forward.add(
+                    [partner_numeric.on_qubits(relabel), numeric.on_qubits(relabel)]
+                )
                 backward = Circuit(len(relabel))
-                backward.add([gate.on_qubits(relabel), partner.on_qubits(relabel)])
+                backward.add(
+                    [numeric.on_qubits(relabel), partner_numeric.on_qubits(relabel)]
+                )
                 if (
                     backend.matrix_norm(
                         forward.unitary(backend) - backward.unitary(backend),
@@ -465,6 +489,7 @@ class InverseCancellation(Optimizer):
 
             if index is None:
                 kept.append(gate)
+                kept_numeric.append(numeric)
                 for qubit in gate.qubits:
                     stacks[qubit].append(len(kept) - 1)
             else:
@@ -711,6 +736,12 @@ class ParametrizedGateFusion(Optimizer):
     * :class:`qibo.gates.PRX` and :class:`qibo.gates.U1q`, where the rotation angle
       adds up as long as the phase angle of both gates is the same up to ``atol``.
 
+    Gates with sympy parameters of these classes are merged too, and the angle of the
+    merged gate is the sympy sum of the angles. The parameters that must coincide, such
+    as the phase angle of :class:`qibo.gates.PRX`, must then be the same expression.
+    The gates :class:`qibo.gates.U2` and :class:`qibo.gates.U3` are not merged when
+    any of their parameters is a sympy expression.
+
     Any of these gates can also be controlled on further qubits with
     ``controlled_by``, as long as both gates have the same control qubits. Gates that
     are symmetric under exchanging their two qubits (such as
@@ -882,8 +913,10 @@ class ParametrizedGateFusion(Optimizer):
                 and set(partner.qubits) == set(gate.qubits)
                 and partner.control_qubits == gate.control_qubits
                 and partner.trainable == gate.trainable
-                and not partner.symbolic_parameters
-                and not gate.symbolic_parameters
+                and (
+                    same_class
+                    or not (partner.symbolic_parameters or gate.symbolic_parameters)
+                )
             )
 
             merged = None
@@ -891,7 +924,13 @@ class ParametrizedGateFusion(Optimizer):
                 added, equal, reversal = rule
                 sign = 1 if partner.qubits == gate.qubits else reversal
                 if sign is not None and all(
-                    backend.abs(partner.parameters[i] - gate.parameters[i]) <= self.atol
+                    (
+                        partner.parameters[i] == gate.parameters[i]
+                        if i in partner.symbolic_parameters
+                        or i in gate.symbolic_parameters
+                        else backend.abs(partner.parameters[i] - gate.parameters[i])
+                        <= self.atol
+                    )
                     for i in equal
                 ):
                     merged = partner.on_qubits(
@@ -1236,6 +1275,11 @@ class RemoveIdentityEquivalent(Optimizer):
     removed. Gates are evaluated at their current parameter values, so a removed
     parametrized gate is not tracked by the returned circuit anymore.
 
+    A gate with sympy parameters is evaluated at fixed random values of its symbols. It
+    is removed only if it is the identity there up to numerical precision, whatever the
+    value of ``approximation_degree``, because the true values of the symbols are
+    unknown.
+
     Args:
         approximation_degree (float, optional): Value in :math:`[0, 1]` that sets the
             tolerance as :math:`\\epsilon = 1 -` ``approximation_degree``. With the
@@ -1297,17 +1341,23 @@ class RemoveIdentityEquivalent(Optimizer):
         unremovable = (gates.M, gates.Align, gates.Channel, SpecialGate)
 
         kept = []
-        for gate in circuit.queue:
+        for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
             removable = False
-            if not isinstance(gate, unremovable + (gates.FusedGate,)):
-                matrix = gate.matrix(backend)
+            if numeric is not None and not isinstance(
+                gate, unremovable + (gates.FusedGate,)
+            ):
+                matrix = numeric.matrix(backend)
                 target_dim = matrix.shape[0]
                 control_dim = 2 ** len(gate.control_qubits)
                 dim = target_dim * control_dim
                 # the controlled gate acts as the identity when a control is off
                 trace = (control_dim - 1) * target_dim + backend.trace(matrix)
                 fidelity = (backend.abs(trace) ** 2 + dim) / (dim * (dim + 1))
-                removable = bool(1 - fidelity <= tolerance)
+                # A gate with sympy parameters is evaluated at one value of its symbols,
+                # so it is removed only if it is the identity up to numerical precision.
+                removable = bool(
+                    1 - fidelity <= (1e-14 if gate.symbolic_parameters else tolerance)
+                )
             if not removable:
                 kept.append(gate)
 
@@ -1546,3 +1596,39 @@ class TGateRules(Optimizer):
                 new.add(gate)
 
         return new
+
+
+def _numeric_gates(circuit: Circuit) -> list[Gate | None]:
+    """Gates of a circuit with its sympy parameters replaced by numbers.
+
+    Every symbol gets the same fixed random value in all gates, so gates that are
+    related for any value of the symbols, such as :class:`qibo.gates.RX` gates with
+    angles :math:`x` and :math:`-x`, are related at these numbers as well. Gates without
+    sympy parameters are returned unchanged. A gate whose parameters are not real
+    numbers at these values is replaced by ``None``.
+    """
+    generator = random.Random(0)
+    values = {}
+    numeric = []
+    for gate in circuit.queue:
+        if not gate.symbolic_parameters:
+            numeric.append(gate)
+            continue
+
+        parameters = list(gate.parameters)
+        try:
+            for index, expression in gate.symbolic_parameters.items():
+                for symbol in expression.free_symbols:
+                    if symbol not in values:
+                        values[symbol] = generator.uniform(0.1, math.pi)
+                parameters[index] = float(expression.subs(values))
+        except (TypeError, ValueError):
+            numeric.append(None)
+            continue
+
+        gate = gate.on_qubits(dict(zip(gate.qubits, gate.qubits)))
+        gate.symbolic_parameters = {}
+        gate.parameters = tuple(parameters)
+        numeric.append(gate)
+
+    return numeric

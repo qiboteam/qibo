@@ -1,3 +1,4 @@
+import cmath
 import functools
 import math
 
@@ -514,11 +515,18 @@ def two_qubit_decomposition(
 ) -> list[Gate]:
     """Performs two qubit unitary gate decomposition.
 
+    The decomposition has at most three :class:`qibo.gates.CZ` gates [1]. It has two or
+    fewer if the unitary needs fewer, which is decided from the operator-Schmidt
+    coefficients of the unitary [2]: a product of two single-qubit unitaries uses no
+    :class:`qibo.gates.CZ` gate, and a unitary that is locally equivalent to
+    :class:`qibo.gates.CZ` uses one.
+
     Args:
         q0 (int): index of the first qubit.
         q1 (int): index of the second qubit.
         unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
-        threshold (float): Threshold for determining if hz component is zero.
+        threshold (float): Threshold for determining if hz component is zero, and
+            if the operator-Schmidt coefficients of the unitary vanish or coincide.
         weight (float, optional): Weight of the imaginary part in the matrix that is
             diagonalized to find the local gates, see
             :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
@@ -529,6 +537,15 @@ def two_qubit_decomposition(
 
     Returns:
         list: gates implementing the decomposition
+
+    References:
+        1. F. Vatan and C. Williams,
+        *Optimal quantum circuits for general two-qubit gates*,
+        `Phys. Rev. A 69, 032315 (2004) <https://doi.org/10.1103/PhysRevA.69.032315>`_.
+
+        2. V. V. Shende, I. L. Markov and S. S. Bullock,
+        *Minimal universal two-qubit controlled-NOT-based circuits*,
+        `Phys. Rev. A 69, 062321 (2004) <https://doi.org/10.1103/PhysRevA.69.062321>`_.
     """
     backend = _check_backend(backend)
 
@@ -536,8 +553,76 @@ def two_qubit_decomposition(
     if backend.allclose(unitary, backend.identity(4)):
         return []
 
+    # The singular values of the realigned unitary, i.e. its operator-Schmidt coefficients,
+    # do not change under single-qubit gates. They are (2, 0, 0, 0) for a product of
+    # single-qubit gates, which needs no CZ gate, and (sqrt(2), sqrt(2), 0, 0) for a gate
+    # locally equivalent to CZ, which needs one.
+    matrix = backend.to_numpy(unitary)
+    left, singular, right = np.linalg.svd(
+        matrix.reshape(2, 2, 2, 2).transpose(0, 2, 1, 3).reshape(4, 4)
+    )
+    if singular[1] < threshold:
+        factor = math.sqrt(singular[0])
+        return [
+            gates.Unitary(
+                backend.cast(factor * left[:, 0].reshape(2, 2), dtype=matrix.dtype), q0
+            ),
+            gates.Unitary(
+                backend.cast(factor * right[0].reshape(2, 2), dtype=matrix.dtype), q1
+            ),
+        ]
+    if singular[2] < threshold and singular[0] - singular[1] < threshold:
+        # The interaction part of the unitary is then a product of Pauli rotations by
+        # multiples of pi / 2, which are local, and one rotation by an odd multiple of
+        # pi / 4 about an axis P. The latter is exp(i pi / 4 PP) = exp(i pi / 4) (K x K)
+        # CZ (S^dagger K^dagger x S^dagger K^dagger), with K Z K^dagger = P.
+        u4, v4, ud, u1, v1 = (
+            backend.to_numpy(array)
+            for array in magic_decomposition(unitary, backend=backend, weight=weight)
+        )
+        hadamard = np.array([[1, 1], [1, -1]]) / math.sqrt(2)
+        phase = np.diag([1, 1j])
+        for pauli, frame in (
+            (matrices.Z, np.eye(2)),
+            (matrices.X, hadamard),
+            (matrices.Y, phase @ hadamard),
+        ):
+            entangler = (np.eye(4) + 1j * np.kron(pauli, pauli)) / math.sqrt(2)
+            first, coefficients, second = np.linalg.svd(
+                (ud @ entangler.conj().T)
+                .reshape(2, 2, 2, 2)
+                .transpose(0, 2, 1, 3)
+                .reshape(4, 4)
+            )
+            if coefficients[1] < threshold:
+                factor = math.sqrt(coefficients[0])
+                before = phase.conj() @ frame.conj().T
+                after = cmath.exp(1j * math.pi / 4) * frame
+                return [
+                    gates.Unitary(backend.cast(before @ u1, dtype=matrix.dtype), q0),
+                    gates.Unitary(backend.cast(before @ v1, dtype=matrix.dtype), q1),
+                    gates.CZ(q0, q1),
+                    gates.Unitary(
+                        backend.cast(
+                            u4 @ (factor * first[:, 0].reshape(2, 2)) @ after,
+                            dtype=matrix.dtype,
+                        ),
+                        q0,
+                    ),
+                    gates.Unitary(
+                        backend.cast(
+                            v4 @ (factor * second[0].reshape(2, 2)) @ frame,
+                            dtype=matrix.dtype,
+                        ),
+                        q1,
+                    ),
+                ]
+
+    # ``hz`` is defined up to multiples of pi, which only change the global phase of the
+    # unitary. Its representative depends on the choice of the degenerate eigenvectors
+    # in the magic decomposition, e.g. for iSWAP, hence it is compared modulo pi.
     z_component = _get_z_component(unitary, weight, backend)
-    if abs(z_component) < threshold:
+    if abs(math.remainder(z_component, math.pi)) < threshold:
         return _two_qubit_decomposition_without_z(q0, q1, unitary, weight, backend)
     return _two_qubit_decomposition_with_z(q0, q1, unitary, weight, backend)
 
@@ -776,12 +861,12 @@ def _get_z_component(unitary: ArrayLike, weight: float, backend: Backend) -> flo
 def _two_qubit_decomposition_without_z(
     q0: int, q1: int, unitary: ArrayLike, weight: float, backend: Backend
 ) -> list[Gate]:
-    """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 case."""
+    """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 (modulo pi) case."""
     # Get magic decomposition
     u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend, weight=weight)
     ud_diag = to_bell_diagonal(ud, backend=backend)
-    hx, hy, _ = calculate_h_vector(ud_diag, backend=backend)
-    hx, hy = float(hx), float(hy)
+    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
+    hx, hy, hz = float(hx), float(hy), float(hz)
 
     # Get light decomposition
     gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
@@ -791,7 +876,9 @@ def _two_qubit_decomposition_without_z(
     gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
 
     g0, g1 = gatelist[-2:]
-    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+    # A shift of ``hz`` by pi multiplies the unitary by a global phase of -1.
+    phase = (-1) ** round(hz / math.pi)
+    gatelist[-2] = gates.Unitary(phase * u4 @ g0.parameters[0], q0)
     gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
 
     return gatelist

@@ -166,6 +166,81 @@ def test_inverse_cancellation_controlled(backend):
     assert reduced.ngates == 2
 
 
+SYMBOLIC_PAIRS = {
+    "opposite angles": (
+        [gates.RX(0, sympy.Symbol("x")), gates.RX(0, -sympy.Symbol("x"))],
+        0,
+    ),
+    "different symbols": (
+        [gates.RX(0, sympy.Symbol("x")), gates.RX(0, sympy.Symbol("y"))],
+        2,
+    ),
+    "symbol and number": ([gates.RX(0, sympy.Symbol("x")), gates.RX(0, -0.3)], 2),
+    "controlled": (
+        [
+            gates.RY(1, sympy.Symbol("x")).controlled_by(0),
+            gates.RY(1, -sympy.Symbol("x")).controlled_by(0),
+        ],
+        0,
+    ),
+    "unevaluable": (
+        [
+            gates.RX(0, sympy.sqrt(-sympy.Symbol("x"))),
+            gates.RX(0, -sympy.sqrt(-sympy.Symbol("x"))),
+        ],
+        2,
+    ),
+}
+
+
+@pytest.mark.parametrize("commutation", [False, True])
+@pytest.mark.parametrize("pair, remaining", SYMBOLIC_PAIRS.values(), ids=SYMBOLIC_PAIRS)
+def test_inverse_cancellation_symbolic(backend, commutation, pair, remaining):
+    """Gates with sympy parameters cancel when their product is the identity."""
+    circuit = Circuit(2)
+    circuit.add(pair)
+    reduced = InverseCancellation(commutation=commutation)(circuit, backend=backend)
+    assert reduced.ngates == remaining
+
+
+def test_inverse_cancellation_symbolic_commutation(backend):
+    """Gates with sympy parameters are skipped over only when they commute."""
+    x, y = sympy.symbols("x y")
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.RX(0, x))
+    circuit.add(gates.X(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, x))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Z(1))
+    circuit.add(gates.RX(1, y))
+    circuit.add(gates.Z(1))
+
+    reduced = InverseCancellation(commutation=False)(circuit, backend=backend)
+    assert reduced.queue == circuit.queue
+
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    # RX commutes with X, RZ on the control commutes with CNOT, but RX does not with Z
+    assert [gate.name for gate in reduced.queue] == ["rx", "rz", "z", "rx", "z"]
+    assert [gate.parameters for gate in reduced.queue if gate.name == "rx"] == [
+        (x,),
+        (y,),
+    ]
+
+
+def test_inverse_cancellation_symbolic_shared_symbols(backend):
+    """The same symbol takes the same value in all the gates."""
+    x, y = sympy.symbols("x y")
+    circuit = Circuit(1)
+    circuit.add(gates.RZ(0, x))
+    circuit.add(gates.RZ(0, y))
+    circuit.add(gates.RZ(0, -x))
+    circuit.add(gates.RZ(0, -y))
+    reduced = InverseCancellation(commutation=True)(circuit, backend=backend)
+    assert reduced.ngates == 0
+
+
 def test_inverse_cancellation_atol(backend):
     circuit = Circuit(1)
     circuit.add(gates.RX(0, 0.3))
@@ -472,13 +547,13 @@ NOT_FUSED = {
         gates.U3(0, 0.3, 0.2, 0.1, trainable=False),
         gates.U2(0, 0.4, 0.5),
     ],
-    "sympy parameter in the first gate": [
-        gates.RX(0, sympy.Symbol("x")),
-        gates.RX(0, 0.2),
+    "different sympy phase angles": [
+        gates.PRX(0, 0.1, sympy.Symbol("x")),
+        gates.PRX(0, 0.2, sympy.Symbol("y")),
     ],
-    "sympy parameter in the second gate": [
-        gates.RX(0, 0.2),
-        gates.RX(0, sympy.Symbol("x")),
+    "sympy phase angle and number": [
+        gates.PRX(0, 0.1, sympy.Symbol("x")),
+        gates.PRX(0, 0.2, 0.3),
     ],
     "sympy parameter in a U gate": [
         gates.U3(0, sympy.Symbol("x"), 0.2, 0.1),
@@ -584,6 +659,26 @@ def test_parametrized_gate_fusion_not_fused(backend, pair):
     assert [gate.name for gate in fused.queue] == [gate.name for gate in pair]
 
 
+def test_parametrized_gate_fusion_symbolic(backend):
+    x, y = sympy.symbols("x y")
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, x))
+    circuit.add(gates.RX(0, 0.2))
+    circuit.add(gates.RZZ(0, 1, x))
+    circuit.add(gates.RZZ(1, 0, y))
+    circuit.add(gates.PRX(1, 0.1, x))
+    circuit.add(gates.PRX(1, 0.3, x))
+    fused = ParametrizedGateFusion()(circuit, backend=backend)
+
+    assert [gate.name for gate in fused.queue] == ["rx", "rzz", "prx"]
+    assert fused.queue[0].parameters == (x + 0.2,)
+    assert fused.queue[0].symbolic_parameters == {0: x + 0.2}
+    assert fused.queue[1].parameters == (x + y,)
+    assert fused.queue[1].symbolic_parameters == {0: x + y}
+    assert float(fused.queue[2].parameters[0]) == pytest.approx(0.4)
+    assert fused.queue[2].parameters[1] == x
+
+
 @pytest.mark.parametrize("trainable", [True, False])
 @pytest.mark.parametrize(
     "pair",
@@ -659,6 +754,38 @@ def test_remove_identity_equivalent_controlled(backend):
     circuit.add(gates.CRX(0, 1, 0.0))
     reduced = RemoveIdentityEquivalent()(circuit, backend=backend)
     assert [gate.name for gate in reduced.queue] == ["crz"]
+
+
+def test_remove_identity_equivalent_symbolic(backend):
+    x = sympy.Symbol("x")
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, x))
+    circuit.add(gates.RZ(1, 0.0))
+    circuit.add(gates.RZ(0, sympy.sin(x) ** 2 + sympy.cos(x) ** 2 - 1))
+    circuit.add(gates.RZ(0, x))
+    reduced = RemoveIdentityEquivalent()(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["rx", "rz"]
+    assert reduced.queue[0].parameters == (x,)
+    assert reduced.queue[1].parameters == (x,)
+
+
+def test_remove_identity_equivalent_symbolic_approximation_degree(backend):
+    """The approximation is not applied to gates whose parameters are unknown."""
+    x = sympy.Symbol("x")
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, x))
+    circuit.add(gates.RX(0, 1e-3))
+    reduced = RemoveIdentityEquivalent(approximation_degree=0.5)(
+        circuit, backend=backend
+    )
+    assert [gate.parameters for gate in reduced.queue] == [(x,)]
+
+
+def test_remove_identity_equivalent_unevaluable(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, sympy.sqrt(-sympy.Symbol("x"))))
+    reduced = RemoveIdentityEquivalent()(circuit, backend=backend)
+    assert reduced.queue == circuit.queue
 
 
 def test_remove_identity_equivalent_pipeline(backend, star_connectivity):
@@ -1193,6 +1320,27 @@ def test_consolidate_blocks_fewer_cz_gates(backend):
     )
 
 
+@pytest.mark.parametrize(
+    "block, expected",
+    [
+        ([gates.iSWAP(0, 1), gates.iSWAP(0, 1)], 0),
+        ([gates.CRZ(0, 1, math.pi / 2), gates.CRZ(0, 1, math.pi / 2)], 1),
+        ([gates.CZ(0, 1), gates.SWAP(0, 1), gates.CZ(0, 1), gates.SWAP(0, 1)], 0),
+        ([gates.RXX(0, 1, math.pi / 2), gates.RYY(0, 1, math.pi)], 1),
+    ],
+)
+def test_consolidate_blocks_locally_equivalent(backend, block, expected):
+    """Blocks equivalent to a product of single-qubit gates or to CZ use 0 or 1 CZ."""
+    circuit = Circuit(2)
+    circuit.add(block)
+    consolidated = ConsolidateBlocks()(circuit, backend=backend)
+
+    assert sum(len(gate.qubits) == 2 for gate in consolidated.queue) == expected
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
 def test_consolidate_blocks_single_qubit_gates_join_block(backend):
     circuit = Circuit(3)
     circuit.add(gates.CZ(0, 1))
@@ -1288,6 +1436,30 @@ def test_fixed_point_stops_when_unchanged(backend):
     optimized = FixedPoint([counter, counter], max_iterations=5)(circuit, backend)
     assert counter.calls == 2
     assert optimized is circuit
+
+
+def test_fixed_point_symbolic(backend):
+    x, y = sympy.symbols("x y")
+    circuit = Circuit(2)
+    circuit.add(gates.RZ(0, x))
+    circuit.add(gates.RZ(0, y))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RX(1, x))
+    circuit.add(gates.RX(1, 0.3))
+    optimizer = FixedPoint(
+        [InverseCancellation(), ParametrizedGateFusion(), RemoveIdentityEquivalent()]
+    )
+    optimized = optimizer(circuit, backend)
+    assert [gate.name for gate in optimized.queue] == ["rz", "rx"]
+    assert optimized.queue[0].parameters == (x + y,)
+    assert optimized.queue[1].parameters == (x + 0.3,)
+
+    # a circuit that does not change must also be recognised as a fixed point
+    unchanged = optimizer(optimized, backend)
+    assert [gate.parameters for gate in unchanged.queue] == [
+        gate.parameters for gate in optimized.queue
+    ]
 
 
 def test_fixed_point_connectivity(backend, star_connectivity):
