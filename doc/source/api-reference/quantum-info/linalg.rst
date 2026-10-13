@@ -52,6 +52,12 @@ Matrix square root
 .. autofunction:: qibo.quantum_info.matrix_sqrt
 
 
+Cosine-Sine decomposition
+-------------------------
+
+.. autofunction:: qibo.quantum_info.cosine_sin_decomposition
+
+
 Singular value decomposition
 ----------------------------
 

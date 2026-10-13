@@ -362,6 +362,14 @@ Generalized Reconfigurable Beam Splitter (RBS)
     :member-order: bysource
 
 
+Multiplexor
+^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.Multiplexor
+    :members:
+    :member-order: bysource
+
+
 Arbitrary unitary
 ^^^^^^^^^^^^^^^^^
 
