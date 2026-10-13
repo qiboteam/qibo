@@ -3,7 +3,7 @@
 import numpy as np
 from numpy.polynomial.polynomial import polyfromroots, polyroots
 from numpy.typing import ArrayLike, DTypeLike
-from scipy.linalg import block_diag, expm, fractional_matrix_power, logm
+from scipy.linalg import block_diag, cossin, expm, fractional_matrix_power, logm
 from scipy.sparse import coo_matrix, csr_matrix, issparse
 from scipy.sparse import eye as eye_sparse
 from scipy.sparse.linalg import eigsh
@@ -132,6 +132,22 @@ class NumpyBackend(Backend):
             ArrayLike: The coordinate-format version of ``array``.
         """
         return coo_matrix(array, **kwargs)
+
+    def cosine_sin_decomposition(
+        self, array: ArrayLike, block_nrows: int, block_ncols: int
+    ) -> tuple[ArrayLike, ArrayLike, ArrayLike]:
+        """Calculate the Cosine-Sine Decomposition of a unitary ``array``.
+
+        Args:
+            array (ArrayLike): unitary matrix to be decomposed.
+            block_nrows (int): number of rows of the upper left block of ``array``.
+            block_ncols (int): number of columns of the upper left block of ``array``.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike, ArrayLike]: Block-diagonal left unitary,
+            cosine-sine matrix, and block-diagonal right unitary, in that order.
+        """
+        return cossin(array, p=block_nrows, q=block_ncols)
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
         """Return the sparse version of ``array`` in compressed sparse row format.
