@@ -50,6 +50,7 @@ from qibo.quantum_info.linalg_operations import (
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
+    schur_decomposition,
     singular_value_decomposition,
 )
 from qibo.quantum_info.metrics import (
@@ -266,6 +267,7 @@ __all__ = [
     "relative_von_neumann_entropy",
     "renyi_entropy",
     "schmidt_decomposition",
+    "schur_decomposition",
     "shannon_entropy",
     "singular_value_decomposition",
     "stabilizer_renyi_entropy",
