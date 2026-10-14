@@ -3,7 +3,7 @@ import pytest
 
 import qibo
 from qibo import Circuit, matrices
-from qibo.backends import _Global, get_backend
+from qibo.backends import MissingBackend, _Global, construct_backend, get_backend
 from qibo.backends.numpy import NumpyBackend
 from qibo.models.encodings import entangling_layer
 from qibo.quantum_info.random_ensembles import random_statevector
@@ -269,3 +269,19 @@ def test_default_transpiler_hw(connectivity):
         NativeGates.CZ in transpiler.native_gates
         and NativeGates.GPI2 in transpiler.native_gates
     )
+
+
+@pytest.mark.parametrize("missing_provider", [False, True])
+def test_construct_backend_import_error(monkeypatch, missing_provider):
+    module_name = "provider" if missing_provider else "dependency"
+
+    def _import_module(name):
+        raise ImportError(f"No module named '{module_name}'")
+
+    monkeypatch.setattr("qibo.backends.import_module", _import_module)
+
+    expected_error = MissingBackend if missing_provider else ImportError
+    with pytest.raises(expected_error) as excinfo:
+        construct_backend("provider")
+
+    assert isinstance(excinfo.value, MissingBackend) == missing_provider
