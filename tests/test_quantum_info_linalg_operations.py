@@ -25,6 +25,7 @@ from qibo.quantum_info.linalg_operations import (
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
+    schur_decomposition,
     singular_value_decomposition,
 )
 from qibo.quantum_info.metrics import infidelity, purity
@@ -466,6 +467,52 @@ def test_cosine_sin_decomposition_errors(backend):
                 block_ncols=block_ncols,
                 backend=backend,
             )
+
+
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_schur_decomposition(backend, nqubits):
+    dims = 2**nqubits
+    unitary = random_unitary(dims, seed=42, backend=backend)
+
+    triangular, basis = schur_decomposition(unitary, backend=backend)
+
+    identity = backend.identity(dims)
+    backend.assert_allclose(basis @ backend.conj(basis).T, identity, atol=1e-8)
+    backend.assert_allclose(
+        basis @ triangular @ backend.conj(basis).T, unitary, atol=1e-8
+    )
+
+    # unitary matrices are normal, so the Schur form is diagonal with unit-modulus entries
+    triangular = backend.to_numpy(triangular)
+    backend.assert_allclose(triangular, np.diag(np.diag(triangular)), atol=1e-8)
+    backend.assert_allclose(np.abs(np.diag(triangular)), np.ones(dims), atol=1e-8)
+
+
+def test_schur_decomposition_outputs(backend):
+    matrix = np.random.default_rng(1).normal(size=(4, 4))
+    matrix = backend.cast(matrix, dtype=backend.float64)
+
+    # complex output of a real matrix is upper triangular
+    triangular, basis = schur_decomposition(matrix, backend=backend)
+    lower = np.tril(backend.to_numpy(triangular), k=-1)
+    backend.assert_allclose(lower, np.zeros_like(lower), atol=1e-8)
+    backend.assert_allclose(
+        basis @ triangular @ backend.conj(basis).T, matrix, atol=1e-8
+    )
+
+    # real output keeps ``basis`` orthogonal
+    quasi_triangular, basis = schur_decomposition(
+        matrix, output="real", backend=backend
+    )
+    assert not np.iscomplexobj(backend.to_numpy(basis))
+    backend.assert_allclose(
+        basis @ quasi_triangular @ backend.transpose(basis), matrix, atol=1e-8
+    )
+
+
+def test_schur_decomposition_errors(backend):
+    with pytest.raises(ValueError):
+        schur_decomposition(np.eye(2), output="imaginary", backend=backend)
 
 
 def test_schmidt_decomposition(backend):

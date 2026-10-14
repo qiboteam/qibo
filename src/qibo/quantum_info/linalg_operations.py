@@ -532,6 +532,46 @@ def cosine_sin_decomposition(
     return backend.cosine_sin_decomposition(matrix, block_nrows, block_ncols)
 
 
+def schur_decomposition(
+    matrix: ArrayLike, output: str = "complex", backend: Backend | None = None
+) -> tuple[ArrayLike, ArrayLike]:
+    """Calculate the Schur decomposition of a square ``matrix``.
+
+    Given an :math:`N \\times N` matrix :math:`A`, its Schur decomposition is given by
+
+    .. math::
+        A = Z \\, T \\, Z^{\\dagger} \\, ,
+
+    where :math:`Z` is an :math:`N \\times N` unitary matrix and :math:`T` is an upper
+    triangular matrix with the eigenvalues of :math:`A` in its diagonal.
+    If :math:`A` is normal, which is the case of unitary and Hermitian matrices,
+    then :math:`T` is diagonal.
+
+    Args:
+        matrix (ArrayLike): square matrix whose Schur decomposition to calculate.
+        output (str, optional): if ``"complex"``, :math:`T` is upper triangular.
+            If ``"real"`` and ``matrix`` is real, :math:`Z` is orthogonal and :math:`T` is
+            quasi upper triangular, i.e. with :math:`1 \\times 1` and :math:`2 \\times 2`
+            blocks in its diagonal. Defaults to ``"complex"``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        Tuple[ArrayLike, ArrayLike]: Schur form :math:`T` and unitary matrix :math:`Z`,
+        in that order.
+    """
+    if output not in ("real", "complex"):
+        raise_error(
+            ValueError,
+            f"``output`` must be ``'real'`` or ``'complex'``, got ``{output}``.",
+        )
+
+    backend = _check_backend(backend)
+
+    return backend.schur(matrix, output=output)
+
+
 def singular_value_decomposition(
     matrix: ArrayLike, backend: Backend | None = None
 ) -> tuple[ArrayLike, ArrayLike, ArrayLike]:

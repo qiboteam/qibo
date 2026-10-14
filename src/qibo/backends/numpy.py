@@ -3,7 +3,14 @@
 import numpy as np
 from numpy.polynomial.polynomial import polyfromroots, polyroots
 from numpy.typing import ArrayLike, DTypeLike
-from scipy.linalg import block_diag, cossin, expm, fractional_matrix_power, logm
+from scipy.linalg import (
+    block_diag,
+    cossin,
+    expm,
+    fractional_matrix_power,
+    logm,
+    schur,
+)
 from scipy.sparse import coo_matrix, csr_matrix, issparse
 from scipy.sparse import eye as eye_sparse
 from scipy.sparse.linalg import eigsh
@@ -228,6 +235,26 @@ class NumpyBackend(Backend):
             ArrayLike: Roots of the polynomial.
         """
         return polyroots(self.engine.flip(array), **kwargs)
+
+    def schur(self, array: ArrayLike, **kwargs) -> tuple[ArrayLike, ArrayLike]:
+        """Compute the Schur decomposition of a square ``array``.
+
+        The Schur decomposition of a matrix :math:`A` is :math:`A = Z \\, T \\, Z^{\\dagger}`,
+        where :math:`Z` is unitary and :math:`T` is upper triangular, if the complex form
+        is requested. If :math:`A` is normal, which is the case of unitary matrices,
+        :math:`T` is diagonal.
+
+        Args:
+            array (ArrayLike): square input array.
+            kwargs (optional): additional options for this function, such as
+                ``output="complex"`` to obtain the complex Schur form for real ``array``.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike]: Schur form :math:`T` and unitary matrix
+            :math:`Z`, in that order.
+        """
+        return schur(array, **kwargs)
 
     ########################################################################################
     ######## Methods related to linear algebra operations                           ########
