@@ -47,8 +47,10 @@ class _probability_distribution_sin(rv_continuous):  # pragma: no cover
 
 
 def uniform_sampling_U3(
-    ngates: int, seed: int | None = None, backend: Backend | None = None
-):
+    ngates: int,
+    seed: int | np.random.Generator | None = None,
+    backend: Backend | None = None,
+) -> ArrayLike:
     """Samples parameters for Haar-random :class:`qibo.gates.U3`.
 
     Args:
@@ -61,7 +63,7 @@ def uniform_sampling_U3(
             Defaults to ``None``.
 
     Returns:
-        ndarray: array of shape (``ngates``, :math:`3`).
+        ArrayLike: array of shape (``ngates``, :math:`3`).
     """
     if not isinstance(ngates, int):
         raise_error(
@@ -94,9 +96,9 @@ def random_gaussian_matrix(
     rank: int | None = None,
     mean: float = 0.0,
     stddev: float = 1.0,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> ArrayLike:
     """Generates a random Gaussian Matrix.
 
     Gaussian matrices are matrices where each entry is
@@ -123,7 +125,7 @@ def random_gaussian_matrix(
             Defaults to ``None``.
 
     Returns:
-        ndarray: Random Gaussian matrix with dimensions ``(dims, rank)``.
+        ArrayLike: Random Gaussian matrix with dimensions ``(dims, rank)``.
     """
     if not isinstance(dims, int):
         raise_error(TypeError, f"dims must be an integer, but got {type(dims)}.")
@@ -148,7 +150,7 @@ def random_gaussian_matrix(
             TypeError, f"seed must be an integer or Generator, but got {type(seed)}."
         )
 
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
     return backend.qinfo._random_gaussian_matrix(dims, rank, mean, stddev)
 
 
@@ -156,9 +158,9 @@ def random_hermitian(
     dims: int,
     semidefinite: bool = False,
     normalize: bool = False,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> ArrayLike:
     """Generates a random Hermitian matrix :math:`H`, i.e.
     a random matrix such that :math:`H = H^{\\dagger}.`
 
@@ -178,11 +180,11 @@ def random_hermitian(
             Defaults to ``None``.
 
     Returns:
-        ndarray: Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
+        ArrayLike: Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
     """
 
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
     if semidefinite:
         matrix = backend.qinfo._random_hermitian_semidefinite(dims)
     else:
@@ -333,9 +335,9 @@ def random_isometry(
 def random_unitary(
     dims: int,
     measure: str | None = None,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> ArrayLike:
     """Returns a random Unitary operator :math:`U`, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
@@ -353,11 +355,11 @@ def random_unitary(
             Defaults to ``None``.
 
     Returns:
-        ndarray: Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
+        ArrayLike: Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
     """
 
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
 
     if measure is not None and measure != "haar":
         raise_error(ValueError, f"measure {measure} not implemented.")
@@ -379,9 +381,9 @@ def random_quantum_channel(
     validate_cp: bool = True,
     nqubits: int | None = None,
     initial_state_env=None,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> ArrayLike | tuple:
     """Creates a random superoperator from an unitary operator in one of the
     supported superoperator representations.
 
@@ -404,7 +406,9 @@ def random_quantum_channel(
             If ``None``, then ``rank==dims``. Defaults to ``None``.
         order (str, optional): If ``"row"``, vectorization is performed row-wise.
             If ``"column"``, vectorization is performed column-wise. If ``"system"``,
-            a block-vectorization is performed. Defaults to ``"row"``.
+            a block-vectorization is performed, which is not supported
+            if ``measure="bcsz"`` or if ``representation`` is ``"liouville"`` or ``"pauli"``.
+            Defaults to ``"row"``.
         normalize (bool, optional): used when ``representation="chi"`` or
             ``representation="pauli"``. If ``True`` assumes the normalized Pauli basis.
             If ``False``, it assumes unnormalized Pauli basis. Defaults to ``False``.
@@ -423,8 +427,8 @@ def random_quantum_channel(
             the environment. Must be equal or greater than the number of
             qubits that Kraus representation of the system superoperator acts on.
             If ``None``, defaults to the number of qubits in the Kraus operators.
-            Defauts to ``None``.
-        initial_state_env (ndarray, optional): used when ``representation="stinespring"``.
+            Defaults to ``None``.
+        initial_state_env (ArrayLike, optional): used when ``representation="stinespring"``.
             Statevector representing the initial state of the enviroment.
             If ``None``, it assumes the environment in its ground state.
             Defaults to ``None``.
@@ -436,7 +440,7 @@ def random_quantum_channel(
             Defaults to ``None``.
 
     Returns:
-        ndarray: Superoperator representation of a random unitary gate.
+        ArrayLike: Superoperator representation of a random unitary gate.
     """
     if representation not in (
         "chi",
@@ -452,8 +456,11 @@ def random_quantum_channel(
     ):
         raise_error(ValueError, f"representation {representation} not implemented.")
 
+    if measure not in (None, "haar", "bcsz"):
+        raise_error(ValueError, f"measure {measure} not implemented.")
+
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
 
     if measure == "bcsz":
         super_op = _super_op_from_bcsz_measure(
@@ -515,9 +522,9 @@ def random_quantum_channel(
 def random_statevector(
     dims: int,
     dtype: DTypeLike | None = None,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> ArrayLike:
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
@@ -547,10 +554,10 @@ def random_statevector(
             Defaults to ``None``.
 
     Returns:
-        ndarray: Random statevector :math:`\\ket{\\psi}`.
+        ArrayLike: Random statevector :math:`\\ket{\\psi}`.
     """
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
 
     if dtype is None:
         dtype = backend.dtype
@@ -571,9 +578,9 @@ def random_density_matrix(
     basis: str | None = None,
     normalize: bool = False,
     order: str = "row",
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> ArrayLike:
     """Creates a random density matrix :math:`\\rho`. If ``pure=True``,
 
     .. math::
@@ -618,7 +625,7 @@ def random_density_matrix(
             Defaults to ``None``.
 
     Returns:
-        ndarray: Random density matrix :math:`\\rho`.
+        ArrayLike: Random density matrix :math:`\\rho`.
 
     References:
         1. V. A. Osipov, H.-J. Sommers, and K. Życzkowski, *Random Bures mixed states and
@@ -632,11 +639,11 @@ def random_density_matrix(
     if rank is not None and rank < 1:
         raise_error(ValueError, f"rank ({rank}) must be a positive integer.")
 
-    if rank is not None and metric == "hilbert-schmidt" and rank != dims:
+    if metric == "hilbert-schmidt" and rank not in (None, dims):
         raise_error(
             ValueError,
-            f"rank ({rank}) must be None or equal to dims ({dims}) when "
-            + "metric='hilbert-schmidt'. Use metric='ginibre' or metric='bures' "
+            f"rank ({rank}) must be ``None`` or equal to dims ({dims}) when "
+            + "``metric='hilbert-schmidt'``. Use metric='ginibre' or metric='bures' "
             + "to sample states of lower rank.",
         )
 
@@ -658,7 +665,7 @@ def random_density_matrix(
         raise_error(ValueError, "normalize cannot be True when basis=None.")
 
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
 
     rank = dims if rank is None else rank
 
@@ -679,7 +686,7 @@ def random_density_matrix(
             state = state / backend.trace(state)
 
     if basis is not None:
-        pauli_order = basis.split("-")[1]
+        pauli_order = basis.split("-")[1] if "-" in basis else "IXYZ"
         unitary = comp_basis_to_pauli(
             int(np.log2(dims)),
             normalize=normalize,
@@ -695,17 +702,17 @@ def random_density_matrix(
 def random_clifford(
     nqubits: int,
     return_circuit: bool = True,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
     **kwargs,
-):
+) -> Clifford | Circuit:
     """Generates a random :math:`n`-qubit Clifford operator, where :math:`n` is ``nqubits``.
     For the mathematical details, see Reference [1].
 
     Args:
         nqubits (int): number of qubits.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
-            object. If ``False``, returns an ``ndarray`` object. Defaults to ``True``.
+            object. If ``False``, returns an ``ArrayLike`` object. Defaults to ``True``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -719,7 +726,7 @@ def random_clifford(
         :class:`qibo.quantum_info.clifford.Clifford` or :class:`qibo.models.Circuit`:
         Random Clifford operator.
 
-    Reference:
+    References:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
            structure of the Clifford group*.
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
@@ -731,7 +738,7 @@ def random_clifford(
         )
 
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
     dtype = backend.uint8 if nqubits <= 255 else backend.int16
 
     hadamards, permutations = backend.qinfo._sample_from_quantum_mallows_distribution(
@@ -825,18 +832,18 @@ def random_pauli(
     subset: list | None = None,
     return_circuit: bool = True,
     density_matrix: bool = False,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> Circuit | ArrayLike:
     """Creates random Pauli operator(s).
 
     Pauli operators are sampled from the single-qubit Pauli set
     :math:`\\{I, \\, X, \\, Y, \\, Z\\}`.
 
     Args:
-        qubits (int or list or ndarray): if ``int`` and ``max_qubits=None``, the
+        qubits (int or list or ArrayLike): if ``int`` and ``max_qubits=None``, the
             number of qubits. If ``int`` and ``max_qubits != None``, qubit index
-            in which the Pauli sequence will act. If ``list`` or ``ndarray``,
+            in which the Pauli sequence will act. If ``list`` or ``ArrayLike``,
             indexes of the qubits for the Pauli sequence to act.
         depth (int): length of the sequence of Pauli gates.
         max_qubits (int, optional): total number of qubits in the circuit.
@@ -845,7 +852,7 @@ def random_pauli(
             Pauli operators. If ``None``, defaults to the complete set.
             Defaults to ``None``.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
-            object. If ``False``, returns an ``ndarray`` with shape (qubits, depth, 2, 2)
+            object. If ``False``, returns an ``ArrayLike`` with shape (qubits, depth, 2, 2)
             that contains all Pauli matrices that were sampled. Defaults to ``True``.
         density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
             the circuit would evolve density matrices. Defaults to ``False``.
@@ -857,7 +864,7 @@ def random_pauli(
             Defaults to ``None``.
 
     Returns:
-        (ndarray or :class:`qibo.models.Circuit`): all sampled Pauli operators.
+        (ArrayLike or :class:`qibo.models.Circuit`): all sampled Pauli operators.
 
     """
 
@@ -879,7 +886,7 @@ def random_pauli(
         )
 
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
 
     complete_set = (
         {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
@@ -935,15 +942,17 @@ def random_pauli_hamiltonian(
     max_eigenvalue: float | None = None,
     normalize: bool = False,
     pauli_order: str = "IXYZ",
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> tuple[ArrayLike, ArrayLike]:
     """Generates a random Hamiltonian in the Pauli basis.
 
     Args:
         nqubits (int): number of qubits.
         max_eigenvalue (int or float, optional): fixes the value of the
-            largest eigenvalue. Defaults to ``None``.
+            largest eigenvalue. If ``nqubits=1``, there are only two eigenvalues, :math:`0`
+            and :math:`1` if ``normalize=True``, hence ``max_eigenvalue`` is ignored.
+            Defaults to ``None``.
         normalize (bool, optional): If ``True``, fixes the gap of the
             Hamiltonian as ``1.0``. Moreover, if ``True``, then ``max_eigenvalue``
             must be ``> 1.0``. Defaults to ``False``.
@@ -957,7 +966,8 @@ def random_pauli_hamiltonian(
             Defaults to ``None``.
 
     Returns:
-        tuple(ndarray, ndarray): Hamiltonian in the Pauli basis and its corresponding eigenvalues.
+        tuple(ArrayLike, ArrayLike): Hamiltonian in the Pauli basis and its
+        corresponding eigenvalues.
     """
     if isinstance(nqubits, int) is False:
         raise_error(
@@ -992,7 +1002,7 @@ def random_pauli_hamiltonian(
         )
 
     backend = _check_backend(backend)
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
 
     d = 2**nqubits
 
@@ -1009,10 +1019,11 @@ def random_pauli_hamiltonian(
         eigenvalues = eigenvalues / eigenvalues[1]
 
         shift = 2
-        eigenvectors[:, shift:] = (
-            eigenvectors[:, shift:] * max_eigenvalue / eigenvalues[-1]
+        # affine map that keeps the two lowest eigenvalues at 0 and 1 (unit gap)
+        # and sets the largest eigenvalue to ``max_eigenvalue``
+        eigenvalues[shift:] = 1 + (eigenvalues[shift:] - 1) * (max_eigenvalue - 1) / (
+            eigenvalues[-1] - 1
         )
-        eigenvalues[shift:] = eigenvalues[shift:] * max_eigenvalue / eigenvalues[-1]
 
         hamiltonian = backend.zeros((d, d), dtype=backend.complex128)
         hamiltonian = backend.cast(hamiltonian, dtype=hamiltonian.dtype)
@@ -1039,9 +1050,9 @@ def random_stochastic_matrix(
     diagonally_dominant: bool = False,
     precision_tol: float | None = None,
     max_iterations: int | None = None,
-    seed: int | None = None,
+    seed: int | np.random.Generator | None = None,
     backend: Backend | None = None,
-):
+) -> ArrayLike:
     """Creates a random stochastic matrix.
 
     Args:
@@ -1059,13 +1070,13 @@ def random_stochastic_matrix(
             Defaults to ``None``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
-            initializes a statevectorgenerator with a random seed. Defaults to ``None``.
+            initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        ndarray: a random stochastic matrix.
+        ArrayLike: a random stochastic matrix.
 
     """
     if dims <= 0:
@@ -1144,6 +1155,17 @@ def random_stochastic_matrix(
     return matrix
 
 
+def _set_seed(seed: int | np.random.Generator | None, backend: Backend) -> None:
+    """Sets the seed of ``backend``, which only accepts integers or ``None``.
+
+    If ``seed`` is a :class:`numpy.random.Generator`, an integer seed is drawn from it.
+    """
+    if isinstance(seed, np.random.Generator):
+        seed = int(seed.integers(2**32))
+
+    backend.set_seed(seed)
+
+
 def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend):
     """Helper function for :func:qibo.quantum_info.random_ensembles.random_quantum_channel.
     Generates a channel from the BCSZ measure.
@@ -1161,7 +1183,7 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    backend.set_seed(seed)
+    _set_seed(seed, backend)
 
     if rank is None:
         rank = dims
