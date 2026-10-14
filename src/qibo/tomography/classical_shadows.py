@@ -840,13 +840,22 @@ class ClassicalShadow(Tomography):
                 for shadow_circuit, result in zip(circuits, results):
                     # the random unitary is what was appended after ``circuit``,
                     # without the final measurement
-                    unitary_circuit = Circuit(nqubits)
-                    unitary_circuit.add(shadow_circuit.queue[len(circuit.queue) : -1])
-                    # rows of the unitary indexed by the outcomes are <b|U
-                    rows = unitary_circuit.unitary(backend)[
-                        result.samples(binary=False)
-                    ]
-                    snapshot = snapshot + backend.conj(rows).T @ rows
+                    inverse = Circuit(nqubits, density_matrix=True)
+                    inverse.add(shadow_circuit.queue[len(circuit.queue) : -1])
+                    # the sum of U^{dagger} |b><b| U over the outcomes b is the evolution
+                    # of the diagonal matrix of their counts under the inverse of U,
+                    # which avoids building the matrix of U
+                    counts = result.frequencies(binary=False)
+                    outcomes = backend.cast(
+                        [counts.get(outcome, 0) for outcome in range(dim)],
+                        dtype=backend.complex128,
+                    )
+                    snapshot = (
+                        snapshot
+                        + backend.execute_circuit(
+                            inverse.invert(), initial_state=backend.diag(outcomes)
+                        ).state()
+                    )
 
                 # circuits hold reference cycles, so they are freed explicitly
                 # instead of waiting for the next automatic collection
