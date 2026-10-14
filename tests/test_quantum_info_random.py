@@ -102,41 +102,41 @@ def test_random_hermitian(backend):
     # test if function returns Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, backend=backend)
-    matrix_dagger = backend.conj(matrix).T
+    matrix_dagger = backend.dagger(matrix)
     norm = float(backend.matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, backend=backend)
-    matrix_dagger = backend.conj(matrix).T
+    matrix_dagger = backend.dagger(matrix)
     norm = float(backend.matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
-    eigenvalues = np.real(eigenvalues)
+    eigenvalues = backend.eigvalsh(matrix)
+    eigenvalues = backend.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues >= 0), True)
 
     # test if function returns normalized Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, normalize=True, backend=backend)
-    matrix_dagger = backend.conj(matrix).T
+    matrix_dagger = backend.dagger(matrix)
     norm = float(backend.matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
-    eigenvalues = np.real(eigenvalues)
+    eigenvalues = backend.eigvalsh(matrix)
+    eigenvalues = backend.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues <= 1), True)
 
     # test if function returns normalized and semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, normalize=True, backend=backend)
-    matrix_dagger = backend.conj(matrix).T
+    matrix_dagger = backend.dagger(matrix)
     norm = float(backend.vector_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
-    eigenvalues = np.real(eigenvalues)
+    eigenvalues = backend.eigvalsh(matrix)
+    eigenvalues = backend.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues >= 0), True)
     backend.assert_allclose(all(eigenvalues <= 1), True)
 
@@ -331,10 +331,10 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
         )
         if basis is None and normalize is False:
             backend.assert_allclose(
-                np.real(np.trace(backend.to_numpy(state))) <= 1.0 + PRECISION_TOL, True
+                backend.real(backend.trace(state)) <= 1.0 + PRECISION_TOL, True
             )
             backend.assert_allclose(
-                np.real(np.trace(backend.to_numpy(state))) >= 1.0 - PRECISION_TOL, True
+                backend.real(backend.trace(state)) >= 1.0 - PRECISION_TOL, True
             )
             backend.assert_allclose(
                 purity(state, backend=backend) <= 1.0 + PRECISION_TOL, True
@@ -343,16 +343,14 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
                 backend.assert_allclose(
                     purity(state, backend=backend) >= 1.0 - PRECISION_TOL, True
                 )
-            norm = np.abs(
-                backend.to_numpy(norm_function(state - backend.conj(state).T, order=2))
-            )
+            norm = backend.abs(norm_function(state - backend.dagger(state), order=2))
             backend.assert_allclose(norm < PRECISION_TOL, True)
         else:
             normalization = 1.0 if normalize is False else 1.0 / np.sqrt(dims)
             backend.assert_allclose(state[0], normalization)
-            assert all(
-                np.abs(backend.to_numpy(exp_value)) <= normalization
-                for exp_value in state[1:]
+            backend.assert_allclose(
+                [backend.abs(exp_value) <= normalization for exp_value in state[1:]],
+                True,
             )
 
 
@@ -366,7 +364,7 @@ def test_random_density_matrix_rank(backend, metric, rank):
 
     backend.assert_allclose(backend.trace(state), 1.0, atol=PRECISION_TOL)
 
-    eigenvalues = backend.eigvalsh(backend.to_numpy(state))
+    eigenvalues = backend.eigvalsh(state)
     assert backend.sum(eigenvalues > PRECISION_TOL) == rank
     assert backend.all(eigenvalues > -PRECISION_TOL)
 
@@ -544,14 +542,10 @@ def test_random_pauli_hamiltonian(
     )
 
     if normalize is True:
+        backend.assert_allclose(backend.abs(eigenvalues[0]) < PRECISION_TOL, True)
+        backend.assert_allclose(backend.abs(eigenvalues[1] - 1) < PRECISION_TOL, True)
         backend.assert_allclose(
-            np.abs(backend.to_numpy(eigenvalues[0])) < PRECISION_TOL, True
-        )
-        backend.assert_allclose(
-            np.abs(backend.to_numpy(eigenvalues[1]) - 1) < PRECISION_TOL, True
-        )
-        backend.assert_allclose(
-            np.abs(backend.to_numpy(eigenvalues[-1]) - max_eigenvalue) < PRECISION_TOL,
+            backend.abs(eigenvalues[-1] - max_eigenvalue) < PRECISION_TOL,
             True,
         )
 
@@ -697,12 +691,12 @@ def test_random_pauli_hamiltonian_tensorflow(backend):
     ],
 )
 def test_random_functions_accept_generator_seed(backend, function):
-    first = function(np.random.default_rng(1234), backend)
-    second = function(np.random.default_rng(1234), backend)
-    other = function(np.random.default_rng(4321), backend)
+    first = function(backend.default_rng(1234), backend)
+    second = function(backend.default_rng(1234), backend)
+    other = function(backend.default_rng(4321), backend)
 
     backend.assert_allclose(first, second)
-    assert not np.allclose(backend.to_numpy(first), backend.to_numpy(other))
+    assert not backend.allclose(first, other)
 
     # integer seeds are unchanged
     backend.assert_allclose(function(7, backend), function(7, backend))
@@ -729,16 +723,14 @@ def test_random_pauli_hamiltonian_spectrum(backend, nqubits, max_eigenvalue):
     dims = 2**nqubits
 
     # back to the computational basis
-    vector = backend.to_numpy(
-        pauli_to_comp_basis(nqubits, normalize=True, backend=backend)
-    ) @ backend.to_numpy(hamiltonian)
+    vector = pauli_to_comp_basis(nqubits, normalize=True, backend=backend) @ hamiltonian
     matrix = vector.reshape(dims, dims)
-    matrix = (matrix + matrix.conj().T) / 2
-    spectrum = np.sort(np.linalg.eigvalsh(matrix))
+    matrix = (matrix + backend.dagger(matrix)) / 2
+    spectrum = backend.sort(backend.eigvalsh(matrix))
 
     # returned eigenvalues are the spectrum of the Hamiltonian, with unit gap
-    np.testing.assert_allclose(
-        spectrum, np.sort(backend.to_numpy(eigenvalues).real), atol=1e-8
+    backend.assert_allclose(
+        spectrum, backend.sort(backend.real(eigenvalues)), atol=1e-8
     )
-    np.testing.assert_allclose(spectrum[:2], [0.0, 1.0], atol=1e-8)
-    np.testing.assert_allclose(spectrum[-1], max_eigenvalue, atol=1e-8)
+    backend.assert_allclose(spectrum[:2], [0.0, 1.0], atol=1e-8)
+    backend.assert_allclose(spectrum[-1], max_eigenvalue, atol=1e-8)
