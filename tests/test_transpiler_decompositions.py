@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -5,7 +7,10 @@ from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.asserts import assert_decomposition
-from qibo.transpiler.decompositions import standard_decompositions
+from qibo.transpiler.decompositions import (
+    _mottonen_compute_theta,
+    standard_decompositions,
+)
 from qibo.transpiler.unroller import NativeGates, cz_dec, translate_gate
 
 default_natives = NativeGates.Z | NativeGates.RZ | NativeGates.M | NativeGates.I
@@ -273,7 +278,7 @@ def test_static_decomposition_copies_gates():
 
 @pytest.mark.parametrize("controls,target", [([0, 1], 2), ([3, 1], 0)])
 def test_function_decomposition_qubits(backend, controls, target):
-    angles = np.random.default_rng(1).uniform(-np.pi, np.pi, 2 ** len(controls))
+    angles = backend.random_uniform(-np.pi, np.pi, 2 ** len(controls), seed=1)
     gate = gates.Multiplexor(controls, target, angles)
 
     decomposed = standard_decompositions(gate)
@@ -293,3 +298,14 @@ def test_function_decomposition_qubits(backend, controls, target):
     backend.assert_allclose(
         circuit.unitary(backend), reference.unitary(backend), atol=1e-8
     )
+
+
+@pytest.mark.parametrize("shape", [(1,), (3, 1)])
+def test_mottonen_compute_theta_single_angle(backend, shape):
+    """A single angle (*i.e.*, no control qubits) is returned unchanged."""
+    angles = backend.random_uniform(-math.pi, math.pi, shape, seed=1)
+
+    thetas = _mottonen_compute_theta(angles, backend=backend)
+
+    assert thetas.shape == angles.shape
+    backend.assert_allclose(thetas, angles)
