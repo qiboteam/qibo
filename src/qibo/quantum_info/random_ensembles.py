@@ -669,8 +669,6 @@ def random_density_matrix(
 
     rank = dims if rank is None else rank
 
-    rank = dims if rank is None else rank
-
     if pure:
         state = backend.qinfo._random_density_matrix_pure(dims)
     else:
@@ -968,7 +966,8 @@ def random_pauli_hamiltonian(
             Defaults to ``None``.
 
     Returns:
-        tuple(ArrayLike, ArrayLike): Hamiltonian in the Pauli basis and its corresponding eigenvalues.
+        tuple(ArrayLike, ArrayLike): Hamiltonian in the Pauli basis and its
+        corresponding eigenvalues.
     """
     if isinstance(nqubits, int) is False:
         raise_error(

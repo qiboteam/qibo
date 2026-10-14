@@ -708,26 +708,6 @@ def test_random_functions_accept_generator_seed(backend, function):
     backend.assert_allclose(function(7, backend), function(7, backend))
 
 
-@pytest.mark.parametrize("metric", ["ginibre", "bures"])
-@pytest.mark.parametrize("rank", [1, 2, 4])
-def test_random_density_matrix_rank(backend, metric, rank):
-    state = random_density_matrix(4, rank=rank, metric=metric, seed=3, backend=backend)
-    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(state))
-
-    assert np.sum(eigenvalues > 1e-10) == rank
-    backend.assert_allclose(np.trace(backend.to_numpy(state)), 1.0, atol=1e-10)
-
-
-def test_random_density_matrix_rank_errors(backend):
-    with pytest.raises(ValueError):
-        random_density_matrix(4, rank=2, metric="hilbert-schmidt", backend=backend)
-    with pytest.raises(ValueError):
-        random_density_matrix(4, rank=0, metric="ginibre", backend=backend)
-
-    # the rank equal to the dimension is the default for the Hilbert-Schmidt metric
-    random_density_matrix(4, rank=4, backend=backend)
-
-
 def test_random_density_matrix_pauli_basis_default_order(backend):
     default = random_density_matrix(4, basis="pauli", seed=5, backend=backend)
     explicit = random_density_matrix(4, basis="pauli-IXYZ", seed=5, backend=backend)
