@@ -683,6 +683,22 @@ class Backend:
         """
         return self.engine.cos(array, **kwargs)
 
+    def cosine_sin_decomposition(
+        self, array: ArrayLike, block_nrows: int, block_ncols: int
+    ) -> tuple[ArrayLike, ArrayLike, ArrayLike]:  # pragma: no cover
+        """Calculate the Cosine-Sine Decomposition of a unitary ``array``.
+
+        Args:
+            array (ArrayLike): unitary matrix to be decomposed.
+            block_nrows (int): number of rows of the upper left block of ``array``.
+            block_ncols (int): number of columns of the upper left block of ``array``.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike, ArrayLike]: Block-diagonal left unitary,
+            cosine-sine matrix, and block-diagonal right unitary, in that order.
+        """
+        raise_error(NotImplementedError)
+
     def count_nonzero(self, array: ArrayLike, **kwargs) -> ArrayLike:
         """Count the number of non-zero elements in ``array``.
 
@@ -1744,6 +1760,28 @@ class Backend:
             ArrayLike: The rounded array.
         """
         return self.engine.round(array, decimals, **kwargs)
+
+    def schur(
+        self, array: ArrayLike, **kwargs
+    ) -> tuple[ArrayLike, ArrayLike]:  # pragma: no cover
+        """Compute the Schur decomposition of a square ``array``.
+
+        The Schur decomposition of a matrix :math:`A` is :math:`A = Z \\, T \\, Z^{\\dagger}`,
+        where :math:`Z` is unitary and :math:`T` is upper triangular, if the complex form
+        is requested. If :math:`A` is normal, which is the case of unitary matrices,
+        :math:`T` is diagonal.
+
+        Args:
+            array (ArrayLike): square input array.
+            kwargs (optional): additional options for this function, such as
+                ``output="complex"`` to obtain the complex Schur form for real ``array``.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            Tuple[ArrayLike, ArrayLike]: Schur form :math:`T` and unitary matrix
+            :math:`Z`, in that order.
+        """
+        raise_error(NotImplementedError)
 
     def searchsorted(
         self, array_1: ArrayLike, array_2: ArrayLike, **kwargs
@@ -2860,6 +2898,8 @@ class Backend:
             )
         elif name == "FanOut":
             _matrix = _matrix(*gate.init_args)
+        elif name == "Multiplexor":
+            _matrix = _matrix(angles=gate.parameters[0], axis=gate.init_kwargs["axis"])
         else:
             _matrix = _matrix(*gate.parameters)
 

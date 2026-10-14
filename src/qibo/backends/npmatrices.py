@@ -550,6 +550,25 @@ class NumpyMatrices:
 
         return self._cast(matrix, dtype=self.dtype)
 
+    def Multiplexor(self, angles, axis):
+        angles = self.engine.asarray(angles)
+        cos = self.engine.cos(angles / 2.0) + 0j
+        sin = self.engine.sin(angles / 2.0) + 0j
+        ones = self.engine.asarray([1.0, 1.0])
+
+        if axis == "z":
+            signs = self.engine.asarray([1.0, -1.0])
+            diagonal = self.engine.kron(cos, ones) - 1j * self.engine.kron(sin, signs)
+            return self._cast(self.engine.diag(diagonal), dtype=self.dtype)
+
+        # each block is ``[[cos, -sin], [sin, cos]]``
+        off_diagonal = self.engine.kron(sin, self.engine.asarray([1.0, 0.0]))[:-1]
+        matrix = self.engine.diag(self.engine.kron(cos, ones))
+        matrix = matrix + self.engine.diag(off_diagonal, -1)
+        matrix = matrix - self.engine.diag(off_diagonal, 1)
+
+        return self._cast(matrix, dtype=self.dtype)
+
     def Unitary(self, u):
         return self.engine.asarray(u, dtype=self.dtype)
 

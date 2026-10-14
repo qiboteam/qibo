@@ -10,9 +10,11 @@ randomized measurements. In this tutorial we go through the functionalities of
 * the three ensembles of random measurements ``"global-clifford"``, ``"local-clifford"``
   and ``"ultra-shallow"``;
 * observables given as Pauli strings, and as Hamiltonians or matrices;
+* the estimated density matrix, i.e. the classical shadow itself;
 * what happens inside the pipeline: generating circuits, executing them, and the frame operator;
 * the median-of-means estimator, and the options that control memory and reproducibility;
-* ultra-shallow shadows, whose frame operator is sampled, and their robustness to circuit noise;
+* ultra-shallow and robust local Clifford shadows, whose frame operators are sampled, and their
+  robustness to circuit noise;
 * how to write your own protocol with the abstract class :class:`qibo.tomography.abstract.Tomography`.
 
 All the outputs below were obtained with the seeds shown, on the ``numpy`` backend.
@@ -131,7 +133,9 @@ and number of samples:
     ultra-shallow    1.010
 
 ``depth`` and ``ncalibration`` only matter for ``"ultra-shallow"``, and are discussed
-:ref:`below <classical-shadows-ultra-shallow>`. For the other methods they are ignored.
+:ref:`below <classical-shadows-ultra-shallow>`. For the other methods they are ignored, except
+that ``ncalibration`` also applies to ``"local-clifford"`` with ``robust=True``, which is discussed
+:ref:`below <classical-shadows-robust-local>`.
 
 As a rule of thumb [1]:
 
@@ -202,6 +206,63 @@ backend for a matrix:
 
 Both bases give the same estimate for the same samples. Use the Pauli basis whenever the observable
 has a Pauli decomposition with few terms: the computational basis builds a :math:`4^{n} \times 4^{n}` matrix.
+
+
+The estimated state
+-------------------
+
+The estimate of an observable does not need the whole state, but the state itself is also
+available. ``density_matrix`` returns the classical shadow
+:math:`\hat{\rho} = \mathcal{M}^{-1}(\bar{\sigma})`, where :math:`\bar{\sigma}` is the average snapshot
+over all the samples, as a :math:`2^{n} \times 2^{n}` matrix. It takes the arguments of the pipeline that
+are about the circuits, i.e. all except the observable and ``nbatches``, since there is a single average:
+
+.. code-block:: python
+
+    import numpy as np
+
+    rho = shadow.density_matrix(circuit, nsamples=2000, method="local-clifford", seed=1)
+    print(np.round(rho.real, 2))
+
+.. code-block:: text
+
+    [[ 0.51 -0.01  0.    0.47]
+     [-0.01 -0.    0.03  0.02]
+     [ 0.    0.03 -0.02  0.04]
+     [ 0.47  0.02  0.04  0.52]]
+
+which is close to the density matrix :math:`\ketbra{\Phi^{+}}{\Phi^{+}}` of the Bell state, with
+entries :math:`1/2` in the corners (only the real part is shown). The estimate has unit trace and is
+Hermitian, and it is unbiased, but it is **not** positive semidefinite in general, since each
+snapshot is mapped through the inverse of a channel:
+
+.. code-block:: python
+
+    print(f"{np.trace(rho).real:.3f}", np.allclose(rho, rho.conj().T))
+    print(f"{np.linalg.eigvalsh(rho).min():.3f}")
+
+.. code-block:: text
+
+    1.000 True
+    -0.054
+
+Expectation values of :math:`\hat{\rho}` are the estimates of the pipeline with ``nbatches=1`` for the same
+arguments, and the same seed. For instance, the fidelity with the Bell state is
+
+.. code-block:: python
+
+    bell = np.array([1, 0, 0, 1]) / np.sqrt(2)
+    print(f"{(bell @ rho @ bell).real:.3f}", f"{float(shadow(circuit, observable, 2000, 'local-clifford', seed=1)):.3f}")
+
+.. code-block:: text
+
+    0.980 0.980
+
+The argument ``basis`` selects how the inverse frame is applied, as for the observables. Both bases give
+the same state, but ``"pauli"`` only needs the diagonal of the frame, whereas ``"computational"`` builds
+a :math:`4^{n} \times 4^{n}` matrix. If the state has to be physical, project it onto the positive
+semidefinite matrices afterwards. The median of means is not available for the state, because the median
+of matrices is not defined.
 
 
 Looking inside the pipeline
@@ -535,6 +596,78 @@ The price is a larger variance, as the estimates are divided by smaller numbers.
 and a weighted sum of Pauli strings of the GHZ state, the spread of the estimates over seeds
 was roughly two to three times larger than without noise.
 
+
+.. _classical-shadows-robust-local:
+
+**Robust local Clifford shadows.** The frame of ``"local-clifford"`` has the analytical form
+:math:`3^{-w}` only if the measurement circuits are ideal. With ``robust=True`` it is sampled from
+``ncalibration`` circuits applied to the zero state, in the same way as for ``"ultra-shallow"``, so
+that it includes the noise of the circuits. This is the robust shadow estimation of Ref. [4].
+Since the ensemble is a product of single-qubit ones, the noisy sampled frame shows the damping of each
+qubit. Here, depolarizing noise of strength :math:`0.15` after every ``H`` and ``S`` gate:
+
+.. code-block:: python
+
+    local_noise = NoiseModel()
+    local_noise.add(DepolarizingError(0.15), gates.H)
+    local_noise.add(DepolarizingError(0.15), gates.S)
+
+    backend = NoisyBackend(local_noise, Circuit(2))
+    ideal = shadow.frame_operator(2, "local-clifford")
+    noisy = shadow.frame_operator(
+        2, "local-clifford", robust=True, nsamples=4000, seed=3, backend=backend
+    )
+    print(np.round(ideal, 3))
+    print(np.round(noisy, 3))
+
+.. code-block:: text
+
+    [1.    0.333 0.333 0.333 0.333 0.111 0.111 0.111 0.333 0.111 0.111 0.111
+     0.333 0.111 0.111 0.111]
+    [1.    0.222 0.222 0.222 0.211 0.043 0.043 0.043 0.211 0.043 0.043 0.043
+     0.211 0.043 0.043 0.043]
+
+A depolarizing channel multiplies the non-identity Pauli coefficients by :math:`1 - \lambda`, so the exact eigenvalue
+of one qubit is the average of :math:`(1 - \lambda)^{\ell}` over the single-qubit Cliffords that map
+:math:`Z` to :math:`\pm Z`, with :math:`\ell` their number of gates, which is :math:`0.207` here. It is
+the value, up to the statistical error, of the weight one entries above, and its square, :math:`0.043`,
+is that of the weight two entries.
+
+We estimate :math:`\langle Z \rangle = \cos(\pi / 3) = 0.5` of the single-qubit state prepared by
+:math:`R_{y}(\pi / 3)`, whose preparation has no ``H`` or ``S`` gates, with and without the sampled frame:
+
+.. code-block:: python
+
+    import math
+
+    circuit_ry = Circuit(1)
+    circuit_ry.add(gates.RY(0, math.pi / 3))
+
+    for robust in (False, True):
+        backend = NoisyBackend(local_noise, circuit_ry)
+        estimate = shadow(
+            circuit_ry,
+            {"Z": 1.0},
+            nsamples=800,
+            method="local-clifford",
+            ncalibration=2000,
+            robust=robust,
+            seed=1,
+            backend=backend,
+        )
+        print(f"robust={robust!s:5}  {float(estimate):.3f}")
+
+.. code-block:: text
+
+    robust=False  0.308
+    robust=True   0.450
+
+The analytical frame ignores the noise, and underestimates the expectation value. Over six seeds, the
+estimates with the analytical frame averaged :math:`0.30`, whereas those with the sampled frame averaged
+:math:`0.48`, with a standard deviation of :math:`0.08`. As for ``"ultra-shallow"``, the price is a larger
+variance. Note that ``robust`` has no effect on ``"ultra-shallow"``, whose frame is always sampled, and that
+``"global-clifford"`` does not support it.
+
 On a real device, pass the backend of the device: the noise is then real, and the calibration is
 run on the same device with no changes to the code.
 
@@ -608,10 +741,15 @@ Summary of the options
       - number of entangling layers of ``"ultra-shallow"``; ``0`` is local Cliffords
     * - ``ncalibration``
       - ``None``
-      - number of circuits that sample the frame of ``"ultra-shallow"``; ``None`` means ``nsamples``
+      - number of circuits that sample the frame of ``"ultra-shallow"``, or of ``"local-clifford"`` if
+        ``robust=True``; ``None`` means ``nsamples``
+    * - ``robust``
+      - ``False``
+      - if ``True``, the frame of ``"local-clifford"`` is sampled, so it includes the noise of the
+        measurement circuits; ``"global-clifford"`` does not support it
     * - ``seed``
       - ``None``
-      - seed of the random unitaries; the calibration uses ``seed + 1``
+      - seed of the random unitaries; the calibration, if any, uses ``seed + 1``
     * - ``backend``
       - ``None``
       - backend that executes the circuits; ``None`` is the current backend
@@ -625,6 +763,12 @@ Limitations
   the computational basis, which builds a :math:`4^{n} \times 4^{n}` matrix, even fewer.
 * The circuits of ``"global-clifford"`` are deep and are generated with
   :func:`qibo.quantum_info.random_clifford`.
+* The state returned by ``density_matrix`` is an unbiased estimate, but it is not positive
+  semidefinite in general. Its error in the trace norm grows with the number of qubits, so it is
+  meant for few qubits, or for checking, and not as a replacement of state tomography.
+* Robust shadows are only implemented for ``"local-clifford"`` and ``"ultra-shallow"``. The
+  robustness of both is limited to noise that is the same in the calibration and in the measurement
+  circuits.
 * Single-qubit layers of ``"ultra-shallow"`` are Cliffords, not Haar-random unitaries, so all
   measurement circuits are Clifford circuits.
 * The noise robustness requires the calibration and the measurement circuits to be noisy in the same
@@ -644,3 +788,6 @@ References
 3. R. M. S. Farias, R. D. Peddinti, I. Roth and L. Aolita,
    *Robust ultra-shallow shadows*,
    `Quantum Science and Technology 10, 025044 <https://doi.org/10.1088/2058-9565/adc14f>`_.
+
+4. S. Chen, W. Yu, P. Zeng and S. T. Flammia, *Robust shadow estimation* (2021),
+   `PRX Quantum 2, 030348 <https://doi.org/10.1103/PRXQuantum.2.030348>`_.

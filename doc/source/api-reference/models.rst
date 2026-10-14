@@ -113,6 +113,14 @@ Grover's Algorithm
     :member-order: bysource
 
 
+Double-Bracket Iterations
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.models.double_bracket.DoubleBracketIteration
+    :members:
+    :member-order: bysource
+
+
 Quantum Signal Processing
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

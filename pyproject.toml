@@ -32,7 +32,7 @@ Documentation = "https://qibo.science/qibo/stable/"
 [project.optional-dependencies]
 qinfo = ["stim>=1.15.0,<2.0.0"]
 qulacs = ["qulacs>=0.6.4,<0.7.0; python_version < '3.13'"]
-cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform != 'win32'"]
+cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux'"]
 qir = ["qbraid[qir]>=0.10.0,<0.11.0"]
 
 [dependency-groups]
@@ -51,30 +51,34 @@ docs = [
   "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
   "seaborn>=0.13.2,<0.14.0",
   "ipykernel>=6.29.4,<7.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
 ]
 tests = [
   "pytest>=7.2.1,<10.0.0",
   "pytest-cov>=4.0.0,<5.0.0",
   "matplotlib>=3.7.0,<3.11.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
   "stim>=1.15.0,<2.0.0",
   "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
   "qiskit>=2.2.3,<3.0.0",
-  "qbraid[cudaq,qir]>=0.10.0,<0.11.0; sys_platform != 'win32'",
-  "qbraid[qir]>=0.10.0,<0.11.0; sys_platform == 'win32'",
+  "qbraid[qir]>=0.10.0,<0.11.0",
+  "qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux'",
   "pygridsynth>=2.0.0,<3.0.0",
 ]
 cuda11 = [
   "cupy-cuda11x>=13.1.0,<14.0.0",
   "cuquantum-python-cu11>=24.1.0,<25.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
 ]
 cuda12 = [
   "cupy-cuda12x>=13.1.0,<14.0.0",
   "cuquantum-python-cu12>=24.1.0,<25.0.0",
-  "qibojit @ git+https://github.com/qiboteam/qibojit.git",
+  "qibojit",
 ]
+
+[tool.uv.sources.qibojit]
+git = "https://github.com/qiboteam/qibojit.git"
+branch = "main"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]

@@ -4,16 +4,28 @@ Linear Algebra Operations
 Collection of linear algebra operations that are commonly used in quantum information theory.
 
 
+Anticommutator
+--------------
+
+.. autofunction:: qibo.quantum_info.anticommutator
+
+
 Commutator
 ----------
 
 .. autofunction:: qibo.quantum_info.commutator
 
 
-Anticommutator
---------------
+Double commutator
+-----------------
 
-.. autofunction:: qibo.quantum_info.anticommutator
+.. autofunction:: qibo.quantum_info.double_commutator
+
+
+Group commutator
+----------------
+
+.. autofunction:: qibo.quantum_info.group_commutator
 
 
 Partial trace
@@ -50,6 +62,18 @@ Matrix square root
 ------------------
 
 .. autofunction:: qibo.quantum_info.matrix_sqrt
+
+
+Cosine-Sine decomposition
+-------------------------
+
+.. autofunction:: qibo.quantum_info.cosine_sin_decomposition
+
+
+Schur decomposition
+-------------------
+
+.. autofunction:: qibo.quantum_info.schur_decomposition
 
 
 Singular value decomposition

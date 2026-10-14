@@ -11,6 +11,7 @@ from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.models.encodings import entangling_layer
 from qibo.quantum_info._superoperator_transformations import (
     _operator_to_pauli_vectors_fht,
+    _pauli_vectors_to_operator_fht,
 )
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.random_ensembles import random_clifford
@@ -73,9 +74,15 @@ class ClassicalShadow(Tomography):
       Its frame operator has no analytical form, and is sampled from the same
       circuits applied to the zero state.
 
+    With ``robust=True``, the frame operator of ``"local-clifford"`` is sampled in the
+    same way instead of taking its analytical form, so that it includes the noise of
+    the measurement circuits. This is the robust shadow estimation of Ref. [4].
+
     The frame operator is applied in the Pauli basis, where it is diagonal, or in the
     computational basis. Estimates can be combined by the median of means, and circuits
-    are generated and executed in chunks to bound the memory used.
+    are generated and executed in chunks to bound the memory used. Besides expectation
+    values, :meth:`density_matrix` returns the estimated density matrix itself, i.e.
+    the classical shadow.
 
     Example:
         .. testcode::
@@ -102,6 +109,8 @@ class ClassicalShadow(Tomography):
         3. R. M. S. Farias, R. D. Peddinti, I. Roth and L. Aolita,
            *Robust ultra-shallow shadows*, `Quantum Sci. Technol.
            <https://doi.org/10.1088/2058-9565/adc14f>`_.
+        4. S. Chen, W. Yu, P. Zeng and S. T. Flammia, *Robust shadow estimation*,
+           `PRX Quantum 2, 030348 (2021) <https://doi.org/10.1103/PRXQuantum.2.030348>`_.
     """
 
     def __call__(
@@ -118,6 +127,7 @@ class ClassicalShadow(Tomography):
         chunksize: int = 1000,
         depth: int = 1,
         ncalibration: int | None = None,
+        robust: bool = False,
         seed: int | None = None,
         backend: Backend = None,
     ):
@@ -152,11 +162,17 @@ class ClassicalShadow(Tomography):
                 single-qubit Cliffords. It is ignored by the other methods.
                 Defaults to :math:`1`.
             ncalibration (int, optional): number of circuits used to sample the frame
-                operator of ``"ultra-shallow"``, which has no analytical form. It is
-                ignored by the other methods. If ``None``, it is ``nsamples``.
-                Defaults to ``None``.
+                operator of ``"ultra-shallow"``, which has no analytical form, or of
+                ``"local-clifford"`` if ``robust=True``. It is ignored otherwise.
+                If ``None``, it is ``nsamples``. Defaults to ``None``.
+            robust (bool, optional): if ``True``, the frame operator of
+                ``"local-clifford"`` is sampled from ``ncalibration`` circuits applied to
+                the zero state, so that it includes the noise of the measurement
+                circuits. The frame of ``"ultra-shallow"`` is always sampled, and
+                ``"global-clifford"`` raises ``NotImplementedError``.
+                Defaults to ``False``.
             seed (int, optional): seed of the random unitaries. The calibration of
-                ``"ultra-shallow"`` uses ``seed + 1``. Defaults to ``None``.
+                the frame, if sampled, uses ``seed + 1``. Defaults to ``None``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses the current
                 backend. Defaults to ``None``.
@@ -195,6 +211,7 @@ class ClassicalShadow(Tomography):
                 chunksize,
                 depth,
                 nsamples if ncalibration is None else ncalibration,
+                robust,
                 seed,
                 backend,
             )
@@ -209,6 +226,7 @@ class ClassicalShadow(Tomography):
                 chunksize,
                 depth,
                 nsamples if ncalibration is None else ncalibration,
+                robust,
                 seed,
                 backend,
             )
@@ -306,6 +324,122 @@ class ClassicalShadow(Tomography):
 
         return circuits
 
+    def density_matrix(
+        self,
+        circuit: Circuit,
+        nsamples: int,
+        method: str = "global-clifford",
+        basis: str = "pauli",
+        nshots: int = 1,
+        chunksize: int = 1000,
+        depth: int = 1,
+        ncalibration: int | None = None,
+        robust: bool = False,
+        seed: int | None = None,
+        backend: Backend = None,
+    ) -> ArrayLike:
+        """Estimates the density matrix of the state prepared by ``circuit``.
+
+        The estimate is the classical shadow
+        :math:`\\hat{\\rho} = \\mathcal{M}^{-1}(\\bar{\\sigma})`, where
+        :math:`\\bar{\\sigma}` is the average snapshot over the ``nsamples`` random
+        unitaries, and :math:`\\mathcal{M}` is the frame operator. It is Hermitian with
+        unit trace, and it is an unbiased estimate of the density matrix, but it is not
+        positive semidefinite in general. For the same arguments, expectation values
+        computed from it are those returned by :meth:`__call__` with ``nbatches=1``,
+        up to numerical precision.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit preparing the
+                state, without measurements.
+            nsamples (int): number of random unitaries.
+            method (str, optional): ``"global-clifford"``, ``"local-clifford"``, or
+                ``"ultra-shallow"``. Defaults to ``"global-clifford"``.
+            basis (str, optional): ``"pauli"`` or ``"computational"``, the basis in
+                which the inverse frame is applied. Both give the same estimate, but
+                ``"computational"`` builds a :math:`4^{n} \\times 4^{n}` matrix, while
+                ``"pauli"`` uses a fast Hadamard transform. Defaults to ``"pauli"``.
+            nshots (int, optional): number of shots per random unitary.
+                Defaults to :math:`1`.
+            chunksize (int, optional): maximum number of circuits generated and
+                executed at once, which bounds the memory used by the circuits.
+                Defaults to :math:`1000`.
+            depth (int, optional): number of entangling layers of the measurement
+                circuits of ``"ultra-shallow"``, which has ``depth + 1`` layers of
+                single-qubit Cliffords. It is ignored by the other methods.
+                Defaults to :math:`1`.
+            ncalibration (int, optional): number of circuits used to sample the frame
+                operator of ``"ultra-shallow"``, which has no analytical form, or of
+                ``"local-clifford"`` if ``robust=True``. It is ignored otherwise.
+                If ``None``, it is ``nsamples``. Defaults to ``None``.
+            robust (bool, optional): if ``True``, the frame operator of
+                ``"local-clifford"`` is sampled from ``ncalibration`` circuits applied to
+                the zero state, so that it includes the noise of the measurement
+                circuits. The frame of ``"ultra-shallow"`` is always sampled, and
+                ``"global-clifford"`` raises ``NotImplementedError``.
+                Defaults to ``False``.
+            seed (int, optional): seed of the random unitaries. The calibration of
+                the frame, if sampled, uses ``seed + 1``. Defaults to ``None``.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+                to be used in the execution. If ``None``, it uses the current
+                backend. Defaults to ``None``.
+
+        Returns:
+            ArrayLike: :math:`2^{n} \\times 2^{n}` estimated density matrix.
+        """
+        if not isinstance(nsamples, int) or nsamples < 1:
+            raise_error(
+                ValueError,
+                f"``nsamples`` must be a positive int, but it is {nsamples}.",
+            )
+
+        if not isinstance(chunksize, int) or chunksize < 1:
+            raise_error(
+                ValueError,
+                f"``chunksize`` must be a positive int, but it is {chunksize}.",
+            )
+
+        backend = _check_backend(backend)
+
+        nqubits = circuit.nqubits
+        dim = 2**nqubits
+
+        inverse_frame = self.frame_operator(
+            nqubits,
+            method,
+            True,
+            basis,
+            depth,
+            nsamples if ncalibration is None else ncalibration,
+            chunksize,
+            robust,
+            # independent of the seed of the shadows, to avoid correlations
+            None if seed is None else seed + 1,
+            backend,
+        )
+
+        snapshot = next(
+            self._snapshots(
+                circuit, nsamples, method, nshots, 1, chunksize, depth, seed, backend
+            )
+        )
+
+        if basis == "computational":
+            return backend.reshape(
+                inverse_frame @ backend.reshape(snapshot, (-1,)), (dim, dim)
+            )
+
+        # real Pauli coefficients tr(P snapshot), for all Pauli strings P
+        coefficients = backend.real(
+            _operator_to_pauli_vectors_fht(snapshot, nqubits, dim, backend=backend)
+        )
+        # sum over P of f_P^{-1} tr(P snapshot) P / 2^n, back in the computational basis
+        state = _pauli_vectors_to_operator_fht(
+            inverse_frame * coefficients, nqubits, dim, backend=backend
+        )
+
+        return state / dim
+
     def frame_operator(
         self,
         nqubits: int,
@@ -315,6 +449,7 @@ class ClassicalShadow(Tomography):
         depth: int = 1,
         nsamples: int = 1000,
         chunksize: int = 1000,
+        robust: bool = False,
         seed: int | None = None,
         backend: Backend = None,
     ) -> ArrayLike:
@@ -324,11 +459,13 @@ class ClassicalShadow(Tomography):
         identity. Any other Pauli string of weight :math:`w` has eigenvalue
         :math:`1 / (2^{n} + 1)` if ``method="global-clifford"``, and
         :math:`3^{-w}` if ``method="local-clifford"``. If ``method="ultra-shallow"``,
-        the eigenvalue :math:`f_{k}` depends only on the support
-        :math:`k \\in \\{0, 1\\}^{n}` of the Pauli string, and it is sampled: it is the
-        average of :math:`\\langle z | g Z^{k} g^{\\dagger} | z \\rangle` over
-        ``nsamples`` random circuits :math:`g` applied to the zero state, with
-        outcomes :math:`z`, where :math:`Z^{k} = \\bigotimes_{l} Z^{k_{l}}`.
+        or ``method="local-clifford"`` with ``robust=True``, the eigenvalue
+        :math:`f_{k}` depends only on the support :math:`k \\in \\{0, 1\\}^{n}` of the
+        Pauli string, and it is sampled: it is the average of
+        :math:`\\langle z | g Z^{k} g^{\\dagger} | z \\rangle` over ``nsamples`` random
+        circuits :math:`g` applied to the zero state, with outcomes :math:`z`, where
+        :math:`Z^{k} = \\bigotimes_{l} Z^{k_{l}}`. If the circuits are noisy, so is
+        the sampled frame, which makes the estimates robust to that noise.
 
         .. note::
             If ``basis="pauli"``, only the diagonal of the frame is returned,
@@ -339,8 +476,8 @@ class ClassicalShadow(Tomography):
             nqubits (int): number of qubits.
             method (str, optional): ``"global-clifford"``, ``"local-clifford"``, or
                 ``"ultra-shallow"``. Defaults to ``"global-clifford"``.
-            inverse (bool, optional): if ``True``, returns the inverse frame. For
-                ``"ultra-shallow"``, it raises an error if a sampled eigenvalue is not
+            inverse (bool, optional): if ``True``, returns the inverse frame. If the
+                frame is sampled, it raises an error if a sampled eigenvalue is not
                 positive. Defaults to ``False``.
             basis (str, optional): ``"pauli"`` or ``"computational"``. If
                 ``"computational"``, the full :math:`4^{n} \\times 4^{n}` matrix acting
@@ -349,10 +486,14 @@ class ClassicalShadow(Tomography):
             depth (int, optional): number of entangling layers of ``"ultra-shallow"``.
                 It is ignored by the other methods. Defaults to :math:`1`.
             nsamples (int, optional): number of circuits used to sample the frame of
-                ``"ultra-shallow"``. It is ignored by the other methods. Defaults to
-                :math:`1000`.
+                ``"ultra-shallow"``, or of ``"local-clifford"`` if ``robust=True``. It is
+                ignored otherwise. Defaults to :math:`1000`.
             chunksize (int, optional): maximum number of circuits executed at once
                 when sampling. Defaults to :math:`1000`.
+            robust (bool, optional): if ``True``, the frame of ``"local-clifford"`` is
+                sampled instead of using its analytical form. The frame of
+                ``"ultra-shallow"`` is always sampled, and ``"global-clifford"`` raises
+                ``NotImplementedError``. Defaults to ``False``.
             seed (int, optional): seed of the sampling. Defaults to ``None``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the calculation. If ``None``, it uses the current
@@ -371,13 +512,19 @@ class ClassicalShadow(Tomography):
                 ValueError, f"``basis`` must be one of {BASES}, but it is {basis}."
             )
 
+        if robust and method == "global-clifford":
+            raise_error(
+                NotImplementedError,
+                '``robust=True`` is not implemented for ``method="global-clifford"``.',
+            )
+
         backend = _check_backend(backend)
 
         if method == "global-clifford":
             eigenvalues = [1.0]
             eigenvalues.extend([1 / (2**nqubits + 1)] * (4**nqubits - 1))
             eigenvalues = backend.cast(eigenvalues, dtype=backend.float64)
-        elif method == "local-clifford":
+        elif method == "local-clifford" and not robust:
             single_qubit = backend.cast([1, 1 / 3, 1 / 3, 1 / 3], dtype=backend.float64)
             eigenvalues = single_qubit
             for _ in range(nqubits - 1):
@@ -445,6 +592,7 @@ class ClassicalShadow(Tomography):
         chunksize: int,
         depth: int,
         ncalibration: int,
+        robust: bool,
         seed: int | None,
         backend: Backend = None,
     ):
@@ -462,6 +610,7 @@ class ClassicalShadow(Tomography):
             chunksize (int): maximum number of circuits executed at once.
             depth (int): number of entangling layers of ``"ultra-shallow"``.
             ncalibration (int): number of circuits used to sample the frame.
+            robust (bool): if ``True``, the frame of ``"local-clifford"`` is sampled.
             seed (int or None): seed of the random unitaries.
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses the current
@@ -483,6 +632,7 @@ class ClassicalShadow(Tomography):
             depth,
             ncalibration,
             chunksize,
+            robust,
             # independent of the seed of the shadows, to avoid correlations
             None if seed is None else seed + 1,
             backend,
@@ -524,6 +674,7 @@ class ClassicalShadow(Tomography):
         chunksize: int,
         depth: int,
         ncalibration: int,
+        robust: bool,
         seed: int | None,
         backend: Backend = None,
     ):
@@ -546,6 +697,7 @@ class ClassicalShadow(Tomography):
             chunksize (int): maximum number of circuits executed at once.
             depth (int): number of entangling layers of ``"ultra-shallow"``.
             ncalibration (int): number of circuits used to sample the frame.
+            robust (bool): if ``True``, the frame of ``"local-clifford"`` is sampled.
             seed (int or None): seed of the random unitaries.
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses the current
@@ -579,6 +731,7 @@ class ClassicalShadow(Tomography):
             depth,
             ncalibration,
             chunksize,
+            robust,
             # independent of the seed of the shadows, to avoid correlations
             None if seed is None else seed + 1,
             backend,
@@ -687,13 +840,22 @@ class ClassicalShadow(Tomography):
                 for shadow_circuit, result in zip(circuits, results):
                     # the random unitary is what was appended after ``circuit``,
                     # without the final measurement
-                    unitary_circuit = Circuit(nqubits)
-                    unitary_circuit.add(shadow_circuit.queue[len(circuit.queue) : -1])
-                    # rows of the unitary indexed by the outcomes are <b|U
-                    rows = unitary_circuit.unitary(backend)[
-                        result.samples(binary=False)
-                    ]
-                    snapshot = snapshot + backend.conj(rows).T @ rows
+                    inverse = Circuit(nqubits, density_matrix=True)
+                    inverse.add(shadow_circuit.queue[len(circuit.queue) : -1])
+                    # the sum of U^{dagger} |b><b| U over the outcomes b is the evolution
+                    # of the diagonal matrix of their counts under the inverse of U,
+                    # which avoids building the matrix of U
+                    counts = result.frequencies(binary=False)
+                    outcomes = backend.cast(
+                        [counts.get(outcome, 0) for outcome in range(dim)],
+                        dtype=backend.complex128,
+                    )
+                    snapshot = (
+                        snapshot
+                        + backend.execute_circuit(
+                            inverse.invert(), initial_state=backend.diag(outcomes)
+                        ).state()
+                    )
 
                 # circuits hold reference cycles, so they are freed explicitly
                 # instead of waiting for the next automatic collection

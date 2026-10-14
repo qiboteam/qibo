@@ -1,6 +1,7 @@
 from qibo.models import hep
 from qibo.models.block_encoding import block_encoding_circuit
 from qibo.models.circuit import Circuit
+from qibo.models.double_bracket import DoubleBracketIteration
 from qibo.models.encodings import (
     binary_encoder,
     comp_basis_encoder,
@@ -39,6 +40,7 @@ __all__ = [
     "ZNE",
     "AdiabaticEvolution",
     "Circuit",
+    "DoubleBracketIteration",
     "Grover",
     "StateEvolution",
     "binary_encoder",

@@ -322,6 +322,57 @@ def test_poly_matrix(backend, size):
     backend.assert_allclose(backend.poly(matrix), target)
 
 
+@pytest.mark.parametrize("size", [2, 4, 8])
+def test_schur(backend, size):
+    backend.set_seed(42)
+    matrix = backend.random_normal(0, 1, (size, size)) + 1j * backend.random_normal(
+        0, 1, (size, size)
+    )
+    identity = backend.identity(size)
+
+    triangular, unitary = backend.schur(matrix, output="complex")
+
+    backend.assert_allclose(unitary @ backend.conj(unitary).T, identity, atol=1e-8)
+    backend.assert_allclose(
+        unitary @ triangular @ backend.conj(unitary).T, matrix, atol=1e-8
+    )
+    lower = np.tril(backend.to_numpy(triangular), k=-1)
+    backend.assert_allclose(lower, np.zeros_like(lower), atol=1e-8)
+
+
+@pytest.mark.parametrize("degenerate", [False, True])
+@pytest.mark.parametrize("size", [4, 8])
+def test_schur_normal(backend, size, degenerate):
+    if degenerate:
+        phases = np.repeat(np.exp(1j * np.array([0.3, 1.1, -0.7, 2.0])), size // 4)
+    else:
+        phases = np.exp(1j * np.linspace(0.1, 2.0, size))
+    basis = random_unitary(size, seed=42, backend=backend)
+    matrix = basis @ backend.cast(np.diag(phases)) @ backend.conj(basis).T
+
+    triangular, unitary = backend.schur(matrix, output="complex")
+
+    # the Schur form of a normal matrix is diagonal, even with repeated eigenvalues
+    triangular = backend.to_numpy(triangular)
+    backend.assert_allclose(triangular, np.diag(np.diag(triangular)), atol=1e-8)
+    backend.assert_allclose(
+        unitary @ backend.cast(triangular) @ backend.conj(unitary).T,
+        matrix,
+        atol=1e-8,
+    )
+
+
+def test_schur_real(backend):
+    backend.set_seed(42)
+    matrix = backend.random_normal(0, 1, (4, 4))
+
+    quasi_triangular, orthogonal = backend.schur(matrix)
+
+    backend.assert_allclose(
+        orthogonal @ quasi_triangular @ backend.transpose(orthogonal), matrix, atol=1e-8
+    )
+
+
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_argmax(backend, axis):
     backend.set_seed(42)

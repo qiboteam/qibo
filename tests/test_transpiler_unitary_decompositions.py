@@ -188,6 +188,100 @@ def test_two_qubit_decomposition_bell_unitary(backend, hz_zero):
     backend.assert_allclose(final_matrix, unitary, atol=1e-6, rtol=1e-6)
 
 
+@pytest.mark.parametrize("seed", [1, 2, 3])
+@pytest.mark.parametrize(
+    "gate_name, ncz",
+    [
+        ("CZ", 1),
+        ("CNOT", 1),
+        ("CY", 1),
+        ("RXX", 1),
+        ("RYY", 1),
+        ("RZZ", 1),
+        ("RZX", 1),
+        ("iSWAP", 2),
+        ("SWAP", 3),
+    ],
+)
+def test_two_qubit_decomposition_cz_count(backend, gate_name, ncz, seed):
+    """Locally equivalent unitaries use the minimal number of CZ gates."""
+    gate = getattr(gates, gate_name)
+    gate = gate(0, 1, math.pi / 2) if gate_name.startswith("R") else gate(0, 1)
+    circuit = Circuit(2)
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed, backend=backend), 0))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 10, backend=backend), 1))
+    circuit.add(gate)
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 20, backend=backend), 0))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 30, backend=backend), 1))
+    matrix = circuit.unitary(backend)
+
+    decomposition = two_qubit_decomposition(0, 1, matrix, backend=backend)
+    result = Circuit(2)
+    result.add(decomposition)
+
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == ncz
+    assert all(
+        len(gate.qubits) == 1 or isinstance(gate, gates.CZ) for gate in decomposition
+    )
+    backend.assert_allclose(result.unitary(backend), matrix, atol=1e-6)
+
+
+@pytest.mark.parametrize("seed", [5, 70, 298])
+def test_two_qubit_decomposition_iswap_hz_modulo_pi(backend, seed):
+    """The ``hz`` component of iSWAP can be a multiple of pi, which is a global phase.
+
+    The eigenvectors of the magic decomposition are degenerate for iSWAP, so the
+    representative of ``hz`` depends on the linear algebra library. For these seeds it
+    is pi with the default LAPACK, and the decomposition must still use two CZ gates.
+    """
+    circuit = Circuit(2)
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed, backend=backend), 0))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 10, backend=backend), 1))
+    circuit.add(gates.iSWAP(0, 1))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 20, backend=backend), 0))
+    circuit.add(gates.Unitary(random_unitary(2, seed=seed + 30, backend=backend), 1))
+    matrix = circuit.unitary(backend)
+
+    decomposition = two_qubit_decomposition(0, 1, matrix, backend=backend)
+    result = Circuit(2)
+    result.add(decomposition)
+
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == 2
+    backend.assert_allclose(result.unitary(backend), matrix, atol=1e-6)
+
+
+@pytest.mark.parametrize("seed", [None, 5])
+def test_two_qubit_decomposition_product_of_single_qubit_gates(backend, seed):
+    """A tensor product of single-qubit gates, with its phase, needs no CZ gate."""
+    matrix = backend.kron(
+        random_unitary(2, seed=seed, backend=backend),
+        random_unitary(2, seed=None if seed is None else seed + 1, backend=backend),
+    )
+    matrix = matrix * np.exp(0.3j)
+
+    decomposition = two_qubit_decomposition(0, 1, matrix, backend=backend)
+    result = Circuit(2)
+    result.add(decomposition)
+
+    assert [len(gate.qubits) for gate in decomposition] == [1, 1]
+    backend.assert_allclose(result.unitary(backend), matrix, atol=1e-6)
+
+
+def test_two_qubit_decomposition_near_cz_uses_two_cz(backend):
+    """A small but resolvable deviation from CZ is not rounded to a single CZ gate."""
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.RXX(0, 1, 1e-3))
+    matrix = circuit.unitary(backend)
+
+    decomposition = two_qubit_decomposition(0, 1, matrix, backend=backend)
+    result = Circuit(2)
+    result.add(decomposition)
+
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == 2
+    backend.assert_allclose(result.unitary(backend), matrix, atol=1e-6)
+
+
 def test_two_qubit_decomposition_no_entanglement(backend):
     """Test two-qubit decomposition on unitary that creates no entanglement."""
     matrix = np.array(

@@ -2262,6 +2262,96 @@ def test_matrix(backend, gate, qubits, params):
     backend.assert_allclose(gate.matrix(backend), backend.matrix(gate))
 
 
+@pytest.mark.parametrize("axis", ["y", "z"])
+@pytest.mark.parametrize(
+    "controls,target", [([0], 1), ([0, 1], 2), ([2, 0], 1), ([3, 1, 0], 2)]
+)
+def test_multiplexor(backend, controls, target, axis):
+    ncontrols = len(controls)
+    nqubits = ncontrols + 1
+    rotation = gates.RY if axis == "y" else gates.RZ
+    angles = np.random.default_rng(123).uniform(-np.pi, np.pi, 2**ncontrols)
+
+    # reference circuit: one multi-controlled rotation for each control bitstring
+    reference = Circuit(nqubits)
+    for j, angle in enumerate(angles):
+        bits = f"{j:0{ncontrols}b}"
+        flipped = [q for q, bit in zip(controls, bits) if bit == "0"]
+        reference.add(gates.X(q) for q in flipped)
+        reference.add(rotation(target, angle).controlled_by(*controls))
+        reference.add(gates.X(q) for q in flipped)
+    target_matrix = reference.unitary(backend)
+
+    gate = gates.Multiplexor(controls, target, angles, axis=axis)
+    assert gate.unitary
+    assert not gate.clifford
+    assert gate.qubits == tuple(controls) + (target,)
+    with pytest.raises(NotImplementedError):
+        gate.qasm_label
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    backend.assert_allclose(circuit.unitary(backend), target_matrix, atol=1e-8)
+
+    # test decomposition
+    decomposed = gate.decompose()
+    assert len(decomposed) == 2 ** (ncontrols + 1)
+    assert all(isinstance(g, (rotation, gates.CNOT)) for g in decomposed)
+
+    circuit = Circuit(nqubits)
+    circuit.add(decomposed)
+    backend.assert_allclose(circuit.unitary(backend), target_matrix, atol=1e-8)
+
+    # test dagger
+    matrix = gate.matrix(backend)
+    backend.assert_allclose(
+        gate.dagger().matrix(backend), backend.conj(matrix).T, atol=1e-8
+    )
+
+    # test update of the parameters
+    new_angles = np.random.default_rng(321).uniform(-np.pi, np.pi, 2**ncontrols)
+    gate.parameters = new_angles
+    backend.assert_allclose(
+        gate.matrix(backend),
+        gates.Multiplexor(controls, target, new_angles, axis=axis).matrix(backend),
+    )
+
+    # test on_qubits
+    qubit_map = {q: q + 1 for q in controls + [target]}
+    new_gate = gate.on_qubits(qubit_map)
+    assert new_gate.qubits == tuple(q + 1 for q in controls) + (target + 1,)
+    backend.assert_allclose(new_gate.matrix(backend), gate.matrix(backend))
+
+    # test on_qubits with a controlled gate (exercises the ``is_controlled_by`` branch)
+    control = nqubits
+    controlled_gate = gates.Multiplexor(controls, target, angles, axis).controlled_by(
+        control
+    )
+    qubit_map = {q: q + 1 for q in controls + [target, control]}
+    new_controlled_gate = controlled_gate.on_qubits(qubit_map)
+    assert new_controlled_gate.is_controlled_by
+    assert new_controlled_gate.control_qubits == (control + 1,)
+
+
+def test_multiplexor_many_controls():
+    ncontrols = 8
+    angles = np.random.default_rng(42).uniform(-np.pi, np.pi, 2**ncontrols)
+    gate = gates.Multiplexor(list(range(ncontrols)), ncontrols, angles, axis="y")
+
+    decomposed = gate.decompose()
+
+    assert len(decomposed) == 2 ** (ncontrols + 1)
+
+
+def test_multiplexor_errors():
+    with pytest.raises(ValueError):
+        gates.Multiplexor([], 0, [0.1])
+    with pytest.raises(ValueError):
+        gates.Multiplexor([0], 1, [0.1, 0.2], axis="x")
+    with pytest.raises(ValueError):
+        gates.Multiplexor([0, 1], 2, [0.1, 0.2, 0.3])
+
+
 @pytest.mark.parametrize(
     "gate",
     [

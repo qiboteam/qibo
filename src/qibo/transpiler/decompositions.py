@@ -1,8 +1,11 @@
 import cmath
 import math
 
+import numpy as np
+from numpy.typing import ArrayLike
+
 from qibo import gates
-from qibo.backends import Backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
@@ -54,6 +57,15 @@ class GateDecompositions:
     def __call__(self, gate, backend: Backend = None):
         """Decompose a gate."""
         decomposition = self._check_instance(gate, backend)
+
+        # Decompositions given as functions create new gates in every call, which
+        # already act on the right qubits if the gate acts on ``0, ..., n - 1``.
+        # The gates of static decompositions are shared between calls, so they are
+        # copied. The copy also remaps them onto the actual qubits of the gate.
+        creates_gates = callable(self.decompositions[gate.__class__])
+        if creates_gates and gate.qubits == tuple(range(len(gate.qubits))):
+            return decomposition
+
         return [g.on_qubits(dict(enumerate(gate.qubits))) for g in decomposition]
 
     def _set_precision_cliff_plus_t(
@@ -548,6 +560,74 @@ def _decomposition_generalized_rbs(gate):
     return list_gates
 
 
+def _decomposition_multiplexor(gate):
+    """Multiplexed rotation in Gray-code order, see Fig. 2 of Möttönen et al. (2004)."""
+    backend = _check_backend(None)
+
+    controls = list(reversed(range(len(gate.init_args[0]))))
+    target = len(controls)
+    rotation = gates.RY if gate.init_kwargs["axis"] == "y" else gates.RZ
+
+    thetas = _mottonen_compute_theta(gate.parameters[0], backend=backend)
+    code = _mottonen_gray_code(len(controls), backend=backend)
+    indices = backend.log2(code ^ backend.roll(code, -1))
+    indices = backend.cast(indices, dtype=backend.int64)
+
+    list_gates = []
+    for theta, index in zip(thetas, indices):
+        list_gates.append(rotation(target, theta))
+        list_gates.append(gates.CNOT(controls[int(index)], target))
+
+    return list_gates
+
+
+def _mottonen_compute_theta(
+    alpha: ArrayLike, backend: Backend | None = None
+) -> ArrayLike:
+    """Map uniformly controlled rotation angles to Gray-code decomposition angles.
+
+    See Eq. (3) in Möttönen et al. (2004).
+    """
+    backend = _check_backend(backend)
+
+    alpha = backend.cast(alpha, dtype=backend.float64)
+    orig_shape = alpha.shape
+    nqubits = int(math.log2(orig_shape[-1]))
+    if nqubits == 0:
+        return alpha
+
+    broadcasted = len(orig_shape) > 1
+    new_shape = (orig_shape[0],) + (2,) * nqubits if broadcasted else (2,) * nqubits
+    theta = backend.reshape(alpha, new_shape)
+
+    # cast to a backend tensor: cupy's tensordot rejects a raw numpy operand
+    hadamard = backend.cast(np.array([[1, 1], [1, -1]]) / 2, dtype=theta.dtype)
+    for i in range(broadcasted, nqubits + broadcasted):
+        theta = backend.tensordot(hadamard, theta, axes=[[1], [i]])
+
+    if nqubits > 1:
+        cnot = backend.reshape(backend.matrices.CNOT, (2, 2, 2, 2))
+        theta = backend.tensordot(
+            cnot, theta, axes=[[2, 3], [nqubits - 1, nqubits - 2]]
+        )
+        for i in range(broadcasted + 1, nqubits + broadcasted - 1):
+            theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, nqubits - 1]])
+        theta = backend.moveaxis(theta, 0, 1)
+
+    return backend.reshape(backend.transpose(theta), orig_shape)
+
+
+def _mottonen_gray_code(rank: int, backend: Backend | None = None) -> ArrayLike:
+    """Return Gray code of given rank as integer array."""
+    backend = _check_backend(backend)
+
+    code = backend.cast([0, 1], dtype=backend.int64)
+    for elem in range(1, rank):
+        code = backend.concatenate([code, code[::-1] + 2**elem])
+
+    return code
+
+
 # standard gate decompositions used by :meth:`qibo.gates.gates.Gate.decompose`
 standard_decompositions = GateDecompositions()
 standard_decompositions.add(gates.CNOT, [gates.CNOT(0, 1)])
@@ -815,6 +895,7 @@ standard_decompositions.add(
     gates.GeneralizedRBS,
     lambda gate: _decomposition_generalized_rbs(gate),
 )
+standard_decompositions.add(gates.Multiplexor, _decomposition_multiplexor)
 
 try:
     import pygridsynth

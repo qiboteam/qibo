@@ -13,6 +13,9 @@ from qibo.quantum_info._linalg_operations import (
 from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
+    cosine_sin_decomposition,
+    double_commutator,
+    group_commutator,
     lanczos,
     lie_closure,
     matrix_exponentiation,
@@ -22,6 +25,7 @@ from qibo.quantum_info.linalg_operations import (
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
+    schur_decomposition,
     singular_value_decomposition,
 )
 from qibo.quantum_info.metrics import infidelity, purity
@@ -29,6 +33,7 @@ from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_hermitian,
     random_statevector,
+    random_unitary,
 )
 
 
@@ -67,6 +72,77 @@ def test_commutator(backend):
 
     comm = commutator(X, Z)
     backend.assert_allclose(comm, -2j * Y)
+
+
+def test_double_commutator(backend):
+    I, X, Y = backend.matrices.I(2), backend.matrices.X, backend.matrices.Y
+    zeros = backend.zeros((2, 2))
+
+    # [X, [X, Y]] = [X, 2i Z] = 4 Y and [[X, X], Y] = 0
+    backend.assert_allclose(double_commutator(X, X, Y), 4 * Y)
+    backend.assert_allclose(double_commutator(X, X, Y, nesting="right"), 4 * Y)
+    backend.assert_allclose(double_commutator(X, X, Y, nesting="left"), zeros)
+
+    # [X, [Y, Y]] = 0 and [[X, Y], Y] = [2i Z, Y] = 4 X
+    backend.assert_allclose(double_commutator(X, Y, Y), zeros)
+    backend.assert_allclose(double_commutator(X, Y, Y, nesting="left"), 4 * X)
+
+    backend.assert_allclose(double_commutator(I, X, Y), zeros)
+    backend.assert_allclose(double_commutator(X, Y, I, nesting="left"), zeros)
+
+    matrix_1, matrix_2, matrix_3 = (
+        random_hermitian(4, seed=seed, backend=backend) for seed in (1, 2, 3)
+    )
+
+    # definitions
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3),
+        commutator(matrix_1, commutator(matrix_2, matrix_3)),
+    )
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="left"),
+        commutator(commutator(matrix_1, matrix_2), matrix_3),
+    )
+
+    # antisymmetry in the last (first) two arguments for right (left) nesting
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3),
+        -double_commutator(matrix_1, matrix_3, matrix_2),
+    )
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="left"),
+        -double_commutator(matrix_2, matrix_1, matrix_3, nesting="left"),
+    )
+
+    # Jacobi identity relates both nestings: [[A, B], C] = [A, [B, C]] - [B, [A, C]]
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="left"),
+        double_commutator(matrix_1, matrix_2, matrix_3)
+        - double_commutator(matrix_2, matrix_1, matrix_3),
+        atol=1e-10,
+    )
+
+    # default third operator: [A, [A, B]] (right) or [[A, B], B] (left)
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2),
+        commutator(matrix_1, commutator(matrix_1, matrix_2)),
+    )
+    backend.assert_allclose(
+        double_commutator(matrix_1, matrix_2, nesting="left"),
+        commutator(commutator(matrix_1, matrix_2), matrix_2),
+    )
+    backend.assert_allclose(double_commutator(X, Y), 4 * Y)
+    backend.assert_allclose(double_commutator(X, Y, nesting="left"), 4 * X)
+    backend.assert_allclose(double_commutator(X, X), zeros)
+
+    with pytest.raises(ValueError):
+        double_commutator(matrix_1, matrix_2, matrix_3, nesting="center")
+    with pytest.raises(TypeError):
+        double_commutator(matrix_1, matrix_2, backend.cast(np.random.rand(3, 3)))
+    with pytest.raises(TypeError):
+        double_commutator(
+            matrix_1, matrix_2, backend.cast(np.random.rand(3, 3)), nesting="left"
+        )
 
 
 def test_anticommutator(backend):
@@ -328,6 +404,115 @@ def test_singular_value_decomposition(backend):
     coeffs_sorted = backend.sort(coeffs)
 
     backend.assert_allclose(S_sorted, coeffs_sorted)
+
+
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_cosine_sin_decomposition(backend, nqubits):
+    dims = 2**nqubits
+    half = dims // 2
+    unitary = random_unitary(dims, backend=backend)
+
+    left, middle, right = cosine_sin_decomposition(unitary, backend=backend)
+
+    identity = backend.cast(np.eye(dims), dtype=unitary.dtype)
+    backend.assert_allclose(left @ middle @ right, unitary, atol=1e-8)
+    for matrix in (left, middle, right):
+        backend.assert_allclose(matrix @ backend.conj(matrix).T, identity, atol=1e-8)
+
+    # ``left`` and ``right`` are block diagonal, ``middle`` has the cosine-sine structure
+    zeros = backend.cast(np.zeros((half, half)), dtype=unitary.dtype)
+    for matrix in (left, right):
+        backend.assert_allclose(matrix[:half, half:], zeros, atol=1e-8)
+        backend.assert_allclose(matrix[half:, :half], zeros, atol=1e-8)
+
+    cosines, sines = middle[:half, :half], middle[half:, :half]
+    backend.assert_allclose(middle[half:, half:], cosines, atol=1e-8)
+    backend.assert_allclose(middle[:half, half:], -sines, atol=1e-8)
+    backend.assert_allclose(cosines, backend.diag(backend.diag(cosines)), atol=1e-8)
+    backend.assert_allclose(sines, backend.diag(backend.diag(sines)), atol=1e-8)
+
+
+@pytest.mark.parametrize("dims,nrows,ncols", [(8, 2, 3), (3, 1, 1), (6, 4, 2)])
+def test_cosine_sin_decomposition_partition(backend, dims, nrows, ncols):
+    unitary = random_unitary(dims, backend=backend)
+
+    left, middle, right = cosine_sin_decomposition(
+        unitary, block_nrows=nrows, block_ncols=ncols, backend=backend
+    )
+
+    backend.assert_allclose(left @ middle @ right, unitary, atol=1e-8)
+
+    zeros = backend.cast(np.zeros((nrows, dims - nrows)), dtype=unitary.dtype)
+    backend.assert_allclose(left[:nrows, nrows:], zeros, atol=1e-8)
+    backend.assert_allclose(left[nrows:, :nrows], backend.transpose(zeros), atol=1e-8)
+
+    zeros = backend.cast(np.zeros((ncols, dims - ncols)), dtype=unitary.dtype)
+    backend.assert_allclose(right[:ncols, ncols:], zeros, atol=1e-8)
+    backend.assert_allclose(right[ncols:, :ncols], backend.transpose(zeros), atol=1e-8)
+
+
+def test_cosine_sin_decomposition_errors(backend):
+    with pytest.raises(ValueError):
+        cosine_sin_decomposition(np.ones((2, 4)), backend=backend)
+
+    with pytest.raises(ValueError):
+        cosine_sin_decomposition(random_unitary(3, backend=backend), backend=backend)
+
+    unitary = random_unitary(4, backend=backend)
+    for block_nrows, block_ncols in [(0, 2), (4, 2), (2, 0), (2, 4), (-1, 2)]:
+        with pytest.raises(ValueError):
+            cosine_sin_decomposition(
+                unitary,
+                block_nrows=block_nrows,
+                block_ncols=block_ncols,
+                backend=backend,
+            )
+
+
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_schur_decomposition(backend, nqubits):
+    dims = 2**nqubits
+    unitary = random_unitary(dims, seed=42, backend=backend)
+
+    triangular, basis = schur_decomposition(unitary, backend=backend)
+
+    identity = backend.identity(dims)
+    backend.assert_allclose(basis @ backend.conj(basis).T, identity, atol=1e-8)
+    backend.assert_allclose(
+        basis @ triangular @ backend.conj(basis).T, unitary, atol=1e-8
+    )
+
+    # unitary matrices are normal, so the Schur form is diagonal with unit-modulus entries
+    triangular = backend.to_numpy(triangular)
+    backend.assert_allclose(triangular, np.diag(np.diag(triangular)), atol=1e-8)
+    backend.assert_allclose(np.abs(np.diag(triangular)), np.ones(dims), atol=1e-8)
+
+
+def test_schur_decomposition_outputs(backend):
+    matrix = np.random.default_rng(1).normal(size=(4, 4))
+    matrix = backend.cast(matrix, dtype=backend.float64)
+
+    # complex output of a real matrix is upper triangular
+    triangular, basis = schur_decomposition(matrix, backend=backend)
+    lower = np.tril(backend.to_numpy(triangular), k=-1)
+    backend.assert_allclose(lower, np.zeros_like(lower), atol=1e-8)
+    backend.assert_allclose(
+        basis @ triangular @ backend.conj(basis).T, matrix, atol=1e-8
+    )
+
+    # real output keeps ``basis`` orthogonal
+    quasi_triangular, basis = schur_decomposition(
+        matrix, output="real", backend=backend
+    )
+    assert not np.iscomplexobj(backend.to_numpy(basis))
+    backend.assert_allclose(
+        basis @ quasi_triangular @ backend.transpose(basis), matrix, atol=1e-8
+    )
+
+
+def test_schur_decomposition_errors(backend):
+    with pytest.raises(ValueError):
+        schur_decomposition(np.eye(2), output="imaginary", backend=backend)
 
 
 def test_schmidt_decomposition(backend):
@@ -1022,11 +1207,18 @@ def test_lanczos_arguments(backend):
     )
 
 
-@pytest.mark.parametrize("function", [commutator, anticommutator])
+@pytest.mark.parametrize("function", [commutator, anticommutator, group_commutator])
 def test_commutators_require_matrices(backend, function):
     vector = backend.cast(np.array([1.0, 2.0]))
-    with pytest.raises(TypeError):
+    matrix_2 = backend.cast(np.random.rand(2, 2))
+    matrix_3 = backend.cast(np.random.rand(3, 3))
+
+    with pytest.raises(TypeError, match="``operator_1`` must have shape"):
         function(vector, vector)
+    with pytest.raises(TypeError, match="``operator_2`` must have shape"):
+        function(matrix_2, vector)
+    with pytest.raises(TypeError, match="must have the same shape"):
+        function(matrix_2, matrix_3)
 
 
 def test_matrix_exponentiation_default_phase(backend):
