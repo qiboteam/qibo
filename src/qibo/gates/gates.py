@@ -2706,6 +2706,97 @@ class GeneralizedRBS(ParametrizedGate):
         return gate
 
 
+class Multiplexor(ParametrizedGate):
+    """Multiplexed (uniformly controlled) single-qubit rotation.
+
+    Given :math:`k` control qubits and one target qubit, this gate rotates the target
+    qubit around the ``axis`` of the Bloch sphere by an angle :math:`\\theta_{j}` that
+    depends on the computational basis state :math:`|j\\rangle` of the control qubits,
+    with :math:`0 \\leq j < 2^{k}`. Its matrix representation is block diagonal,
+
+    .. math::
+        \\sum_{j=0}^{2^{k} - 1} |j\\rangle\\langle j| \\otimes R_{a}(\\theta_{j}) \\, ,
+
+    where :math:`R_{a}` is :class:`qibo.gates.RY` or :class:`qibo.gates.RZ`.
+    The first control qubit is the most significant bit of :math:`j`.
+
+    When decomposed, this gate uses :math:`2^{k}` rotations and :math:`2^{k}`
+    :class:`qibo.gates.CNOT` gates arranged in a Gray-code order.
+
+    References:
+        1. M. Möttönen, J. J. Vartiainen, V. Bergholm, and M. M. Salomaa,
+        *Quantum circuits for general multiqubit gates*,
+        `Phys. Rev. Lett. 93, 130502 (2004) <https://doi.org/10.1103/PhysRevLett.93.130502>`_.
+
+        2. V. V. Shende, S. S. Bullock, and I. L. Markov,
+        *Synthesis of quantum-logic circuits*,
+        `IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst. 25, 1000 (2006)
+        <https://doi.org/10.1109/TCAD.2005.855930>`_.
+
+    Args:
+        controls (tuple or list): ids of the control qubits.
+        target (int): id of the target qubit.
+        angles (ArrayLike): the :math:`2^{k}` rotation angles.
+        axis (str, optional): rotation axis, either ``"y"`` or ``"z"``.
+            Defaults to ``"y"``.
+        trainable (bool, optional): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(
+        self,
+        controls: tuple[int, ...] | list[int],
+        target: int,
+        angles: ArrayLike,
+        axis: str = "y",
+        trainable: bool = True,
+    ):
+        if len(controls) == 0:
+            raise_error(
+                ValueError, "``Multiplexor`` gate must have at least one control qubit."
+            )
+
+        if axis not in ("y", "z"):
+            raise_error(
+                ValueError, f"``axis`` must be ``'y'`` or ``'z'``, got ``{axis}``."
+            )
+
+        if len(angles) != 2 ** len(controls):
+            raise_error(
+                ValueError,
+                f"``angles`` must have length {2 ** len(controls)} for "
+                + f"{len(controls)} control qubits, got {len(angles)}.",
+            )
+
+        super().__init__(trainable)
+        self.name = "multiplexor"
+        self.draw_label = f"UCR{axis.upper()}"
+        self.target_qubits = tuple(controls) + (target,)
+        self.unitary = True
+
+        self.parameter_names = "angles"
+        self.parameters = angles
+        self.nparams = len(angles)
+
+        self.init_args = [controls, target]
+        self.init_kwargs = {"angles": angles, "axis": axis, "trainable": trainable}
+
+    def on_qubits(self, qubit_map: dict) -> Gate:
+        controls = tuple(qubit_map.get(q) for q in self.init_args[0])
+        target = qubit_map.get(self.init_args[1])
+        gate = self.__class__(controls, target, **self.init_kwargs)
+        if self.is_controlled_by:
+            controls = (qubit_map.get(q) for q in self.control_qubits)
+            gate = gate.controlled_by(*controls)
+        gate.parameters = self.parameters
+        return gate
+
+    def _dagger(self) -> Gate:
+        init_kwargs = {**self.init_kwargs, "angles": -self.parameters[0]}
+        return self.__class__(*self.init_args, **init_kwargs)
+
+
 class Unitary(ParametrizedGate):
     """Arbitrary unitary gate.
 

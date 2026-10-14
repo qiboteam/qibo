@@ -38,6 +38,7 @@ from qibo.quantum_info.hamming_weight import HammingWeightResult
 from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
+    cosine_sin_decomposition,
     double_commutator,
     group_commutator,
     lanczos,
@@ -184,6 +185,7 @@ __all__ = [
     "comp_basis_to_pauli",
     "concurrence",
     "conditional_entropy",
+    "cosine_sin_decomposition",
     "decompose_permutation",
     "diamond_norm",
     "double_commutator",

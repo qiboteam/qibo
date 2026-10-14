@@ -13,6 +13,7 @@ from qibo.quantum_info._linalg_operations import (
 from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
+    cosine_sin_decomposition,
     double_commutator,
     group_commutator,
     lanczos,
@@ -31,6 +32,7 @@ from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_hermitian,
     random_statevector,
+    random_unitary,
 )
 
 
@@ -401,6 +403,69 @@ def test_singular_value_decomposition(backend):
     coeffs_sorted = backend.sort(coeffs)
 
     backend.assert_allclose(S_sorted, coeffs_sorted)
+
+
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_cosine_sin_decomposition(backend, nqubits):
+    dims = 2**nqubits
+    half = dims // 2
+    unitary = random_unitary(dims, backend=backend)
+
+    left, middle, right = cosine_sin_decomposition(unitary, backend=backend)
+
+    identity = backend.cast(np.eye(dims), dtype=unitary.dtype)
+    backend.assert_allclose(left @ middle @ right, unitary, atol=1e-8)
+    for matrix in (left, middle, right):
+        backend.assert_allclose(matrix @ backend.conj(matrix).T, identity, atol=1e-8)
+
+    # ``left`` and ``right`` are block diagonal, ``middle`` has the cosine-sine structure
+    zeros = backend.cast(np.zeros((half, half)), dtype=unitary.dtype)
+    for matrix in (left, right):
+        backend.assert_allclose(matrix[:half, half:], zeros, atol=1e-8)
+        backend.assert_allclose(matrix[half:, :half], zeros, atol=1e-8)
+
+    cosines, sines = middle[:half, :half], middle[half:, :half]
+    backend.assert_allclose(middle[half:, half:], cosines, atol=1e-8)
+    backend.assert_allclose(middle[:half, half:], -sines, atol=1e-8)
+    backend.assert_allclose(cosines, backend.diag(backend.diag(cosines)), atol=1e-8)
+    backend.assert_allclose(sines, backend.diag(backend.diag(sines)), atol=1e-8)
+
+
+@pytest.mark.parametrize("dims,nrows,ncols", [(8, 2, 3), (3, 1, 1), (6, 4, 2)])
+def test_cosine_sin_decomposition_partition(backend, dims, nrows, ncols):
+    unitary = random_unitary(dims, backend=backend)
+
+    left, middle, right = cosine_sin_decomposition(
+        unitary, block_nrows=nrows, block_ncols=ncols, backend=backend
+    )
+
+    backend.assert_allclose(left @ middle @ right, unitary, atol=1e-8)
+
+    zeros = backend.cast(np.zeros((nrows, dims - nrows)), dtype=unitary.dtype)
+    backend.assert_allclose(left[:nrows, nrows:], zeros, atol=1e-8)
+    backend.assert_allclose(left[nrows:, :nrows], backend.transpose(zeros), atol=1e-8)
+
+    zeros = backend.cast(np.zeros((ncols, dims - ncols)), dtype=unitary.dtype)
+    backend.assert_allclose(right[:ncols, ncols:], zeros, atol=1e-8)
+    backend.assert_allclose(right[ncols:, :ncols], backend.transpose(zeros), atol=1e-8)
+
+
+def test_cosine_sin_decomposition_errors(backend):
+    with pytest.raises(ValueError):
+        cosine_sin_decomposition(np.ones((2, 4)), backend=backend)
+
+    with pytest.raises(ValueError):
+        cosine_sin_decomposition(random_unitary(3, backend=backend), backend=backend)
+
+    unitary = random_unitary(4, backend=backend)
+    for block_nrows, block_ncols in [(0, 2), (4, 2), (2, 0), (2, 4), (-1, 2)]:
+        with pytest.raises(ValueError):
+            cosine_sin_decomposition(
+                unitary,
+                block_nrows=block_nrows,
+                block_ncols=block_ncols,
+                backend=backend,
+            )
 
 
 def test_schmidt_decomposition(backend):
