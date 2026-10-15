@@ -10,8 +10,8 @@ from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.router import _find_connected_qubit
 
 
-def _find_gates_qubits_pairs(circuit: Circuit) -> list[tuple[int]]:
-    """Helper method for :meth:`qibo.transpiler.placer`.
+def _find_gates_qubits_pairs(circuit: Circuit) -> list[list[int]]:
+    """Helper method for the placers in :mod:`qibo.transpiler.placer`.
 
     Translate circuit into a list of pairs of qubits to be used by the router and placer.
 
@@ -19,13 +19,13 @@ def _find_gates_qubits_pairs(circuit: Circuit) -> list[tuple[int]]:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be translated.
 
     Returns:
-        List[Tuple[int]]: Pairs of qubits targeted by two qubits gates.
+        list[list[int]]: Sorted pairs of qubits targeted by two qubits gates.
     """
     gates_qubits_pairs = []
     for gate in circuit.queue:
         if isinstance(gate, gates.M):
-            pass
-        elif len(gate.qubits) == 2:
+            continue
+        if len(gate.qubits) == 2:
             gates_qubits_pairs.append(sorted(gate.qubits))
         elif len(gate.qubits) >= 3:
             raise_error(
@@ -44,7 +44,8 @@ class StarConnectivityPlacer(Placer):
              q
 
     Args:
-        connectivity (:class:`networkx.Graph`): Star connectivity graph.
+        connectivity (:class:`networkx.Graph`, optional): Star connectivity graph.
+            Defaults to ``None``.
     """
 
     def __init__(self, connectivity: nx.Graph | None = None):
@@ -116,8 +117,9 @@ class Subgraph(Placer):
     Since it is a :math:`NP`-complete problem, it can take exponential time for large circuits.
     This initialization method may fail for very short circuits.
 
-    Attributes:
-        connectivity (:class:`networkx.Graph`): Hardware connectivity.
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            Defaults to ``None``.
     """
 
     def __init__(self, connectivity: nx.Graph | None = None):
@@ -169,11 +171,12 @@ class Subgraph(Placer):
 
 class Random(Placer):
     """
-    Random initialization with greedy policy, let a maximum number of 2-qubit
+    Random initialization with greedy policy, so that a maximum number of 2-qubit
     gates can be applied without introducing any SWAP gate.
 
-    Attributes:
-        connectivity (:class:`networkx.Graph`): Hardware connectivity.
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            Defaults to ``None``.
         samples (int, optional): Number of random initializations to try. If :math:`0`,
             no random initialization is tried and the qubits are placed following the order
             of the nodes of ``connectivity``, i.e. the :math:`i`-th qubit is placed on the
@@ -187,18 +190,21 @@ class Random(Placer):
         self,
         connectivity: nx.Graph | None = None,
         samples: int = 100,
-        seed: int | None = None,
+        seed: int | np.random.Generator | None = None,
     ):
-
         self.connectivity = connectivity
         self.samples = samples
         self.seed = seed
+        self._rng = np.random.default_rng(seed)
 
-    def __call__(self, circuit, backend: Backend | None = None) -> None:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Find an initial layout of the given circuit using random greedy algorithm.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
+                Not used by this placer, it is accepted to be compatible with
+                :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
         assert_placement(circuit, self.connectivity)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
@@ -209,12 +215,7 @@ class Random(Placer):
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
         final_cost = self._cost(final_graph, gates_qubits_pairs)
         for _ in range(self.samples):
-            mapping = dict(
-                zip(
-                    keys,
-                    np.random.choice(range(nodes), size=nodes, replace=False),
-                )
-            )
+            mapping = dict(zip(keys, self._rng.permutation(nodes)))
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = self._cost(graph, gates_qubits_pairs)
 
@@ -224,7 +225,6 @@ class Random(Placer):
                 return
 
             if cost < final_cost:
-                final_graph = graph
                 final_mapping = mapping
                 final_cost = cost
 
@@ -233,14 +233,14 @@ class Random(Placer):
 
     def _cost(self, graph: nx.Graph, gates_qubits_pairs: list) -> int:
         """
-        Compute the cost associated to an initial layout as the lengh of the reduced circuit.
+        Compute the cost associated to an initial layout as the length of the reduced circuit.
 
         Args:
             graph (:class:`networkx.Graph`): Hardware connectivity.
             gates_qubits_pairs (list): Circuit representation.
 
         Returns:
-            (int): lengh of the reduced circuit.
+            (int): length of the reduced circuit.
         """
         for allowed, gate in enumerate(gates_qubits_pairs):
             if gate not in graph.edges():
@@ -285,13 +285,22 @@ class ReverseTraversal(Placer):
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Find the initial layout of the given circuit using Reverse Traversal placement.
 
+        Method works in-place.
+
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
+                Not used by this placer, it is accepted to be compatible with
+                :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
         assert_placement(circuit, self.connectivity)
         self.routing_algorithm.connectivity = self.connectivity
         new_circuit = self._assemble_circuit(circuit)
-        self._routing_step(new_circuit)
+        final_layout = self._routing_step(new_circuit)
+
+        # The final layout of the reversed circuit is the initial layout of the circuit.
+        wire_names = circuit.wire_names.copy()
+        circuit.wire_names = [wire_names[final_layout[name]] for name in wire_names]
 
     def _assemble_circuit(self, circuit: Circuit) -> Circuit:
         """Assemble a single circuit to apply Reverse Traversal placement based on depth.
@@ -335,6 +344,9 @@ class ReverseTraversal(Placer):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
+
+        Returns:
+            dict: Final {logical: physical} qubit mapping.
         """
         _, final_mapping = self.routing_algorithm(circuit)
 

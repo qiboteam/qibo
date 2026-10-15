@@ -7,6 +7,7 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.transpiler._exceptions import (
     ConnectivityError,
+    DecompositionError,
     PlacementError,
     TranspilerPipelineError,
 )
@@ -16,10 +17,12 @@ from qibo.transpiler.asserts import (
     assert_decomposition,
     assert_placement,
 )
-from qibo.transpiler.unroller import DecompositionError, NativeGates, Unroller
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
-def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list[str]):
+def restrict_connectivity_qubits(
+    connectivity: nx.Graph, qubits: list[int | str]
+) -> nx.Graph:
     """Restrict the connectivity to selected qubits.
 
     Args:
@@ -48,14 +51,15 @@ def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list[str]):
 
 
 class Passes:
-    """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially:
+    """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially.
 
     Args:
         passes (list, optional): List of transpiler passes to be applied sequentially.
             If ``None``, default transpiler will be used. Defaults to ``None``.
         connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            It is required if ``on_qubits`` is given. Defaults to ``None``.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware.
-            Defaults to :class:`qibo.transpiler.unroller.NativeGates.default()`.
+            Defaults to :meth:`qibo.transpiler.unroller.NativeGates.default`.
         on_qubits (list, optional): List of qubits to be used in the transpiler.
             If ``None``, all qubits in the connectivity will be used. Defaults to ``None``.
     """
@@ -63,11 +67,16 @@ class Passes:
     def __init__(
         self,
         passes: list | None = None,
-        connectivity: nx.Graph = None,
+        connectivity: nx.Graph | None = None,
         native_gates: NativeGates | None = None,
         on_qubits: list | None = None,
     ):
         if on_qubits is not None:
+            if connectivity is None:
+                raise_error(
+                    ConnectivityError,
+                    "``connectivity`` must be provided when ``on_qubits`` is given.",
+                )
             connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
         if native_gates is None:
             native_gates = NativeGates.default()
@@ -75,15 +84,21 @@ class Passes:
         self.native_gates = native_gates
         self.passes = [] if passes is None else passes
 
-    def __call__(self, circuit, backend: Backend = None):
+    def __call__(
+        self, circuit: Circuit, backend: Backend | None = None
+    ) -> tuple[Circuit, dict | None]:
         """Apply the transpiler pipeline to the circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend passed
+                to the transpiler passes that take one. If ``None``, defaults to the
+                global backend. Defaults to ``None``.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final
-            {logical: physical} qubit mapping.
+            {logical: physical} qubit mapping. The mapping is ``None`` if the pipeline
+            has no router.
         """
         backend = _check_backend(backend)
 
@@ -113,7 +128,7 @@ class Passes:
                 )
         return circuit, final_layout
 
-    def is_satisfied(self, circuit: Circuit):
+    def is_satisfied(self, circuit: Circuit) -> bool:
         """Check if the circuit respects the hardware connectivity and native gates.
 
         Args:

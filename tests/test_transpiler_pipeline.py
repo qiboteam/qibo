@@ -60,6 +60,12 @@ def test_restrict_qubits_error_not_connected(star_connectivity):
     assert "New connectivity graph is not connected." in str(excinfo.value)
 
 
+def test_on_qubits_without_connectivity_error():
+    with pytest.raises(ConnectivityError) as excinfo:
+        Passes(passes=None, on_qubits=[0, 1, 2])
+    assert "``connectivity`` must be provided" in str(excinfo.value)
+
+
 def test_restrict_qubits(star_connectivity):
     new_connectivity = restrict_connectivity_qubits(
         star_connectivity(["A", "B", "C", "D", "E"]), ["A", "B", "C"]
