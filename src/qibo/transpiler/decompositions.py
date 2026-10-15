@@ -1,4 +1,3 @@
-import cmath
 import math
 
 import numpy as np
@@ -24,7 +23,7 @@ class GateDecompositions:
         """Register a decomposition for a gate."""
         self.decompositions[gate] = decomposition
 
-    def _check_instance(self, gate, backend: Backend = None):
+    def _check_instance(self, gate: gates.Gate, backend: Backend | None = None) -> list:
         special_gates = (
             gates.FusedGate,
             gates.Unitary,
@@ -44,17 +43,17 @@ class GateDecompositions:
 
         return decomposition
 
-    def count_2q(self, gate, backend: Backend):
+    def count_2q(self, gate: gates.Gate, backend: Backend | None = None) -> int:
         """Count the number of two-qubit gates in the decomposition of the given gate."""
         decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) > 1))
 
-    def count_1q(self, gate, backend):
+    def count_1q(self, gate: gates.Gate, backend: Backend | None = None) -> int:
         """Count the number of single qubit gates in the decomposition of the given gate."""
         decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) == 1))
 
-    def __call__(self, gate, backend: Backend = None):
+    def __call__(self, gate: gates.Gate, backend: Backend | None = None) -> list:
         """Decompose a gate."""
         decomposition = self._check_instance(gate, backend)
 
@@ -89,11 +88,8 @@ class GateDecompositions:
             theta = mpmath.mpmathify(theta)
 
             sequence = gridsynth_gates(theta=theta, epsilon=self._epsilon)
-            sequence = sequence.split("W")
-            num_global_phase = len(sequence[1:])
-            sequence = sequence[0]
-
-            cmath.exp(1j * num_global_phase * math.pi / 4)
+            # the "W" gates are global phases, which are dropped
+            sequence = sequence.split("W")[0]
 
             gate_list = [
                 getattr(gates, gate_name)(qubit) for gate_name in reversed(sequence)
@@ -101,10 +97,13 @@ class GateDecompositions:
 
             return gate_list
         except ModuleNotFoundError:  # pragma: no cover
-            raise_error(NotImplementedError)
+            raise_error(
+                NotImplementedError,
+                "``pygridsynth`` and ``mpmath`` are required for this decomposition.",
+            )
 
 
-def _u3_to_gpi2(t, p, l):
+def _u3_to_gpi2(t: float, p: float, l: float) -> list[gates.Gate]:
     """Decompose a :class:`qibo.gates.U3` gate into :class:`qibo.gates.GPI2` gates.
 
     The decomposition is optimized to use the minimum number of gates.
@@ -560,7 +559,7 @@ def _decomposition_generalized_rbs(gate):
     return list_gates
 
 
-def _decomposition_multiplexor(gate):
+def _decomposition_multiplexor(gate: gates.Gate) -> list[gates.Gate]:
     """Multiplexed rotation in Gray-code order, see Fig. 2 of Möttönen et al. (2004)."""
     backend = _check_backend(None)
 
@@ -610,7 +609,7 @@ def _mottonen_compute_theta(
         theta = backend.tensordot(
             cnot, theta, axes=[[2, 3], [nqubits - 1, nqubits - 2]]
         )
-        for i in range(broadcasted + 1, nqubits + broadcasted - 1):
+        for _ in range(broadcasted + 1, nqubits + broadcasted - 1):
             theta = backend.tensordot(cnot, theta, axes=[[2, 3], [1, nqubits - 1]])
         theta = backend.moveaxis(theta, 0, 1)
 
