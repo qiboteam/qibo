@@ -67,6 +67,8 @@ def u3_decomposition(
 
     Args:
         unitary (ArrayLike): Unitary :math:`2 \\times 2` matrix to be decomposed.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend to be used in the
+            calculation.
 
     Returns:
         Tuple[float, float, float]: Parameters of :class:`qibo.gates.gates.U3` gate.
@@ -141,12 +143,15 @@ def calculate_psi(
 def calculate_single_qubit_unitaries(
     psi: ArrayLike, backend: Backend | None = None
 ) -> tuple[ArrayLike, ArrayLike]:
-    """Calculates local unitaries that maps a maximally entangled basis to the magic basis.
+    """Calculates local unitaries that map a maximally entangled basis to the magic basis.
 
     See Lemma 1 of Appendix A in Ref. [1].
 
     Args:
         psi (ArrayLike): Maximally entangled two-qubit states that define a basis.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
+            in the calculation. If ``None``, it uses the current backend.
+            Defaults to ``None``.
 
     Returns:
         Tuple[ArrayLike, ArrayLike]: Local unitaries UA and UB that map the given
@@ -154,9 +159,11 @@ def calculate_single_qubit_unitaries(
 
     References:
         1. B. Kraus and J. I. Cirac, *Optimal creation of entanglement using a two-qubit gate*,
-        `Phys. Rev. A 63, 062309 (2001) <https://doi.org/10.1103/PhysRevA.63.062309 >`_.
+        `Phys. Rev. A 63, 062309 (2001) <https://doi.org/10.1103/PhysRevA.63.062309>`_.
 
     """
+    backend = _check_backend(backend)
+
     psi_magic = backend.matmul(backend.conj(backend.cast(magic_basis)).T, psi)
     if (
         backend.real(backend.matrix_norm(backend.imag(psi_magic))) > 1e-6
@@ -749,7 +756,9 @@ def _euler_frames(gate_classes: tuple[type[Gate], ...]) -> tuple | None:
     axes = []
     for _, word, _, gate_class, extra in best[1:]:
         inverse_word = tuple(
-            gate for gate in reversed(word) for gate in (gate,) * (fixed[gate][1] - 1)
+            inverse_gate
+            for gate in reversed(word)
+            for inverse_gate in (gate,) * (fixed[gate][1] - 1)
         )
         axes.append((gate_class, extra, word, inverse_word))
 
