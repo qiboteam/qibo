@@ -2,6 +2,7 @@
 
 from functools import reduce
 
+import networkx as nx
 import numpy as np
 import pytest
 
@@ -416,6 +417,294 @@ def test_fermi_hubbard_chain_lattice(
     lattice = FermiHubbard((1, nsites), **kwargs)
 
     backend.assert_allclose(lattice.matrix, chain.matrix)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize(
+    "graph, lattice, closed_boundary",
+    [
+        (nx.path_graph(3), 3, False),
+        (nx.cycle_graph(3), 3, True),
+        (nx.convert_node_labels_to_integers(nx.grid_2d_graph(2, 2)), (2, 2), False),
+    ],
+)
+def test_fermi_hubbard_graph_regular(backend, graph, lattice, closed_boundary, dense):
+    """Graphs with chain and rectangular connectivity must reproduce the lattice models."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "dense": dense,
+        "backend": backend,
+    }
+    target = FermiHubbard(
+        lattice,
+        closed_boundary=closed_boundary,
+        labelling="row_major",
+        **kwargs,
+    )
+    hamiltonian = FermiHubbard(graph, **kwargs)
+
+    assert hamiltonian.nqubits == target.nqubits
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "graph",
+    [
+        nx.complete_graph(3),
+        nx.Graph([(0, 2), (1, 2)]),
+        nx.Graph([("a", "c"), ("b", "c")]),
+        nx.star_graph(3),
+    ],
+)
+def test_fermi_hubbard_graph_dense_symbolic(backend, graph):
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "backend": backend,
+    }
+    dense = FermiHubbard(graph, dense=True, **kwargs)
+    symbolic = FermiHubbard(graph, dense=False, **kwargs)
+
+    assert dense.nqubits == 2 * graph.number_of_nodes()
+    backend.assert_allclose(dense.matrix, symbolic.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("graph", [nx.complete_graph(3), nx.star_graph(3)])
+def test_fermi_hubbard_graph_free_fermions(backend, graph):
+    """At :math:`U = 0`, the ground-state energy must be equal to the sum, over both spin
+    species, of the negative single-particle energies of the hopping matrix."""
+    t = -1.3
+
+    hopping = backend.cast(t * nx.to_numpy_array(graph), dtype=backend.float64)
+    levels = backend.eigvalsh(hopping)
+    target = 2 * backend.sum(levels[levels < 0])
+
+    hamiltonian = FermiHubbard(
+        graph, hopping_strength=t, interaction_strength=0.0, backend=backend
+    )
+    energies = hamiltonian.eigenvalues()
+
+    backend.assert_allclose(backend.min(energies), target, atol=1e-8)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_fermi_hubbard_graph_integer_nodes(backend, dense):
+    """Integer nodes from 0 to n - 1 are site labels, regardless of insertion order."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "dense": dense,
+        "backend": backend,
+    }
+    target = FermiHubbard(nx.Graph([(0, 1), (0, 2)]), **kwargs)
+    hamiltonian = FermiHubbard(nx.Graph([(2, 0), (0, 1)]), **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_fermi_hubbard_graph_other_nodes(backend, dense):
+    """Nodes that are not integers from 0 to n - 1 are labeled by their order in the graph."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "closed_boundary": False,
+        "dense": dense,
+        "backend": backend,
+    }
+    target = FermiHubbard(3, **kwargs)
+    hamiltonian = FermiHubbard(nx.Graph([("a", "b"), ("b", "c")]), **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_fermi_hubbard_graph_isolated_node(backend, dense):
+    """Isolated nodes are sites without hopping."""
+    graph = nx.Graph([(0, 1)])
+    graph.add_node(2)
+    kwargs = {"hopping_strength": -1.5, "dense": dense, "backend": backend}
+
+    free = FermiHubbard(graph, interaction_strength=0.0, **kwargs)
+    target = _multikron(
+        [
+            FermiHubbard(2, interaction_strength=0.0, **kwargs).matrix,
+            backend.identity(4),
+        ],
+        backend=backend,
+    )
+    backend.assert_allclose(free.matrix, target, atol=1e-10)
+
+    interacting = FermiHubbard(graph, interaction_strength=0.75, **kwargs)
+    interaction = FermiHubbard(nx.empty_graph(3), interaction_strength=0.75, **kwargs)
+    backend.assert_allclose(
+        interacting.matrix - free.matrix, interaction.matrix, atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_fermi_hubbard_graph_weights_linear(backend, dense):
+    """At :math:`U = 0`, the Hamiltonian is linear in the edge weights."""
+    weights = {(0, 1): 0.5, (1, 2): -2.0, (0, 2): 1.5}
+    kwargs = {
+        "hopping_strength": -1.3,
+        "interaction_strength": 0.0,
+        "dense": dense,
+        "backend": backend,
+    }
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(*edge, weight) for edge, weight in weights.items()])
+    hamiltonian = FermiHubbard(graph, **kwargs)
+
+    target = 0
+    for edge, weight in weights.items():
+        single = nx.empty_graph(3)
+        single.add_edge(*edge)
+        target = target + weight * FermiHubbard(single, **kwargs).matrix
+
+    backend.assert_allclose(hamiltonian.matrix, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_fermi_hubbard_graph_weights_uniform(backend, dense):
+    """A uniform weight :math:`w` is equivalent to rescaling the hopping strength by :math:`w`."""
+    kwargs = {"interaction_strength": 0.75, "dense": dense, "backend": backend}
+
+    graph = nx.complete_graph(3)
+    nx.set_edge_attributes(graph, 2.5, "weight")
+    hamiltonian = FermiHubbard(graph, hopping_strength=-1.5, **kwargs)
+    target = FermiHubbard(nx.complete_graph(3), hopping_strength=-3.75, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_fermi_hubbard_graph_weights_default(backend, dense):
+    """Edges without a ``"weight"`` attribute have weight one, and other attributes are ignored."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "dense": dense,
+        "backend": backend,
+    }
+    graph = nx.Graph()
+    graph.add_edge(0, 1, weight=1.0)
+    graph.add_edge(1, 2, cost=10.0)
+
+    target = FermiHubbard(nx.path_graph(3), **kwargs)
+    hamiltonian = FermiHubbard(graph, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_fermi_hubbard_graph_weights_zero(backend, dense):
+    """An edge with zero weight is equivalent to a missing edge."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "dense": dense,
+        "backend": backend,
+    }
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 1.0), (1, 2, 0.0)])
+
+    target = nx.empty_graph(3)
+    target.add_edge(0, 1)
+
+    hamiltonian = FermiHubbard(graph, **kwargs)
+    target = FermiHubbard(target, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("graph", [nx.complete_graph(3), nx.star_graph(3)])
+def test_fermi_hubbard_graph_weights_free_fermions(backend, graph):
+    """At :math:`U = 0`, the ground-state energy must be equal to the sum, over both spin
+    species, of the negative single-particle energies of the weighted hopping matrix."""
+    t = -1.3
+    for index, (node_a, node_b) in enumerate(graph.edges):
+        graph[node_a][node_b]["weight"] = 0.5 + index
+
+    hopping = backend.cast(
+        t * nx.to_numpy_array(graph, weight="weight"), dtype=backend.float64
+    )
+    levels = backend.eigvalsh(hopping)
+    target = 2 * backend.sum(levels[levels < 0])
+
+    hamiltonian = FermiHubbard(
+        graph, hopping_strength=t, interaction_strength=0.0, backend=backend
+    )
+    energies = hamiltonian.eigenvalues()
+
+    backend.assert_allclose(backend.min(energies), target, atol=1e-8)
+
+
+@pytest.mark.parametrize("graph_type", [nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph])
+def test_fermi_hubbard_graph_weights_edge_multiplicity(backend, graph_type):
+    """Edges between the same pair of nodes are merged if their weights are equal."""
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "backend": backend,
+    }
+
+    graph = graph_type()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (1, 0, 2.0), (1, 2, 0.5), (1, 2, 0.5)])
+
+    target = nx.Graph()
+    target.add_weighted_edges_from([(0, 1, 2.0), (1, 2, 0.5)])
+
+    hamiltonian = FermiHubbard(graph, **kwargs)
+    target = FermiHubbard(target, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("graph_type", [nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph])
+def test_fermi_hubbard_graph_weights_value_error(backend, graph_type):
+    graph = graph_type()
+    graph.add_weighted_edges_from([(0, 1, 1.0), (1, 0, 2.0)])
+
+    with pytest.raises(ValueError):
+        FermiHubbard(graph, backend=backend)
+
+
+@pytest.mark.parametrize("graph_type", [nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph])
+def test_fermi_hubbard_graph_edge_multiplicity(backend, graph_type):
+    """Edge directions and multiplicities are ignored."""
+    edges = [(0, 1), (1, 0), (1, 2), (1, 2)]
+    kwargs = {
+        "hopping_strength": -1.5,
+        "interaction_strength": 0.75,
+        "backend": backend,
+    }
+
+    target = FermiHubbard(nx.Graph(edges), **kwargs)
+    hamiltonian = FermiHubbard(graph_type(edges), **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_fermi_hubbard_graph_ignored_arguments(backend):
+    """``closed_boundary`` and ``labelling`` do not change a model defined by a graph."""
+    graph = nx.cycle_graph(3)
+    target = FermiHubbard(graph, backend=backend)
+    hamiltonian = FermiHubbard(
+        graph, closed_boundary=False, labelling="row_major", backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix)
+
+
+def test_fermi_hubbard_graph_value_error(backend):
+    with pytest.raises(ValueError):
+        FermiHubbard(nx.Graph(), backend=backend)
+
+    with pytest.raises(ValueError):
+        FermiHubbard(nx.Graph([(0, 0), (0, 1)]), backend=backend)
 
 
 @pytest.mark.parametrize("nsites", [(2,), (2, 2, 2), "2", 2.0])
