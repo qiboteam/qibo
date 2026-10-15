@@ -705,7 +705,7 @@ def _mcx_gidney_linear_depth(
 
 
 def _mcx_gidney_log_depth(
-    controls: tuple[int, ...], target: int, ancillas: tuple[int, ...], clean: bool
+    controls: tuple[int, ...], target: int, ancillas: tuple[int, int], clean: bool
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled :math:`X` gate with two auxiliary qubits in logarithmic depth.
 
@@ -916,7 +916,7 @@ def _nie_first_half(
 
 
 def _toffoli(
-    controls: tuple[int, ...], target: int, cancel: str | None = None
+    controls: tuple[int, int], target: int, cancel: str | None = None
 ) -> list[gates.Gate]:
     """Toffoli gate up to a relative phase, with :math:`3` CNOTs instead of :math:`6`.
 
