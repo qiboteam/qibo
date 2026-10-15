@@ -1,7 +1,5 @@
 """Classical shadows tomography with random Clifford measurements."""
 
-from gc import collect
-
 from numpy.typing import ArrayLike
 
 from qibo import Circuit, gates
@@ -857,9 +855,6 @@ class ClassicalShadow(Tomography):
                         ).state()
                     )
 
-                # circuits hold reference cycles, so they are freed explicitly
-                # instead of waiting for the next automatic collection
                 del circuits, results
-                collect()
 
             yield snapshot / (size * nshots)
