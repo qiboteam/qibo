@@ -127,11 +127,12 @@ def FermiHubbard(
         weights = {}
         for node_a, node_b, weight in nsites.edges(data="weight", default=1):
             bond = tuple(sorted((labels[node_a], labels[node_b])))
-            if weights.setdefault(bond, weight) != weight:
+            if bond in weights and weights[bond] != weight:
                 raise_error(
                     ValueError,
                     f"Edges between nodes {node_a} and {node_b} have different weights.",
                 )
+            weights[bond] = weight
         weights = dict(sorted(weights.items()))
     else:
         if isinstance(nsites, (int, np.integer)):
