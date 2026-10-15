@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import networkx as nx
 
 from qibo import Circuit
+from qibo.backends import Backend
 
 
 class Placer(ABC):
@@ -17,13 +18,16 @@ class Placer(ABC):
         """
 
     @abstractmethod
-    def __call__(self, circuit: Circuit, *args):
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Find initial qubit mapping.
 
         Method works in-place.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be placed.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
+                Placers that do not need a backend accept it to be compatible with
+                :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
 
 
