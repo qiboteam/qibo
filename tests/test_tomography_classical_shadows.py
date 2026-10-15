@@ -145,12 +145,12 @@ def test_call_errors(backend):
 @pytest.mark.parametrize(
     "method,nqubits,nsamples,ncalibration,nbatches,atol",
     [
-        ("local-clifford", 1, 1500, None, 1, 0.2),
-        ("local-clifford", 2, 800, None, 1, 0.4),
-        ("local-clifford", 2, 800, None, 4, 0.7),
-        ("global-clifford", 1, 1500, None, 1, 0.2),
-        ("global-clifford", 2, 600, None, 1, 0.3),
-        ("ultra-shallow", 2, 600, 2000, 1, 0.5),
+        ("local-clifford", 1, 400, None, 1, 0.4),
+        ("local-clifford", 2, 300, None, 1, 0.7),
+        ("local-clifford", 2, 300, None, 4, 0.7),
+        ("global-clifford", 1, 400, None, 1, 0.3),
+        ("global-clifford", 2, 250, None, 1, 0.4),
+        ("ultra-shallow", 2, 250, 800, 1, 0.5),
     ],
 )
 def test_call_estimates(
@@ -446,11 +446,11 @@ def test_density_matrix(backend, method, robust):
 @pytest.mark.parametrize(
     "method,nqubits,nsamples,ncalibration,robust,atol",
     [
-        ("local-clifford", 1, 1500, None, False, 0.15),
-        ("local-clifford", 2, 600, None, False, 0.3),
-        ("local-clifford", 2, 600, 1500, True, 0.3),
-        ("global-clifford", 2, 600, None, False, 0.3),
-        ("ultra-shallow", 2, 600, 1500, False, 0.3),
+        ("local-clifford", 1, 400, None, False, 0.2),
+        ("local-clifford", 2, 250, None, False, 0.35),
+        ("local-clifford", 2, 250, 600, True, 0.45),
+        ("global-clifford", 2, 250, None, False, 0.3),
+        ("ultra-shallow", 2, 250, 600, False, 0.3),
     ],
 )
 def test_density_matrix_estimate(

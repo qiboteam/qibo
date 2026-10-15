@@ -7,7 +7,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.gates.abstract import GATES_CONTROLLED_BY_DEFAULT
-from qibo.quantum_info.random_ensembles import random_unitary
+from qibo.quantum_info.random_ensembles import random_statevector, random_unitary
 from qibo.transpiler import multicontrolled_decompositions
 from qibo.transpiler.multicontrolled_decompositions import (
     multi_controlled_decomposition,
@@ -198,7 +198,7 @@ FREE_QUBITS_CASES = [
 
 @pytest.mark.parametrize(("nctrl", "nfree"), FREE_QUBITS_CASES)
 def test_x_decompose_with_free_qubits(backend, nctrl, nfree):
-    """The free qubits can be in any state, so the whole unitary must be exact."""
+    """The free qubits can be in any state, so the action on random states must be exact."""
     nqubits = nctrl + 1 + nfree
     controls, target, free = (
         tuple(range(nctrl)),
@@ -208,11 +208,18 @@ def test_x_decompose_with_free_qubits(backend, nctrl, nfree):
     gate = gates.X(target).controlled_by(*controls)
     decomposition = gate.decompose(*free)
 
-    backend.assert_allclose(
-        _unitary(backend, decomposition, nqubits),
-        _unitary(backend, [gate], nqubits),
-        atol=1e-10,
-    )
+    # two different unitaries differ on a random state with probability one, which avoids
+    # building the full unitary
+    circuit, expected = Circuit(nqubits), Circuit(nqubits)
+    circuit.add(decomposition)
+    expected.add(gate)
+    for seed in range(3):
+        state = random_statevector(2**nqubits, seed=seed, backend=backend)
+        backend.assert_allclose(
+            backend.execute_circuit(circuit, initial_state=state).state(),
+            backend.execute_circuit(expected, initial_state=state).state(),
+            atol=1e-10,
+        )
     used = {q for g in decomposition for q in g.qubits}
     assert set(controls + (target,)) <= used <= set(range(nqubits))
 
@@ -220,11 +227,16 @@ def test_x_decompose_with_free_qubits(backend, nctrl, nfree):
 def test_x_decompose_with_free_qubits_scattered(backend):
     controls, target, free, nqubits = (6, 2, 9, 0, 4), 7, (1, 8, 3), 10
     gate = gates.X(target).controlled_by(*controls)
-    backend.assert_allclose(
-        _unitary(backend, gate.decompose(*free), nqubits),
-        _unitary(backend, [gate], nqubits),
-        atol=1e-10,
-    )
+    circuit, expected = Circuit(nqubits), Circuit(nqubits)
+    circuit.add(gate.decompose(*free))
+    expected.add(gate)
+    for seed in range(3):
+        state = random_statevector(2**nqubits, seed=seed, backend=backend)
+        backend.assert_allclose(
+            backend.execute_circuit(circuit, initial_state=state).state(),
+            backend.execute_circuit(expected, initial_state=state).state(),
+            atol=1e-10,
+        )
 
 
 def test_circuit_decompose_with_free_qubits(backend):
