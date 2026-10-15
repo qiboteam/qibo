@@ -27,11 +27,11 @@ class Block:
         self.name = name
 
     @property
-    def entangled(self):
+    def entangled(self) -> bool:
         """Returns ``True`` if the block contains two-qubit gates."""
         return self._count_2q_gates() > 0
 
-    def add_gate(self, gate: Gate):
+    def add_gate(self, gate: Gate) -> None:
         """Add a new gate to the block.
 
         Args:
@@ -41,29 +41,29 @@ class Block:
             raise_error(
                 BlockingError,
                 f"Gate acting on qubits {gate.qubits} can't be added "
-                + f"to block acting on qubits {self._qubits}.",
+                + f"to block acting on qubits {self.qubits}.",
             )
         self.gates.append(gate)
 
-    def _count_2q_gates(self):
+    def _count_2q_gates(self) -> int:
         """Return the number of two qubit gates in the block."""
         return _count_2q_gates(self.gates)
 
     @property
-    def qubits(self):
+    def qubits(self) -> tuple:
         """Returns a sorted tuple with qubits of the block."""
         return tuple(sorted(self._qubits))
 
     @qubits.setter
-    def qubits(self, qubits):
+    def qubits(self, qubits: tuple) -> None:
         self._qubits = qubits
 
-    def fuse(self, block, name: str | None = None):
+    def fuse(self, block: "Block", name: str | int | None = None) -> "Block":
         """Fuses the current block with a new one, the qubits they are acting on must coincide.
 
         Args:
             block (:class:`qibo.transpiler.blocks.Block`): block to fuse.
-            name (str, optional): name of the fused block. Defaults to ``None``.
+            name (str or int, optional): name of the fused block. Defaults to ``None``.
 
         Return:
             (:class:`qibo.transpiler.blocks.Block`): fusion of the two input blocks.
@@ -74,7 +74,7 @@ class Block:
             )
         return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
 
-    def on_qubits(self, new_qubits: tuple):
+    def on_qubits(self, new_qubits: tuple) -> "Block":
         """Return a new block acting on the new qubits.
 
         Args:
@@ -85,7 +85,7 @@ class Block:
         return Block(qubits=new_qubits, gates=new_gates, name=self.name)
 
     # TODO: use real QM properties to check commutation
-    def commute(self, block):
+    def commute(self, block: "Block") -> bool:
         """Check if a block commutes with the current one.
 
         Args:
@@ -95,10 +95,10 @@ class Block:
             True if the two blocks don't share any qubit.
             False otherwise.
         """
-        return not len(set(self.qubits).intersection(block.qubits)) > 0
+        return len(set(self.qubits).intersection(block.qubits)) == 0
 
     def kak_decompose(
-        self, weight: float = math.sqrt(2), backend: Backend = None
+        self, weight: float = math.sqrt(2), backend: Backend | None = None
     ) -> list[Gate]:
         """Return the gates of the block with as few CZ gates as the KAK decomposition allows.
 
@@ -164,10 +164,10 @@ class CircuitBlocks:
                 block.name = index
         self.qubits = circuit.nqubits
 
-    def __call__(self):
+    def __call__(self) -> list[Block]:
         return self.block_list
 
-    def search_by_index(self, index: int):
+    def search_by_index(self, index: int) -> Block:
         """Find a block from its index, requires index_names to be ``True``."""
         if not self._index_names:
             raise_error(
@@ -179,20 +179,25 @@ class CircuitBlocks:
                 return block
         raise_error(BlockingError, f"No block found with index {index}.")
 
-    def add_block(self, block: "Block"):
+    def add_block(self, block: Block) -> None:
         """Add a two qubits block."""
         if not set(block.qubits).issubset(range(self.qubits)):
             raise_error(
                 BlockingError,
-                "The block can't be added to the circuit because it acts on different qubits",
+                "The block can't be added to the circuit because it acts on different qubits.",
             )
         self.block_list.append(block)
 
-    def circuit(self, circuit_kwargs=None):
+    def circuit(self, circuit_kwargs: dict | None = None) -> Circuit:
         """Return the quantum circuit.
 
         Args:
-            circuit_kwargs (dict): original circuit init_kwargs.
+            circuit_kwargs (dict, optional): original circuit init_kwargs.
+                If ``None``, a circuit with the same number of qubits as the
+                decomposed circuit is created. Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit made of the gates of the blocks.
         """
         if circuit_kwargs is None:
             circuit = Circuit(self.qubits)
@@ -203,7 +208,7 @@ class CircuitBlocks:
                 circuit.add(gate)
         return circuit
 
-    def remove_block(self, block: "Block"):
+    def remove_block(self, block: Block) -> None:
         """Remove a block from the circuit blocks."""
         try:
             self.block_list.remove(block)
@@ -213,7 +218,7 @@ class CircuitBlocks:
                 "The block you are trying to remove is not present in the circuit blocks.",
             )
 
-    def return_last_block(self):
+    def return_last_block(self) -> Block:
         """Return the last block in the circuit blocks."""
         if len(self.block_list) == 0:
             raise_error(
@@ -225,11 +230,12 @@ class CircuitBlocks:
 
 def block_decomposition(circuit: Circuit, fuse: bool = True) -> list[Block]:
     """Decompose a circuit into blocks of gates acting on two qubits.
-    Break measurements on multiple qubits into measurements of single qubit.
+    Break measurements on multiple qubits into measurements of single qubits.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to be decomposed.
         fuse (bool, optional): fuse adjacent blocks acting on the same qubits.
+            Defaults to ``True``.
 
     Returns:
         list[:class:`qibo.transpiler.blocks.Block`]: List of blocks that act on two qubits.
@@ -264,8 +270,8 @@ def block_decomposition(circuit: Circuit, fuse: bool = True) -> list[Block]:
     return blocks
 
 
-def _initial_block_decomposition(circuit: Circuit):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _initial_block_decomposition(circuit: Circuit) -> list[Block]:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Decompose a circuit into blocks of gates acting on two qubits.
     This decomposition is not minimal.
@@ -320,8 +326,8 @@ def _initial_block_decomposition(circuit: Circuit):
     return blocks
 
 
-def _check_multi_qubit_measurements(circuit: Circuit):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _check_multi_qubit_measurements(circuit: Circuit) -> bool:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Return True if the circuit contains measurements acting on multiple qubits."""
     for gate in circuit.queue:
@@ -330,10 +336,10 @@ def _check_multi_qubit_measurements(circuit: Circuit):
     return False
 
 
-def _split_multi_qubit_measurements(circuit: Circuit):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _split_multi_qubit_measurements(circuit: Circuit) -> Circuit:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
-    Return an equivalent circuit containinig measurements acting only on single qubits.
+    Return an equivalent circuit containing measurements acting only on single qubits.
     """
     new_circuit = Circuit(circuit.nqubits)
     for gate in circuit.queue:
@@ -345,41 +351,37 @@ def _split_multi_qubit_measurements(circuit: Circuit):
     return new_circuit
 
 
-def _gates_on_qubit(gatelist, qubit):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _gates_on_qubit(gatelist: list[Gate], qubit: int) -> list[Gate]:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Return a list of all single qubit gates in gatelist acting on a specific qubit."""
-    selected_gates = []
-    for gate in gatelist:
-        if gate.qubits[0] == qubit:
-            selected_gates.append(gate)
-    return selected_gates
+    return [gate for gate in gatelist if gate.qubits[0] == qubit]
 
 
-def _remove_gates(gatelist, remove_list):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _remove_gates(gatelist: list, remove_list: list) -> None:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Remove all gates present in remove_list from gatelist."""
     for gate in remove_list:
         gatelist.remove(gate)
 
 
-def _count_2q_gates(gatelist: list):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _count_2q_gates(gatelist: list[Gate]) -> int:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Return the number of two qubit gates in a list of gates."""
     return len([gate for gate in gatelist if len(gate.qubits) == 2])
 
 
-def _count_multi_qubit_gates(gatelist: list):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _count_multi_qubit_gates(gatelist: list[Gate]) -> int:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Return the number of multi qubit gates in a list of gates."""
     return len([gate for gate in gatelist if len(gate.qubits) >= 2])
 
 
-def _find_successive_gates(gates_list: list, qubits: tuple):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _find_successive_gates(gates_list: list[Gate], qubits: tuple) -> list[Gate]:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Return a list containing all gates acting on qubits until a new two qubit gate acting on qubits is found.
     """
@@ -393,12 +395,8 @@ def _find_successive_gates(gates_list: list, qubits: tuple):
     return successive_gates
 
 
-def _find_previous_gates(gates_list: list, qubits: tuple):
-    """Helper method for :meth:'qibo.transpiler.blocks.block_decomposition'.
+def _find_previous_gates(gates_list: list[Gate], qubits: tuple) -> list[Gate]:
+    """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
     Return a list containing all gates acting on qubits."""
-    previous_gates = []
-    for gate in gates_list:
-        if gate.qubits[0] in qubits:
-            previous_gates.append(gate)
-    return previous_gates
+    return [gate for gate in gates_list if gate.qubits[0] in qubits]
