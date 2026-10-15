@@ -269,19 +269,19 @@ def _fill_tril(mat, symmetric):
         return
 
     if dim <= 4:
-        mat[1, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
+        mat[1, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)[0]
         if symmetric:
             mat[0, 1] = mat[1, 0]
         if dim > 2:
-            mat[2, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
-            mat[2, 1] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
+            mat[2, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)[0]
+            mat[2, 1] = ENGINE.random_integers(2, dtype=ENGINE.uint8)[0]
             if symmetric:
                 mat[0, 2] = mat[2, 0]
                 mat[1, 2] = mat[2, 1]
         if dim > 3:
-            mat[3, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
-            mat[3, 1] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
-            mat[3, 2] = ENGINE.random_integers(2, dtype=ENGINE.uint8)
+            mat[3, 0] = ENGINE.random_integers(2, dtype=ENGINE.uint8)[0]
+            mat[3, 1] = ENGINE.random_integers(2, dtype=ENGINE.uint8)[0]
+            mat[3, 2] = ENGINE.random_integers(2, dtype=ENGINE.uint8)[0]
             if symmetric:
                 mat[0, 3] = mat[3, 0]
                 mat[1, 3] = mat[3, 1]
