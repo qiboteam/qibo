@@ -120,6 +120,41 @@ Fermi-Hubbard model
     :members:
     :member-order: bysource
 
+Besides chains and rectangular lattices, the Fermi-Hubbard model can be defined on a lattice
+with arbitrary connectivity. For that, the connectivity is passed as a
+`networkx.Graph <https://networkx.org/documentation/stable/reference/classes/graph.html>`_,
+in which every node is a lattice site and every edge is a pair of sites connected by hopping.
+For instance, the model on a star-shaped lattice with a central site and three leaves is built as
+
+.. code-block:: python
+
+    import networkx as nx
+
+    from qibo.hamiltonians import FermiHubbard
+
+    graph = nx.star_graph(3)
+    hamiltonian = FermiHubbard(graph, hopping_strength=-1.0, interaction_strength=0.5)
+
+If the nodes of the graph are exactly the integers :math:`\{0, \, 1, \, \dots, \, n - 1\}`,
+every node is its own site label. Otherwise, sites are labeled by the order of the nodes in the
+graph. Periodic boundaries must be encoded as edges of the graph, *e.g.*, a ring with
+:math:`n` sites is obtained with ``nx.cycle_graph(n)``.
+
+The graph can also be weighted. The ``"weight"`` attribute of an edge multiplies the
+``hopping_strength`` of the corresponding bond, and edges without this attribute have weight
+:math:`1`. For instance, the following lattice has a stronger tunneling amplitude between the
+first two sites
+
+.. code-block:: python
+
+    import networkx as nx
+
+    from qibo.hamiltonians import FermiHubbard
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (1, 2, 1.0), (0, 2, 0.5)])
+    hamiltonian = FermiHubbard(graph, hopping_strength=-1.0, interaction_strength=0.5)
+
 
 Heisenberg model
 ----------------
