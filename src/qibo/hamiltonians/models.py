@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from functools import reduce
 
+import networkx as nx
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -11,7 +12,7 @@ from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 
 
 def FermiHubbard(
-    nsites: int | tuple[int, int],
+    nsites: int | tuple[int, int] | nx.Graph,
     hopping_strength: float = -1.0,
     interaction_strength: float = 0.5,
     dense: bool = True,
@@ -19,8 +20,8 @@ def FermiHubbard(
     labelling: str = "snake",
     backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
-    """Jordan-Wigner-transformed Fermi-Hubbard model on a one-dimensional chain
-    or on a two-dimensional rectangular lattice.
+    """Jordan-Wigner-transformed Fermi-Hubbard model on a one-dimensional chain,
+    on a two-dimensional rectangular lattice, or on a lattice with arbitrary connectivity.
 
     In second quantization, the Hamiltonian is defined as
 
@@ -32,20 +33,37 @@ def FermiHubbard(
             + U \\, \\sum_{j} \\, n_{j,\\uparrow} \\, n_{j,\\downarrow} \\, ,
 
     where :math:`\\langle j, \\, k \\rangle` runs over all pairs of nearest-neighbor
-    lattice sites, :math:`a_{j,\\sigma}` (:math:`a_{j,\\sigma}^{\\dagger}`) is the
-    annihilation (creation) operator for spin :math:`\\sigma \\in \\{\\uparrow, \\, \\downarrow \\}`
+    (*i.e.*, connected) lattice sites, :math:`a_{j,\\sigma}`
+    (:math:`a_{j,\\sigma}^{\\dagger}`) is the annihilation (creation) operator for spin
+    :math:`\\sigma \\in \\{\\uparrow, \\, \\downarrow \\}`
     at site :math:`j`, :math:`n_{j,\\sigma} = a_{j,\\sigma}^{\\dagger}\\,a_{j,\\sigma}` is the
     number operator for spin :math:`\\sigma` at site :math:`j`, :math:`t` is the tunneling
     amplitude, and :math:`U` is the Coulomb potential.
 
-    Lattice sites are labeled according to ``labelling``. For a lattice with :math:`n_{c}`
-    columns, site :math:`(r, \\, c)` has label :math:`j = r \\, n_{c} + c` in the
+    For chains and rectangular lattices, sites are labeled according to ``labelling``. For a
+    lattice with :math:`n_{c}` columns, site :math:`(r, \\, c)` has label :math:`j = r \\, n_{c} + c` in the
     ``"row_major"`` scheme, in which every row is traversed from left to right. In the
     ``"snake"`` scheme, the first row is traversed from left to right, the second row from
     right to left, and so on. Thus, the label is the same as in the ``"row_major"`` scheme if
     :math:`r` is even, and :math:`j = r \\, n_{c} + n_{c} - 1 - c` if :math:`r` is odd.
     Qubits :math:`2j` and :math:`2j + 1` encode the spin-up and spin-down modes of site
     :math:`j`, respectively. Both schemes are equivalent for chains and single-row lattices.
+
+    For an arbitrary connectivity, ``nsites`` can be a :class:`networkx.Graph`, in which every
+    node is a lattice site and every edge is a pair of connected sites. If the nodes of the graph
+    are exactly the integers :math:`\\{0, \\, 1, \\, \\dots, \\, n - 1\\}`, every node is its
+    own site label :math:`j`. Otherwise, sites are labeled by the order in which the nodes
+    are stored in the graph, *i.e.*, the :math:`j`-th node of ``list(nsites.nodes)`` has label
+    :math:`j`. The graph defines all the bonds of the model. Therefore, ``closed_boundary`` and
+    ``labelling`` are ignored, and any periodicity must be encoded as edges of the graph.
+    Isolated nodes are lattice sites with no hopping, and self-loops are not allowed.
+
+    The graph can be weighted. The tunneling amplitude of the bond between sites :math:`j` and
+    :math:`k` is :math:`t \\, w_{j,k}`, where :math:`w_{j,k}` is the ``"weight"`` attribute
+    of the corresponding edge. Edges without this attribute have weight :math:`1`, and
+    therefore an unweighted graph has a uniform tunneling amplitude :math:`t`. Edge directions
+    are ignored. Edges between the same pair of nodes, *e.g.*, parallel edges of a multigraph,
+    are merged into a single bond, and they must have the same weight.
 
     Every hopping term between qubits :math:`p < q` is multiplied by the Jordan-Wigner
     string :math:`\\prod_{p < m < q} Z_{m}`, so that fermionic anticommutation is
@@ -58,9 +76,11 @@ def FermiHubbard(
         the correction that depends on the parity of the total number of particles.
 
     Args:
-        nsites (int or tuple[int, int]): if an ``int``, total number of sites in a
-            one-dimensional chain. If a ``tuple`` :math:`(n_{r}, \\, n_{c})`, number
-            of rows and columns of a two-dimensional lattice.
+        nsites (int or tuple[int, int] or :class:`networkx.Graph`): if an ``int``, total number
+            of sites in a one-dimensional chain. If a ``tuple`` :math:`(n_{r}, \\, n_{c})`,
+            number of rows and columns of a two-dimensional lattice. If a
+            :class:`networkx.Graph`, connectivity graph of the lattice, with one node per site
+            and, optionally, a ``"weight"`` attribute per edge that scales ``hopping_strength``.
         hopping_strength (float or int, optional): tunneling amplitude. Defaults to :math:`-1.0`.
         interaction_strength (float or int, optional): Coulomb potential.
             Defaults to :math:`0.5`.
@@ -70,9 +90,11 @@ def FermiHubbard(
             Defaults to ``True``.
         closed_boundary (bool, optional): If ``True``, returns Fermi-Hubbard model with periodic
             boundary condition along every dimension with more than two sites. If ``False``,
-            returns Hamiltonian with open boundaries. Defaults to ``True``.
+            returns Hamiltonian with open boundaries. Ignored if ``nsites`` is a
+            :class:`networkx.Graph`. Defaults to ``True``.
         labelling (str, optional): scheme used to label the lattice sites, either ``"snake"``
-            or ``"row_major"``. Defaults to ``"snake"``.
+            or ``"row_major"``. Ignored if ``nsites`` is a :class:`networkx.Graph`.
+            Defaults to ``"snake"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -83,62 +105,93 @@ def FermiHubbard(
     """
     backend = _check_backend(backend)
 
-    if isinstance(nsites, (int, np.integer)):
-        nrows, ncols = 1, int(nsites)
-    elif isinstance(nsites, tuple) and len(nsites) == 2:
-        nrows, ncols = nsites
+    if isinstance(nsites, nx.Graph):
+        if nsites.number_of_nodes() < 1:
+            raise_error(ValueError, "The graph must have at least one node.")
+
+        if nx.number_of_selfloops(nsites) > 0:
+            raise_error(ValueError, "The graph must not have self-loops.")
+
+        nodes = list(nsites.nodes)
+        # integer nodes from 0 to n - 1 are used as site labels, otherwise sites are labeled
+        # by the order of the nodes in the graph
+        if set(nodes) == set(range(len(nodes))):
+            labels = {node: int(node) for node in nodes}
+        else:
+            labels = {node: label for label, node in enumerate(nodes)}
+
+        nqubits = 2 * len(nodes)
+
+        # edges between the same pair of nodes (e.g. antiparallel edges of a directed graph)
+        # are merged into a single bond, and they must have the same weight
+        weights = {}
+        for node_a, node_b, weight in nsites.edges(data="weight", default=1):
+            bond = tuple(sorted((labels[node_a], labels[node_b])))
+            if weights.setdefault(bond, weight) != weight:
+                raise_error(
+                    ValueError,
+                    f"Edges between nodes {node_a} and {node_b} have different weights.",
+                )
+        weights = dict(sorted(weights.items()))
     else:
-        raise_error(
-            TypeError,
-            "``nsites`` must be either an ``int`` or a ``tuple`` of two ``int``s, "
-            + f"but it is {nsites}.",
-        )
+        if isinstance(nsites, (int, np.integer)):
+            nrows, ncols = 1, int(nsites)
+        elif isinstance(nsites, tuple) and len(nsites) == 2:
+            nrows, ncols = nsites
+        else:
+            raise_error(
+                TypeError,
+                "``nsites`` must be either an ``int``, a ``tuple`` of two ``int``s, "
+                + f"or a ``networkx.Graph``, but it is {nsites}.",
+            )
 
-    if nrows < 1 or ncols < 1:
-        raise_error(
-            ValueError,
-            f"Lattice dimensions must be positive, but they are {(nrows, ncols)}.",
-        )
+        if nrows < 1 or ncols < 1:
+            raise_error(
+                ValueError,
+                f"Lattice dimensions must be positive, but they are {(nrows, ncols)}.",
+            )
 
-    if labelling not in ("row_major", "snake"):
-        raise_error(
-            ValueError,
-            f"``labelling`` must be either ``'row_major'`` or ``'snake'``, but it is {labelling}.",
-        )
+        if labelling not in ("row_major", "snake"):
+            raise_error(
+                ValueError,
+                f"``labelling`` must be either ``'row_major'`` or ``'snake'``, but it is {labelling}.",
+            )
 
-    nqubits = 2 * nrows * ncols
+        nqubits = 2 * nrows * ncols
 
-    # in the snake scheme, rows are traversed in alternating directions
-    labels = [
-        [
-            row * ncols
-            + (col if labelling == "row_major" or row % 2 == 0 else ncols - 1 - col)
+        # in the snake scheme, rows are traversed in alternating directions
+        labels = [
+            [
+                row * ncols
+                + (col if labelling == "row_major" or row % 2 == 0 else ncols - 1 - col)
+                for col in range(ncols)
+            ]
+            for row in range(nrows)
+        ]
+
+        # nearest-neighbor bonds between sites
+        bonds = [
+            (labels[row][col], labels[row][col + 1])
+            for row in range(nrows)
+            for col in range(ncols - 1)
+        ]
+        bonds += [
+            (labels[row][col], labels[row + 1][col])
+            for row in range(nrows - 1)
             for col in range(ncols)
         ]
-        for row in range(nrows)
-    ]
+        if closed_boundary and ncols > 2:
+            bonds += [(labels[row][0], labels[row][-1]) for row in range(nrows)]
+        if closed_boundary and nrows > 2:
+            bonds += [(labels[0][col], labels[-1][col]) for col in range(ncols)]
 
-    # nearest-neighbor bonds between sites
-    bonds = [
-        (labels[row][col], labels[row][col + 1])
-        for row in range(nrows)
-        for col in range(ncols - 1)
-    ]
-    bonds += [
-        (labels[row][col], labels[row + 1][col])
-        for row in range(nrows - 1)
-        for col in range(ncols)
-    ]
-    if closed_boundary and ncols > 2:
-        bonds += [(labels[row][0], labels[row][-1]) for row in range(nrows)]
-    if closed_boundary and nrows > 2:
-        bonds += [(labels[0][col], labels[-1][col]) for col in range(ncols)]
+        weights = dict.fromkeys(bonds, 1)
 
     # pairs of qubits (spin-up with spin-up, spin-down with spin-down) connected by hopping,
-    # ordered such that the first qubit has the smallest label
+    # ordered such that the first qubit has the smallest label, and the bond weights
     hoppings = [
-        (2 * min(j, k) + spin, 2 * max(j, k) + spin)
-        for j, k in bonds
+        (2 * min(j, k) + spin, 2 * max(j, k) + spin, weight)
+        for (j, k), weight in weights.items()
         for spin in (0, 1)
     ]
 
@@ -165,13 +218,15 @@ def FermiHubbard(
             base_string[site + 1] = I
 
         # hopping terms
-        for qubit_a, qubit_b in hoppings:
+        for qubit_a, qubit_b, weight in hoppings:
             for pauli in (X, Y):
                 base_string[qubit_a] = pauli
                 base_string[qubit_b] = pauli
                 for qubit in range(qubit_a + 1, qubit_b):
                     base_string[qubit] = Z
-                term = (hopping_strength / 2) * _multikron(base_string, backend=backend)
+                term = (hopping_strength * weight / 2) * _multikron(
+                    base_string, backend=backend
+                )
                 hamiltonian += term
                 del term
                 base_string[qubit_a : qubit_b + 1] = [I] * (qubit_b - qubit_a + 1)
@@ -192,9 +247,9 @@ def FermiHubbard(
     )
 
     # hopping terms
-    for qubit_a, qubit_b in hoppings:
+    for qubit_a, qubit_b, weight in hoppings:
         string = [Z(qubit) for qubit in range(qubit_a + 1, qubit_b)]
-        hamiltonian += (hopping_strength / 2) * sum(
+        hamiltonian += (hopping_strength * weight / 2) * sum(
             reduce(lambda x, y: x * y, [pauli(qubit_a), *string, pauli(qubit_b)])
             for pauli in (X, Y)
         )
