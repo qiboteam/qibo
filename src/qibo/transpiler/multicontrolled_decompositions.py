@@ -19,7 +19,7 @@ def multi_controlled_decomposition(
     clean: tuple[int, ...] = (),
     minimize_toffolis: bool = False,
     minimize_depth: bool = False,
-    backend: Backend = None,
+    backend: Backend | None = None,
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled single-qubit gate, with or without auxiliary qubits.
 
@@ -260,7 +260,7 @@ def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
 
 
 def _controlled_u2(
-    unitary: ArrayLike, control: int, target: int, backend: Backend = None
+    unitary: ArrayLike, control: int, target: int, backend: Backend | None = None
 ) -> list[gates.Gate]:
     """Decomposes a singly-controlled single-qubit gate into :math:`2` CNOTs.
 
@@ -294,7 +294,7 @@ def _controlled_u2(
     ]
 
 
-def _eig_u2(unitary: ArrayLike, backend: Backend = None) -> tuple:
+def _eig_u2(unitary: ArrayLike, backend: Backend | None = None) -> tuple:
     """Eigendecomposition of a :math:`2 \\times 2` unitary with unitary eigenvectors.
 
     A general eigensolver loses orthogonality between the eigenvectors when the
@@ -397,7 +397,7 @@ def _ldmcsu(
     unitary: ArrayLike,
     controls: tuple[int, ...],
     target: int,
-    backend: Backend = None,
+    backend: Backend | None = None,
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled gate with :math:`\\det(U) = 1` using the controls
     themselves as dirty auxiliary qubits.
@@ -512,7 +512,7 @@ def _ldmcu(
     unitary: ArrayLike,
     controls: tuple[int, ...],
     target: int,
-    backend: Backend = None,
+    backend: Backend | None = None,
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled single-qubit gate using controlled rotations.
 
@@ -705,7 +705,7 @@ def _mcx_gidney_linear_depth(
 
 
 def _mcx_gidney_log_depth(
-    controls: tuple[int, ...], target: int, ancillas: tuple[int, int], clean: bool
+    controls: tuple[int, ...], target: int, ancillas: tuple[int, ...], clean: bool
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled :math:`X` gate with two auxiliary qubits in logarithmic depth.
 
@@ -715,7 +715,7 @@ def _mcx_gidney_log_depth(
     Args:
         controls (tuple[int, ...]): Ids of the control qubits. At least three are needed.
         target (int): Id of the target qubit.
-        ancillas (tuple[int, int]): Ids of the two auxiliary qubits.
+        ancillas (tuple[int, ...]): Ids of the two auxiliary qubits.
         clean (bool): If ``True``, ``ancillas`` are in the state :math:`\\ket{0}`.
             Otherwise they can be in any state. They are left unchanged.
 
@@ -916,7 +916,7 @@ def _nie_first_half(
 
 
 def _toffoli(
-    controls: tuple[int, int], target: int, cancel: str | None = None
+    controls: tuple[int, ...], target: int, cancel: str | None = None
 ) -> list[gates.Gate]:
     """Toffoli gate up to a relative phase, with :math:`3` CNOTs instead of :math:`6`.
 
