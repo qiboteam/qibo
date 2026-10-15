@@ -639,3 +639,26 @@ def test_router_seed_reproducibility(router_class, grid_connectivity):
         routed_circuit, _ = router(circuit.copy())
         routed_qubits.append([gate.qubits for gate in routed_circuit.queue])
     assert routed_qubits[0] == routed_qubits[1]
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+def test_router_reuse_with_string_wire_names(router_algorithm):
+    """The router must not modify its connectivity, so that it can be called again."""
+    names = ["A", "B", "C", "D"]
+    connectivity = line_connectivity(4, names)
+    router = router_algorithm(connectivity)
+
+    def build_circuit():
+        circuit = Circuit(4, wire_names=names)
+        circuit.add(gates.CZ(0, 3))
+        circuit.add(gates.CZ(1, 3))
+        circuit.add(gates.M(*range(4)))
+        return circuit
+
+    _, first_layout = router(build_circuit())
+    second, second_layout = router(build_circuit())
+
+    assert set(router.connectivity.nodes) == set(names)
+    assert set(router.connectivity.edges) == set(connectivity.edges)
+    assert_connectivity(connectivity, second)
+    assert first_layout == second_layout
