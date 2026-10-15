@@ -22,8 +22,8 @@ def assert_transpiling(
     connectivity: nx.Graph,
     final_layout: dict,
     native_gates: NativeGates | None = None,
-    check_circuit_equivalence=True,
-):
+    check_circuit_equivalence: bool = True,
+) -> None:
     """Check that all transpiler passes have been executed correctly.
 
     Args:
@@ -32,7 +32,7 @@ def assert_transpiling(
         connectivity (:class:`networkx.Graph`): Hardware connectivity.
         final_layout (dict): Final {logical: physical} qubit mapping.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware.
-            Defaults to :class:`qibo.transpiler.unroller.NativeGates.default()`.
+            Defaults to :meth:`qibo.transpiler.unroller.NativeGates.default`.
         check_circuit_equivalence (bool, optional): Check if the transpiled circuit is equivalent to the original one.
             Defaults to ``True``.
     """
@@ -62,7 +62,7 @@ def assert_circuit_equivalence(
     final_layout: dict,
     test_states: list | None = None,
     ntests: int = 3,
-):
+) -> None:
     """Checks that the transpiled circuit is equivalent to the original one.
 
     Args:
@@ -70,8 +70,8 @@ def assert_circuit_equivalence(
         transpiled_circuit (:class:`qibo.models.circuit.Circuit`): Circuit after transpiling.
         final_layout (dict): Final {logical: physical} qubit mapping.
         test_states (list, optional): List of states to test the equivalence.
-            If ``None``, ``ntests`` random states will be tested. Defauts to ``None``.
-        ntests (int, optional): Number of random states to test the equivalence. Defaults to :math: `3`.
+            If ``None``, ``ntests`` random states will be tested. Defaults to ``None``.
+        ntests (int, optional): Number of random states to test the equivalence. Defaults to :math:`3`.
     """
     backend = NumpyBackend()
     if transpiled_circuit.nqubits != original_circuit.nqubits:
@@ -89,7 +89,7 @@ def assert_circuit_equivalence(
 
     ordering = list(final_layout.values())
 
-    for i, state in enumerate(test_states):
+    for state in test_states:
         target_state = backend.execute_circuit(
             original_circuit, initial_state=state
         ).state()
@@ -105,12 +105,15 @@ def assert_circuit_equivalence(
             raise_error(TranspilerPipelineError, "Circuit equivalence not satisfied.")
 
 
-def _transpose_qubits(state: np.ndarray, qubits_ordering: np.ndarray):
+def _transpose_qubits(state: np.ndarray, qubits_ordering: list[int]) -> np.ndarray:
     """Reorders qubits of a given state vector.
 
     Args:
         state (np.ndarray): State vector to reorder.
-        qubits_ordering (np.ndarray): Final qubit ordering.
+        qubits_ordering (list[int]): Final qubit ordering.
+
+    Returns:
+        np.ndarray: State vector with the qubits reordered.
     """
     original_shape = state.shape
     state = np.reshape(state, len(qubits_ordering) * (2,))
@@ -118,17 +121,18 @@ def _transpose_qubits(state: np.ndarray, qubits_ordering: np.ndarray):
     return np.reshape(state, original_shape)
 
 
-def assert_placement(circuit: Circuit, connectivity: nx.Graph):
+def assert_placement(circuit: Circuit, connectivity: nx.Graph | None) -> None:
     """Check if the layout of the circuit is consistent with the circuit and connectivity graph.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
-        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity. A
+            ``ValueError`` is raised if it is ``None``.
     """
     if connectivity is None:
         raise_error(
             ValueError,
-            "Connectivity graph is not provided",
+            "Connectivity graph is not provided.",
         )
 
     if circuit.nqubits != len(circuit.wire_names) or circuit.nqubits != len(
@@ -147,11 +151,12 @@ def assert_placement(circuit: Circuit, connectivity: nx.Graph):
         )
 
 
-def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
+def assert_connectivity(connectivity: nx.Graph, circuit: Circuit) -> None:
     """Assert if a circuit can be executed on Hardware.
 
-    No gates acting on more than two qubits.
-    All two-qubit operations can be performed on hardware.
+    No gates acting on more than two qubits, except for measurements.
+    All two-qubit operations can be performed on hardware. Measurements do not
+    require the qubits to be connected.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
@@ -159,7 +164,9 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
     """
     layout = circuit.wire_names
     for gate in circuit.queue:
-        if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
+        if isinstance(gate, gates.M):
+            continue
+        if len(gate.qubits) > 2:
             raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
         if len(gate.qubits) == 2:
             physical_qubits = (layout[gate.qubits[0]], layout[gate.qubits[1]])
@@ -173,7 +180,7 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
 def assert_decomposition(
     circuit: Circuit,
     native_gates: NativeGates,
-):
+) -> None:
     """Checks if a circuit has been correctly decomposed into native gates.
 
     Args:
