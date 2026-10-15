@@ -135,7 +135,7 @@ class ConsolidateBlocks(Optimizer):
     def __init__(self, weight: float = math.sqrt(2)):
         self.weight = weight
 
-    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Rewrite the blocks of gates acting on two qubits.
 
         Args:
@@ -252,7 +252,7 @@ class FixedPoint(Optimizer):
         self.max_iterations = max_iterations
         self.connectivity = None
 
-    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Apply the optimizers until the circuit stops changing.
 
         Args:
@@ -396,7 +396,7 @@ class InverseCancellation(Optimizer):
         self.atol = atol
         self.commutation = commutation
 
-    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Remove pairs of gates that multiply to the identity.
 
         Args:
@@ -593,7 +593,7 @@ class Optimize1qGatesDecomposition(Optimizer):
             if redundant in self.euler_bases and kept in self.euler_bases:
                 self.euler_bases.remove(redundant)
 
-    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Rewrite runs of consecutive single-qubit gates.
 
         Args:
@@ -879,7 +879,7 @@ class ParametrizedGateFusion(Optimizer):
         self.atol = atol
         self.up_to_global_phase = up_to_global_phase
 
-    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Merge consecutive rotation gates of the same kind.
 
         Args:
@@ -1027,6 +1027,15 @@ class Preprocessing(Optimizer):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit) -> Circuit:
+        """Match the number of qubits and the ``wire_names`` of the circuit to the connectivity.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be preprocessed.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with as many qubits as the
+            connectivity graph.
+        """
         if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
             default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
             log.warning(
@@ -1045,11 +1054,18 @@ class Preprocessing(Optimizer):
         if logical_qubits == physical_qubits:
             return circuit
 
-        new_wire_names = circuit.wire_names + list(
-            self.connectivity.nodes - circuit.wire_names
-        )
+        # a list comprehension keeps the order of the nodes, unlike a set difference
+        new_wire_names = circuit.wire_names + [
+            node for node in self.connectivity.nodes if node not in circuit.wire_names
+        ]
 
-        new_circuit = Circuit(nqubits=physical_qubits, wire_names=new_wire_names)
+        new_circuit = Circuit(
+            **{
+                **circuit.init_kwargs,
+                "nqubits": physical_qubits,
+                "wire_names": new_wire_names,
+            }
+        )
         for gate in circuit.queue:
             new_circuit.add(gate)
 
@@ -1072,7 +1088,7 @@ class Rearrange(Optimizer):
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         backend = _check_backend(backend)
         fused_circuit = circuit.fuse(max_qubits=self.max_qubits)
-        new = circuit.__class__(nqubits=circuit.nqubits, wire_names=circuit.wire_names)
+        new = circuit.__class__(**circuit.init_kwargs)
         for fgate in fused_circuit.queue:
             if isinstance(fgate, gates.FusedGate):
                 new.add(gates.Unitary(fgate.matrix(backend), *fgate.qubits))
@@ -1183,7 +1199,7 @@ class RemoveDiagonalGatesBeforeMeasurement(Optimizer):
                 )
             ):
                 kept.append(gate)
-            following.update({qubit: gate for qubit in gate.qubits})
+            following.update(dict.fromkeys(gate.qubits, gate))
 
         new = Circuit(**circuit.init_kwargs)
         new.add(kept[::-1])
@@ -1323,7 +1339,7 @@ class RemoveIdentityEquivalent(Optimizer):
             )
         self.approximation_degree = approximation_degree
 
-    def __call__(self, circuit: Circuit, backend: Backend = None) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Remove the gates that are equivalent to the identity.
 
         Args:
