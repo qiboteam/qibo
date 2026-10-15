@@ -27,7 +27,7 @@ class FlagMeta(EnumMeta):
     """Metaclass for :class:`qibo.transpiler.unroller.NativeGates`
     that allows initialization with a list of gate name strings."""
 
-    def __getitem__(cls, keys: str | list[str]):
+    def __getitem__(cls, keys: str | list[str]) -> "NativeGates":
         if isinstance(keys, str):
             try:
                 return super().__getitem__(keys)
@@ -100,12 +100,12 @@ class NativeGates(Flag, metaclass=FlagMeta):
     PRX = auto()
 
     @classmethod
-    def default(cls):
+    def default(cls) -> "NativeGates":
         """Return default native gates set."""
         return cls.CZ | cls.GPI2 | cls.I | cls.Z | cls.RZ | cls.M
 
     @classmethod
-    def from_gatelist(cls, gatelist: list[Gate]):
+    def from_gatelist(cls, gatelist: list[Gate]) -> "NativeGates":
         """Create a NativeGates object containing all gates from a ``gatelist``."""
         natives = cls(0)
         for gate in gatelist:
@@ -113,7 +113,7 @@ class NativeGates(Flag, metaclass=FlagMeta):
         return natives
 
     @classmethod
-    def from_gate(cls, gate: Gate):
+    def from_gate(cls, gate: Gate | type[Gate]) -> "NativeGates":
         """Create a :class:`qibo.transpiler.unroller.NativeGates`
         object from a :class:`qibo.gates.gates.Gate`."""
         if isinstance(gate, Gate):
@@ -229,7 +229,7 @@ class Unroller:
 
 
 def translate_gate(
-    gate,
+    gate: Gate,
     native_gates: NativeGates,
     backend: Backend | None = None,
     free: tuple[int, ...] = (),
@@ -258,12 +258,12 @@ def translate_gate(
     backend = _check_backend(backend)
 
     if isinstance(gate, (gates.I, gates.Align)):
-        return gate
+        return [gate]
 
     if isinstance(gate, gates.M):
         gate.basis_gates = len(gate.basis_gates) * [gates.Z]
         gate.basis = []
-        return gate
+        return [gate]
 
     if gate.is_controlled_by and len(gate.qubits) > 2:
         try:
@@ -391,7 +391,7 @@ def _translate_two_qubit_gates(
 
         # Check the decomposition with less 2 qubit gates.
         if cz_dec.count_2q(gate, backend) < iswap_dec.count_2q(gate, backend):
-            return cz_dec(gate)
+            return cz_dec(gate, backend)
 
         if cz_dec.count_2q(gate, backend) > iswap_dec.count_2q(gate, backend):
             return iswap_dec(gate, backend)
@@ -418,10 +418,9 @@ def _translate_two_qubit_gates(
         iswap_decomposed = []
         for g in cz_decomposed:
             # Need recursive function as gates.Unitary is not in iswap_dec
-            for g_translated in translate_gate(
-                g, native_gates=native_gates, backend=backend
-            ):
-                iswap_decomposed.append(g_translated)  # noqa: PERF402
+            iswap_decomposed.extend(
+                translate_gate(g, native_gates=native_gates, backend=backend)
+            )
         return iswap_decomposed
 
     # For testing purposes
@@ -433,5 +432,5 @@ def _translate_two_qubit_gates(
     raise_error(
         DecompositionError,
         "Use only CZ and/or iSWAP as native gates. CNOT is allowed in circuits"
-        + "where the two-qubit gates are limited to CZ, CNOT, and SWAP.",
+        + " where the two-qubit gates are limited to CZ, CNOT, and SWAP.",
     )  # pragma: no cover
