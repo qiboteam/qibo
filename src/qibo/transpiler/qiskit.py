@@ -21,12 +21,12 @@ class QiskitPasses:
     def __call__(self, circuit: Circuit) -> Circuit:
         init_kwargs = circuit.init_kwargs
         # convert to qasm
-        circuit = circuit.to_qasm(extended_compatibility=True)
+        qasm = circuit.to_qasm(extended_compatibility=True)
         # convert to qiskit circuit
-        circuit = QuantumCircuit.from_qasm_str(circuit)
+        qiskit_circuit = QuantumCircuit.from_qasm_str(qasm)
         # transpile
-        circuit = self.pass_manager.run(circuit)
+        qiskit_circuit = self.pass_manager.run(qiskit_circuit)
         # convert back to qasm
-        circuit = dumps(circuit)
+        qasm = dumps(qiskit_circuit)
         # rebuild the qibo circuit
-        return Circuit.from_qasm(circuit, **init_kwargs)
+        return Circuit.from_qasm(qasm, **init_kwargs)
