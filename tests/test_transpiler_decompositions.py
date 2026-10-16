@@ -18,35 +18,20 @@ default_natives = NativeGates.Z | NativeGates.RZ | NativeGates.M | NativeGates.I
 
 def assert_matrices_allclose(gate, natives, backend):
     target_matrix = gate.matrix(backend)
-    # Remove global phase from target matrix
-    normalisation = np.power(
-        np.linalg.det(backend.to_numpy(target_matrix)),
-        1 / float(target_matrix.shape[0]),
-        dtype=complex,
-    )
-    target_unitary = target_matrix / normalisation
 
     circuit = Circuit(len(gate.qubits))
     circuit.add(translate_gate(gate, natives, backend=backend))
     native_matrix = circuit.unitary(backend)
-    # Remove global phase from native matrix
-    normalisation = np.power(
-        np.linalg.det(backend.to_numpy(native_matrix)),
-        1 / float(native_matrix.shape[0]),
-        dtype=complex,
-    )
-    native_unitary = native_matrix / normalisation
 
-    # There can still be phase differences of -1, -1j, 1j
-    c = 0
-    for phase in [1, -1, 1j, -1j]:
-        if backend.allclose(
-            phase * native_unitary,
-            target_unitary,
-            atol=1e-6,
-        ):
-            c = 1
-    backend.assert_allclose(c, 1)
+    # The matrices are equal up to a global phase, which is the one of their overlap.
+    # It is not computed from the determinants, because their roots are ambiguous for a
+    # determinant on the branch cut, as the one of some gates which is exactly -1.
+    overlap = backend.dot(
+        backend.ravel(backend.conj(target_matrix)), backend.ravel(native_matrix)
+    )
+    backend.assert_allclose(
+        native_matrix, overlap / backend.abs(overlap) * target_matrix, atol=1e-6
+    )
     assert_decomposition(circuit, natives)
 
 
@@ -215,6 +200,61 @@ def test_rnn_to_native(backend, gate_name, natives_1q, natives_2q):
 def test_TOFFOLI_to_native(backend, natives_1q, natives_2q):
     gate = gates.TOFFOLI(0, 1, 2)
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
+
+
+@pytest.mark.parametrize("theta", [0.0, 0.1234, -1.3, math.pi / 2, 3.0])
+@pytest.mark.parametrize(
+    "natives_2q",
+    [
+        NativeGates.CZ,
+        NativeGates.iSWAP,
+        NativeGates.CZ | NativeGates.iSWAP,
+        NativeGates.CNOT,
+    ],
+)
+@pytest.mark.parametrize("natives_1q", [NativeGates.U3, NativeGates.GPI2])
+def test_deutsch_to_native(backend, natives_1q, natives_2q, theta):
+    gate = gates.DEUTSCH(0, 1, 2, theta)
+    assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
+
+
+@pytest.mark.parametrize("theta", [0.1234, math.pi / 2])
+def test_deutsch_two_qubit_gate_count(backend, theta):
+    gate = gates.DEUTSCH(0, 1, 2, theta)
+    # six is the minimum, since the Deutsch gate is a Toffoli gate for theta = pi / 2
+    assert cz_dec.count_2q(gate, backend) == 6
+    assert standard_decompositions.count_2q(gate, backend) == 6
+
+
+@pytest.mark.parametrize("qubits", [(0, 1, 2), (2, 0, 1), (1, 2, 0)])
+@pytest.mark.parametrize("table", [cz_dec, standard_decompositions])
+def test_deutsch_decomposition_on_other_qubits(backend, table, qubits):
+    theta = 0.4321
+    original = Circuit(3)
+    original.add(gates.DEUTSCH(*qubits, theta))
+    decomposed = Circuit(3)
+    decomposed.add(table(gates.DEUTSCH(*qubits, theta), backend))
+    unitary = backend.to_numpy(decomposed.unitary(backend))
+    target = backend.to_numpy(original.unitary(backend))
+    phase = np.vdot(target.ravel(), unitary.ravel())
+    backend.assert_allclose(unitary * abs(phase) / phase, target, atol=1e-8)
+
+
+@pytest.mark.parametrize("theta", [0.0, 0.1234, -1.3, math.pi, 3.0])
+@pytest.mark.parametrize("natives_1q", [NativeGates.U3, NativeGates.GPI2])
+def test_RBS_to_native_with_cnot(backend, natives_1q, theta):
+    gate = gates.RBS(0, 1, theta)
+    natives = natives_1q | NativeGates.CNOT | default_natives
+    assert_matrices_allclose(gate, natives, backend)
+
+
+def test_RBS_standard_decomposition_matches_gate_decompose():
+    gate = gates.RBS(0, 1, 0.3)
+    expected = gate.decompose()
+    decomposed = standard_decompositions(gate)
+    assert [(g.name, g.qubits, g.parameters) for g in decomposed] == [
+        (g.name, g.qubits, g.parameters) for g in expected
+    ]
 
 
 @pytest.mark.parametrize("seed", [None, 10])
