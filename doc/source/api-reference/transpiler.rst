@@ -220,6 +220,12 @@ Passes
     :member-order: bysource
 
 
+Preset passes
+^^^^^^^^^^^^^
+
+.. autofunction:: qibo.transpiler.pipeline.generate_preset_passes
+
+
 Restrict qubit connectivity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
