@@ -877,3 +877,51 @@ def test_unroller_call_backend(monkeypatch):
     backends.clear()
     Unroller(NativeGates.default())(circuit)
     assert backends and all(backend is None for backend in backends)
+
+
+class _WithoutDecomposition(gates.Gate):
+    """Gate that acts on several qubits and does not have a decomposition."""
+
+    def __init__(self, *qubits):
+        super().__init__()
+        self.name = "without_decomposition"
+        self.target_qubits = tuple(qubits)
+        self.init_args = list(qubits)
+        self.init_kwargs = {}
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_translate_gate_without_decomposition_error(backend, nqubits):
+    gate = _WithoutDecomposition(*range(nqubits))
+    with pytest.raises(DecompositionError, match=f"acting on {nqubits} qubits"):
+        translate_gate(gate, NativeGates.default(), backend=backend)
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.GeneralizedRBS([0, 1], [2, 3], 0.37, 0.2),
+        gates.Multiplexor([0, 1], 2, [0.1, 0.2, 0.3, 0.4]),
+        gates.FanOut(0, 1, 2, 3),
+    ],
+    ids=lambda gate: gate.name,
+)
+def test_unroller_gates_with_own_decomposition(backend, gate):
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gate)
+    natives = NativeGates.default()
+    # the gates acting on more than two qubits can be decomposed before the routing
+    partially_unrolled = Unroller(natives, backend=backend, min_qubits=3)(circuit)
+    assert all(len(g.qubits) <= 2 for g in partially_unrolled.queue)
+    # some backends cannot simulate all these gates, so the reference state is NumPy's
+    state = backend.execute_circuit(circuit).state()
+    fully_unrolled = Unroller(natives, backend=backend)(circuit)
+    assert_decomposition(fully_unrolled, natives)
+    for translated in (partially_unrolled, fully_unrolled):
+        translated_state = backend.execute_circuit(translated).state()
+        phase = backend.dot(
+            backend.ravel(backend.conj(translated_state)), backend.ravel(state)
+        )
+        assert np.isclose(abs(phase), 1.0)
+        backend.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)
