@@ -2309,7 +2309,11 @@ without optimizing it. It decomposes the gates acting on three or more qubits, w
 routed, places the qubits on ``initial_layout`` (or on the first qubits of the connectivity if
 there is none), routes the circuit with :class:`qibo.transpiler.router.Sabre`, keeping the best
 of five trials, and decomposes it to the native gates. The ``seed`` makes the transpilation
-reproducible.
+reproducible. The qubits of the circuit that a multi-controlled gate does not act on are used as
+auxiliary qubits in its decomposition, and ``qubits_initially_zero=True`` also uses as clean
+auxiliary qubits the ones that no previous gate acts on, if the circuit starts in the state
+:math:`\ket{0}`. The ``layout_method`` and ``routing_method`` arguments select other placers and
+routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
 
 .. testcode:: python
 
