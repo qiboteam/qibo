@@ -196,8 +196,8 @@ class Unroller:
             with another initial state. Defaults to ``False``.
         minimize_toffolis (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with
-            the lowest number of Toffoli gates. With clean auxiliary qubits, see
-            ``qubits_initially_zero``, this makes the decomposition shallower and, for many
+            the lowest number of Toffoli gates. With clean auxiliary qubits (see
+            ``qubits_initially_zero``), this makes the decomposition shallower and, for many
             controls, also shorter in number of native gates. With dirty auxiliary
             qubits only, it needs more native gates than the default decomposition. It
             cannot be used together with ``minimize_depth``. Defaults to ``False``.
