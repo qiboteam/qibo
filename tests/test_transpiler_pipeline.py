@@ -6,6 +6,8 @@ import pytest
 from qiskit.transpiler import PassManager, passes
 
 from qibo import Circuit, gates
+from qibo.backends import NumpyBackend
+from qibo.transpiler import unroller as unroller_module
 from qibo.transpiler._exceptions import (
     BlockingError,
     ConnectivityError,
@@ -460,3 +462,51 @@ def test_generate_preset_passes_on_qubits(backend, restrict_names, star_connecti
         final_layout=final_layout,
     )
     assert set(transpiled_circuit.wire_names) == set(restrict_names)
+
+
+@pytest.fixture
+def recorded_backends(monkeypatch):
+    """Record the backends that the unrollers give to ``translate_gate``."""
+    backends = []
+    translate = unroller_module.translate_gate
+
+    def recorder(gate, native_gates, backend=None, **kwargs):
+        backends.append(backend)
+        return translate(gate, native_gates, backend=backend, **kwargs)
+
+    monkeypatch.setattr(unroller_module, "translate_gate", recorder)
+    return backends
+
+
+def test_passes_call_backend_reaches_unrollers(recorded_backends):
+    own_backend, call_backend = NumpyBackend(), NumpyBackend()
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 2))
+    pipeline = Passes(
+        [Unroller(NativeGates.default(), backend=own_backend)],
+        connectivity=nx.path_graph(3),
+    )
+
+    pipeline(circuit, backend=call_backend)
+    assert recorded_backends and all(b is call_backend for b in recorded_backends)
+
+    # without a backend in the call the unroller keeps its own, and not the global one
+    recorded_backends.clear()
+    pipeline(circuit)
+    assert recorded_backends and all(b is own_backend for b in recorded_backends)
+
+
+def test_generate_preset_passes_call_backend(recorded_backends):
+    own_backend, call_backend = NumpyBackend(), NumpyBackend()
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    pipeline = generate_preset_passes(nx.path_graph(5), seed=0, backend=own_backend)
+
+    # both unrollers of the preset use the backend of the call
+    pipeline(circuit, backend=call_backend)
+    assert recorded_backends and all(b is call_backend for b in recorded_backends)
+
+    recorded_backends.clear()
+    pipeline(circuit)
+    assert recorded_backends and all(b is own_backend for b in recorded_backends)

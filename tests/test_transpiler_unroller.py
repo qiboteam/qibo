@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.backends import NumpyBackend
 from qibo.quantum_info import lie_closure, random_unitary
 from qibo.transpiler import unroller
 from qibo.transpiler._exceptions import DecompositionError
@@ -843,3 +844,36 @@ def test_translate_gate_clean_auxiliary_qubits(backend):
         gate, natives, backend=backend, clean=(8, 9), minimize_toffolis=True
     )
     assert {8, 9} <= {qubit for gate in translated for qubit in gate.qubits}
+
+
+def _record_backends(monkeypatch):
+    """Record the backend that the unroller gives to ``translate_gate``."""
+    backends = []
+    translate = unroller.translate_gate
+
+    def recorder(gate, native_gates, backend=None, **kwargs):
+        backends.append(backend)
+        return translate(gate, native_gates, backend=backend, **kwargs)
+
+    monkeypatch.setattr(unroller, "translate_gate", recorder)
+    return backends
+
+
+def test_unroller_call_backend(monkeypatch):
+    own_backend, call_backend = NumpyBackend(), NumpyBackend()
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    backends = _record_backends(monkeypatch)
+
+    # the backend given in the call has priority over the one of the unroller
+    Unroller(NativeGates.default(), backend=own_backend)(circuit, backend=call_backend)
+    assert backends and all(backend is call_backend for backend in backends)
+
+    backends.clear()
+    Unroller(NativeGates.default(), backend=own_backend)(circuit)
+    assert backends and all(backend is own_backend for backend in backends)
+
+    backends.clear()
+    Unroller(NativeGates.default())(circuit)
+    assert backends and all(backend is None for backend in backends)

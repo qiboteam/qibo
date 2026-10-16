@@ -67,13 +67,16 @@ class Passes:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend passed
                 to the transpiler passes that take one. If ``None``, defaults to the
-                global backend. Defaults to ``None``.
+                global backend, except for the unrollers, which keep their own backend.
+                Defaults to ``None``.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final
             {logical: physical} qubit mapping. The mapping is ``None`` if the pipeline
             has no router.
         """
+        # an unroller uses its own backend unless one is explicitly given
+        unroller_backend = backend
         backend = _check_backend(backend)
 
         final_layout = None
@@ -90,10 +93,9 @@ class Passes:
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
                 circuit, final_layout = transpiler_pass(circuit)
-            elif (
-                isinstance(transpiler_pass, Unroller)
-                or transpiler_pass.__class__.__name__ == "QiskitPasses"
-            ):
+            elif isinstance(transpiler_pass, Unroller):
+                circuit = transpiler_pass(circuit, backend=unroller_backend)
+            elif transpiler_pass.__class__.__name__ == "QiskitPasses":
                 circuit = transpiler_pass(circuit)
             else:
                 raise_error(
@@ -160,8 +162,8 @@ def generate_preset_passes(
             :class:`qibo.transpiler.pipeline.Passes`. It requires ``connectivity``.
             Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
-            unrollers to compute the gate matrices. If ``None``, it uses the global backend.
-            Defaults to ``None``.
+            unrollers to compute the gate matrices, unless another one is given when the
+            pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
 
     Returns:
         :class:`qibo.transpiler.pipeline.Passes`: Transpiler pipeline.
