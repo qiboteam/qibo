@@ -1,6 +1,7 @@
 """Tests methods from `qibo/src/hamiltonians/models.py`."""
 
 from functools import reduce
+from itertools import combinations
 
 import networkx as nx
 import numpy as np
@@ -10,15 +11,18 @@ from qibo import hamiltonians, matrices, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.hamiltonians._models import _multikron
 from qibo.hamiltonians.models import (
+    ANNNI,
     GPP,
     LABS,
     TFIM,
     XXX,
+    ClusterIsing,
     FermiHubbard,
     FoldedXXZ,
     Heisenberg,
     Ising,
     MaxCut,
+    SpinGlass,
 )
 
 models_config = [
@@ -1061,6 +1065,230 @@ def test_maxcut_zero_adjacency_matrix(backend, dense):
 def test_maxcut_adjacency_matrix_shape(backend, shape):
     with pytest.raises(RuntimeError):
         MaxCut(3, adj_matrix=np.ones(shape), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nqubits", [3, 4, 5, 6])
+def test_annni(backend, nqubits, closed_boundary, dense):
+    """Pairs one and two sites apart, coupled at most once even in small periodic rings."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    j1, j2, h = 1.2, 0.7, 0.4
+
+    if closed_boundary:
+        first = [(qubit, (qubit + 1) % nqubits) for qubit in range(nqubits)]
+        second = {
+            tuple(sorted((qubit, (qubit + 2) % nqubits))) for qubit in range(nqubits)
+        }
+        second -= {tuple(sorted(pair)) for pair in first}
+    else:
+        first = [(qubit, qubit + 1) for qubit in range(nqubits - 1)]
+        second = [(qubit, qubit + 2) for qubit in range(nqubits - 2)]
+
+    target = -j1 * sum(Z(a) * Z(b) for a, b in first)
+    target += j2 * sum(Z(a) * Z(b) for a, b in second)
+    target -= h * sum(X(qubit) for qubit in range(nqubits))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = ANNNI(
+        nqubits, j1, j2, h, dense, closed_boundary=closed_boundary, backend=backend
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_annni_tfim(backend, closed_boundary, dense):
+    """For :math:`J_{1} = 1` and :math:`J_{2} = 0`, the ANNNI model is the TFIM."""
+    kwargs = {"dense": dense, "closed_boundary": closed_boundary, "backend": backend}
+    hamiltonian = ANNNI(5, 1.0, 0.0, 0.3, **kwargs)
+    target = TFIM(5, 0.3, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [0, 1, 2])
+def test_annni_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        ANNNI(nqubits, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+def test_cluster_ising(backend, nqubits, closed_boundary, dense):
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    cluster, ising, field = 0.9, 0.5, 0.3
+
+    centers = range(nqubits) if closed_boundary else range(1, nqubits - 1)
+    bonds = [
+        (q, (q + 1) % nqubits)
+        for q in range(nqubits if closed_boundary else nqubits - 1)
+    ]
+
+    target = -cluster * sum(
+        Z((q - 1) % nqubits) * X(q) * Z((q + 1) % nqubits) for q in centers
+    )
+    target -= ising * sum(Z(a) * Z(b) for a, b in bonds)
+    target -= field * sum(X(q) for q in range(nqubits))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = ClusterIsing(
+        nqubits,
+        cluster,
+        ising,
+        field,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_cluster_ising_ising(backend, closed_boundary, dense):
+    """Without cluster interaction, the model is Ising, and TFIM for unit Ising strength."""
+    kwargs = {"dense": dense, "closed_boundary": closed_boundary, "backend": backend}
+
+    hamiltonian = ClusterIsing(4, 0.0, 0.8, 0.3, **kwargs)
+    target = Ising(4, -0.8, (0.0, -0.3), **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+    hamiltonian = ClusterIsing(4, 0.0, 1.0, 0.3, **kwargs)
+    target = TFIM(4, 0.3, **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_cluster_ising_cluster_state(backend, nqubits, closed_boundary):
+    """All cluster stabilizers are satisfied in the ground state."""
+    hamiltonian = ClusterIsing(
+        nqubits, closed_boundary=closed_boundary, backend=backend
+    )
+    energy = hamiltonian.eigenvalues()[0]
+
+    nstabilizers = nqubits if closed_boundary else nqubits - 2
+    backend.assert_allclose(energy, -nstabilizers, atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [0, 1, 2])
+def test_cluster_ising_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        ClusterIsing(nqubits, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("distribution", ["bimodal", "gaussian"])
+def test_spin_glass_sk(backend, distribution, dense):
+    """Infinite-range model, with couplings that are drawn bond by bond in lexicographic order."""
+    nqubits, seed, strength = 4, 7, 2.0
+    bonds = list(combinations(range(nqubits), 2))
+    scale = strength / math.sqrt(nqubits)
+
+    if distribution == "gaussian":
+        target = backend.random_normal(0, 1, len(bonds), seed=seed)
+    else:
+        target = backend.random_choice([-1.0, 1.0], size=len(bonds), seed=seed)
+
+    hamiltonian = SpinGlass(
+        nqubits,
+        strength,
+        distribution=distribution,
+        seed=seed,
+        dense=dense,
+        backend=backend,
+    )
+
+    # couplings are read from the diagonal, since the Hamiltonian is a sum of Z strings
+    energies = backend.real(backend.diag(hamiltonian.matrix))
+    spins = np.array(list(product([1.0, -1.0], repeat=nqubits)))
+    couplings = (spins * energies[:, None]).T @ spins / 2**nqubits
+
+    backend.assert_allclose(
+        [couplings[a, b] for a, b in bonds], scale * target, atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_spin_glass_ea(backend, dense):
+    """Short-range model on a graph, with edge weights scaling the couplings."""
+    seed, strength = 3, 1.5
+    graph = nx.grid_2d_graph(2, 2)
+    graph[(0, 0)][(0, 1)]["weight"] = 2.0
+
+    # nodes are labeled as (0, 0) -> 0, (0, 1) -> 1, (1, 0) -> 2, (1, 1) -> 3
+    bonds = [(0, 1), (0, 2), (1, 3), (2, 3)]
+    weights = backend.cast([2.0, 1.0, 1.0, 1.0], dtype=backend.float64)
+    target = backend.random_normal(len(bonds), seed=seed)
+
+    hamiltonian = SpinGlass(graph, strength, seed=seed, dense=dense, backend=backend)
+
+    energies = backend.real(backend.diag(hamiltonian.matrix))
+    spins = np.array(list(itertools.product([1.0, -1.0], repeat=4)))
+    couplings = (spins * energies[:, None]).T @ spins / 2**4
+
+    backend.assert_allclose(
+        [couplings[a, b] for a, b in bonds], strength * weights * target, atol=1e-10
+    )
+    # qubits that are not connected by an edge are not coupled
+    backend.assert_allclose([couplings[0, 3], couplings[1, 2]], [0.0, 0.0], atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_spin_glass_seed(backend, dense):
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = SpinGlass(4, seed=1, **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, SpinGlass(4, seed=1, **kwargs).matrix)
+    # a generator is equivalent to the seed that initializes it
+    target = SpinGlass(4, seed=np.random.default_rng(1), **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, target.matrix)
+
+    other = SpinGlass(4, seed=2, **kwargs)
+    assert not backend.allclose(hamiltonian.matrix, other.matrix)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_spin_glass_local_fields(backend, dense):
+    """Local fields are added to the random couplings, and a single qubit has no coupling."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    fields = SymbolicHamiltonian(
+        sum(0.2 * Z(q) + 0.4 * X(q) for q in range(3)), nqubits=3, backend=backend
+    )
+    couplings = SpinGlass(3, seed=1, dense=dense, backend=backend)
+    hamiltonian = SpinGlass(3, 1.0, (0.2, 0.4), seed=1, dense=dense, backend=backend)
+    backend.assert_allclose(
+        hamiltonian.matrix, couplings.matrix + fields.matrix, atol=1e-10
+    )
+
+    hamiltonian = SpinGlass(1, 1.0, (0.2, 0.4), seed=1, dense=dense, backend=backend)
+    target = SymbolicHamiltonian(0.2 * Z(0) + 0.4 * X(0), nqubits=1, backend=backend)
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_spin_glass_value_error(backend):
+    with pytest.raises(ValueError):
+        SpinGlass(3, distribution="uniform", backend=backend)
+
+    with pytest.raises(ValueError):
+        SpinGlass(0, backend=backend)
+
+    with pytest.raises(ValueError):
+        SpinGlass(nx.Graph(), backend=backend)
 
 
 @pytest.mark.parametrize("dense", [False, True])
