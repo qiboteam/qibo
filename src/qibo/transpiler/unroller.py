@@ -186,6 +186,26 @@ class Unroller:
             ``min_qubits=3`` decomposes only gates acting on three or more qubits,
             which is useful to make a circuit executable by a router before routing.
             Defaults to :math:`1`, which decomposes every gate.
+        qubits_initially_zero (bool, optional): If ``True``, the circuit is assumed to
+            start in the state :math:`\\ket{0}^{\\otimes n}`. The qubits on which no previous
+            gate of the circuit acts are then known to be in the state :math:`\\ket{0}`, and
+            are used as clean auxiliary qubits in the decomposition of multi-controlled
+            gates, being left in that state. By default, clean auxiliary qubits are used as
+            dirty ones, so they only lower the cost if ``minimize_toffolis`` or
+            ``minimize_depth`` is ``True``. It must be ``False`` if the circuit is executed
+            with another initial state. Defaults to ``False``.
+        minimize_toffolis (bool, optional): If ``True``, a multi-controlled
+            :class:`qibo.gates.X` with at least one clean auxiliary qubit is decomposed
+            with the lowest number of Toffoli gates, which makes the decomposition shallower
+            and, for many controls, also shorter in number of native gates. It has no effect
+            without clean auxiliary qubits, see ``qubits_initially_zero``. It cannot be used
+            together with ``minimize_depth``. Defaults to ``False``.
+        minimize_depth (bool, optional): If ``True``, a multi-controlled
+            :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with a
+            depth that is logarithmic in the number of controls. It cannot be used together
+            with ``minimize_toffolis``. See
+            :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+            Defaults to ``False``.
     """
 
     def __init__(
@@ -194,6 +214,9 @@ class Unroller:
         backend: Backend | None = None,
         use_dirty_ancillas: bool = False,
         min_qubits: int = 1,
+        qubits_initially_zero: bool = False,
+        minimize_toffolis: bool = False,
+        minimize_depth: bool = False,
     ):
         if not native_gates.is_universal:
             raise_error(
@@ -203,10 +226,18 @@ class Unroller:
                 + "single-qubit unitary: U3, GPI2, or rotations about two orthogonal "
                 + "axes with free angles.",
             )
+        if minimize_toffolis and minimize_depth:
+            raise_error(
+                ValueError,
+                "``minimize_toffolis`` and ``minimize_depth`` cannot be used together.",
+            )
         self.native_gates = native_gates
         self.backend = backend
         self.use_dirty_ancillas = use_dirty_ancillas
         self.min_qubits = min_qubits
+        self.qubits_initially_zero = qubits_initially_zero
+        self.minimize_toffolis = minimize_toffolis
+        self.minimize_depth = minimize_depth
 
     def __call__(self, circuit: Circuit) -> Circuit:
         """Decomposes a circuit to native gates.
@@ -218,23 +249,40 @@ class Unroller:
             (:class:`qibo.models.circuit.Circuit`): Decomposed circuit.
         """
         translated_circuit = Circuit(**circuit.init_kwargs)
+        # qubits that a previous gate acts on, so that they may not be in the state 0
+        touched = set()
         for gate in circuit.queue:
             if len(gate.qubits) < self.min_qubits:
                 translated_circuit.add(gate)
-                continue
-            free = (
-                tuple(q for q in range(circuit.nqubits) if q not in gate.qubits)
-                if self.use_dirty_ancillas and gate.is_controlled_by
-                else ()
-            )
-            translated_circuit.add(
-                translate_gate(
-                    gate,
-                    self.native_gates,
-                    backend=self.backend,
-                    free=free,
+            else:
+                idle = (
+                    tuple(q for q in range(circuit.nqubits) if q not in gate.qubits)
+                    if gate.is_controlled_by
+                    else ()
                 )
-            )
+                clean = (
+                    tuple(q for q in idle if q not in touched)
+                    if self.qubits_initially_zero
+                    else ()
+                )
+                free = (
+                    tuple(q for q in idle if q not in clean)
+                    if self.use_dirty_ancillas
+                    else ()
+                )
+                translated_circuit.add(
+                    translate_gate(
+                        gate,
+                        self.native_gates,
+                        backend=self.backend,
+                        free=free,
+                        clean=clean,
+                        minimize_toffolis=self.minimize_toffolis,
+                        minimize_depth=self.minimize_depth,
+                    )
+                )
+            if not isinstance(gate, (gates.Align, gates.Barrier, gates.I)):
+                touched.update(gate.qubits)
         return translated_circuit
 
 
@@ -243,6 +291,9 @@ def translate_gate(
     native_gates: NativeGates,
     backend: Backend | None = None,
     free: tuple[int, ...] = (),
+    clean: tuple[int, ...] = (),
+    minimize_toffolis: bool = False,
+    minimize_depth: bool = False,
 ) -> list[Gate]:
     """Maps gates to a hardware-native implementation.
 
@@ -256,6 +307,18 @@ def translate_gate(
         free (tuple[int, ...], optional): Ids of free qubits that can be used as
             dirty auxiliary qubits to decompose multi-controlled gates. Defaults
             to an empty tuple, which uses no auxiliary qubits.
+        clean (tuple[int, ...], optional): Ids of free qubits that are known to be in
+            the state :math:`\\ket{0}` and are left in that state, which can be used as
+            clean auxiliary qubits to decompose multi-controlled gates. They must not
+            be in ``free``. Defaults to an empty tuple.
+        minimize_toffolis (bool, optional): If ``True``, a multi-controlled
+            :class:`qibo.gates.X` is decomposed with the lowest number of Toffoli gates
+            when it has auxiliary qubits, see
+            :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+            Defaults to ``False``.
+        minimize_depth (bool, optional): If ``True``, a multi-controlled
+            :class:`qibo.gates.X` is decomposed with a logarithmic depth when it has
+            auxiliary qubits. Defaults to ``False``.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Native gates that decompose the input gate.
@@ -277,7 +340,12 @@ def translate_gate(
 
     if gate.is_controlled_by and len(gate.qubits) > 2:
         try:
-            decomposed_gates = gate.decompose(*free)
+            decomposed_gates = gate.decompose(
+                *free,
+                clean=clean,
+                minimize_toffolis=minimize_toffolis,
+                minimize_depth=minimize_depth,
+            )
         except RecursionError:
             decomposed_gates = [gate]
         if any(
