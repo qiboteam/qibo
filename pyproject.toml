@@ -66,7 +66,7 @@ tests = [
   "qiskit>=2.2.3,<3.0.0",
   "qbraid[qir]>=0.10.0,<0.11.0; python_version < '3.14'",
   "qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux' and python_version < '3.14'",
-  "pygridsynth>=2.0.0,<3.0.0",
+  "pygridsynth>=2.0.0,<3.0.0; python_version < '3.15'",
 ]
 cuda11 = [
   "cupy-cuda11x>=13.1.0,<14.0.0",
