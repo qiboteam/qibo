@@ -80,7 +80,7 @@ cuda12 = [
 
 [tool.uv.sources.qibojit]
 git = "https://github.com/qiboteam/qibojit.git"
-branch = "main"
+branch = "multiplexor"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
