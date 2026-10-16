@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.backends import NumpyBackend
 from qibo.quantum_info import lie_closure, random_unitary
 from qibo.transpiler import unroller
 from qibo.transpiler._exceptions import DecompositionError
@@ -670,3 +671,257 @@ def test_translate_gate_unrelated_key_error_is_not_swallowed(
     )
     with pytest.raises(KeyError, match="unrelated"):
         translate_gate(gate, NativeGates.default(), backend=backend)
+
+
+def test_translate_gate_keeps_directives_and_resets(backend):
+    natives = NativeGates.default()
+    for gate in (
+        gates.Align(0, 10),
+        gates.Barrier(0, 1),
+        gates.I(0),
+        gates.ResetChannel(0, [1.0, 0.0]),
+    ):
+        assert translate_gate(gate, natives, backend=backend) == [gate]
+
+
+def test_unroller_keeps_barrier_and_reset(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Barrier(0, 1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    translated = Unroller(NativeGates.default(), backend=backend)(circuit)
+    names = [gate.name for gate in translated.queue]
+    assert names.count("barrier") == 1
+    assert names.count("ResetChannel") == 1
+    assert names.index("barrier") < names.index("cz") < names.index("ResetChannel")
+
+
+@pytest.mark.parametrize("min_qubits", [1, 2, 3, 4])
+def test_unroller_min_qubits(backend, min_qubits):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    translated = Unroller(
+        NativeGates.default(), backend=backend, min_qubits=min_qubits
+    )(circuit)
+    names = [gate.name for gate in translated.queue]
+    assert ("h" in names) == (min_qubits > 1)
+    assert ("cx" in names) == (min_qubits > 2)
+    assert ("ccx" in names) == (min_qubits > 3)
+    if min_qubits <= 3:
+        assert all(len(gate.qubits) < 3 for gate in translated.queue)
+
+
+def _multi_controlled_circuit(nqubits, ncontrols, touched_before=(), touched_after=()):
+    """MCX with ``ncontrols`` controls on qubits ``0, ..., ncontrols - 1``, with the
+    target on ``ncontrols``. The gates acting on the controls and target do not touch
+    the other qubits, unless they are given."""
+    circuit = Circuit(nqubits)
+    for qubit in range(ncontrols + 1):
+        circuit.add(gates.RY(qubit, 0.3 + 0.2 * qubit))
+    for qubit in touched_before:
+        circuit.add(gates.X(qubit))
+    circuit.add(gates.X(ncontrols).controlled_by(*range(ncontrols)))
+    for qubit in touched_after:
+        circuit.add(gates.X(qubit))
+    return circuit
+
+
+def _assert_same_state_up_to_phase(backend, circuit, translated):
+    state = backend.to_numpy(backend.execute_circuit(circuit).state())
+    translated_state = backend.to_numpy(backend.execute_circuit(translated).state())
+    phase = np.vdot(translated_state, state)
+    assert np.isclose(abs(phase), 1.0)
+    np.testing.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)
+
+
+def _auxiliary_qubits(circuit, nused):
+    return {qubit for gate in circuit.queue for qubit in gate.qubits if qubit >= nused}
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {"use_dirty_ancillas": True},
+        {"qubits_initially_zero": True},
+        {"qubits_initially_zero": True, "minimize_toffolis": True},
+        {"qubits_initially_zero": True, "minimize_depth": True},
+        {
+            "qubits_initially_zero": True,
+            "use_dirty_ancillas": True,
+            "minimize_toffolis": True,
+        },
+    ],
+)
+def test_unroller_clean_auxiliary_qubits(backend, options):
+    circuit = _multi_controlled_circuit(nqubits=11, ncontrols=7)
+    natives = NativeGates.default()
+    translated = Unroller(natives, backend=backend, **options)(circuit)
+    assert_decomposition(translated, natives)
+    # the clean auxiliary qubits are only valid if the circuit starts in the state 0
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_clean_auxiliary_qubits_lower_the_cost(backend):
+    circuit = _multi_controlled_circuit(nqubits=11, ncontrols=7)
+    natives = NativeGates.default()
+
+    def count_two_qubit_gates(**options):
+        translated = Unroller(natives, backend=backend, **options)(circuit)
+        return sum(len(gate.qubits) == 2 for gate in translated.queue), translated
+
+    without_auxiliary, translated = count_two_qubit_gates()
+    assert not _auxiliary_qubits(translated, 8)
+    dirty, translated = count_two_qubit_gates(use_dirty_ancillas=True)
+    assert _auxiliary_qubits(translated, 8)
+    clean, translated = count_two_qubit_gates(
+        qubits_initially_zero=True, minimize_toffolis=True
+    )
+    assert _auxiliary_qubits(translated, 8)
+    assert clean < dirty < without_auxiliary
+
+
+def test_unroller_touched_qubits_are_not_clean(backend):
+    natives = NativeGates.default()
+    options = {"qubits_initially_zero": True, "minimize_toffolis": True}
+    # all the qubits that are not in the multi-controlled gate are acted on before it
+    circuit = _multi_controlled_circuit(11, 7, touched_before=(8, 9, 10))
+    translated = Unroller(natives, backend=backend, **options)(circuit)
+    assert not _auxiliary_qubits(translated, 11) - {8, 9, 10}
+    reference = Unroller(natives, backend=backend)(circuit)
+    assert [(gate.name, gate.qubits) for gate in translated.queue] == [
+        (gate.name, gate.qubits) for gate in reference.queue
+    ]
+    # while the qubits that are only acted on afterwards are still clean
+    circuit = _multi_controlled_circuit(11, 7, touched_after=(8, 9, 10))
+    translated = Unroller(natives, backend=backend, **options)(circuit)
+    assert len(_auxiliary_qubits(translated, 8)) >= 2
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_clean_and_dirty_auxiliary_qubits(backend):
+    # qubit 8 is dirty, since it is acted on before, and qubits 9 and 10 are clean
+    circuit = _multi_controlled_circuit(11, 7, touched_before=(8,))
+    natives = NativeGates.default()
+    translated = Unroller(
+        natives,
+        backend=backend,
+        use_dirty_ancillas=True,
+        qubits_initially_zero=True,
+        minimize_toffolis=True,
+    )(circuit)
+    assert {9, 10} <= _auxiliary_qubits(translated, 8)
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_min_qubits_gates_still_touch_qubits(backend):
+    circuit = _multi_controlled_circuit(11, 7, touched_before=(8,))
+    translated = Unroller(
+        NativeGates.default(),
+        backend=backend,
+        min_qubits=2,
+        qubits_initially_zero=True,
+        minimize_toffolis=True,
+    )(circuit)
+    # the single-qubit gate on qubit 8 is not decomposed, but qubit 8 is not clean
+    touching_eight = [gate for gate in translated.queue if 8 in gate.qubits]
+    assert [gate.name for gate in touching_eight] == ["x"]
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_minimize_toffolis_and_depth_error():
+    with pytest.raises(ValueError):
+        Unroller(NativeGates.default(), minimize_toffolis=True, minimize_depth=True)
+
+
+def test_translate_gate_clean_auxiliary_qubits(backend):
+    gate = gates.X(7).controlled_by(*range(7))
+    natives = NativeGates.default()
+    translated = translate_gate(
+        gate, natives, backend=backend, clean=(8, 9), minimize_toffolis=True
+    )
+    assert {8, 9} <= {qubit for gate in translated for qubit in gate.qubits}
+
+
+def _record_backends(monkeypatch):
+    """Record the backend that the unroller gives to ``translate_gate``."""
+    backends = []
+    translate = unroller.translate_gate
+
+    def recorder(gate, native_gates, backend=None, **kwargs):
+        backends.append(backend)
+        return translate(gate, native_gates, backend=backend, **kwargs)
+
+    monkeypatch.setattr(unroller, "translate_gate", recorder)
+    return backends
+
+
+def test_unroller_call_backend(monkeypatch):
+    own_backend, call_backend = NumpyBackend(), NumpyBackend()
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    backends = _record_backends(monkeypatch)
+
+    # the backend given in the call has priority over the one of the unroller
+    Unroller(NativeGates.default(), backend=own_backend)(circuit, backend=call_backend)
+    assert backends and all(backend is call_backend for backend in backends)
+
+    backends.clear()
+    Unroller(NativeGates.default(), backend=own_backend)(circuit)
+    assert backends and all(backend is own_backend for backend in backends)
+
+    backends.clear()
+    Unroller(NativeGates.default())(circuit)
+    assert backends and all(backend is None for backend in backends)
+
+
+class _WithoutDecomposition(gates.Gate):
+    """Gate that acts on several qubits and does not have a decomposition."""
+
+    def __init__(self, *qubits):
+        super().__init__()
+        self.name = "without_decomposition"
+        self.target_qubits = tuple(qubits)
+        self.init_args = list(qubits)
+        self.init_kwargs = {}
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_translate_gate_without_decomposition_error(backend, nqubits):
+    gate = _WithoutDecomposition(*range(nqubits))
+    with pytest.raises(DecompositionError, match=f"acting on {nqubits} qubits"):
+        translate_gate(gate, NativeGates.default(), backend=backend)
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.GeneralizedRBS([0, 1], [2, 3], 0.37, 0.2),
+        gates.Multiplexor([0, 1], 2, [0.1, 0.2, 0.3, 0.4]),
+        gates.FanOut(0, 1, 2, 3),
+    ],
+    ids=lambda gate: gate.name,
+)
+def test_unroller_gates_with_own_decomposition(backend, gate):
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gate)
+    natives = NativeGates.default()
+    # the gates acting on more than two qubits can be decomposed before the routing
+    partially_unrolled = Unroller(natives, backend=backend, min_qubits=3)(circuit)
+    assert all(len(g.qubits) <= 2 for g in partially_unrolled.queue)
+    # some backends cannot simulate all these gates, so the reference state is NumPy's
+    state = backend.execute_circuit(circuit).state()
+    fully_unrolled = Unroller(natives, backend=backend)(circuit)
+    assert_decomposition(fully_unrolled, natives)
+    for translated in (partially_unrolled, fully_unrolled):
+        translated_state = backend.execute_circuit(translated).state()
+        phase = backend.dot(
+            backend.ravel(backend.conj(translated_state)), backend.ravel(state)
+        )
+        assert np.isclose(abs(phase), 1.0)
+        backend.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)

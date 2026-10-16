@@ -98,6 +98,30 @@ Transverse-field Ising model
     :members:
     :member-order: bysource
 
+Axial next-nearest-neighbor Ising model
+---------------------------------------
+
+.. autoclass:: qibo.hamiltonians.ANNNI
+    :members:
+    :member-order: bysource
+
+Cluster-Ising model
+-------------------
+
+.. autoclass:: qibo.hamiltonians.ClusterIsing
+    :members:
+    :member-order: bysource
+
+Spin glass
+----------
+
+The spin glass model covers both the Sherrington-Kirkpatrick (SK) model, with all-to-all
+connectivity, and the Edwards-Anderson (EA) model, with connectivity given by a graph.
+
+.. autoclass:: qibo.hamiltonians.SpinGlass
+    :members:
+    :member-order: bysource
+
 Max Cut
 -------
 
@@ -176,6 +200,22 @@ Heisenberg XXZ
 --------------
 
 .. autoclass:: qibo.hamiltonians.XXZ
+    :members:
+    :member-order: bysource
+
+
+Heisenberg XY model
+-------------------
+
+.. autoclass:: qibo.hamiltonians.XY
+    :members:
+    :member-order: bysource
+
+
+Disordered Heisenberg model
+---------------------------
+
+.. autoclass:: qibo.hamiltonians.DisorderedHeisenberg
     :members:
     :member-order: bysource
 

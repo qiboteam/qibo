@@ -1021,9 +1021,12 @@ def link_product(
         subscripts, *tensors, optimize=False, einsum_call=True
     )
 
-    inds, idx_rm, einsum_str, _, _ = contracrtion_list[0]
+    # numpy >= 2.1 returns ``(contract_inds, einsum_str, input_list)``; the
+    # contracted (removed) indices are no longer provided, so derive them.
+    inds, einsum_str, _ = contracrtion_list[0]
     input_str, results_index = einsum_str.split("->")
     inputs = input_str.split(",")
+    idx_rm = set(input_str.replace(",", "")) - set(results_index)
 
     # Warning if the same index connects two input or two output systems
     if not surpress_warning:

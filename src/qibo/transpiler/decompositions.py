@@ -482,6 +482,26 @@ cz_dec.add(
         gates.H(0),
     ],
 )
+cz_dec.add(
+    gates.DEUTSCH,
+    lambda gate: [
+        gates.CZ(1, 2),
+        gates.RX(2, -gate.parameters[0] / 2),
+        gates.CZ(0, 2),
+        gates.RX(2, gate.parameters[0] / 2),
+        gates.CZ(1, 2),
+        gates.RX(2, -gate.parameters[0] / 2),
+        gates.CZ(0, 2),
+        gates.RX(2, gate.parameters[0] / 2),
+        gates.RZ(1, math.pi / 4),
+        gates.H(1),
+        gates.CZ(0, 1),
+        gates.RZ(0, math.pi / 4),
+        gates.RX(1, -math.pi / 4),
+        gates.CZ(0, 1),
+        gates.H(1),
+    ],
+)
 
 # register other optimized gate decompositions
 opt_dec = GateDecompositions()
@@ -829,6 +849,17 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
+    gates.RBS,
+    lambda gate: [
+        gates.H(0),
+        gates.CNOT(0, 1),
+        gates.RY(0, gate.parameters[0]),
+        gates.RY(1, gate.parameters[0]),
+        gates.CNOT(0, 1),
+        gates.H(0),
+    ],
+)
+standard_decompositions.add(
     gates.GIVENS, lambda gate: gates.RBS(0, 1, -gate.parameters[0]).decompose()
 )
 standard_decompositions.add(
@@ -880,10 +911,21 @@ standard_decompositions.add(
 standard_decompositions.add(
     gates.DEUTSCH,
     lambda gate: [
-        gates.Z(2).controlled_by(0, 1),
-        gates.Y(2).controlled_by(0, 1),
-        gates.RX(2, 2 * gate.parameters[0]).controlled_by(0, 1),
-        gates.X(2).controlled_by(0, 1),
+        gates.H(2),
+        gates.CNOT(1, 2),
+        gates.RZ(2, -gate.parameters[0] / 2),
+        gates.CNOT(0, 2),
+        gates.RZ(2, gate.parameters[0] / 2),
+        gates.CNOT(1, 2),
+        gates.T(1),
+        gates.RZ(2, -gate.parameters[0] / 2),
+        gates.CNOT(0, 2),
+        gates.CNOT(0, 1),
+        gates.RZ(2, gate.parameters[0] / 2),
+        gates.T(0),
+        gates.TDG(1),
+        gates.H(2),
+        gates.CNOT(0, 1),
     ],
 )
 standard_decompositions.add(

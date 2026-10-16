@@ -9,6 +9,7 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
+from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.decompositions import u3_dec
@@ -1021,10 +1022,22 @@ class Preprocessing(Optimizer):
 
     Args:
         connectivity (:class:`networkx.Graph`): Hardware connectivity as a graph.
+        initial_layout (list, optional): Physical qubits on which the logical qubits of the
+            circuit are placed, that is, the :math:`i`-th logical qubit is placed on the
+            physical qubit ``initial_layout[i]``. It must have one distinct node of the
+            connectivity for every logical qubit, and it replaces the ``wire_names``
+            of the circuit, which are set in place. If ``None``, the ``wire_names``
+            of the circuit are used if they are all in the connectivity, and the first
+            nodes of the connectivity otherwise. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity: nx.Graph | None = None):
+    def __init__(
+        self,
+        connectivity: nx.Graph | None = None,
+        initial_layout: list[int | str] | None = None,
+    ):
         self.connectivity = connectivity
+        self.initial_layout = initial_layout
 
     def __call__(self, circuit: Circuit) -> Circuit:
         """Match the number of qubits and the ``wire_names`` of the circuit to the connectivity.
@@ -1035,7 +1048,25 @@ class Preprocessing(Optimizer):
         Returns:
             :class:`qibo.models.circuit.Circuit`: Circuit with as many qubits as the
             connectivity graph.
+
+        Raises:
+            PlacementError: If ``initial_layout`` does not have a distinct node of the
+                connectivity for every qubit of the circuit.
         """
+        if self.initial_layout is not None:
+            layout = list(self.initial_layout)
+            if (
+                len(layout) != circuit.nqubits
+                or len(set(layout)) != len(layout)
+                or not set(layout) <= set(self.connectivity.nodes)
+            ):
+                raise_error(
+                    PlacementError,
+                    f"The initial layout {layout} must have one distinct node of the "
+                    + f"connectivity for each of the {circuit.nqubits} qubits of the circuit.",
+                )
+            circuit.wire_names = layout
+
         if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
             default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
             log.warning(

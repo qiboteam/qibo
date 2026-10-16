@@ -153,7 +153,8 @@ def calculate_fourier_coeffs_unfiltered(input_function, frequency_degree):
     # Evaluate the function at each sampling point
     for index in indices:
         sampling_point = spacing * np.array(index)
-        function_discretized[index] = input_function(sampling_point)
+        # Coerce to a scalar: user functions may return a 0-d/1-element array.
+        function_discretized[index] = np.asarray(input_function(sampling_point)).item()
 
     # Compute the Fourier coefficients using the Fast Fourier Transform (FFT)
     coefficients = np.fft.fftn(function_discretized) / function_discretized.size
