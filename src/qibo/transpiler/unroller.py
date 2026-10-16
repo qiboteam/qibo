@@ -239,15 +239,19 @@ class Unroller:
         self.minimize_toffolis = minimize_toffolis
         self.minimize_depth = minimize_depth
 
-    def __call__(self, circuit: Circuit) -> Circuit:
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Decomposes a circuit to native gates.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be decomposed.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use for
+                gate matrix. If ``None``, it uses the backend of the unroller. Defaults
+                to ``None``.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`): Decomposed circuit.
         """
+        backend = self.backend if backend is None else backend
         translated_circuit = Circuit(**circuit.init_kwargs)
         # qubits that a previous gate acts on, so that they may not be in the state 0
         touched = set()
@@ -274,7 +278,7 @@ class Unroller:
                     translate_gate(
                         gate,
                         self.native_gates,
-                        backend=self.backend,
+                        backend=backend,
                         free=free,
                         clean=clean,
                         minimize_toffolis=self.minimize_toffolis,
