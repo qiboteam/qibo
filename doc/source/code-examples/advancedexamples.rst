@@ -2303,6 +2303,37 @@ on a star-shaped hardware connectivity and a custom set of native gates.
     )
 
 
+Instead of writing the list of passes, :func:`qibo.transpiler.pipeline.generate_preset_passes`
+creates a ready-to-use pipeline that only makes the circuit executable on the hardware,
+without optimizing it. It decomposes the gates acting on three or more qubits, which cannot be
+routed, places the qubits on ``initial_layout`` (or on the first qubits of the connectivity if
+there is none), routes the circuit with :class:`qibo.transpiler.router.Sabre`, keeping the best
+of five trials, and decomposes it to the native gates. The ``seed`` makes the transpilation
+reproducible.
+
+.. testcode:: python
+
+    import networkx as nx
+
+    from qibo import Circuit, gates
+    from qibo.transpiler import generate_preset_passes
+
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.M(0, 1, 2))
+
+    # a line of five qubits, on which the circuit is placed on the qubits 1, 2 and 3
+    connectivity = nx.path_graph(5)
+    pipeline = generate_preset_passes(connectivity, initial_layout=[1, 2, 3], seed=42)
+    transpiled_circ, final_layout = pipeline(circuit)
+
+    print(pipeline.is_satisfied(transpiled_circ))
+
+.. testoutput:: python
+
+    True
+
+
 In the current Qibo version, transpiler passes require that
 ``wire_names`` match the qubit names in the given connectivity graph.
 This can be done manually or by using :class:`qibo.transpiler.optimizer.Preprocessing`
