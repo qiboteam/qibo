@@ -217,6 +217,61 @@ def test_TOFFOLI_to_native(backend, natives_1q, natives_2q):
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
 
 
+@pytest.mark.parametrize("theta", [0.0, 0.1234, -1.3, math.pi / 2, 3.0])
+@pytest.mark.parametrize(
+    "natives_2q",
+    [
+        NativeGates.CZ,
+        NativeGates.iSWAP,
+        NativeGates.CZ | NativeGates.iSWAP,
+        NativeGates.CNOT,
+    ],
+)
+@pytest.mark.parametrize("natives_1q", [NativeGates.U3, NativeGates.GPI2])
+def test_DEUTSCH_to_native(backend, natives_1q, natives_2q, theta):
+    gate = gates.DEUTSCH(0, 1, 2, theta)
+    assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
+
+
+@pytest.mark.parametrize("theta", [0.1234, math.pi / 2])
+def test_DEUTSCH_two_qubit_gate_count(backend, theta):
+    gate = gates.DEUTSCH(0, 1, 2, theta)
+    # six is the minimum, since the Deutsch gate is a Toffoli gate for theta = pi / 2
+    assert cz_dec.count_2q(gate, backend) == 6
+    assert standard_decompositions.count_2q(gate, backend) == 6
+
+
+@pytest.mark.parametrize("qubits", [(0, 1, 2), (2, 0, 1), (1, 2, 0)])
+@pytest.mark.parametrize("table", [cz_dec, standard_decompositions])
+def test_DEUTSCH_decomposition_on_other_qubits(backend, table, qubits):
+    theta = 0.4321
+    original = Circuit(3)
+    original.add(gates.DEUTSCH(*qubits, theta))
+    decomposed = Circuit(3)
+    decomposed.add(table(gates.DEUTSCH(*qubits, theta), backend))
+    unitary = backend.to_numpy(decomposed.unitary(backend))
+    target = backend.to_numpy(original.unitary(backend))
+    phase = np.vdot(target.ravel(), unitary.ravel())
+    backend.assert_allclose(unitary * abs(phase) / phase, target, atol=1e-8)
+
+
+@pytest.mark.parametrize("theta", [0.0, 0.1234, -1.3, math.pi, 3.0])
+@pytest.mark.parametrize("natives_1q", [NativeGates.U3, NativeGates.GPI2])
+def test_RBS_to_native_with_cnot(backend, natives_1q, theta):
+    gate = gates.RBS(0, 1, theta)
+    natives = natives_1q | NativeGates.CNOT | default_natives
+    assert_matrices_allclose(gate, natives, backend)
+
+
+def test_RBS_standard_decomposition_matches_gate_decompose():
+    gate = gates.RBS(0, 1, 0.3)
+    expected = gate.decompose()
+    decomposed = standard_decompositions(gate)
+    assert [(g.name, g.qubits, g.parameters) for g in decomposed] == [
+        (g.name, g.qubits, g.parameters) for g in expected
+    ]
+
+
 @pytest.mark.parametrize("seed", [None, 10])
 @pytest.mark.parametrize(
     "natives_2q",
