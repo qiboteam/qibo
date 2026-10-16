@@ -212,6 +212,14 @@ Heisenberg XY model
     :member-order: bysource
 
 
+Disordered Heisenberg model
+---------------------------
+
+.. autoclass:: qibo.hamiltonians.DisorderedHeisenberg
+    :members:
+    :member-order: bysource
+
+
 Folded XXZ model
 ----------------
 
