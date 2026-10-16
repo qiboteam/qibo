@@ -711,3 +711,135 @@ def test_unroller_min_qubits(backend, min_qubits):
     assert ("ccx" in names) == (min_qubits > 3)
     if min_qubits <= 3:
         assert all(len(gate.qubits) < 3 for gate in translated.queue)
+
+
+def _multi_controlled_circuit(nqubits, ncontrols, touched_before=(), touched_after=()):
+    """MCX with ``ncontrols`` controls on qubits ``0, ..., ncontrols - 1``, with the
+    target on ``ncontrols``. The gates acting on the controls and target do not touch
+    the other qubits, unless they are given."""
+    circuit = Circuit(nqubits)
+    for qubit in range(ncontrols + 1):
+        circuit.add(gates.RY(qubit, 0.3 + 0.2 * qubit))
+    for qubit in touched_before:
+        circuit.add(gates.X(qubit))
+    circuit.add(gates.X(ncontrols).controlled_by(*range(ncontrols)))
+    for qubit in touched_after:
+        circuit.add(gates.X(qubit))
+    return circuit
+
+
+def _assert_same_state_up_to_phase(backend, circuit, translated):
+    state = backend.to_numpy(backend.execute_circuit(circuit).state())
+    translated_state = backend.to_numpy(backend.execute_circuit(translated).state())
+    phase = np.vdot(translated_state, state)
+    assert np.isclose(abs(phase), 1.0)
+    np.testing.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)
+
+
+def _auxiliary_qubits(circuit, nused):
+    return {qubit for gate in circuit.queue for qubit in gate.qubits if qubit >= nused}
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {"use_dirty_ancillas": True},
+        {"qubits_initially_zero": True},
+        {"qubits_initially_zero": True, "minimize_toffolis": True},
+        {"qubits_initially_zero": True, "minimize_depth": True},
+        {
+            "qubits_initially_zero": True,
+            "use_dirty_ancillas": True,
+            "minimize_toffolis": True,
+        },
+    ],
+)
+def test_unroller_clean_auxiliary_qubits(backend, options):
+    circuit = _multi_controlled_circuit(nqubits=11, ncontrols=7)
+    natives = NativeGates.default()
+    translated = Unroller(natives, backend=backend, **options)(circuit)
+    assert_decomposition(translated, natives)
+    # the clean auxiliary qubits are only valid if the circuit starts in the state 0
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_clean_auxiliary_qubits_lower_the_cost(backend):
+    circuit = _multi_controlled_circuit(nqubits=11, ncontrols=7)
+    natives = NativeGates.default()
+
+    def count_two_qubit_gates(**options):
+        translated = Unroller(natives, backend=backend, **options)(circuit)
+        return sum(len(gate.qubits) == 2 for gate in translated.queue), translated
+
+    without_auxiliary, translated = count_two_qubit_gates()
+    assert not _auxiliary_qubits(translated, 8)
+    dirty, translated = count_two_qubit_gates(use_dirty_ancillas=True)
+    assert _auxiliary_qubits(translated, 8)
+    clean, translated = count_two_qubit_gates(
+        qubits_initially_zero=True, minimize_toffolis=True
+    )
+    assert _auxiliary_qubits(translated, 8)
+    assert clean < dirty < without_auxiliary
+
+
+def test_unroller_touched_qubits_are_not_clean(backend):
+    natives = NativeGates.default()
+    options = {"qubits_initially_zero": True, "minimize_toffolis": True}
+    # all the qubits that are not in the multi-controlled gate are acted on before it
+    circuit = _multi_controlled_circuit(11, 7, touched_before=(8, 9, 10))
+    translated = Unroller(natives, backend=backend, **options)(circuit)
+    assert not _auxiliary_qubits(translated, 11) - {8, 9, 10}
+    reference = Unroller(natives, backend=backend)(circuit)
+    assert [(gate.name, gate.qubits) for gate in translated.queue] == [
+        (gate.name, gate.qubits) for gate in reference.queue
+    ]
+    # while the qubits that are only acted on afterwards are still clean
+    circuit = _multi_controlled_circuit(11, 7, touched_after=(8, 9, 10))
+    translated = Unroller(natives, backend=backend, **options)(circuit)
+    assert len(_auxiliary_qubits(translated, 8)) >= 2
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_clean_and_dirty_auxiliary_qubits(backend):
+    # qubit 8 is dirty, since it is acted on before, and qubits 9 and 10 are clean
+    circuit = _multi_controlled_circuit(11, 7, touched_before=(8,))
+    natives = NativeGates.default()
+    translated = Unroller(
+        natives,
+        backend=backend,
+        use_dirty_ancillas=True,
+        qubits_initially_zero=True,
+        minimize_toffolis=True,
+    )(circuit)
+    assert {9, 10} <= _auxiliary_qubits(translated, 8)
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_min_qubits_gates_still_touch_qubits(backend):
+    circuit = _multi_controlled_circuit(11, 7, touched_before=(8,))
+    translated = Unroller(
+        NativeGates.default(),
+        backend=backend,
+        min_qubits=2,
+        qubits_initially_zero=True,
+        minimize_toffolis=True,
+    )(circuit)
+    # the single-qubit gate on qubit 8 is not decomposed, but qubit 8 is not clean
+    touching_eight = [gate for gate in translated.queue if 8 in gate.qubits]
+    assert [gate.name for gate in touching_eight] == ["x"]
+    _assert_same_state_up_to_phase(backend, circuit, translated)
+
+
+def test_unroller_minimize_toffolis_and_depth_error():
+    with pytest.raises(ValueError):
+        Unroller(NativeGates.default(), minimize_toffolis=True, minimize_depth=True)
+
+
+def test_translate_gate_clean_auxiliary_qubits(backend):
+    gate = gates.X(7).controlled_by(*range(7))
+    natives = NativeGates.default()
+    translated = translate_gate(
+        gate, natives, backend=backend, clean=(8, 9), minimize_toffolis=True
+    )
+    assert {8, 9} <= {qubit for gate in translated for qubit in gate.qubits}
