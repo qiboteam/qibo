@@ -195,11 +195,12 @@ class Unroller:
             ``minimize_depth`` is ``True``. It must be ``False`` if the circuit is executed
             with another initial state. Defaults to ``False``.
         minimize_toffolis (bool, optional): If ``True``, a multi-controlled
-            :class:`qibo.gates.X` with at least one clean auxiliary qubit is decomposed
-            with the lowest number of Toffoli gates, which makes the decomposition shallower
-            and, for many controls, also shorter in number of native gates. It has no effect
-            without clean auxiliary qubits, see ``qubits_initially_zero``. It cannot be used
-            together with ``minimize_depth``. Defaults to ``False``.
+            :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with
+            the lowest number of Toffoli gates. With clean auxiliary qubits (see
+            ``qubits_initially_zero``), this makes the decomposition shallower and, for many
+            controls, also shorter in number of native gates. With dirty auxiliary
+            qubits only, it needs more native gates than the default decomposition. It
+            cannot be used together with ``minimize_depth``. Defaults to ``False``.
         minimize_depth (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with a
             depth that is logarithmic in the number of controls. It cannot be used together
@@ -342,7 +343,16 @@ def translate_gate(
         gate.basis = []
         return [gate]
 
-    if gate.is_controlled_by and len(gate.qubits) > 2:
+    if len(gate.qubits) > 2 and (
+        gate.is_controlled_by
+        or (
+            gate.__class__ not in cz_dec.decompositions
+            and not isinstance(gate, (gates.FusedGate, gates.Unitary))
+        )
+    ):
+        # The gate is decomposed by itself into gates acting on less qubits, which
+        # happens for the controlled gates and for the gates with no registered
+        # decomposition, like the ones that other gates are built from.
         try:
             decomposed_gates = gate.decompose(
                 *free,
@@ -361,6 +371,14 @@ def translate_gate(
                 DecompositionError,
                 f"Cannot decompose {gate.name} controlled by {len(gate.control_qubits)} "
                 + f"qubit(s) with {len(gate.target_qubits)} target qubit(s).",
+            )
+        if not gate.is_controlled_by and any(
+            len(decomposed_gate.qubits) >= len(gate.qubits)
+            for decomposed_gate in decomposed_gates
+        ):
+            raise_error(
+                DecompositionError,
+                f"Cannot decompose {gate.name} acting on {len(gate.qubits)} qubits.",
             )
         translated = []
         for decomposed_gate in decomposed_gates:
@@ -509,7 +527,17 @@ def _translate_two_qubit_gates(
     # No CZ, iSWAP gates in the native gate set
     # Decompose CNOT, CZ, SWAP gates into CNOT gates
     if native_gates & NativeGates.CNOT:
-        return standard_decompositions(gate, backend)
+        if gate.__class__ in standard_decompositions.decompositions:
+            return standard_decompositions(gate, backend)
+
+        # First decompose into CZ, which are then decomposed into CNOT
+        cz_decomposed = cz_dec(gate, backend)
+        cnot_decomposed = []
+        for g in cz_decomposed:
+            cnot_decomposed.extend(
+                translate_gate(g, native_gates=native_gates, backend=backend)
+            )
+        return cnot_decomposed
 
     raise_error(
         DecompositionError,
