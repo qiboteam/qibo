@@ -6,6 +6,7 @@ import sympy
 
 from qibo import Circuit, gates
 from qibo.gates.special import Barrier
+from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.optimizer import (
     ConsolidateBlocks,
@@ -63,6 +64,53 @@ def test_preprocessing_add(star_connectivity):
     new_circuit = preprocesser(circuit=circ)
     assert new_circuit.ngates == 1
     assert new_circuit.nqubits == 5
+
+
+def test_preprocessing_initial_layout(star_connectivity):
+    circ = Circuit(3, wire_names=[0, 1, 2])
+    circ.add(gates.CNOT(0, 1))
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout=[4, 2, 0]
+    )
+    new_circuit = preprocesser(circuit=circ)
+    # the remaining physical qubits follow the order of the connectivity
+    assert new_circuit.wire_names == [4, 2, 0, 1, 3]
+    assert new_circuit.nqubits == 5
+    assert new_circuit.ngates == 1
+    assert new_circuit.queue[0].qubits == (0, 1)
+
+
+def test_preprocessing_initial_layout_all_qubits(star_connectivity):
+    circ = Circuit(5)
+    circ.add(gates.CNOT(0, 1))
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout=[3, 1, 4, 0, 2]
+    )
+    new_circuit = preprocesser(circuit=circ)
+    assert new_circuit.wire_names == [3, 1, 4, 0, 2]
+    assert new_circuit.ngates == 1
+
+
+def test_preprocessing_initial_layout_named_qubits(star_connectivity):
+    names = ["a", "b", "c", "d", "e"]
+    circ = Circuit(2)
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(names), initial_layout=["c", "a"]
+    )
+    assert preprocesser(circuit=circ).wire_names == ["c", "a", "b", "d", "e"]
+
+
+@pytest.mark.parametrize(
+    "initial_layout",
+    [[0, 1], [0, 1, 2, 3], [0, 0, 1], [0, 1, 9], [0, 1, "q"]],
+)
+def test_preprocessing_initial_layout_error(initial_layout, star_connectivity):
+    circ = Circuit(3)
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout=initial_layout
+    )
+    with pytest.raises(PlacementError):
+        preprocesser(circuit=circ)
 
 
 def test_fusion(backend):
