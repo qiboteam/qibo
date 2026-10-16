@@ -210,6 +210,11 @@ class Sabre(Router):
             Defaults to :math:`1.5`.
         seed (int, optional): Seed for the candidate random choice as tiebreaker.
             Defaults to ``None``.
+        trials (int, optional): Number of independent routing attempts, which differ in
+            the random choices among equally good candidates. The attempt with the
+            lowest number of added SWAPs is returned, and the first one among ties.
+            The attempts are reproducible if ``seed`` is given, and the first one
+            does not depend on ``trials``. Defaults to :math:`1`.
 
     References:
         1. G. Li, Y. Ding, and Y. Xie,
@@ -225,12 +230,16 @@ class Sabre(Router):
         delta: float = 0.001,
         swap_threshold: float = 1.5,
         seed: int | None = None,
+        trials: int = 1,
     ):
+        if trials < 1:
+            raise_error(ValueError, f"``trials`` must be positive, but it is {trials}.")
         self.connectivity = connectivity
         self.lookahead = lookahead
         self.decay = decay_lookahead
         self.delta = delta
         self.swap_threshold = swap_threshold
+        self.trials = trials
         self._delta_register = None
         self._dist_matrix = None
         self._dag = None
@@ -251,42 +260,55 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
-        # The connectivity is relabeled during the preprocessing. It is restored at the
-        # end so that the router can be used again with the same ``wire_names``.
+        # The connectivity is relabeled during the preprocessing, so it is restored before
+        # every trial and at the end, so that the router can be used again with the same
+        # ``wire_names``.
         connectivity = self.connectivity
+        best_trial = None
         try:
-            self._preprocessing(circuit=circuit)
-            longest_path = np.max(self._dist_matrix)
+            for _ in range(self.trials):
+                self.connectivity = connectivity
+                self._preprocessing(circuit=circuit)
+                longest_path = np.max(self._dist_matrix)
 
-            while self._dag.number_of_nodes() != 0:
-                execute_block_list = self._check_execution()
-                if execute_block_list is not None:
-                    self._execute_blocks(execute_block_list)
-                else:
-                    self._find_new_mapping()
+                while self._dag.number_of_nodes() != 0:
+                    execute_block_list = self._check_execution()
+                    if execute_block_list is not None:
+                        self._execute_blocks(execute_block_list)
+                    else:
+                        self._find_new_mapping()
 
-                # If the number of added swaps is too high, the algorithm is stuck.
-                # Reset the circuit to the last saved state and make the nearest gate executable by manually adding SWAPs.
-                if (
-                    len(self._temp_added_swaps) > self.swap_threshold * longest_path
-                ):  # threshold is arbitrary
-                    while self._temp_added_swaps:
-                        self._temp_added_swaps.pop()
-                        self.circuit_map.undo()
-                    self._temp_added_swaps = []
-                    self._shortest_path_routing()
+                    # If the number of added swaps is too high, the algorithm is stuck.
+                    # Reset the circuit to the last saved state and make the nearest gate executable by manually adding SWAPs.
+                    if (
+                        len(self._temp_added_swaps) > self.swap_threshold * longest_path
+                    ):  # threshold is arbitrary
+                        while self._temp_added_swaps:
+                            self._temp_added_swaps.pop()
+                            self.circuit_map.undo()
+                        self._temp_added_swaps = []
+                        self._shortest_path_routing()
 
-            circuit_kwargs = circuit.init_kwargs
-            routed_circuit = self.circuit_map.routed_circuit(
-                circuit_kwargs=circuit_kwargs
-            )
-            if self._final_measurements is not None:
-                routed_circuit = self._append_final_measurements(
-                    routed_circuit=routed_circuit
+                circuit_kwargs = circuit.init_kwargs
+                routed_circuit = self.circuit_map.routed_circuit(
+                    circuit_kwargs=circuit_kwargs
                 )
+                if self._final_measurements is not None:
+                    routed_circuit = self._append_final_measurements(
+                        routed_circuit=routed_circuit
+                    )
+
+                # the first trial among the ones with the fewest swaps is kept
+                if best_trial is None or self.circuit_map._swaps < best_trial[0]:
+                    best_trial = (
+                        self.circuit_map._swaps,
+                        routed_circuit,
+                        self.circuit_map,
+                    )
         finally:
             self.connectivity = connectivity
 
+        _, routed_circuit, self.circuit_map = best_trial
         return routed_circuit, self.circuit_map.final_layout()
 
     @property
