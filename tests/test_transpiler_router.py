@@ -15,6 +15,7 @@ from qibo.transpiler.asserts import (
     assert_connectivity,
     assert_placement,
 )
+from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import Random, StarConnectivityPlacer, Subgraph
 from qibo.transpiler.router import (
@@ -745,3 +746,51 @@ def test_router_reuse_with_string_wire_names(router_algorithm):
     assert set(router.connectivity.edges) == set(connectivity.edges)
     assert_connectivity(connectivity, second)
     assert first_layout == second_layout
+
+
+@pytest.mark.parametrize("seed", range(8))
+@pytest.mark.parametrize("device", ["line", "grid"])
+def test_shortest_paths_random_layouts(seed, device):
+    """The qubits are moved along the path one step at a time, also for distant qubits."""
+    if device == "line":
+        connectivity = line_connectivity(9)
+    else:
+        connectivity = nx.relabel_nodes(
+            nx.grid_2d_graph(3, 3),
+            {(i, j): 3 * i + j for i in range(3) for j in range(3)},
+        )
+    rng = random.Random(seed)
+    circuit = Circuit(6)
+    for _ in range(20):
+        circuit.add(gates.CNOT(*rng.sample(range(6), 2)))
+        circuit.add(gates.RX(rng.randrange(6), rng.random()))
+    circuit = Preprocessing(connectivity=connectivity)(circuit)
+    Random(connectivity=connectivity, seed=seed)(circuit)
+    original_circuit = circuit.copy(deep=True)
+
+    routed_circuit, final_layout = ShortestPaths(connectivity=connectivity, seed=seed)(
+        circuit
+    )
+    assert_connectivity(circuit=routed_circuit, connectivity=connectivity)
+    assert_circuit_equivalence(
+        original_circuit=original_circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+
+
+def test_shortest_paths_distant_qubits():
+    connectivity = line_connectivity(7)
+    circuit = Circuit(7)
+    circuit.add(gates.CNOT(0, 6))
+    circuit.add(gates.CNOT(1, 5))
+    router = ShortestPaths(connectivity=connectivity, seed=0)
+    routed_circuit, final_layout = router(circuit)
+    assert_connectivity(circuit=routed_circuit, connectivity=connectivity)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+    # a SWAP only acts on neighbours, so a distance of six needs at least five of them
+    assert router.added_swaps >= 5

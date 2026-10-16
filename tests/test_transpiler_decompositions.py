@@ -257,6 +257,91 @@ def test_RBS_standard_decomposition_matches_gate_decompose():
     ]
 
 
+@pytest.mark.parametrize(
+    "natives_2q",
+    [
+        NativeGates.CZ,
+        NativeGates.iSWAP,
+        NativeGates.CZ | NativeGates.iSWAP,
+        NativeGates.CNOT,
+    ],
+)
+@pytest.mark.parametrize("natives_1q", [NativeGates.U3, NativeGates.GPI2])
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.GeneralizedRBS([0], [1, 2], 0.37, 0.2),
+        gates.GeneralizedRBS([0, 1], [2, 3], -1.3, 0.2),
+        gates.Multiplexor([0, 1], 2, [0.1, 0.2, 0.3, 0.4], axis="y"),
+        gates.Multiplexor([0, 1], 2, [0.1, 0.2, 0.3, 0.4], axis="z"),
+        gates.FanOut(0, 1, 2),
+        gates.FanOut(0, 1, 2, 3),
+    ],
+    ids=lambda gate: f"{gate.name}-{len(gate.qubits)}q",
+)
+def test_gates_with_own_decomposition_to_native(backend, gate, natives_1q, natives_2q):
+    assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
+
+
+@pytest.mark.parametrize("qubits", [(0, 1, 2), (2, 0, 1), (1, 2, 0)])
+def test_gate_with_own_decomposition_on_other_qubits(backend, qubits):
+    original = Circuit(3)
+    original.add(gates.Multiplexor(qubits[:2], qubits[2], [0.1, 0.2, 0.3, 0.4]))
+    translated = Circuit(3)
+    translated.add(
+        translate_gate(
+            gates.Multiplexor(qubits[:2], qubits[2], [0.1, 0.2, 0.3, 0.4]),
+            default_natives | NativeGates.CZ | NativeGates.GPI2,
+            backend=backend,
+        )
+    )
+    unitary = backend.to_numpy(translated.unitary(backend))
+    target = backend.to_numpy(original.unitary(backend))
+    phase = np.vdot(target, unitary)
+    backend.assert_allclose(unitary * np.abs(phase) / phase, target, atol=1e-8)
+
+
+@pytest.mark.parametrize("natives_1q", [NativeGates.U3, NativeGates.GPI2])
+@pytest.mark.parametrize("seed", [None, 10])
+def test_two_qubit_unitary_to_native_with_cnot(backend, natives_1q, seed):
+    u = random_unitary(4, seed=seed, backend=NumpyBackend())
+    gate = gates.Unitary(u, 0, 1)
+    assert_matrices_allclose(
+        gate, natives_1q | NativeGates.CNOT | default_natives, backend
+    )
+
+
+@pytest.mark.parametrize("natives_1q", [NativeGates.U3, NativeGates.GPI2])
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.fSim(0, 1, 0.3, 0.5),
+        gates.fSim(0, 1, -1.2, 2.0),
+        gates.GeneralizedfSim(
+            0, 1, random_unitary(2, seed=3, backend=NumpyBackend()), 0.4
+        ),
+    ],
+    ids=lambda gate: gate.name,
+)
+def test_fsim_to_native_with_cnot(backend, gate, natives_1q):
+    assert_matrices_allclose(
+        gate, natives_1q | NativeGates.CNOT | default_natives, backend
+    )
+
+
+def test_gates_with_cnot_natives_use_only_cnot(backend):
+    natives = NativeGates.RZ | NativeGates.SX | NativeGates.X | NativeGates.CNOT
+    for gate in (
+        gates.Unitary(random_unitary(4, seed=1, backend=NumpyBackend()), 0, 1),
+        gates.fSim(0, 1, 0.3, 0.5),
+        gates.FanOut(0, 1, 2),
+    ):
+        translated = translate_gate(gate, natives | default_natives, backend=backend)
+        two_qubit_gates = [g for g in translated if len(g.qubits) == 2]
+        assert two_qubit_gates
+        assert all(isinstance(g, gates.CNOT) for g in two_qubit_gates)
+
+
 @pytest.mark.parametrize("seed", [None, 10])
 @pytest.mark.parametrize(
     "natives_2q",
