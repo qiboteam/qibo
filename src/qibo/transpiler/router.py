@@ -1,3 +1,4 @@
+import itertools
 import random
 from collections.abc import Sequence
 from copy import deepcopy
@@ -661,18 +662,20 @@ class ShortestPaths(Router):
         meeting_point = candidate[1]
         forward = path[0 : meeting_point + 1]
         backward = list(reversed(path[meeting_point + 1 :]))
-        for f in forward[1:]:
+        # the first qubit of each half of the path moves to the meeting point,
+        # swapping at every step with the next qubit of the path
+        for previous, current in itertools.pairwise(forward):
             circuitmap.update(
                 (
-                    circuitmap.physical_to_logical[f],
-                    circuitmap.physical_to_logical[forward[0]],
+                    circuitmap.physical_to_logical[current],
+                    circuitmap.physical_to_logical[previous],
                 )
             )
-        for b in backward[1:]:
+        for previous, current in itertools.pairwise(backward):
             circuitmap.update(
                 (
-                    circuitmap.physical_to_logical[b],
-                    circuitmap.physical_to_logical[backward[0]],
+                    circuitmap.physical_to_logical[current],
+                    circuitmap.physical_to_logical[previous],
                 )
             )
 
