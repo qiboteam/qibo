@@ -486,6 +486,75 @@ def test_sabre_intermediate_measurements():
     assert routed_circ.queue[3].register_name == measurement.register_name
 
 
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_sabre_trials(seed):
+    connectivity = line_connectivity(6)
+    circuit = generate_random_circuit(6, 30, seed=seed)
+    original_swaps = sum(isinstance(gate, gates.SWAP) for gate in circuit.queue)
+
+    single_trial = Sabre(connectivity=connectivity, seed=seed)
+    single_trial(circuit)
+    router = Sabre(connectivity=connectivity, seed=seed, trials=10)
+    routed_circuit, final_layout = router(circuit)
+
+    # the first trial does not depend on ``trials``, so the best one cannot be worse
+    assert router.added_swaps <= single_trial.added_swaps
+    # the number of swaps, the circuit and the layout come from the same trial
+    routed_swaps = sum(isinstance(gate, gates.SWAP) for gate in routed_circuit.queue)
+    assert routed_swaps - original_swaps == router.added_swaps
+    assert_connectivity(circuit=routed_circuit, connectivity=connectivity)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+
+
+def test_sabre_trials_lower_the_swaps():
+    connectivity = nx.relabel_nodes(
+        nx.grid_2d_graph(3, 3), {(i, j): 3 * i + j for i in range(3) for j in range(3)}
+    )
+    swaps = {1: 0, 5: 0}
+    for seed in range(15):
+        rng = random.Random(seed)
+        circuit = Circuit(9)
+        for _ in range(40):
+            circuit.add(gates.CNOT(*rng.sample(range(9), 2)))
+        for trials in swaps:
+            router = Sabre(connectivity=connectivity, seed=seed, trials=trials)
+            router(circuit)
+            swaps[trials] += router.added_swaps
+    assert swaps[5] < swaps[1]
+
+
+def test_sabre_trials_reproducible_and_reusable():
+    connectivity = line_connectivity(6)
+    circuit = generate_random_circuit(6, 30)
+    nodes_before = list(connectivity.nodes)
+    edges_before = list(connectivity.edges)
+
+    first = Sabre(connectivity=connectivity, seed=7, trials=4)
+    second = Sabre(connectivity=connectivity, seed=7, trials=4)
+    routed_first, layout_first = first(circuit)
+    routed_second, layout_second = second(circuit)
+
+    assert layout_first == layout_second
+    assert [(gate.name, gate.qubits) for gate in routed_first.queue] == [
+        (gate.name, gate.qubits) for gate in routed_second.queue
+    ]
+    # the connectivity is restored after every trial, so the router can be used again
+    assert list(connectivity.nodes) == nodes_before
+    assert list(connectivity.edges) == edges_before
+    routed_again, _ = first(circuit)
+    assert_connectivity(circuit=routed_again, connectivity=connectivity)
+
+
+@pytest.mark.parametrize("trials", [0, -3])
+def test_sabre_trials_invalid(trials):
+    with pytest.raises(ValueError):
+        Sabre(connectivity=line_connectivity(3), trials=trials)
+
+
 @pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
 def test_routing_with_align(router_algorithm):
     connectivity = nx.Graph([(0, 1), (1, 2)])
