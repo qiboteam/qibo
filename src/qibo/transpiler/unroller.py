@@ -195,11 +195,12 @@ class Unroller:
             ``minimize_depth`` is ``True``. It must be ``False`` if the circuit is executed
             with another initial state. Defaults to ``False``.
         minimize_toffolis (bool, optional): If ``True``, a multi-controlled
-            :class:`qibo.gates.X` with at least one clean auxiliary qubit is decomposed
-            with the lowest number of Toffoli gates, which makes the decomposition shallower
-            and, for many controls, also shorter in number of native gates. It has no effect
-            without clean auxiliary qubits, see ``qubits_initially_zero``. It cannot be used
-            together with ``minimize_depth``. Defaults to ``False``.
+            :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with
+            the lowest number of Toffoli gates. With clean auxiliary qubits, see
+            ``qubits_initially_zero``, this makes the decomposition shallower and, for many
+            controls, also shorter in number of native gates. With dirty auxiliary
+            qubits only, it needs more native gates than the default decomposition. It
+            cannot be used together with ``minimize_depth``. Defaults to ``False``.
         minimize_depth (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with a
             depth that is logarithmic in the number of controls. It cannot be used together
