@@ -487,6 +487,20 @@ def test_sabre_intermediate_measurements():
 
 
 @pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+def test_routing_with_align(router_algorithm):
+    connectivity = nx.Graph([(0, 1), (1, 2)])
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Align(0, 5))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.M(0, 1, 2))
+    routed_circuit, _ = router_algorithm(connectivity=connectivity)(circuit)
+    aligns = [gate for gate in routed_circuit.queue if isinstance(gate, gates.Align)]
+    assert len(aligns) == 1
+    assert aligns[0].parameters == (5,)
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
 def test_restrict_qubits(router_algorithm, star_connectivity):
     circ = Circuit(3)
     circ.add(gates.CZ(0, 1))

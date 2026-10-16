@@ -106,6 +106,15 @@ def test_assert_decomposition():
     assert_decomposition(circuit, native_gates=NativeGates.default())
 
 
+def test_assert_decomposition_ignores_directives_and_resets():
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.Align(0, 5))
+    circuit.add(gates.Barrier(0, 1))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    assert_decomposition(circuit, native_gates=NativeGates.RZ | NativeGates.CZ)
+
+
 def test_assert_decomposition_fail_1q():
     circuit = Circuit(1)
     circuit.add(gates.X(0))
