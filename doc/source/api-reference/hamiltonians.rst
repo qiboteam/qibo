@@ -204,6 +204,14 @@ Heisenberg XXZ
     :member-order: bysource
 
 
+Heisenberg XY model
+-------------------
+
+.. autoclass:: qibo.hamiltonians.XY
+    :members:
+    :member-order: bysource
+
+
 Folded XXZ model
 ----------------
 
