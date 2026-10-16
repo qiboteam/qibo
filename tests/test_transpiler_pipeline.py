@@ -26,9 +26,14 @@ from qibo.transpiler.pipeline import (
     generate_preset_passes,
     restrict_connectivity_qubits,
 )
-from qibo.transpiler.placer import Random, ReverseTraversal
+from qibo.transpiler.placer import (
+    Random,
+    ReverseTraversal,
+    StarConnectivityPlacer,
+    Subgraph,
+)
 from qibo.transpiler.qiskit import QiskitPasses
-from qibo.transpiler.router import Sabre, ShortestPaths
+from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 
@@ -510,3 +515,326 @@ def test_generate_preset_passes_call_backend(recorded_backends):
     recorded_backends.clear()
     pipeline(circuit)
     assert recorded_backends and all(b is own_backend for b in recorded_backends)
+
+
+def _controlled_circuit(nqubits, ncontrols, touched=()):
+    """Multi-controlled X on the first ``ncontrols + 1`` qubits, with the other
+    qubits idle, unless they are acted on by a gate before the multi-controlled gate."""
+    circuit = Circuit(nqubits)
+    for qubit in range(ncontrols + 1):
+        circuit.add(gates.RY(qubit, 0.3 + 0.2 * qubit))
+    for qubit in touched:
+        circuit.add(gates.RY(qubit, 0.9 + 0.1 * qubit))
+    circuit.add(gates.X(ncontrols).controlled_by(*range(ncontrols)))
+    return circuit
+
+
+def _assert_equivalent_from_zero(circuit, transpiled_circuit, connectivity, layout):
+    """Equivalence for the initial state :math:`\\ket{0}^{\\otimes n}` only."""
+    original = Preprocessing(connectivity=connectivity)(circuit.copy(deep=True))
+    zero_state = np.zeros(2**original.nqubits, dtype=complex)
+    zero_state[0] = 1
+    assert_circuit_equivalence(
+        original_circuit=original,
+        transpiled_circuit=transpiled_circuit,
+        final_layout=layout,
+        test_states=[zero_state],
+    )
+
+
+def _count_two_qubit_gates(circuit):
+    return sum(len(gate.qubits) == 2 for gate in circuit.queue)
+
+
+def test_generate_preset_passes_auxiliary_qubit_options():
+    default = generate_preset_passes(nx.path_graph(5)).passes
+    # the qubits that multi-controlled gates do not act on are dirty auxiliary qubits
+    assert default[0].use_dirty_ancillas
+    assert not default[0].qubits_initially_zero and not default[0].minimize_toffolis
+    assert not default[-1].use_dirty_ancillas
+
+    zero = generate_preset_passes(nx.path_graph(5), qubits_initially_zero=True).passes
+    assert zero[0].use_dirty_ancillas
+    assert zero[0].qubits_initially_zero and zero[0].minimize_toffolis
+    assert not zero[-1].qubits_initially_zero
+
+    # without connectivity the only unroller decomposes the multi-controlled gates
+    (unroller,) = generate_preset_passes(qubits_initially_zero=True).passes
+    assert unroller.use_dirty_ancillas and unroller.qubits_initially_zero
+
+
+def test_generate_preset_passes_auxiliary_qubits_lower_the_cost(backend):
+    connectivity = nx.complete_graph(12)
+    circuit = _controlled_circuit(nqubits=12, ncontrols=7)
+
+    def transpile(**options):
+        pipeline = generate_preset_passes(
+            connectivity, seed=0, backend=backend, **options
+        )
+        return pipeline(circuit, backend=backend)
+
+    without_auxiliary = Passes(
+        [
+            Unroller(NativeGates.default(), backend=backend, min_qubits=3),
+            Preprocessing(),
+            Sabre(seed=0),
+            Unroller(NativeGates.default(), backend=backend),
+        ],
+        connectivity=connectivity,
+    )(circuit, backend=backend)[0]
+    dirty, dirty_layout = transpile()
+    clean, clean_layout = transpile(qubits_initially_zero=True)
+
+    assert (
+        _count_two_qubit_gates(clean)
+        < _count_two_qubit_gates(dirty)
+        < _count_two_qubit_gates(without_auxiliary)
+    )
+    # the dirty auxiliary qubits do not need any initial state
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=dirty,
+        connectivity=connectivity,
+        final_layout=dirty_layout,
+    )
+    # while the clean ones are valid for the state 0
+    _assert_equivalent_from_zero(circuit, clean, connectivity, clean_layout)
+
+
+@pytest.mark.parametrize("qubits_initially_zero", [False, True])
+def test_generate_preset_passes_touched_qubits_are_not_clean(
+    backend, qubits_initially_zero
+):
+    connectivity = nx.complete_graph(10)
+    circuit = _controlled_circuit(nqubits=10, ncontrols=5, touched=(6, 7, 8, 9))
+    pipeline = generate_preset_passes(
+        connectivity,
+        seed=0,
+        qubits_initially_zero=qubits_initially_zero,
+        backend=backend,
+    )
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    _assert_equivalent_from_zero(
+        circuit, transpiled_circuit, connectivity, final_layout
+    )
+    if not qubits_initially_zero:
+        assert_transpiling(
+            original_circuit=circuit,
+            transpiled_circuit=transpiled_circuit,
+            connectivity=connectivity,
+            final_layout=final_layout,
+        )
+
+
+def test_generate_preset_passes_auxiliary_qubits_without_connectivity(backend):
+    natives = NativeGates.default()
+    circuit = _controlled_circuit(nqubits=10, ncontrols=6)
+    pipeline = generate_preset_passes(
+        native_gates=natives, qubits_initially_zero=True, backend=backend
+    )
+    transpiled_circuit, _ = pipeline(circuit, backend=backend)
+    assert_decomposition(transpiled_circuit, natives)
+    plain = Passes([Unroller(natives, backend=backend)])(circuit, backend=backend)[0]
+    assert _count_two_qubit_gates(transpiled_circuit) < _count_two_qubit_gates(plain)
+    state = backend.to_numpy(backend.execute_circuit(circuit).state())
+    final_state = backend.to_numpy(backend.execute_circuit(transpiled_circuit).state())
+    phase = np.vdot(final_state, state)
+    assert np.isclose(abs(phase), 1.0)
+    np.testing.assert_allclose(final_state * phase / abs(phase), state, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "layout_method, placer_class",
+    [
+        (None, None),
+        ("trivial", None),
+        ("random", Random),
+        ("subgraph", Subgraph),
+        ("reverse_traversal", ReverseTraversal),
+    ],
+)
+def test_generate_preset_passes_layout_method(
+    backend, layout_method, placer_class, grid_connectivity
+):
+    connectivity = grid_connectivity()
+    circuit = generate_random_circuit(nqubits=4, ngates=20, seed=2)
+    circuit.add(gates.M(*range(4)))
+    pipeline = generate_preset_passes(
+        connectivity, seed=5, layout_method=layout_method, backend=backend
+    )
+    if placer_class is None:
+        assert len(pipeline.passes) == 4
+    else:
+        assert len(pipeline.passes) == 5
+        assert isinstance(pipeline.passes[1], Preprocessing)
+        assert isinstance(pipeline.passes[2], placer_class)
+        assert isinstance(pipeline.passes[3], Sabre)
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+def test_generate_preset_passes_layout_method_instance(backend, grid_connectivity):
+    connectivity = grid_connectivity()
+    placer = Random(samples=10, seed=3)
+    circuit = generate_random_circuit(nqubits=4, ngates=20, seed=2)
+    pipeline = generate_preset_passes(
+        connectivity, layout_method=placer, backend=backend
+    )
+    assert pipeline.passes[2] is placer
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+def test_generate_preset_passes_methods_are_seeded(grid_connectivity):
+    connectivity = grid_connectivity()
+    kwargs = {"seed": 7, "layout_method": "reverse_traversal"}
+    pipeline = generate_preset_passes(connectivity, **kwargs)
+    placer = pipeline.passes[2]
+    assert placer.routing_algorithm._rng.getstate() == random.Random(7).getstate()
+
+    placer = generate_preset_passes(
+        connectivity, seed=7, layout_method="random"
+    ).passes[2]
+    assert placer.seed == 7
+    router = generate_preset_passes(
+        connectivity, seed=7, routing_method="shortest_paths"
+    ).passes[-2]
+    assert router._rng.getstate() == random.Random(7).getstate()
+
+
+def test_generate_preset_passes_random_layout_is_reproducible(grid_connectivity):
+    connectivity = grid_connectivity()
+    circuit = generate_random_circuit(nqubits=4, ngates=20, seed=2)
+
+    def transpile():
+        pipeline = generate_preset_passes(connectivity, seed=9, layout_method="random")
+        transpiled_circuit, final_layout = pipeline(circuit)
+        gate_list = [(gate.name, gate.qubits) for gate in transpiled_circuit.queue]
+        return gate_list, transpiled_circuit.wire_names, final_layout
+
+    assert transpile() == transpile()
+
+
+@pytest.mark.parametrize("routing_method", [None, "sabre"])
+def test_generate_preset_passes_routing_method_sabre(
+    backend, routing_method, grid_connectivity
+):
+    connectivity = grid_connectivity()
+    circuit = generate_random_circuit(nqubits=4, ngates=20, seed=2)
+    pipeline = generate_preset_passes(
+        connectivity, seed=1, routing_method=routing_method, backend=backend
+    )
+    router = pipeline.passes[2]
+    assert isinstance(router, Sabre) and router.trials == 5
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+def test_generate_preset_passes_routing_method_instance(backend, grid_connectivity):
+    connectivity = grid_connectivity()
+    router = Sabre(lookahead=0, delta=0.0, seed=2, trials=2)
+    circuit = generate_random_circuit(nqubits=4, ngates=20, seed=2)
+    pipeline = generate_preset_passes(
+        connectivity, routing_method=router, backend=backend
+    )
+    assert pipeline.passes[2] is router
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+def test_generate_preset_passes_routing_method_shortest_paths(backend):
+    connectivity = nx.path_graph(5)
+    # a single gate between qubits at distance two
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.M(0, 1, 2))
+    pipeline = generate_preset_passes(
+        connectivity, seed=1, routing_method="shortest_paths", backend=backend
+    )
+    assert isinstance(pipeline.passes[2], ShortestPaths)
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+def test_generate_preset_passes_star_methods(backend, star_connectivity):
+    connectivity = star_connectivity()
+    circuit = generate_random_circuit(nqubits=5, ngates=15, seed=4)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    pipeline = generate_preset_passes(
+        connectivity,
+        layout_method="star",
+        routing_method="star",
+        backend=backend,
+    )
+    assert isinstance(pipeline.passes[2], StarConnectivityPlacer)
+    assert isinstance(pipeline.passes[3], StarConnectivityRouter)
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+@pytest.mark.parametrize("layout_method", [None, "trivial"])
+def test_generate_preset_passes_initial_layout_with_trivial_method(layout_method):
+    pipeline = generate_preset_passes(
+        nx.path_graph(5), initial_layout=[1, 2, 3], layout_method=layout_method
+    )
+    transpiled_circuit, _ = pipeline(Circuit(3))
+    assert transpiled_circuit.wire_names[:3] == [1, 2, 3]
+
+
+@pytest.mark.parametrize("layout_method", ["random", "subgraph", Random()])
+def test_generate_preset_passes_initial_layout_with_placer_error(layout_method):
+    with pytest.raises(PlacementError):
+        generate_preset_passes(
+            nx.path_graph(5), initial_layout=[1, 2, 3], layout_method=layout_method
+        )
+
+
+@pytest.mark.parametrize("layout_method", ["dense", "Random", 3])
+def test_generate_preset_passes_unknown_layout_method(layout_method):
+    with pytest.raises(ValueError, match="layout method"):
+        generate_preset_passes(nx.path_graph(5), layout_method=layout_method)
+
+
+@pytest.mark.parametrize("routing_method", ["basic", "Sabre", 3])
+def test_generate_preset_passes_unknown_routing_method(routing_method):
+    with pytest.raises(ValueError, match="routing method"):
+        generate_preset_passes(nx.path_graph(5), routing_method=routing_method)
+
+
+@pytest.mark.parametrize(
+    "options", [{"layout_method": "random"}, {"routing_method": "sabre"}]
+)
+def test_generate_preset_passes_methods_without_connectivity_error(options):
+    with pytest.raises(ConnectivityError):
+        generate_preset_passes(**options)
