@@ -118,7 +118,7 @@ class Symbol(sympy.Symbol):
             Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
             product between identities and the symbol's single-qubit matrix.
         """
-        from qibo.hamiltonians.models import _multikron
+        from qibo.hamiltonians._models import _multikron
 
         matrix_list = self.target_qubit * [self.backend.matrices.I()]
         matrix_list.append(self.matrix)
