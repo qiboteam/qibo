@@ -1,3 +1,5 @@
+import itertools
+import math
 from functools import reduce
 
 import networkx as nx
@@ -6,7 +8,7 @@ import sympy
 from numpy.typing import ArrayLike
 
 from qibo import symbols
-from qibo.backends import Backend, _check_backend
+from qibo.backends import Backend, _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
 from qibo.hamiltonians._models import (
     _build_spin_model,
@@ -17,6 +19,171 @@ from qibo.hamiltonians._models import (
     _OneBodyPauli,
 )
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
+
+
+def ANNNI(
+    nqubits: int,
+    j1: float = 1.0,
+    j2: float = 0.5,
+    h: float = 0.0,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Axial next-nearest-neighbor Ising (ANNNI) model in a transverse field.
+
+    .. math::
+        H = -J_{1} \\sum_{j} Z_{j} \\, Z_{j+1} + J_{2} \\sum_{j} Z_{j} \\, Z_{j+2}
+            - h \\sum_{j} X_{j} \\, ,
+
+    where :math:`J_{1}` and :math:`J_{2}` are the nearest- and next-nearest-neighbor couplings,
+    respectively, and :math:`h` is the transverse field strength. For :math:`J_{1}, J_{2} > 0`,
+    the first interaction is ferromagnetic and the second one is antiferromagnetic. They compete
+    with each other, and the frustration is controlled by :math:`\\kappa = J_{2} / J_{1}`.
+
+    With open boundaries, the sums run over all pairs of qubits that are one and two sites
+    apart along the chain. With periodic boundaries, *i.e.*, ``closed_boundary=True``, the
+    chain is a ring, and every pair of qubits is coupled at most once. Therefore, for
+    ``nqubits=3`` all pairs are nearest neighbors, and :math:`J_{2}` has no effect.
+
+    The ANNNI model is the :class:`qibo.hamiltonians.Ising` model on a graph with edge weights
+    :math:`-J_{1}` and :math:`J_{2}`. For :math:`J_{2} = 0` and :math:`J_{1} = 1`, it reduces to
+    the transverse-field Ising model :func:`qibo.hamiltonians.TFIM`.
+
+    Args:
+        nqubits (int): number of qubits. Must be larger than two.
+        j1 (float, optional): nearest-neighbor coupling :math:`J_{1}`. Defaults to :math:`1.0`.
+        j2 (float, optional): next-nearest-neighbor coupling :math:`J_{2}`.
+            Defaults to :math:`0.5`.
+        h (float, optional): transverse field strength :math:`h`. Defaults to :math:`0.0`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        ANNNI Hamiltonian.
+
+    References:
+        1. W. Selke, *The ANNNI model - Theoretical analysis and experimental application*,
+        `Phys. Rep. 170, 213 (1988) <https://doi.org/10.1016/0370-1573(88)90140-8>`_.
+    """
+    if nqubits < 3:
+        raise_error(ValueError, "Number of qubits must be larger than two.")
+
+    graph = nx.Graph()
+    graph.add_nodes_from(range(nqubits))
+    for qubit_a, qubit_b in itertools.combinations(range(nqubits), 2):
+        distance = qubit_b - qubit_a
+        if closed_boundary:
+            distance = min(distance, nqubits - distance)
+
+        if distance == 1:
+            graph.add_edge(qubit_a, qubit_b, weight=-j1)
+        elif distance == 2:
+            graph.add_edge(qubit_a, qubit_b, weight=j2)
+
+    return Ising(graph, 1.0, (0.0, -h), dense=dense, backend=backend)
+
+
+def ClusterIsing(
+    nqubits: int,
+    cluster_strength: float = 1.0,
+    ising_strength: float = 0.0,
+    field_strength: float = 0.0,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Cluster-Ising model.
+
+    .. math::
+        H = -J_{c} \\sum_{j} Z_{j-1} \\, X_{j} \\, Z_{j+1} - J \\sum_{j} Z_{j} \\, Z_{j+1}
+            - h \\sum_{j} X_{j} \\, ,
+
+    where the first term is the three-body cluster interaction, and the other two terms are the
+    transverse-field Ising model. For :math:`J = h = 0`, the ground states are cluster states,
+    which are symmetry-protected topological states. The Ising interaction breaks the
+    symmetry, *i.e.*, competes with the cluster interaction.
+
+    With periodic boundaries, *i.e.*, ``closed_boundary=True``, the sums run over all qubits.
+    With open boundaries, the cluster interaction is centered on the qubits
+    :math:`j = 1, \\, \\dots, \\, n - 2`, and the Ising interaction couples
+    :math:`j = 0, \\, \\dots, \\, n - 2`.
+
+    The cluster-Ising model is the sum of the cluster interaction and the
+    :class:`qibo.hamiltonians.Ising` model with coupling constant :math:`-J` and local field
+    strengths :math:`(0, \\, -h)`. For :math:`J_{c} = 0`, it reduces to the Ising model, and to
+    the transverse-field Ising model :func:`qibo.hamiltonians.TFIM` if, in addition,
+    :math:`J = 1`.
+
+    Note:
+        Ref. [1] introduces the cluster-Ising model with the Ising-like interaction being an
+        antiferromagnetic coupling along the :math:`y`-axis, which is orthogonal to the axes of
+        the cluster interaction :math:`X_{j-1} \\, Z_{j} \\, X_{j+1}`. Here, the Ising
+        interaction is along the :math:`Z`-axis of the cluster interaction and the field is along
+        the :math:`X`-axis, so that the model is the sum of the cluster interaction and
+        :class:`qibo.hamiltonians.Ising`.
+
+    Args:
+        nqubits (int): number of qubits. Must be larger than two.
+        cluster_strength (float, optional): strength :math:`J_{c}` of the cluster interaction.
+            Defaults to :math:`1.0`.
+        ising_strength (float, optional): strength :math:`J` of the Ising interaction.
+            Defaults to :math:`0.0`.
+        field_strength (float, optional): strength :math:`h` of the transverse field.
+            Defaults to :math:`0.0`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Cluster-Ising Hamiltonian.
+
+    References:
+        1. P. Smacchia, L. Amico, P. Facchi, R. Fazio, G. Florio, S. Pascazio, and V. Vedral,
+        *Statistical mechanics of the cluster-Ising model*,
+        `Phys. Rev. A 84, 022304 (2011) <https://doi.org/10.1103/PhysRevA.84.022304>`_.
+    """
+    if nqubits < 3:
+        raise_error(ValueError, "Number of qubits must be larger than two.")
+
+    backend = _check_backend(backend)
+
+    ising = Ising(
+        nqubits,
+        -ising_strength,
+        (0.0, -field_strength),
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+    centers = range(nqubits) if closed_boundary else range(1, nqubits - 1)
+    form = -cluster_strength * sum(
+        symbols.Z((qubit - 1) % nqubits, backend=backend)
+        * symbols.X(qubit, backend=backend)
+        * symbols.Z((qubit + 1) % nqubits, backend=backend)
+        for qubit in centers
+    )
+    cluster = SymbolicHamiltonian(form, nqubits=nqubits, backend=backend)
+
+    return ising + (cluster.dense if dense else cluster)
 
 
 def FermiHubbard(
@@ -802,6 +969,121 @@ def MaxCut(
     )
 
     return ham - float(weights.sum() / 2)
+
+
+def SpinGlass(
+    nqubits: int | nx.Graph,
+    coupling_constant: float = 1.0,
+    local_field_strengths: float | tuple | ArrayLike = 0.0,
+    distribution: str = "gaussian",
+    seed: int | np.random.Generator | None = None,
+    dense: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Ising spin glass model, *i.e.*, Ising model with random couplings.
+
+    .. math::
+        H = \\sum_{\\langle j, \\, k \\rangle} J_{jk} \\, Z_{j} \\, Z_{k}
+            + \\sum_{j} h_{j}^{(z)} \\, Z_{j} + \\sum_{j} h_{j}^{(x)} \\, X_{j} \\, ,
+
+    where :math:`\\langle j, \\, k \\rangle` runs over all pairs of coupled qubits,
+    :math:`\\{J_{jk}\\}_{j,k}` are independent random variables with zero mean, and
+    :math:`\\{h_{j}^{(z)}, h_{j}^{(x)}\\}_{j}` are the ``local field strengths``. Without
+    :math:`X` fields, it is a classical spin glass. Otherwise, it is a quantum spin glass.
+
+    This function covers the two canonical spin glass models, which differ in the connectivity
+    of the qubits:
+
+    - **Sherrington-Kirkpatrick (SK) model**, if ``nqubits`` is an ``int``. Every pair of qubits
+      is coupled (infinite-range model), and the couplings have standard deviation
+      :math:`J / \\sqrt{n}`, where :math:`J` is ``coupling_constant`` and :math:`n` is the number
+      of qubits, so that the energy is extensive.
+    - **Edwards-Anderson (EA) model**, if ``nqubits`` is a :class:`networkx.Graph`. Only the
+      qubits connected by an edge of the graph are coupled (short-range model, *e.g.*,
+      :func:`networkx.grid_2d_graph` for a two-dimensional lattice), and the couplings have
+      standard deviation :math:`J`.
+
+    The graph follows the same conventions as in :class:`qibo.hamiltonians.Ising`, *i.e.*,
+    the qubit labels, the isolated nodes and the ``"weight"`` edge attribute. The coupling of
+    an edge with weight :math:`w_{jk}` is :math:`J_{jk} = J \\, w_{jk} \\, \\xi_{jk}`, where
+    :math:`\\xi_{jk}` is a random variable with zero mean and unit variance.
+    The random variables are drawn in a single call, one per bond, following the lexicographic
+    order of the bonds :math:`(j, \\, k)`, with :math:`j < k` the qubit labels.
+
+    The spin glass is the :class:`qibo.hamiltonians.Ising` model on a graph with random
+    edge weights.
+
+    Args:
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits of the
+            fully connected SK model. If a :class:`networkx.Graph`, connectivity graph of the
+            EA model, with one node per qubit and, optionally, a ``"weight"`` attribute per edge.
+        coupling_constant (float, optional): energy scale :math:`J` of the couplings.
+            Defaults to :math:`1.0`.
+        local_field_strengths (list or tuple or float or int, optional): local field strengths
+            :math:`\\left\\{\\left(h_{j}^{(z)}, \\, h_{j}^{(x)}\\right)\\right\\}_{j}`, following
+            the same conventions as in :class:`qibo.hamiltonians.Ising`.
+            Defaults to :math:`0.0`.
+        distribution (str, optional): distribution of the random variables :math:`\\xi_{jk}`.
+            If ``"gaussian"``, they follow a standard normal distribution. If ``"bimodal"``, they
+            are :math:`\\pm 1` with equal probability (:math:`\\pm J` model).
+            Defaults to ``"gaussian"``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Defaults to ``None``.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Spin glass Hamiltonian.
+
+    References:
+        1. S. F. Edwards and P. W. Anderson, *Theory of spin glasses*,
+        `J. Phys. F: Met. Phys. 5, 965 (1975) <https://doi.org/10.1088/0305-4608/5/5/017>`_.
+
+        2. D. Sherrington and S. Kirkpatrick, *Solvable model of a spin-glass*,
+        `Phys. Rev. Lett. 35, 1792 (1975) <https://doi.org/10.1103/PhysRevLett.35.1792>`_.
+    """
+    if distribution not in ("bimodal", "gaussian"):
+        raise_error(
+            ValueError,
+            "``distribution`` must be either ``'bimodal'`` or ``'gaussian'``, "
+            + f"but it is {distribution}.",
+        )
+
+    backend, local_state = _check_backend_and_local_state(seed, backend)
+
+    graph = nqubits if isinstance(nqubits, nx.Graph) else nx.complete_graph(nqubits)
+    nnodes, weights = _graph_bonds(graph)
+
+    strength = coupling_constant
+    if not isinstance(nqubits, nx.Graph):
+        strength /= math.sqrt(nnodes)
+
+    if distribution == "gaussian":
+        randoms = local_state.standard_normal(len(weights))
+    else:
+        randoms = local_state.choice([-1.0, 1.0], size=len(weights))
+
+    random_graph = nx.Graph()
+    random_graph.add_nodes_from(range(nnodes))
+    random_graph.add_weighted_edges_from(
+        (qubit_a, qubit_b, weight * random)
+        for ((qubit_a, qubit_b), weight), random in zip(weights.items(), randoms)
+    )
+
+    return Ising(
+        random_graph,
+        strength,
+        local_field_strengths,
+        dense=dense,
+        backend=backend,
+    )
 
 
 def TFIM(
