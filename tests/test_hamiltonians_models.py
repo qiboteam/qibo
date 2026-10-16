@@ -1,5 +1,6 @@
 """Tests methods from `qibo/src/hamiltonians/models.py`."""
 
+import math
 from functools import reduce
 from itertools import combinations, product
 
