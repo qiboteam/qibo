@@ -8,6 +8,7 @@ import pytest
 
 from qibo import hamiltonians, matrices, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.hamiltonians._models import _multikron
 from qibo.hamiltonians.models import (
     GPP,
     LABS,
@@ -18,7 +19,6 @@ from qibo.hamiltonians.models import (
     Heisenberg,
     Ising,
     MaxCut,
-    _multikron,
 )
 
 models_config = [
@@ -814,6 +814,253 @@ def test_ising(
     hamiltonian = backend.real(hamiltonian.matrix)
 
     backend.assert_allclose(hamiltonian, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_ising_graph_chain(backend, nqubits, closed_boundary, dense):
+    """Path and cycle graphs are the open and closed chains, and ``closed_boundary`` is ignored."""
+    graph = nx.cycle_graph(nqubits) if closed_boundary else nx.path_graph(nqubits)
+    kwargs = {"local_field_strengths": (0.4, -0.7), "dense": dense, "backend": backend}
+
+    target = Ising(nqubits, -1.3, closed_boundary=closed_boundary, **kwargs)
+    hamiltonian = Ising(graph, -1.3, closed_boundary=not closed_boundary, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_ising_graph_weighted(backend, dense):
+    """Bonds beyond nearest neighbors, edge weights and local fields per qubit."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    nqubits = 4
+    coupling = 0.8
+    fields = [[0.1, 0.2], [0.3, -0.4], [0.5, 0.6], [-0.7, 0.8]]
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)])
+    # edges without a weight have weight 1
+    graph.add_edge(2, 3)
+
+    target = Z(0) * Z(1) * 2.0 + Z(0) * Z(2) * (-0.5) + Z(1) * Z(3) * 1.5
+    target += Z(2) * Z(3)
+    target *= coupling
+    for qubit, (field_z, field_x) in enumerate(fields):
+        target += field_z * Z(qubit) + field_x * X(qubit)
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Ising(
+        graph,
+        coupling_constants=coupling,
+        local_field_strengths=backend.cast(fields, dtype=backend.float64),
+        dense=dense,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_ising_graph_next_nearest_neighbors(backend, dense):
+    """Ising model with first and second neighbors on an open chain."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    nqubits = 4
+    graph = nx.Graph()
+    graph.add_weighted_edges_from(
+        [(qubit, qubit + 1, -1.0) for qubit in range(nqubits - 1)]
+        + [(qubit, qubit + 2, 0.5) for qubit in range(nqubits - 2)]
+    )
+
+    target = -(Z(0) * Z(1) + Z(1) * Z(2) + Z(2) * Z(3))
+    target += 0.5 * (Z(0) * Z(2) + Z(1) * Z(3))
+    target += -0.3 * sum(X(qubit) for qubit in range(nqubits))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Ising(graph, 1.0, (0.0, -0.3), dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_ising_graph_integer_nodes(backend, dense):
+    """Integer nodes from 0 to n - 1 are qubit labels, regardless of insertion order."""
+    kwargs = {"local_field_strengths": (0.2, 0.4), "dense": dense, "backend": backend}
+    target = Ising(nx.Graph([(0, 1), (0, 2)]), 1.5, **kwargs)
+    hamiltonian = Ising(nx.Graph([(2, 0), (0, 1)]), 1.5, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_ising_graph_other_nodes(backend, dense):
+    """Nodes that are not integers from 0 to n - 1 are labeled by their order in the graph."""
+    kwargs = {"local_field_strengths": (0.2, 0.4), "dense": dense, "backend": backend}
+    target = Ising(3, 1.5, closed_boundary=False, **kwargs)
+    hamiltonian = Ising(nx.Graph([("a", "b"), ("b", "c")]), 1.5, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_ising_graph_isolated_node(backend, dense):
+    """Isolated nodes are qubits with no coupling, but they feel the local fields."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    graph = nx.Graph([(0, 1)])
+    graph.add_node(2)
+
+    target = 1.5 * Z(0) * Z(1) + sum(0.2 * Z(q) + 0.4 * X(q) for q in range(3))
+    target = SymbolicHamiltonian(target, nqubits=3, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Ising(graph, 1.5, (0.2, 0.4), dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_ising_graph_no_bonds(backend, dense):
+    """Graphs without edges only have local fields, and may even be the null Hamiltonian."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    graph = nx.empty_graph(3)
+
+    target = sum(0.2 * Z(q) + 0.4 * X(q) for q in range(3))
+    target = SymbolicHamiltonian(target, nqubits=3, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Ising(graph, 1.5, (0.2, 0.4), dense=dense, backend=backend)
+    backend.assert_allclose(backend.real(hamiltonian.matrix), target, atol=1e-10)
+
+    hamiltonian = Ising(graph, 1.5, 0.0, dense=dense, backend=backend)
+    backend.assert_allclose(hamiltonian.matrix, backend.zeros((8, 8)), atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("graph_type", [nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph])
+def test_ising_graph_edge_multiplicity(backend, graph_type, dense):
+    """Edges between the same pair of nodes are merged if their weights are equal."""
+    kwargs = {"local_field_strengths": (0.2, 0.4), "dense": dense, "backend": backend}
+
+    graph = graph_type()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (1, 0, 2.0), (1, 2, 0.5), (1, 2, 0.5)])
+
+    target = nx.Graph()
+    target.add_weighted_edges_from([(0, 1, 2.0), (1, 2, 0.5)])
+
+    hamiltonian = Ising(graph, -1.5, **kwargs)
+    target = Ising(target, -1.5, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("graph_type", [nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph])
+def test_ising_graph_value_error(backend, graph_type):
+    graph = graph_type()
+    graph.add_weighted_edges_from([(0, 1, 1.0), (1, 0, 2.0)])
+
+    with pytest.raises(ValueError):
+        Ising(graph, 1.0, 0.5, backend=backend)
+
+    with pytest.raises(ValueError):
+        Ising(nx.Graph(), 1.0, 0.5, backend=backend)
+
+    with pytest.raises(ValueError):
+        Ising(nx.Graph([(0, 0), (0, 1)]), 1.0, 0.5, backend=backend)
+
+
+@pytest.mark.parametrize("coupling_constants", [[1.0, 1.0], (1.0, 1.0), np.ones(2)])
+def test_ising_graph_type_error(backend, coupling_constants):
+    """Per-bond couplings are given by the edge weights of the graph."""
+    with pytest.raises(TypeError):
+        Ising(nx.path_graph(3), coupling_constants, 0.5, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_tfim_two_qubits(backend, closed_boundary, dense):
+    """Two qubits share a single bond, regardless of the boundary condition."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+    X = lambda x: symbols.X(x, backend=backend)
+
+    target = -Z(0) * Z(1) - 0.5 * (X(0) + X(1))
+    target = SymbolicHamiltonian(target, nqubits=2, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = TFIM(
+        2, h=0.5, closed_boundary=closed_boundary, dense=dense, backend=backend
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("as_list", [False, True])
+def test_maxcut_adjacency_matrix(backend, as_list, dense):
+    """Asymmetric adjacency matrices with self-loops match the explicit definition."""
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    nqubits = 3
+    adj_matrix = np.array([[1.0, 2.0, 0.0], [0.5, 0.0, 3.0], [1.5, -1.0, 2.0]])
+
+    target = -sum(
+        adj_matrix[j][k] * (1 - Z(j) * Z(k))
+        for j in range(nqubits)
+        for k in range(nqubits)
+    )
+    target = SymbolicHamiltonian(target / 2, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = MaxCut(
+        nqubits,
+        dense,
+        adj_matrix=adj_matrix.tolist() if as_list else adj_matrix,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_maxcut_ising(backend, dense):
+    """Max Cut is the Ising model on the weighted graph, up to a constant energy shift."""
+    adj_matrix = np.array([[0.0, 2.0, 0.0], [2.0, 0.0, 3.0], [0.0, 3.0, 0.0]])
+    graph = nx.from_numpy_array(adj_matrix)
+
+    maxcut = MaxCut(3, dense, adj_matrix=adj_matrix, backend=backend)
+    ising = Ising(graph, 1.0, 0.0, dense=dense, backend=backend)
+
+    # sum of the weights of all the bonds
+    shift = 5.0
+    identity = backend.cast(np.eye(8), dtype=backend.complex128)
+    backend.assert_allclose(maxcut.matrix, ising.matrix - shift * identity, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_maxcut_zero_adjacency_matrix(backend, dense):
+    hamiltonian = MaxCut(3, dense, adj_matrix=np.zeros((3, 3)), backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, backend.zeros((8, 8)), atol=1e-10)
+
+
+@pytest.mark.parametrize("shape", [(3, 4), (4, 3), (2, 2, 2)])
+def test_maxcut_adjacency_matrix_shape(backend, shape):
+    with pytest.raises(RuntimeError):
+        MaxCut(3, adj_matrix=np.ones(shape), backend=backend)
 
 
 @pytest.mark.parametrize("dense", [False, True])
