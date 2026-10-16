@@ -11,7 +11,6 @@ from qibo import symbols
 from qibo.backends import Backend, _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
 from qibo.hamiltonians._models import (
-    _build_spin_model,
     _gpp_dense,
     _gpp_symbolic,
     _graph_bonds,
@@ -573,42 +572,74 @@ def GPP(
 
 
 def Heisenberg(
-    nqubits: int,
+    nqubits: int | nx.Graph,
     coupling_constants: float | list | tuple,
     external_field_strengths: float,
     dense: bool = True,
+    closed_boundary: bool = True,
     backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
-    """Heisenberg model on a :math:`1`-dimensional periodic lattice.
+    """Heisenberg model on a one-dimensional chain or on a lattice with arbitrary connectivity.
 
     The general :math:`n`-qubit Hamiltonian is given by
 
     .. math::
         \\begin{align}
-        H &= -\\sum_{k = 1}^{n} \\, \\left(
-            J_{x} \\, X_{k} \\, X_{k + 1}
-            + J_{y} \\, Y_{k} \\, Y_{k + 1}
-            + J_{z} \\, Z_{k} \\, Z_{k + 1} \\right) \\\\
-        &\\quad\\,\\, - \\sum_{k = 1}^{n} \\left(
-            h_{x} \\, X_{k} + h_{y} \\, Y_{k} + h_{z} \\, Z_{k}
+        H &= -\\sum_{\\langle j, \\, k \\rangle} \\, \\left(
+            J_{x} \\, X_{j} \\, X_{k}
+            + J_{y} \\, Y_{j} \\, Y_{k}
+            + J_{z} \\, Z_{j} \\, Z_{k} \\right) \\\\
+        &\\quad\\,\\, - \\sum_{j} \\left(
+            h_{x} \\, X_{j} + h_{y} \\, Y_{j} + h_{z} \\, Z_{j}
             \\right) \\, ,
         \\end{align}
 
-    where :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}` are called the ``coupling constants``,
+    where :math:`\\langle j, \\, k \\rangle` runs over all pairs of coupled (*i.e.*, connected)
+    qubits, :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}` are called the ``coupling constants``,
     :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}` are called the ``external field strengths``,
     and :math:`\\{X, \\, Y, \\, Z\\}` are the usual Pauli operators.
 
+    If ``nqubits`` is an ``int``, the qubits form a one-dimensional chain and
+    :math:`\\langle j, \\, k \\rangle` runs over the nearest neighbors :math:`(j, \\, j + 1)`.
+    The pair :math:`(n - 1, \\, 0)` is also coupled if ``closed_boundary=True``, which is the
+    default, *i.e.*, the chain is a ring. In this case, for ``nqubits=2``, the single pair of
+    qubits appears twice in the sum.
+
+    For an arbitrary connectivity, ``nqubits`` can be a :class:`networkx.Graph`, in which every
+    node is a qubit and every edge is a pair of coupled qubits. If the nodes of the graph
+    are exactly the integers :math:`\\{0, \\, 1, \\, \\dots, \\, n - 1\\}`, every node is its
+    own qubit label :math:`j`. Otherwise, qubits are labeled by the order in which the nodes
+    are stored in the graph, *i.e.*, the :math:`j`-th node of ``list(nqubits.nodes)`` has label
+    :math:`j`. The graph defines all the bonds of the model. Therefore, ``closed_boundary`` is
+    ignored, and any periodicity must be encoded as edges of the graph. Isolated nodes are
+    qubits with no coupling, and self-loops are not allowed.
+
+    The graph can be weighted. The coupling constants of the bond between qubits :math:`j` and
+    :math:`k` are :math:`\\{J_{x} \\, w_{j,k}, \\, J_{y} \\, w_{j,k}, \\, J_{z} \\, w_{j,k}\\}`,
+    where :math:`w_{j,k}` is the ``"weight"`` attribute of the corresponding edge. Edges without
+    this attribute have weight :math:`1`, and therefore an unweighted graph has uniform coupling
+    constants. Edge directions are ignored. Edges between the same pair of nodes, *e.g.*,
+    parallel edges of a multigraph, are merged into a single bond, and they must have the same
+    weight. The external field acts on all qubits, including the isolated ones.
+
     Args:
-        nqubits (int): number of qubits.
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits in a
+            one-dimensional chain. If a :class:`networkx.Graph`, connectivity graph of the
+            qubits, with one node per qubit and, optionally, a ``"weight"`` attribute per edge
+            that scales ``coupling_constants``.
         coupling_constants (list or tuple or float or int): list or tuple with the
-            three coupling constants :math:`\\{J_{x}, J_{y}, J{z}\\}`.
+            three coupling constants :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}`.
             If ``int`` or ``float``, then :math:`J_{x} = J_{y} = J_{z}`.
-        external_field_strength (list or tuple or float or int): list or tuple with the
+        external_field_strengths (list or tuple or float or int): list or tuple with the
             external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
             If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
         dense (bool, optional): If ``True``, creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Ignored if ``nqubits`` is a :class:`networkx.Graph`.
             Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
@@ -641,46 +672,60 @@ def Heisenberg(
 
     backend = _check_backend(backend)
 
+    closing = []
+    if isinstance(nqubits, nx.Graph):
+        nnodes, weights = _graph_bonds(nqubits)
+        bonds = [
+            (qubit_a, qubit_b, weight) for (qubit_a, qubit_b), weight in weights.items()
+        ]
+        nqubits = nnodes
+    else:
+        # nearest-neighbor bonds of the chain, and the bond that closes the ring
+        bonds = [(qubit, qubit + 1, 1) for qubit in range(nqubits - 1)]
+        if closed_boundary:
+            closing.append((nqubits - 1, 0, 1))
+
     paulis = (symbols.X, symbols.Y, symbols.Z)
 
     if dense:
-        condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
+        matrices = (backend.matrices.X, backend.matrices.Y, backend.matrices.Z)
         matrix = backend.zeros((2**nqubits, 2**nqubits), dtype=backend.complex128)
-        for ind, pauli in enumerate(paulis):
-            double_term = _build_spin_model(
-                nqubits, pauli(0, backend=backend).matrix, condition, backend
-            )
-            double_term = backend.cast(double_term, dtype=double_term.dtype)
-            matrix = matrix - coupling_constants[ind] * double_term
-            matrix = (
-                matrix
-                + external_field_strengths[ind]
-                * _OneBodyPauli(nqubits, pauli, dense, backend).matrix
-            )
+        for qubit_a, qubit_b, weight in bonds + closing:
+            for coupling, pauli in zip(coupling_constants, matrices):
+                base_string = [backend.matrices.I()] * nqubits
+                base_string[qubit_a] = pauli
+                base_string[qubit_b] = pauli
+                matrix -= float(coupling) * weight * reduce(backend.kron, base_string)
+
+        for field, pauli in zip(external_field_strengths, paulis):
+            if field != 0:
+                matrix += (
+                    float(field) * _OneBodyPauli(nqubits, pauli, dense, backend).matrix
+                )
 
         return Hamiltonian(nqubits, matrix, backend=backend)
 
-    def h(symbol):
-        return lambda q1, q2: symbol(q1, backend=backend) * symbol(q2, backend=backend)
-
-    def term(q1, q2):
+    def term(qubit_a, qubit_b):
         return sum(
-            coeff * h(operator)(q1, q2)
-            for coeff, operator in zip(coupling_constants, paulis)
+            coupling * pauli(qubit_a, backend=backend) * pauli(qubit_b, backend=backend)
+            for coupling, pauli in zip(coupling_constants, paulis)
         )
 
-    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(
-        nqubits - 1, 0
+    form = -1 * sum(
+        (weight * term(qubit_a, qubit_b) for qubit_a, qubit_b, weight in bonds),
+        start=sympy.S.Zero,
     )
+    for qubit_a, qubit_b, weight in closing:
+        form -= weight * term(qubit_a, qubit_b)
+
     form -= sum(
-        field_strength * pauli(qubit)
+        field_strength * pauli(qubit, backend=backend)
         for qubit in range(nqubits)
         for field_strength, pauli in zip(external_field_strengths, paulis)
         if field_strength != 0.0
     )
 
-    ham = SymbolicHamiltonian(form=form, backend=backend)
-    return ham
+    return SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
 
 
 def Ising(
@@ -1229,6 +1274,75 @@ def XXZ(
         raise_error(ValueError, "Number of qubits must be larger than one.")
 
     return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
+
+
+def XY(
+    nqubits: int | nx.Graph,
+    gamma: float = 0.0,
+    h: float = 0.0,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """XY model in a transverse field.
+
+    .. math::
+        H = -\\sum_{\\langle j, \\, k \\rangle} \\left(
+            \\frac{1 + \\gamma}{2} \\, X_{j} \\, X_{k}
+            + \\frac{1 - \\gamma}{2} \\, Y_{j} \\, Y_{k} \\right)
+            - h \\sum_{j} Z_{j} \\, ,
+
+    where :math:`\\gamma` is the anisotropy of the exchange interaction in the :math:`XY` plane
+    and :math:`h` is the transverse field strength. For :math:`\\gamma = 0`, it is the isotropic
+    :math:`XX` model, which conserves the magnetization along :math:`Z`. For
+    :math:`\\gamma = 1`, it is unitarily equivalent to the transverse-field Ising model
+    :func:`qibo.hamiltonians.TFIM`, with the same boundary conditions, by exchanging
+    :math:`X` and :math:`Z` with a Hadamard gate on every qubit.
+
+    The XY model is the :func:`qibo.hamiltonians.Heisenberg` model with coupling constants
+    :math:`\\{(1 + \\gamma) / 2, \\, (1 - \\gamma) / 2, \\, 0\\}` and external field strengths
+    :math:`\\{0, \\, 0, \\, h\\}`. Therefore, ``nqubits`` can be an ``int``, for a
+    one-dimensional chain, or a :class:`networkx.Graph`, for a lattice with arbitrary
+    connectivity, following the same conventions as in :func:`qibo.hamiltonians.Heisenberg`.
+
+    Args:
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits in a
+            one-dimensional chain. Must be larger than one. If a :class:`networkx.Graph`,
+            connectivity graph of the qubits, with one node per qubit and, optionally,
+            a ``"weight"`` attribute per edge that scales the exchange interaction.
+        gamma (float, optional): anisotropy :math:`\\gamma`. Defaults to :math:`0.0`.
+        h (float, optional): transverse field strength :math:`h`. Defaults to :math:`0.0`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Ignored if ``nqubits`` is a :class:`networkx.Graph`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        XY Hamiltonian.
+
+    References:
+        1. E. Lieb, T. Schultz, and D. Mattis, *Two soluble models of an antiferromagnetic
+        chain*, Ann. Phys. 16, 407 (1961).
+    """
+    if not isinstance(nqubits, nx.Graph) and nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
+
+    return Heisenberg(
+        nqubits,
+        [(1 + gamma) / 2, (1 - gamma) / 2, 0],
+        [0, 0, h],
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
 
 
 def X(
