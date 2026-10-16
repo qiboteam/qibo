@@ -185,6 +185,111 @@ def ClusterIsing(
     return ising + (cluster.dense if dense else cluster)
 
 
+def DisorderedHeisenberg(
+    nqubits: int | nx.Graph,
+    coupling_constants: float | list | tuple,
+    disorder_strength: float,
+    distribution: str = "uniform",
+    seed: int | np.random.Generator | None = None,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Heisenberg model with random on-site fields along the :math:`Z`-axis.
+
+    .. math::
+        H = -\\sum_{\\langle j, \\, k \\rangle} \\left(
+            J_{x} \\, X_{j} \\, X_{k} + J_{y} \\, Y_{j} \\, Y_{k}
+            + J_{z} \\, Z_{j} \\, Z_{k} \\right) - \\sum_{j} h_{j} \\, Z_{j} \\, ,
+
+    where :math:`\\langle j, \\, k \\rangle` runs over all pairs of coupled qubits,
+    :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}` are the ``coupling constants``, and
+    :math:`h_{j} = W \\, \\xi_{j}` are independent random fields with zero mean, with :math:`W`
+    the ``disorder strength``. For isotropic couplings, it is the random-field Heisenberg chain,
+    which is a paradigmatic model of many-body localization: the eigenstates are thermal for weak
+    disorder, and localized for strong disorder.
+
+    The model is the sum of the :class:`qibo.hamiltonians.Heisenberg` model without external
+    field and the random fields. Therefore, ``nqubits`` can be an ``int``, for a chain, or a
+    :class:`networkx.Graph`, for a lattice with arbitrary connectivity, and the couplings, the
+    qubit labels and the ``closed_boundary`` option follow the same conventions as in
+    :class:`qibo.hamiltonians.Heisenberg`. For :math:`W = 0`, it reduces to that model.
+
+    The random variables :math:`\\{\\xi_{j}\\}_{j}` are drawn in a single call, one per qubit,
+    following the order of the qubit labels :math:`j`. The random fields act on all qubits,
+    including the isolated nodes of a graph.
+
+    Args:
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits in a
+            one-dimensional chain. Must be larger than one. If a :class:`networkx.Graph`,
+            connectivity graph of the qubits, with one node per qubit and, optionally,
+            a ``"weight"`` attribute per edge that scales ``coupling_constants``.
+        coupling_constants (list or tuple or float or int): list or tuple with the
+            three coupling constants :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}`.
+            If ``int`` or ``float``, then :math:`J_{x} = J_{y} = J_{z}`.
+        disorder_strength (float): disorder strength :math:`W`.
+        distribution (str, optional): distribution of the random variables :math:`\\xi_{j}`.
+            If ``"uniform"``, they are uniformly distributed in the interval :math:`[-1, 1)`, so
+            that :math:`h_{j} \\in [-W, W)`. If ``"gaussian"``, they follow a standard normal
+            distribution. Defaults to ``"uniform"``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Defaults to ``None``.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Ignored if ``nqubits`` is a :class:`networkx.Graph`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Disordered Heisenberg Hamiltonian.
+
+    References:
+        1. A. Pal and D. A. Huse, *Many-body localization phase transition*,
+        `Phys. Rev. B 82, 174411 (2010) <https://doi.org/10.1103/PhysRevB.82.174411>`_.
+    """
+    if distribution not in ("gaussian", "uniform"):
+        raise_error(
+            ValueError,
+            "``distribution`` must be either ``'gaussian'`` or ``'uniform'``, "
+            + f"but it is {distribution}.",
+        )
+
+    if not isinstance(nqubits, nx.Graph) and nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
+
+    backend = _check_backend(backend)
+
+    heisenberg = Heisenberg(
+        nqubits,
+        coupling_constants,
+        external_field_strengths=0,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+    if distribution == "gaussian":
+        randoms = backend.random_normal(0, 1, heisenberg.nqubits, seed=seed)
+    else:
+        randoms = backend.random_uniform(-1.0, 1.0, size=heisenberg.nqubits, seed=seed)
+
+    form = -disorder_strength * sum(
+        float(random) * symbols.Z(qubit, backend=backend)
+        for qubit, random in enumerate(randoms)
+    )
+    fields = SymbolicHamiltonian(form, nqubits=heisenberg.nqubits, backend=backend)
+
+    return heisenberg + (fields.dense if dense else fields)
+
+
 def FermiHubbard(
     nsites: int | tuple[int, int] | nx.Graph,
     hopping_strength: float = -1.0,
@@ -417,6 +522,9 @@ def FoldedXXZ(
 
     This model is the :math:`\\Delta \\rightarrow \\infty` limit of the XXZ model.
 
+    The model is only defined in one dimension. Therefore, unlike
+    :func:`qibo.hamiltonians.XXZ`, ``nqubits`` cannot be a :class:`networkx.Graph`.
+
     .. math::
         H_{\\Delta \\rightarrow \\infty} = -\\frac{1}{8} \\, \\sum_{j=0}^{n-4} \\,
             (1 + Z_{j} \\, Z_{j+3}) \\, (X_{j+1} \\, X_{j+2} + Y_{j+1} \\, Y_{j+2})
@@ -441,6 +549,13 @@ def FoldedXXZ(
         integrable model with Hilbert space fragmentation*,
         `PRX Quantum 6, 030316 (2025) <https://doi.org/10.1103/g9f9-p8ks>`_.
     """
+    if isinstance(nqubits, nx.Graph):
+        raise_error(
+            TypeError,
+            "``nqubits`` must be an ``int``, because the folded XXZ model is only defined "
+            + "in one dimension, but it is a ``networkx.Graph``.",
+        )
+
     if nqubits < 4:
         raise_error(ValueError, f"``nqubits`` must be at least 4, but it is {nqubits}.")
 
@@ -1176,13 +1291,13 @@ def TFIM(
 
 
 def XXX(
-    nqubits: int,
+    nqubits: int | nx.Graph,
     coupling_constant: float = 1,
     external_field_strengths: float | list | tuple | None = None,
     dense: bool = True,
     backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
-    """Heisenberg :math:`\\mathrm{XXX}` model with periodic boundary conditions.
+    """Heisenberg :math:`\\mathrm{XXX}` model on a periodic chain or on an arbitrary lattice.
 
     The :math:`n`-qubit :math:`\\mathrm{XXX}` Hamiltonian is given by
 
@@ -1197,8 +1312,20 @@ def XXX(
     are called the ``external field strengths``, and :math:`\\{X, \\, Y, \\, Z\\}` are the usual
     Pauli operators.
 
+    If ``nqubits`` is an ``int``, the qubits form a periodic chain. If ``nqubits`` is a
+    :class:`networkx.Graph`, the sum over :math:`k` runs over the edges of the graph, and every
+    edge scales the coupling constant :math:`J` by its ``"weight"`` attribute, which is :math:`1`
+    by default. The qubit labels, the isolated nodes and the edge conventions are the same as in
+    :class:`qibo.hamiltonians.Heisenberg`. In particular, any periodicity must be encoded as
+    edges of the graph, *e.g.*, with :func:`networkx.cycle_graph` for a periodic chain and
+    :func:`networkx.path_graph` for an open chain, and the external field acts on all qubits,
+    including the isolated ones.
+
     Args:
-        nqubits (int): number of qubits.
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits in a periodic
+            chain. If a :class:`networkx.Graph`, connectivity graph of the qubits, with one node
+            per qubit and, optionally, a ``"weight"`` attribute per edge that scales the
+            coupling constant.
         coupling_constant (float or int, optional): coupling constant :math:`J`.
             Defaults to :math:`1`.
         external_field_strengths (float or int or list or tuple, optional): list or tuple with the
@@ -1237,16 +1364,24 @@ def XXX(
 
 
 def XXZ(
-    nqubits: int,
+    nqubits: int | nx.Graph,
     delta: float = 0.5,
     dense: bool = True,
     backend: Backend | None = None,
 ) -> Hamiltonian | SymbolicHamiltonian:
-    """Heisenberg :math:`\\mathrm{XXZ}` model with periodic boundary conditions.
+    """Heisenberg :math:`\\mathrm{XXZ}` model on a periodic chain or on an arbitrary lattice.
 
     .. math::
         H = \\sum _{k=0}^N \\, \\left( X_{k} \\, X_{k + 1} + Y_{k} \\, Y_{k + 1}
             + \\delta Z_{k} \\, Z_{k + 1} \\right) \\, .
+
+    If ``nqubits`` is an ``int``, the qubits form a periodic chain. If ``nqubits`` is a
+    :class:`networkx.Graph`, the sum runs over the edges of the graph, and every edge scales
+    the whole exchange interaction by its ``"weight"`` attribute, which is :math:`1` by default.
+    The qubit labels, the isolated nodes and the edge conventions are the same as in
+    :class:`qibo.hamiltonians.Heisenberg`. In particular, any periodicity must be encoded as
+    edges of the graph, *e.g.*, with :func:`networkx.cycle_graph` for a periodic chain and
+    :func:`networkx.path_graph` for an open chain.
 
     Example:
         .. testcode::
@@ -1255,7 +1390,10 @@ def XXZ(
             h = XXZ(3) # initialized XXZ model with 3 qubits
 
     Args:
-        nqubits (int): number of qubits.
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits in a periodic
+            chain. Must be larger than one. If a :class:`networkx.Graph`, connectivity graph of
+            the qubits, with one node per qubit and, optionally, a ``"weight"`` attribute per
+            edge that scales the interaction.
         delta (float or int, optional): coefficient for the :math:`Z` component.
             Defaults to :math:`0.5`.
         dense (bool, optional): If ``True``, creates the Hamiltonian as a
@@ -1270,7 +1408,7 @@ def XXZ(
         :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
         Heisenberg :math:`\\mathrm{XXZ}` Hamiltonian.
     """
-    if nqubits < 2:
+    if not isinstance(nqubits, nx.Graph) and nqubits < 2:
         raise_error(ValueError, "Number of qubits must be larger than one.")
 
     return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
