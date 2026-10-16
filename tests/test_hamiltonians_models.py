@@ -16,6 +16,8 @@ from qibo.hamiltonians.models import (
     LABS,
     TFIM,
     XXX,
+    XXZ,
+    XY,
     ClusterIsing,
     FermiHubbard,
     FoldedXXZ,
@@ -1289,6 +1291,324 @@ def test_spin_glass_value_error(backend):
 
     with pytest.raises(ValueError):
         SpinGlass(nx.Graph(), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_heisenberg_chain(backend, closed_boundary, dense):
+    """Open and periodic chains, with anisotropic couplings and fields in all directions."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    nqubits = 4
+    couplings, fields = (1.0, -0.4, 0.3), (0.1, -0.2, 0.5)
+
+    nbonds = nqubits if closed_boundary else nqubits - 1
+    bonds = [(qubit, (qubit + 1) % nqubits) for qubit in range(nbonds)]
+
+    target = sum(
+        -coupling * pauli(a, backend=backend) * pauli(b, backend=backend)
+        for a, b in bonds
+        for coupling, pauli in zip(couplings, paulis)
+    )
+    target += sum(
+        -field * pauli(qubit, backend=backend)
+        for qubit in range(nqubits)
+        for field, pauli in zip(fields, paulis)
+    )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Heisenberg(
+        nqubits,
+        couplings,
+        fields,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_heisenberg_two_qubits(backend, dense):
+    """For periodic boundaries, the single pair of two qubits appears twice in the sum."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    couplings = (1.0, -0.4, 0.3)
+
+    bond = sum(
+        -coupling * pauli(0, backend=backend) * pauli(1, backend=backend)
+        for coupling, pauli in zip(couplings, paulis)
+    )
+    bond = backend.real(SymbolicHamiltonian(bond, nqubits=2, backend=backend).matrix)
+
+    kwargs = {"dense": dense, "backend": backend}
+    hamiltonian = Heisenberg(2, couplings, 0, closed_boundary=False, **kwargs)
+    backend.assert_allclose(backend.real(hamiltonian.matrix), bond, atol=1e-10)
+
+    hamiltonian = Heisenberg(2, couplings, 0, **kwargs)
+    backend.assert_allclose(backend.real(hamiltonian.matrix), 2 * bond, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_heisenberg_graph_chain(backend, nqubits, closed_boundary, dense):
+    """Path and cycle graphs are open and periodic chains, and ``closed_boundary`` is ignored."""
+    graph = nx.cycle_graph(nqubits) if closed_boundary else nx.path_graph(nqubits)
+    kwargs = {"dense": dense, "backend": backend}
+
+    target = Heisenberg(
+        nqubits,
+        (1.0, -0.4, 0.3),
+        (0.1, -0.2, 0.5),
+        closed_boundary=closed_boundary,
+        **kwargs,
+    )
+    hamiltonian = Heisenberg(
+        graph,
+        (1.0, -0.4, 0.3),
+        (0.1, -0.2, 0.5),
+        closed_boundary=not closed_boundary,
+        **kwargs,
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_heisenberg_graph_weighted(backend, dense):
+    """Bonds beyond nearest neighbors, anisotropic couplings scaled by the edge weights."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    nqubits = 4
+    couplings, fields = (0.8, -0.3, 0.5), (0.2, 0.0, -0.6)
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)])
+    # edges without a weight have weight 1
+    graph.add_edge(2, 3)
+    bonds = [(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5), (2, 3, 1.0)]
+
+    target = sum(
+        -coupling * weight * pauli(a, backend=backend) * pauli(b, backend=backend)
+        for a, b, weight in bonds
+        for coupling, pauli in zip(couplings, paulis)
+    )
+    target += sum(
+        -field * pauli(qubit, backend=backend)
+        for qubit in range(nqubits)
+        for field, pauli in zip(fields, paulis)
+    )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Heisenberg(graph, couplings, fields, dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_heisenberg_graph_isotropic(backend, dense):
+    """Scalar coupling constants and external fields are the same in every direction."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+
+    # star graph with a central qubit and three leaves
+    graph = nx.star_graph(3)
+
+    target = sum(
+        -0.5 * pauli(0, backend=backend) * pauli(leaf, backend=backend)
+        for leaf in (1, 2, 3)
+        for pauli in paulis
+    )
+    target += sum(
+        -0.3 * pauli(q, backend=backend) for q in range(4) for pauli in paulis
+    )
+    target = SymbolicHamiltonian(target, nqubits=4, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Heisenberg(graph, 0.5, 0.3, dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_heisenberg_graph_labels(backend, dense):
+    """Integer nodes from 0 to n - 1 are labels. Otherwise, qubits are labeled by node order."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    target = Heisenberg(nx.Graph([(0, 1), (0, 2)]), 1.5, 0.2, **kwargs)
+    hamiltonian = Heisenberg(nx.Graph([(2, 0), (0, 1)]), 1.5, 0.2, **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+    target = Heisenberg(3, 1.5, 0.2, closed_boundary=False, **kwargs)
+    hamiltonian = Heisenberg(nx.Graph([("a", "b"), ("b", "c")]), 1.5, 0.2, **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_heisenberg_graph_isolated_node(backend, dense):
+    """Isolated nodes are qubits with no coupling, but they feel the external field."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+
+    graph = nx.Graph([(0, 1)])
+    graph.add_node(2)
+
+    target = sum(
+        -1.5 * pauli(0, backend=backend) * pauli(1, backend=backend) for pauli in paulis
+    )
+    target += sum(
+        -0.2 * pauli(q, backend=backend) for q in range(3) for pauli in paulis
+    )
+    target = SymbolicHamiltonian(target, nqubits=3, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Heisenberg(graph, 1.5, 0.2, dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_heisenberg_graph_no_bonds(backend, dense):
+    """Graphs without edges only have external fields, and may even be the null Hamiltonian."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+
+    graph = nx.empty_graph(2)
+
+    target = sum(-0.2 * pauli(q, backend=backend) for q in range(2) for pauli in paulis)
+    target = SymbolicHamiltonian(target, nqubits=2, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = Heisenberg(graph, 1.5, 0.2, dense=dense, backend=backend)
+    backend.assert_allclose(backend.real(hamiltonian.matrix), target, atol=1e-10)
+
+    hamiltonian = Heisenberg(graph, 1.5, 0, dense=dense, backend=backend)
+    backend.assert_allclose(hamiltonian.matrix, backend.zeros((4, 4)), atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("graph_type", [nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph])
+def test_heisenberg_graph_edge_multiplicity(backend, graph_type, dense):
+    """Edges between the same pair of nodes are merged if their weights are equal."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    graph = graph_type()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (1, 0, 2.0), (1, 2, 0.5), (1, 2, 0.5)])
+
+    target = nx.Graph()
+    target.add_weighted_edges_from([(0, 1, 2.0), (1, 2, 0.5)])
+
+    hamiltonian = Heisenberg(graph, (1.0, -0.4, 0.3), 0.2, **kwargs)
+    target = Heisenberg(target, (1.0, -0.4, 0.3), 0.2, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("graph_type", [nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph])
+def test_heisenberg_value_error(backend, graph_type):
+    graph = graph_type()
+    graph.add_weighted_edges_from([(0, 1, 1.0), (1, 0, 2.0)])
+
+    with pytest.raises(ValueError):
+        Heisenberg(graph, 1.0, 0.5, backend=backend)
+
+    with pytest.raises(ValueError):
+        Heisenberg(nx.Graph(), 1.0, 0.5, backend=backend)
+
+    with pytest.raises(ValueError):
+        Heisenberg(3, (1.0, 1.0), 0.5, backend=backend)
+
+    with pytest.raises(ValueError):
+        Heisenberg(3, 1.0, (0.5, 0.5, 0.5, 0.5), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_xy(backend, closed_boundary, dense):
+    X = lambda x: symbols.X(x, backend=backend)
+    Y = lambda x: symbols.Y(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    nqubits, gamma, h = 4, 0.3, 0.6
+
+    nbonds = nqubits if closed_boundary else nqubits - 1
+    bonds = [(qubit, (qubit + 1) % nqubits) for qubit in range(nbonds)]
+
+    target = -sum(
+        (1 + gamma) / 2 * X(a) * X(b) + (1 - gamma) / 2 * Y(a) * Y(b) for a, b in bonds
+    )
+    target -= h * sum(Z(qubit) for qubit in range(nqubits))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = XY(
+        nqubits,
+        gamma,
+        h,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_xy_graph(backend, dense):
+    X = lambda x: symbols.X(x, backend=backend)
+    Y = lambda x: symbols.Y(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    gamma, h = -0.4, 0.5
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)])
+    graph.add_node(4)
+    bonds = [(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)]
+
+    target = -sum(
+        weight * ((1 + gamma) / 2 * X(a) * X(b) + (1 - gamma) / 2 * Y(a) * Y(b))
+        for a, b, weight in bonds
+    )
+    target -= h * sum(Z(qubit) for qubit in range(5))
+    target = SymbolicHamiltonian(target, nqubits=5, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = XY(graph, gamma, h, dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_xy_tfim(backend, closed_boundary, dense):
+    """For :math:`\\gamma = 1`, the XY model is the TFIM with :math:`X` and :math:`Z` exchanged."""
+    nqubits = 4
+    kwargs = {"dense": dense, "closed_boundary": closed_boundary, "backend": backend}
+
+    xy = backend.to_numpy(XY(nqubits, 1.0, 0.7, **kwargs).matrix)
+    tfim = backend.to_numpy(TFIM(nqubits, 0.7, **kwargs).matrix)
+
+    hadamards = reduce(np.kron, [np.array(matrices.H)] * nqubits)
+    backend.assert_allclose(hadamards @ xy @ hadamards.conj().T, tfim, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_xy_xx(backend, dense):
+    """For :math:`\\gamma = 0` and :math:`h = 0`, the XY model is the XXZ model up to a factor."""
+    hamiltonian = XY(4, dense=dense, backend=backend)
+    target = XXZ(4, 0.0, dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, -0.5 * target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [0, 1])
+def test_xy_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        XY(nqubits, backend=backend)
 
 
 @pytest.mark.parametrize("dense", [False, True])
