@@ -2,16 +2,11 @@ version = 1
 revision = 5
 requires-python = ">=3.12, <3.16"
 resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'linux'",
+    "python_full_version >= '3.14'",
     "python_full_version < '3.14' and sys_platform == 'linux'",
-    "python_full_version >= '3.14' and sys_platform == 'win32'",
-    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
-    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
     "python_full_version < '3.14' and sys_platform == 'win32'",
     "python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version < '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version < '3.14' and sys_platform == 'darwin'",
+    "python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
 ]
 
 [[package]]
@@ -613,22 +608,13 @@ wheels = [
 ]
 
 [[package]]
-name = "cuda-pathfinder"
-version = "1.8.3"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/fb/f8e1890428f9f590b4beebd63b068aac1ce32a3331510c847b9f9a78f261/cuda_pathfinder-1.8.3-py3-none-any.whl", hash = "sha256:e29e59829c297a7a5233bd9cc71094fc5bddbd076951482670178f9eade39b1f", size = 62561, upload-time = "2026-10-02T03:20:23.712Z" },
-]
-
-[[package]]
 name = "cuda-quantum-cu13"
 version = "0.16.0.post1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astpretty" },
     { name = "cudensitymat-cu13" },
-    { name = "cupy-cuda13x", version = "13.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
-    { name = "cupy-cuda13x", version = "14.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "cupy-cuda13x" },
     { name = "custatevec-cu13" },
     { name = "cutensornet-cu13" },
     { name = "numpy" },
@@ -753,9 +739,6 @@ wheels = [
 name = "cupy-cuda13x"
 version = "13.6.0"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.14' and sys_platform == 'linux'",
-]
 dependencies = [
     { name = "fastrlock" },
     { name = "numpy" },
@@ -765,28 +748,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/67/f5/ca0ba263602fc3e7afb7052ae1df68ca48110867752740d355854f8b28d0/cupy_cuda13x-13.6.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:f06b2585b68639fdf3975be06a91e3106b1306a43d77848b6c28df7f8ea98299", size = 54542783, upload-time = "2025-08-18T08:32:35.767Z" },
     { url = "https://files.pythonhosted.org/packages/b7/2d/91af3d769c7d0cdd6eb7fa1e32e5971171ee3a7679704f8f3a13d000d5db/cupy_cuda13x-13.6.0-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:d6d83733691d3114f1a5b792c9e1288e2fb4c432023ce86853a37a16193e1760", size = 65900404, upload-time = "2025-08-18T08:32:43.043Z" },
     { url = "https://files.pythonhosted.org/packages/1a/5c/885d0113113f4a0bfe3e30cd74f92eb4f8717e3077224655496ad98a12de/cupy_cuda13x-13.6.0-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:015a052ec46bad154a74ff04c9c5aea2a8ab441f2d6ae3824bdfe3db0eeb4d2e", size = 54331219, upload-time = "2025-08-18T08:32:46.81Z" },
-]
-
-[[package]]
-name = "cupy-cuda13x"
-version = "14.2.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'linux'",
-]
-dependencies = [
-    { name = "cuda-pathfinder" },
-    { name = "numpy" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/c8/68e07ff959f6a9f93169e37a64a4c24223487102b8625191e4a566cab465/cupy_cuda13x-14.2.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:0a9b6538079c5151dcd99cf44b94cc3f1242315b7de0498b4619cef9b2a7c2c8", size = 73382974, upload-time = "2026-08-20T02:41:13.648Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/bf/c4c25e97552320451afdcd459d4b6e0b715459594e998b23051c06db64c3/cupy_cuda13x-14.2.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:9aafadbe29db3d4285026044aafeb28f2a3de4bd0df70718ec6892b7d27a4ded", size = 69439247, upload-time = "2026-08-20T02:41:17.375Z" },
-    { url = "https://files.pythonhosted.org/packages/3c/02/3cb39774c71a16275c50b5d1e92ddcefa948ff1e69f464249b70a79b0abe/cupy_cuda13x-14.2.0-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:449af7f608dc70ce64e8c45cf5a6ea0bbef51623e7c806b1a43445ae3c76e1e0", size = 72969322, upload-time = "2026-08-20T02:41:23.311Z" },
-    { url = "https://files.pythonhosted.org/packages/4e/27/216370ae8c39fa9835645be3c27513ab72f52cf4f51faf58d799fba981b6/cupy_cuda13x-14.2.0-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:5b79a606f6639d9bed74ef7072f36756a95a804c86d7adb367b39307ac771600", size = 69048238, upload-time = "2026-08-20T02:41:26.831Z" },
-    { url = "https://files.pythonhosted.org/packages/e5/70/8c80c9e7010193afed8ccb7110d6173aa23bf3a6ce2fc2450244b0fa50a1/cupy_cuda13x-14.2.0-cp314-cp314-manylinux2014_aarch64.whl", hash = "sha256:7ac57c4e16c62f265b5ecc2b45d6bbafe9dc70a99b849ed6cfb8d16f32204589", size = 72840193, upload-time = "2026-08-20T02:41:33.146Z" },
-    { url = "https://files.pythonhosted.org/packages/c2/b8/4f4c4f34fc31ab8d136ed965a919505297974629d9852c50e15bfd616281/cupy_cuda13x-14.2.0-cp314-cp314-manylinux2014_x86_64.whl", hash = "sha256:ff0bdebd1b43c0c6db53095784c787c4e4eae671356cf521c4b7482ed78a1a7e", size = 68422828, upload-time = "2026-08-20T02:41:36.527Z" },
-    { url = "https://files.pythonhosted.org/packages/6f/54/a582ac70e9e75d3fad7ae073051bcd50dd128a1f66dd275291dc5f48d997/cupy_cuda13x-14.2.0-cp314-cp314t-manylinux2014_aarch64.whl", hash = "sha256:e8bb453551deced08ec5c4576da61ebf1e2b4a45aeff48e09f47ec332f7cad3d", size = 73336756, upload-time = "2026-08-20T02:41:42.718Z" },
-    { url = "https://files.pythonhosted.org/packages/f9/aa/222151ba5061d7a01efe4009efad9f9a7164e15bb2a494d9aa86efc97d4f/cupy_cuda13x-14.2.0-cp314-cp314t-manylinux2014_x86_64.whl", hash = "sha256:313500c5d415f65d388e84a9d2eb7f07f97c23c85dc5785f986e75d46d9c9693", size = 68792663, upload-time = "2026-08-20T02:41:46.079Z" },
 ]
 
 [[package]]
@@ -2050,11 +2011,7 @@ name = "pandas"
 version = "2.3.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'linux'",
-    "python_full_version >= '3.14' and sys_platform == 'win32'",
-    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
-    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
+    "python_full_version >= '3.14'",
 ]
 dependencies = [
     { name = "numpy" },
@@ -2107,8 +2064,7 @@ resolution-markers = [
     "python_full_version < '3.14' and sys_platform == 'linux'",
     "python_full_version < '3.14' and sys_platform == 'win32'",
     "python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version < '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
-    "python_full_version < '3.14' and sys_platform == 'darwin'",
+    "python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "numpy" },
@@ -2752,16 +2708,16 @@ dependencies = [
 
 [package.optional-dependencies]
 cudaq = [
-    { name = "qbraid", extra = ["cudaq"], marker = "sys_platform == 'linux'" },
+    { name = "qbraid", extra = ["cudaq"], marker = "python_full_version < '3.14' and sys_platform == 'linux'" },
 ]
 qinfo = [
     { name = "stim" },
 ]
 qir = [
-    { name = "qbraid", extra = ["qir"] },
+    { name = "qbraid", extra = ["qir"], marker = "python_full_version < '3.14'" },
 ]
 qulacs = [
-    { name = "qulacs", marker = "python_full_version < '3.13'" },
+    { name = "qulacs", marker = "python_full_version < '3.14'" },
 ]
 
 [package.dev-dependencies]
@@ -2786,7 +2742,7 @@ docs = [
     { name = "ipykernel" },
     { name = "nbsphinx" },
     { name = "qibojit" },
-    { name = "qulacs", marker = "python_full_version < '3.13'" },
+    { name = "qulacs", marker = "python_full_version < '3.14'" },
     { name = "recommonmark" },
     { name = "seaborn" },
     { name = "sphinx" },
@@ -2799,11 +2755,11 @@ tests = [
     { name = "pygridsynth" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "qbraid", extra = ["cudaq"], marker = "sys_platform == 'linux'" },
-    { name = "qbraid", extra = ["qir"] },
+    { name = "qbraid", extra = ["cudaq"], marker = "python_full_version < '3.14' and sys_platform == 'linux'" },
+    { name = "qbraid", extra = ["qir"], marker = "python_full_version < '3.14'" },
     { name = "qibojit" },
     { name = "qiskit" },
-    { name = "qulacs", marker = "python_full_version < '3.13'" },
+    { name = "qulacs", marker = "python_full_version < '3.14'" },
     { name = "stim" },
 ]
 
@@ -2815,9 +2771,9 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.0.0,<3.0.0" },
     { name = "openqasm3", extras = ["parser"], specifier = ">=1.0.1,<2.0.0" },
     { name = "optuna", specifier = ">=4.2.1,<5.0.0" },
-    { name = "qbraid", extras = ["cudaq"], marker = "sys_platform == 'linux' and extra == 'cudaq'", specifier = ">=0.10.0,<0.11.0" },
-    { name = "qbraid", extras = ["qir"], marker = "extra == 'qir'", specifier = ">=0.10.0,<0.11.0" },
-    { name = "qulacs", marker = "python_full_version < '3.13' and extra == 'qulacs'", specifier = ">=0.6.4,<0.7.0" },
+    { name = "qbraid", extras = ["cudaq"], marker = "python_full_version < '3.14' and sys_platform == 'linux' and extra == 'cudaq'", specifier = ">=0.10.0,<0.11.0" },
+    { name = "qbraid", extras = ["qir"], marker = "python_full_version < '3.14' and extra == 'qir'", specifier = ">=0.10.0,<0.11.0" },
+    { name = "qulacs", marker = "python_full_version < '3.14' and extra == 'qulacs'", specifier = ">=0.6.4,<0.7.0" },
     { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
     { name = "stim", marker = "extra == 'qinfo'", specifier = ">=1.15.0,<2.0.0" },
     { name = "sympy", specifier = ">=1.13.1,<2.0.0" },
@@ -2843,7 +2799,7 @@ docs = [
     { name = "ipykernel", specifier = ">=6.29.4,<7.0.0" },
     { name = "nbsphinx", specifier = ">=0.8.12,<0.9.0" },
     { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?branch=uvupgrade" },
-    { name = "qulacs", marker = "python_full_version < '3.13'", specifier = ">=0.6.4,<0.7.0" },
+    { name = "qulacs", marker = "python_full_version < '3.14'", specifier = ">=0.6.4,<0.7.0" },
     { name = "recommonmark", specifier = ">=0.7.1,<0.8.0" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14.0" },
     { name = "sphinx", specifier = ">=6.1.3,<7.0.0" },
@@ -2856,11 +2812,11 @@ tests = [
     { name = "pygridsynth", specifier = ">=2.0.0,<3.0.0" },
     { name = "pytest", specifier = ">=7.2.1,<10.0.0" },
     { name = "pytest-cov", specifier = ">=4.0.0,<5.0.0" },
-    { name = "qbraid", extras = ["cudaq"], marker = "sys_platform == 'linux'", specifier = ">=0.10.0,<0.11.0" },
-    { name = "qbraid", extras = ["qir"], specifier = ">=0.10.0,<0.11.0" },
+    { name = "qbraid", extras = ["cudaq"], marker = "python_full_version < '3.14' and sys_platform == 'linux'", specifier = ">=0.10.0,<0.11.0" },
+    { name = "qbraid", extras = ["qir"], marker = "python_full_version < '3.14'", specifier = ">=0.10.0,<0.11.0" },
     { name = "qibojit", git = "https://github.com/qiboteam/qibojit.git?branch=uvupgrade" },
     { name = "qiskit", specifier = ">=2.2.3,<3.0.0" },
-    { name = "qulacs", marker = "python_full_version < '3.13'", specifier = ">=0.6.4,<0.7.0" },
+    { name = "qulacs", marker = "python_full_version < '3.14'", specifier = ">=0.6.4,<0.7.0" },
     { name = "stim", specifier = ">=1.15.0,<2.0.0" },
 ]
 
