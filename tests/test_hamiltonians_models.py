@@ -20,6 +20,7 @@ from qibo.hamiltonians.models import (
     XXZ,
     XY,
     ClusterIsing,
+    DisorderedHeisenberg,
     FermiHubbard,
     FoldedXXZ,
     Heisenberg,
@@ -1610,6 +1611,239 @@ def test_xy_xx(backend, dense):
 def test_xy_value_error(backend, nqubits):
     with pytest.raises(ValueError):
         XY(nqubits, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_xxx_graph(backend, dense):
+    """Edge weights scale the coupling constant, and the field acts on isolated nodes."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    coupling, fields = 0.8, (0.2, 0.0, -0.4)
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (0, 2, -0.5)])
+    # edges without a weight have weight 1
+    graph.add_edge(1, 2)
+    graph.add_node(3)
+    bonds = [(0, 1, 2.0), (0, 2, -0.5), (1, 2, 1.0)]
+
+    target = sum(
+        -coupling * weight * pauli(a, backend=backend) * pauli(b, backend=backend)
+        for a, b, weight in bonds
+        for pauli in paulis
+    )
+    target += sum(
+        -field * pauli(qubit, backend=backend)
+        for qubit in range(4)
+        for field, pauli in zip(fields, paulis)
+    )
+    target = SymbolicHamiltonian(target, nqubits=4, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = XXX(graph, coupling, fields, dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_xxx_graph_chain(backend, dense):
+    """The cycle graph is the periodic chain."""
+    hamiltonian = XXX(
+        nx.cycle_graph(4), 0.8, (0.2, 0.1, -0.4), dense=dense, backend=backend
+    )
+    target = XXX(4, 0.8, (0.2, 0.1, -0.4), dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_xxz_graph(backend, dense):
+    """Edge weights scale the whole exchange interaction."""
+    X = lambda x: symbols.X(x, backend=backend)
+    Y = lambda x: symbols.Y(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    delta = 0.7
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)])
+    # edges without a weight have weight 1
+    graph.add_edge(2, 3)
+    bonds = [(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5), (2, 3, 1.0)]
+
+    target = sum(
+        weight * (X(a) * X(b) + Y(a) * Y(b) + delta * Z(a) * Z(b))
+        for a, b, weight in bonds
+    )
+    target = SymbolicHamiltonian(target, nqubits=4, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = XXZ(graph, delta, dense=dense, backend=backend)
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_xxz_graph_chain(backend, closed_boundary, dense):
+    """Cycle and path graphs are the periodic and open chains."""
+    nqubits, delta = 4, 0.7
+
+    if closed_boundary:
+        graph = nx.cycle_graph(nqubits)
+        target = XXZ(nqubits, delta, dense=dense, backend=backend)
+    else:
+        graph = nx.path_graph(nqubits)
+        target = Heisenberg(
+            nqubits,
+            [-1, -1, -delta],
+            0,
+            dense=dense,
+            closed_boundary=False,
+            backend=backend,
+        )
+
+    hamiltonian = XXZ(graph, delta, dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_xxz_graph_value_error(backend):
+    with pytest.raises(ValueError):
+        XXZ(nx.Graph(), backend=backend)
+
+    with pytest.raises(ValueError):
+        XXZ(1, backend=backend)
+
+
+def test_folded_xxz_graph_type_error(backend):
+    """The folded XXZ model is only defined in one dimension."""
+    with pytest.raises(TypeError):
+        FoldedXXZ(nx.path_graph(5), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("distribution", ["gaussian", "uniform"])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_disordered_heisenberg(backend, closed_boundary, distribution, dense):
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    nqubits, seed, strength = 4, 5, 1.7
+    couplings = (1.0, -0.4, 0.3)
+
+    if distribution == "gaussian":
+        randoms = backend.random_normal(0, 1, nqubits, seed=seed)
+    else:
+        randoms = backend.random_uniform(-1.0, 1.0, size=nqubits, seed=seed)
+    randoms = backend.to_numpy(randoms)
+
+    nbonds = nqubits if closed_boundary else nqubits - 1
+    bonds = [(qubit, (qubit + 1) % nqubits) for qubit in range(nbonds)]
+
+    target = sum(
+        -coupling * pauli(a, backend=backend) * pauli(b, backend=backend)
+        for a, b in bonds
+        for coupling, pauli in zip(couplings, paulis)
+    )
+    target += sum(
+        -strength * random * symbols.Z(qubit, backend=backend)
+        for qubit, random in enumerate(randoms)
+    )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = DisorderedHeisenberg(
+        nqubits,
+        couplings,
+        strength,
+        distribution=distribution,
+        seed=seed,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_disordered_heisenberg_heisenberg(backend, closed_boundary, dense):
+    """Without disorder, the model is the Heisenberg model without external field."""
+    kwargs = {"dense": dense, "closed_boundary": closed_boundary, "backend": backend}
+
+    hamiltonian = DisorderedHeisenberg(4, (1.0, 0.5, 0.3), 0.0, seed=1, **kwargs)
+    target = Heisenberg(4, (1.0, 0.5, 0.3), 0, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_disordered_heisenberg_graph(backend, dense):
+    """Random fields act on all qubits of the graph, including the isolated ones."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    nqubits, seed, strength = 5, 3, 0.8
+    couplings = (0.8, -0.3, 0.5)
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)])
+    graph.add_node(4)
+    bonds = [(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)]
+
+    randoms = backend.to_numpy(
+        backend.random_uniform(-1.0, 1.0, size=nqubits, seed=seed)
+    )
+
+    target = sum(
+        -coupling * weight * pauli(a, backend=backend) * pauli(b, backend=backend)
+        for a, b, weight in bonds
+        for coupling, pauli in zip(couplings, paulis)
+    )
+    target += sum(
+        -strength * random * symbols.Z(qubit, backend=backend)
+        for qubit, random in enumerate(randoms)
+    )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = DisorderedHeisenberg(
+        graph, couplings, strength, seed=seed, dense=dense, backend=backend
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_disordered_heisenberg_seed(backend, dense):
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DisorderedHeisenberg(4, 1.0, 2.0, seed=1, **kwargs)
+    same = DisorderedHeisenberg(4, 1.0, 2.0, seed=1, **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, same.matrix)
+
+    # a generator is equivalent to the seed that initializes it
+    generator = DisorderedHeisenberg(
+        4, 1.0, 2.0, seed=np.random.default_rng(1), **kwargs
+    )
+    backend.assert_allclose(hamiltonian.matrix, generator.matrix)
+
+    other = DisorderedHeisenberg(4, 1.0, 2.0, seed=2, **kwargs)
+    assert not np.allclose(
+        backend.to_numpy(hamiltonian.matrix), backend.to_numpy(other.matrix)
+    )
+
+
+def test_disordered_heisenberg_value_error(backend):
+    with pytest.raises(ValueError):
+        DisorderedHeisenberg(4, 1.0, 1.0, distribution="bimodal", backend=backend)
+
+    for nqubits in (0, 1):
+        with pytest.raises(ValueError):
+            DisorderedHeisenberg(nqubits, 1.0, 1.0, backend=backend)
+
+    with pytest.raises(ValueError):
+        DisorderedHeisenberg(nx.Graph(), 1.0, 1.0, backend=backend)
 
 
 @pytest.mark.parametrize("dense", [False, True])
