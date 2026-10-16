@@ -181,6 +181,11 @@ class Unroller:
             :class:`qibo.gates.X` linear in the number of controls. They can be in
             any state and are left unchanged. Not using dirty auxiliary qubits makes
             the gate count quadratic in the number of controls. Defaults to ``False``.
+        min_qubits (int, optional): Only gates acting on at least ``min_qubits`` qubits
+            are decomposed, the others are left unchanged. For example,
+            ``min_qubits=3`` decomposes only gates acting on three or more qubits,
+            which is useful to make a circuit executable by a router before routing.
+            Defaults to :math:`1`, which decomposes every gate.
     """
 
     def __init__(
@@ -188,6 +193,7 @@ class Unroller:
         native_gates: NativeGates,
         backend: Backend | None = None,
         use_dirty_ancillas: bool = False,
+        min_qubits: int = 1,
     ):
         if not native_gates.is_universal:
             raise_error(
@@ -200,6 +206,7 @@ class Unroller:
         self.native_gates = native_gates
         self.backend = backend
         self.use_dirty_ancillas = use_dirty_ancillas
+        self.min_qubits = min_qubits
 
     def __call__(self, circuit: Circuit) -> Circuit:
         """Decomposes a circuit to native gates.
@@ -212,6 +219,9 @@ class Unroller:
         """
         translated_circuit = Circuit(**circuit.init_kwargs)
         for gate in circuit.queue:
+            if len(gate.qubits) < self.min_qubits:
+                translated_circuit.add(gate)
+                continue
             free = (
                 tuple(q for q in range(circuit.nqubits) if q not in gate.qubits)
                 if self.use_dirty_ancillas and gate.is_controlled_by
@@ -257,7 +267,7 @@ def translate_gate(
     """
     backend = _check_backend(backend)
 
-    if isinstance(gate, (gates.I, gates.Align)):
+    if isinstance(gate, (gates.Align, gates.Barrier, gates.I, gates.ResetChannel)):
         return [gate]
 
     if isinstance(gate, gates.M):

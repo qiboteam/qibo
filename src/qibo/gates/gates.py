@@ -527,9 +527,19 @@ class Align(ParametrizedGate):
         q (int): The qubit ID.
         delay (int, optional): The time (in ns) for which to delay circuit execution
             on the specified qubits. Defaults to :math:`0`.
+        trainable (bool, optional): Whether the gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`. Defaults to ``False``.
+        name (str, optional): Name of the gate. If ``None``, ``"align"`` is used.
+            Defaults to ``None``.
     """
 
-    def __init__(self, q: int, delay: int = 0, trainable: bool = False):
+    def __init__(
+        self,
+        q: int,
+        delay: int = 0,
+        trainable: bool = False,
+        name: str | None = None,
+    ):
         if not isinstance(delay, int):
             raise_error(
                 TypeError, f"delay must be type int, but it is type {type(delay)}."
@@ -538,7 +548,7 @@ class Align(ParametrizedGate):
             raise_error(ValueError, "Delay must not be negative.")
 
         super().__init__(trainable)
-        self.name = "align"
+        self.name = "align" if name is None else name
         self.draw_label = f"A({delay})"
         self.init_args = [q]
         self.init_kwargs = {"name": self.name, "delay": delay, "trainable": trainable}

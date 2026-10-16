@@ -238,6 +238,16 @@ def test_align(backend):
     identity = backend.identity(2**nqubits)
     backend.assert_allclose(gate_matrix, identity, atol=1e-6)
 
+
+def test_align_name_and_on_qubits():
+    assert gates.Align(0, 3).name == "align"
+    assert gates.Align(0, 3, name="custom").name == "custom"
+
+    gate = gates.Align(0, 3, name="custom").on_qubits({0: 2})
+    assert gate.qubits == (2,)
+    assert gate.parameters == (3,)
+    assert gate.name == "custom"
+
     with pytest.raises(NotImplementedError):
         gate.qasm_label
 

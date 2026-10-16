@@ -188,7 +188,7 @@ def assert_decomposition(
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`): Native gates supported by the hardware.
     """
     for gate in circuit.queue:
-        if isinstance(gate, gates.M):
+        if isinstance(gate, (gates.Align, gates.Barrier, gates.M, gates.ResetChannel)):
             continue
         if len(gate.qubits) <= 2:
             try:

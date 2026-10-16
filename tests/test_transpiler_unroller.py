@@ -670,3 +670,44 @@ def test_translate_gate_unrelated_key_error_is_not_swallowed(
     )
     with pytest.raises(KeyError, match="unrelated"):
         translate_gate(gate, NativeGates.default(), backend=backend)
+
+
+def test_translate_gate_keeps_directives_and_resets(backend):
+    natives = NativeGates.default()
+    for gate in (
+        gates.Align(0, 10),
+        gates.Barrier(0, 1),
+        gates.I(0),
+        gates.ResetChannel(0, [1.0, 0.0]),
+    ):
+        assert translate_gate(gate, natives, backend=backend) == [gate]
+
+
+def test_unroller_keeps_barrier_and_reset(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Barrier(0, 1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.ResetChannel(0, [1.0, 0.0]))
+    translated = Unroller(NativeGates.default(), backend=backend)(circuit)
+    names = [gate.name for gate in translated.queue]
+    assert names.count("barrier") == 1
+    assert names.count("ResetChannel") == 1
+    assert names.index("barrier") < names.index("cz") < names.index("ResetChannel")
+
+
+@pytest.mark.parametrize("min_qubits", [1, 2, 3, 4])
+def test_unroller_min_qubits(backend, min_qubits):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    translated = Unroller(
+        NativeGates.default(), backend=backend, min_qubits=min_qubits
+    )(circuit)
+    names = [gate.name for gate in translated.queue]
+    assert ("h" in names) == (min_qubits > 1)
+    assert ("cx" in names) == (min_qubits > 2)
+    assert ("ccx" in names) == (min_qubits > 3)
+    if min_qubits <= 3:
+        assert all(len(gate.qubits) < 3 for gate in translated.queue)
