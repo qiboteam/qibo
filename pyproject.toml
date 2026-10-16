@@ -6,12 +6,13 @@ authors = [{ name = "The Qibo team" }]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.16"
 keywords = []
 classifiers = [
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
@@ -80,7 +81,7 @@ cuda12 = [
 
 [tool.uv.sources.qibojit]
 git = "https://github.com/qiboteam/qibojit.git"
-branch = "main"
+branch = "uvupgrade"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
