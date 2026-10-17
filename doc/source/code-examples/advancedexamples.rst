@@ -2349,12 +2349,20 @@ or the ``on_qubits`` parameter.
     - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
 
 The single-qubit native gates are not limited to :class:`qibo.gates.U3` and :class:`qibo.gates.GPI2`.
-Any combination of single-qubit gates that implements every single-qubit unitary exactly can be used, which
-holds if it has two rotations with free angles about orthogonal axes, such as :class:`qibo.gates.RX` and
-:class:`qibo.gates.RZ`. The axis of a rotation can also be changed by native gates without parameters, as
-:class:`qibo.gates.H` does for :class:`qibo.gates.RZ`. The property
-:attr:`qibo.transpiler.unroller.NativeGates.is_universal` checks whether a set of native gates can
-implement any unitary, and :class:`qibo.transpiler.unroller.Unroller` raises an error if it cannot.
+Any combination of single-qubit gates that implements every single-qubit unitary exactly can be
+used, which holds if it has two rotations with free angles about orthogonal axes, such as
+:class:`qibo.gates.RX` and :class:`qibo.gates.RZ`. The axis of a rotation can also be changed
+by native gates without parameters, as :class:`qibo.gates.H` does for :class:`qibo.gates.RZ`.
+The property :attr:`qibo.transpiler.unroller.NativeGates.is_universal` checks whether a set of
+native gates can implement any unitary, and :class:`qibo.transpiler.unroller.Unroller` raises
+an error if it cannot.
+
+Any gate without parameters that acts on two qubits can be native, such as
+:class:`qibo.gates.CNOT`, :class:`qibo.gates.CZ`, :class:`qibo.gates.ECR`, :class:`qibo.gates.SYC`
+or :class:`qibo.gates.iSWAP`. A native two-qubit gate is never decomposed. The other gates
+are decomposed into :class:`qibo.gates.CZ` gates, which are replaced by the lowest number
+of native gates that implement them. The :class:`qibo.gates.SWAP` gate can be native, but it
+cannot create entanglement, so it needs another entangling native gate to be universal.
 
 .. testcode:: python
 
