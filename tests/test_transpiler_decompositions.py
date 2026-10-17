@@ -9,9 +9,15 @@ from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.asserts import assert_decomposition
 from qibo.transpiler.decompositions import (
     _mottonen_compute_theta,
+    direction_dec,
     standard_decompositions,
 )
-from qibo.transpiler.unroller import NativeGates, cz_dec, translate_gate
+from qibo.transpiler.unroller import (
+    _TWO_QUBIT_GATES,
+    NativeGates,
+    cz_dec,
+    translate_gate,
+)
 
 default_natives = NativeGates.Z | NativeGates.RZ | NativeGates.M | NativeGates.I
 
@@ -434,3 +440,34 @@ def test_mottonen_compute_theta_single_angle(backend, shape):
 
     assert thetas.shape == angles.shape
     backend.assert_allclose(thetas, angles)
+
+
+@pytest.mark.parametrize(
+    "gate_class", list(direction_dec), ids=lambda gate: gate.__name__
+)
+def test_direction_dec(backend, gate_class):
+    decomposition = Circuit(2)
+    decomposition.add(direction_dec[gate_class])
+    original = Circuit(2)
+    original.add(gate_class(0, 1))
+    unitary, target = decomposition.unitary(backend), original.unitary(backend)
+    phase = backend.dot(backend.ravel(backend.conj(target)), backend.ravel(unitary))
+    backend.assert_allclose(
+        unitary * backend.conj(phase / abs(phase)), target, atol=1e-12
+    )
+    # the gate is applied once, in the opposite direction
+    reversed_gates = [
+        gate for gate in direction_dec[gate_class] if isinstance(gate, gate_class)
+    ]
+    assert [gate.qubits for gate in reversed_gates] == [(1, 0)]
+
+
+def test_direction_dec_non_symmetric_natives(backend):
+    swap = [0, 2, 1, 3]
+    non_symmetric = []
+    for name in _TWO_QUBIT_GATES:
+        gate_class = getattr(gates, name)
+        matrix = backend.to_numpy(gate_class(0, 1).matrix(backend))
+        if not np.allclose(matrix, matrix[swap][:, swap]):
+            non_symmetric.append(gate_class)
+    assert set(non_symmetric) == set(direction_dec)

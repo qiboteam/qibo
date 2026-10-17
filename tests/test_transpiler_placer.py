@@ -301,3 +301,26 @@ def test_placers_with_barrier(placer_class, star_connectivity):
     placer = placer_class(connectivity=connectivity)
     placer(circ)
     assert_placement(circ, connectivity)
+
+
+@pytest.mark.parametrize(
+    "placer_class",
+    [
+        Random,
+        Subgraph,
+        StarConnectivityPlacer,
+        lambda connectivity=None: ReverseTraversal(Sabre(), connectivity),
+    ],
+    ids=["Random", "Subgraph", "StarConnectivityPlacer", "ReverseTraversal"],
+)
+def test_placers_store_undirected_connectivity(placer_class, star_connectivity):
+    assert placer_class().connectivity is None
+    undirected = star_connectivity()
+    assert placer_class(undirected).connectivity is undirected
+    directed = nx.DiGraph(undirected.edges)
+    placer = placer_class(directed)
+    assert not placer.connectivity.is_directed()
+    assert set(map(frozenset, placer.connectivity.edges)) == set(
+        map(frozenset, undirected.edges)
+    )
+    assert directed.is_directed()
