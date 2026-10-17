@@ -2611,8 +2611,9 @@ on the determinant of the matrix of the target gate. Matrices with determinant o
 (the special unitary group SU(2), which includes :class:`qibo.gates.RX`, :class:`qibo.gates.RY`,
 :class:`qibo.gates.RZ` and :class:`qibo.gates.U3`) need a number of two-qubit gates that grows
 linearly with the number of controls. Any other :math:`2 \times 2` unitary matrix (the group
-U(2), which includes :class:`qibo.gates.H` and :class:`qibo.gates.X`) needs a number that grows
-quadratically:
+U(2), which includes :class:`qibo.gates.H`) needs a number that grows quadratically. The
+only exception is the :class:`qibo.gates.X` gate with three or four controls, which has a cheaper
+dedicated decomposition:
 
 .. testcode:: multicontrolled
 
@@ -2637,11 +2638,13 @@ quadratically:
     H         32 gates, exact: True
     Unitary   32 gates, exact: True
 
-The number of two-qubit gates for an increasing number of controls is:
+The number of two-qubit gates for an increasing number of controls is, for :class:`qibo.gates.RX`
+and :class:`qibo.gates.X` (which, with three controls, uses the dedicated decomposition and
+thus has the same cost as :class:`qibo.gates.RX`):
 
 .. testcode:: multicontrolled
 
-    print("controls   RX   H and X")
+    print("controls   RX        X")
     for nctrl in (3, 5, 7, 9):
         controls = tuple(range(nctrl))
         special = gates.RX(nctrl, 0.3).controlled_by(*controls)
@@ -2651,8 +2654,8 @@ The number of two-qubit gates for an increasing number of controls is:
 
 .. testoutput:: multicontrolled
 
-    controls   RX   H and X
-           3   14       26
+    controls   RX        X
+           3   14       14
            5   40       82
            7   80      170
            9  120      290
@@ -2717,7 +2720,23 @@ Clean auxiliary qubits and Toffoli gates
 
 If some free qubits are known to be in the state :math:`\ket{0}`, they are *clean* auxiliary
 qubits and the decomposition can be cheaper. Clean qubits are passed with the keyword
-argument ``clean``. When Toffoli gates are expensive, for example in fault-tolerant
+argument ``clean``. By default, the decomposition with the fewest two-qubit gates is
+chosen for the available qubits, and clean qubits are only used as such if that makes
+it cheaper:
+
+.. testcode:: multicontrolled
+
+    gate = gates.X(5).controlled_by(0, 1, 2, 3, 4)
+
+    print("two free qubits: ", count_cz(gate.decompose(6, 7), 8))
+    print("two clean qubits:", count_cz(gate.decompose(clean=(6, 7)), 8))
+
+.. testoutput:: multicontrolled
+
+    two free qubits:  56
+    two clean qubits: 42
+
+When Toffoli gates are expensive, for example in fault-tolerant
 quantum computing, the keyword argument ``minimize_toffolis`` selects a decomposition
 that uses the lowest possible number of Toffoli gates, :math:`2k - 3` with clean qubits and
 :math:`4k - 8` with dirty qubits, instead of minimizing the number of two-qubit gates:
@@ -2787,8 +2806,8 @@ two qubits. With a single auxiliary qubit, clean or dirty, a different construct
 .. testoutput:: multicontrolled
 
     controls | default | one free | one clean | two free
-          16 |     734 |      983 |       599 |      272
-          64 |    3422 |     2039 |      1127 |      474
+          16 |     734 |      981 |       599 |      272
+          64 |    3422 |     2041 |      1129 |      474
 
 The depth is the one of the unrolled circuit. With a single dirty qubit the decomposition
 is shallower than the default only for tens of controls or more, because it uses about twice as
@@ -2863,11 +2882,17 @@ Summary of the options
     * - ``gate.decompose()``
       - none
       - Linear number of two-qubit gates if :math:`\det(U) = 1`, quadratic otherwise.
-        Linear depth.
+        Linear depth. The :math:`X` gate uses :math:`14` and :math:`36` two-qubit gates
+        with three and four controls.
     * - ``gate.decompose(*free)``
       - dirty (:math:`X` only)
       - Linear number of two-qubit gates, with a smaller slope with :math:`k - 2` qubits.
         Linear depth.
+    * - ``gate.decompose(clean=...)``
+      - clean (:math:`X` only)
+      - Linear number of two-qubit gates, with the cost of dirty qubits if there are
+        :math:`k - 2` or more, and lower otherwise. Linear depth with one qubit,
+        logarithmic with two.
     * - ``minimize_toffolis=True``
       - one or two, clean or dirty (:math:`X` only)
       - :math:`2k - 3` Toffoli gates with clean qubits, :math:`4k - 8` with dirty qubits.

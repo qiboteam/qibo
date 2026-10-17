@@ -23,22 +23,36 @@ def multi_controlled_decomposition(
 ) -> list[gates.Gate]:
     """Decomposes a multi-controlled single-qubit gate, with or without auxiliary qubits.
 
-    The decomposition is exact, including the global phase. By default, no
-    auxiliary qubits are used. Gates with :math:`\\det(U) = 1` are decomposed with
+    The decomposition is exact, including the global phase. By default, the one with
+    the fewest CNOTs is used. Gates with :math:`\\det(U) = 1` are decomposed with
     a number of CNOTs that grows linearly with the number of controls following
-    Ref. [1], and other gates quadratically following Ref. [2]. If ``free`` qubits
-    are given, a multi-controlled :math:`X` gate uses them as dirty auxiliary
-    qubits, which makes its cost linear following Ref. [3]. Other gates do not
-    benefit from auxiliary qubits, and ``free`` and ``clean`` are ignored. This is
+    Ref. [1], and other gates quadratically following Ref. [2]. This is
     the decomposition used by :meth:`qibo.gates.abstract.Gate.decompose` for gates controlled
     by more than one qubit.
+
+    A multi-controlled :math:`X` gate has dedicated decompositions that profit from
+    auxiliary qubits, and ``free`` and ``clean`` are ignored for other gates. Without
+    auxiliary qubits, the gates with three and four controls use :math:`14` and
+    :math:`36` CNOTs, respectively. For more controls, the one with the fewest CNOTs
+    for the given auxiliary qubits is chosen, where :math:`k` is the number of controls:
+
+    * With at least :math:`k - 2` auxiliary qubits, clean or dirty, the cost is linear
+      with a small slope following Ref. [3].
+    * With fewer qubits, but at least one clean qubit, Ref. [4] uses :math:`2k - 3`
+      Toffoli gates. Two clean qubits make the depth logarithmic in :math:`k`, and
+      one makes it linear.
+    * With dirty qubits only, the cost is linear following Ref. [3] with one auxiliary
+      qubit.
+
+    Clean qubits are only used as such if they are needed to reduce the number of
+    CNOTs. Otherwise, they are used as dirty qubits.
 
     If ``minimize_toffolis`` is ``True``, a multi-controlled :math:`X` gate with at
     least one auxiliary qubit is decomposed following Ref. [4] instead. This uses
     :math:`2k - 3` Toffoli gates for :math:`k` controls with clean qubits, and
-    :math:`4k - 8` with dirty qubits, which is the lowest count, but more CNOTs
-    than the default. Two auxiliary qubits make the depth logarithmic in :math:`k`,
-    and one makes it linear. Clean qubits are preferred over dirty ones.
+    :math:`4k - 8` with dirty qubits, which is the lowest count, but not necessarily the
+    lowest number of CNOTs. Two auxiliary qubits make the depth logarithmic in
+    :math:`k`, and one makes it linear. Clean qubits are preferred over dirty ones.
 
     If ``minimize_depth`` is ``True``, a multi-controlled :math:`X` gate with at least
     one auxiliary qubit is decomposed with a depth that is logarithmic in :math:`k`.
@@ -56,7 +70,7 @@ def multi_controlled_decomposition(
             unchanged. Defaults to ``()``, which uses no auxiliary qubits.
         clean (tuple[int, ...], optional): Ids of free qubits that are known to be in
             the state :math:`\\ket{0}`, and are left in that state. They are used as
-            dirty qubits unless ``minimize_toffolis`` is ``True``. Defaults to ``()``.
+            dirty qubits when this is cheaper. Defaults to ``()``.
         minimize_toffolis (bool, optional): If ``True``, a multi-controlled :math:`X`
             gate with auxiliary qubits minimizes the number of Toffoli gates instead
             of the number of CNOTs. Defaults to ``False``.
@@ -123,7 +137,7 @@ def multi_controlled_decomposition(
     if len(controls) == 1:
         decomposition = _controlled_u2(unitary, controls[0], target, backend)
     elif (
-        (free or clean)
+        (free or clean or len(controls) <= 4)
         and len(controls) > 2
         and backend.matrix_norm(unitary - backend.matrices.X) < PRECISION_TOL
     ):
@@ -131,7 +145,7 @@ def multi_controlled_decomposition(
             decomposition = _mcx_gidney_log_depth(
                 controls, target, (*clean, *free)[:2], len(clean) >= 2
             )
-        elif minimize_depth:
+        elif minimize_depth and (free or clean):
             decomposition = _mcx_nie_log_depth(
                 controls, target, (*clean, *free)[0], bool(clean)
             )
@@ -141,12 +155,20 @@ def multi_controlled_decomposition(
             decomposition = _mcx_gidney_linear_depth(controls, target, clean[0], True)
         elif minimize_toffolis and len(free) >= 2:
             decomposition = _mcx_gidney_log_depth(controls, target, free[:2], False)
-        elif minimize_toffolis:
+        elif minimize_toffolis and free:
             decomposition = _mcx_gidney_linear_depth(controls, target, free[0], False)
+        elif len(controls) == 3:
+            decomposition = _c3x(controls, target)
         elif len(free) + len(clean) >= len(controls) - 2:
             decomposition = _mcx_vchain_dirty(controls, target, (*free, *clean))
+        elif len(clean) >= 2:
+            decomposition = _mcx_gidney_log_depth(controls, target, clean[:2], True)
+        elif clean:
+            decomposition = _mcx_gidney_linear_depth(controls, target, clean[0], True)
+        elif free:
+            decomposition = _linear_mcx(controls, target, free[0])
         else:
-            decomposition = _linear_mcx(controls, target, (*free, *clean)[0])
+            decomposition = _c4x(controls, target)
     elif backend.abs(backend.det(unitary) - 1.0) < PRECISION_TOL:
         decomposition = _ldmcsu(unitary, controls, target, backend)
     else:
@@ -234,7 +256,10 @@ def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
 
     # Three-controlled square root of X. ``("p", q, s)`` is a controlled phase from
     # ``q`` to the target by ``s * angle``, and ``("cx", q, r)`` is a CNOT from ``q``
-    # to ``r``. Each step is preceded by a Hadamard gate on the target.
+    # to ``r``. Each step is preceded by a Hadamard gate on the target. A controlled
+    # phase is a controlled ``RZ`` and a phase on the control, because the decomposition
+    # of :class:`qibo.gates.CU1` is only exact up to a global phase, which is
+    # not global if the gates are controlled by other qubits.
     steps = [
         ("p", a, 1), ("cx", a, b), ("p", b, -1), ("cx", a, b), ("p", b, 1),
         ("cx", b, c), ("p", c, -1), ("cx", a, c), ("p", c, 1), ("cx", b, c),
@@ -243,16 +268,33 @@ def _c4x(controls: tuple[int, ...], target: int) -> list[gates.Gate]:
     c3sqrt_x = []
     for kind, first, second in steps:
         c3sqrt_x.append(gates.H(target))
-        c3sqrt_x.append(
-            gates.CU1(first, target, second * angle)
-            if kind == "p"
-            else gates.CNOT(first, second)
-        )
+        if kind == "p":
+            c3sqrt_x.extend(
+                [
+                    gates.CRZ(first, target, second * angle),
+                    gates.U1(first, second * angle / 2),
+                ]
+            )
+        else:
+            c3sqrt_x.append(gates.CNOT(first, second))
     c3sqrt_x.append(gates.H(target))
 
-    c4x = [gates.H(target), gates.CU1(d, target, math.pi / 2), gates.H(target)]
+    quarter = math.pi / 4
+    c4x = [
+        gates.H(target),
+        gates.CRZ(d, target, math.pi / 2),
+        gates.U1(d, quarter),
+        gates.H(target),
+    ]
     c4x.extend(relative_phase_c3x)
-    c4x.extend([gates.H(target), gates.CU1(d, target, -math.pi / 2), gates.H(target)])
+    c4x.extend(
+        [
+            gates.H(target),
+            gates.CRZ(d, target, -math.pi / 2),
+            gates.U1(d, -quarter),
+            gates.H(target),
+        ]
+    )
     c4x.extend(relative_phase_c3x_dagger)
     c4x.extend(c3sqrt_x)
 
