@@ -20,7 +20,7 @@ from qibo.transpiler.asserts import (
     assert_decomposition,
     assert_transpiling,
 )
-from qibo.transpiler.optimizer import Preprocessing
+from qibo.transpiler.optimizer import GateDirection, Preprocessing
 from qibo.transpiler.pipeline import (
     Passes,
     generate_preset_passes,
@@ -95,6 +95,105 @@ def test_restrict_qubits(star_connectivity):
     )
     assert list(new_connectivity.nodes) == ["A", "B", "C"]
     assert list(new_connectivity.edges) == [("A", "C"), ("B", "C")]
+
+
+def test_restrict_qubits_directed(star_connectivity):
+    directed = nx.DiGraph([("A", "C"), ("C", "B"), ("D", "C"), ("E", "C")])
+    new_connectivity = restrict_connectivity_qubits(directed, ["A", "B", "C"])
+    assert new_connectivity.is_directed()
+    assert list(new_connectivity.nodes) == ["A", "B", "C"]
+    assert list(new_connectivity.edges) == [("A", "C"), ("C", "B")]
+    with pytest.raises(ConnectivityError, match="not connected"):
+        restrict_connectivity_qubits(directed, ["A", "B", "D"])
+
+
+def test_generate_preset_passes_directed_structure():
+    connectivity = nx.DiGraph([(0, 1), (1, 2), (2, 3)])
+    natives = NativeGates.ECR | NativeGates.U3 | NativeGates.M
+    pipeline = generate_preset_passes(connectivity, natives, seed=3)
+    assert pipeline.connectivity is connectivity
+    *passes, direction, translator = pipeline.passes
+    assert [type(transpiler_pass) for transpiler_pass in passes] == [
+        Unroller,
+        Preprocessing,
+        Sabre,
+        Unroller,
+    ]
+    assert isinstance(direction, GateDirection)
+    assert isinstance(translator, Unroller) and translator.native_gates == natives
+
+
+def test_generate_preset_passes_undirected_has_no_gate_direction():
+    pipeline = generate_preset_passes(nx.path_graph(4))
+    assert not any(isinstance(p, GateDirection) for p in pipeline.passes)
+
+
+@pytest.mark.parametrize("routing_method", ["sabre", "shortest_paths"])
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.default(),
+        NativeGates.U3
+        | NativeGates.ECR
+        | NativeGates.Z
+        | NativeGates.RZ
+        | NativeGates.M
+        | NativeGates.I,
+        NativeGates.RZ
+        | NativeGates.SX
+        | NativeGates.X
+        | NativeGates.CNOT
+        | NativeGates.M
+        | NativeGates.I,
+    ],
+    ids=["default", "ECR", "CNOT"],
+)
+def test_generate_preset_passes_directed_connectivity(backend, natives, routing_method):
+    # every edge goes in one direction only
+    connectivity = nx.DiGraph([(0, 1), (2, 1), (2, 3), (4, 3), (4, 0)])
+    circuit = generate_random_circuit(nqubits=5, ngates=15, seed=1)
+    circuit.add(gates.M(*range(5)))
+    pipeline = generate_preset_passes(
+        connectivity, natives, seed=1, routing_method=routing_method, backend=backend
+    )
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert pipeline.is_satisfied(transpiled_circuit)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=natives,
+    )
+
+
+def test_generate_preset_passes_directed_wire_names(backend):
+    names = ["a", "b", "c", "d"]
+    connectivity = nx.DiGraph([("b", "a"), ("b", "c"), ("d", "c")])
+    natives = NativeGates.default() | NativeGates.CNOT
+    circuit = generate_random_circuit(nqubits=4, ngates=12, names=names)
+    pipeline = generate_preset_passes(connectivity, natives, seed=2, backend=backend)
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert pipeline.is_satisfied(transpiled_circuit)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=natives,
+    )
+
+
+def test_generate_preset_passes_directed_on_qubits(backend):
+    connectivity = nx.DiGraph([(0, 1), (2, 1), (2, 3), (4, 3)])
+    natives = NativeGates.default() | NativeGates.CNOT
+    circuit = generate_random_circuit(nqubits=3, ngates=10, names=[1, 2, 3])
+    pipeline = generate_preset_passes(
+        connectivity, natives, seed=2, on_qubits=[1, 2, 3], backend=backend
+    )
+    assert pipeline.connectivity.is_directed()
+    transpiled_circuit, _ = pipeline(circuit, backend=backend)
+    assert pipeline.is_satisfied(transpiled_circuit)
 
 
 def test_assert_circuit_equivalence_wrong_nqubits():
