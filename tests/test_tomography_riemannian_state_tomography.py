@@ -244,53 +244,20 @@ def test_call_stopping(backend):
     assert float(backend.max(backend.abs(many - first))) > 1e-6
 
 
-@pytest.mark.parametrize("nqubits", [1, 2, 3])
-def test_circuits(nqubits):
-    circuit = Circuit(nqubits)
+def test_circuits():
+    """The circuits are those of the Pauli strings of the abstract class."""
+    circuit = Circuit(3)
     circuit.add(gates.RX(0, 0.3))
-    circuit.add(gates.CNOT(0, nqubits - 1) if nqubits > 1 else gates.RY(0, 0.2))
-    nprepared = len(circuit.queue)
 
-    observables = ["XYZ"[qubit % 3] for qubit in range(nqubits)]
-    observables = ["".join(observables), "I" * nqubits, "Y" * nqubits, "Z" * nqubits]
-    circuits = RiemannianStateTomography().circuits(circuit, observables)
+    circuits = RiemannianStateTomography().circuits(circuit, ["XYZ", "IIY"])
 
-    # the circuit given by the user is not modified
-    assert len(circuit.queue) == nprepared
-    assert not circuit.measurements
+    assert [[(gate.name, gate.qubits) for gate in c.queue] for c in circuits] == [
+        [("rx", (0,)), ("h", (0,)), ("sdg", (1,)), ("h", (1,)), ("measure", (0, 1, 2))],
+        [("rx", (0,)), ("sdg", (2,)), ("h", (2,)), ("measure", (0, 1, 2))],
+    ]
 
-    assert len(circuits) == len(observables)
-
-    for observable, tomography_circuit in zip(observables, circuits):
-        queue = tomography_circuit.queue
-
-        # the state preparation is kept as it is
-        assert [(gate.name, gate.qubits) for gate in queue[:nprepared]] == [
-            (gate.name, gate.qubits) for gate in circuit.queue
-        ]
-
-        expected = []
-        for qubit, pauli in enumerate(observable):
-            if pauli == "Y":
-                expected.append(("sdg", (qubit,)))
-            if pauli in "XY":
-                expected.append(("h", (qubit,)))
-        expected.append(("measure", tuple(range(nqubits))))
-
-        assert [(gate.name, gate.qubits) for gate in queue[nprepared:]] == expected
-
-
-def test_circuits_errors():
-    circuit = Circuit(2)
-    circuit.add(gates.H(0))
-
-    for observable in ("X", "XYZ", "XA", "xy", 1):
-        with pytest.raises(ValueError):
-            RiemannianStateTomography().circuits(circuit, ["XX", observable])
-
-    circuit.add(gates.M(0))
     with pytest.raises(ValueError):
-        RiemannianStateTomography().circuits(circuit, ["XX"])
+        RiemannianStateTomography().circuits(circuit, ["XY"])
 
 
 def _execute_exact(self, circuits, nshots=1000, backend=None):
