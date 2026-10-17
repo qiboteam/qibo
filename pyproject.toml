@@ -6,12 +6,13 @@ authors = [{ name = "The Qibo team" }]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.16"
 keywords = []
 classifiers = [
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
@@ -33,9 +34,9 @@ Documentation = "https://qibo.science/qibo/stable/"
 
 [project.optional-dependencies]
 qinfo = ["stim>=1.15.0,<2.0.0"]
-qulacs = ["qulacs>=0.6.4,<0.7.0; python_version < '3.13'"]
-cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux'"]
-qir = ["qbraid[qir]>=0.10.0,<0.11.0"]
+qulacs = ["qulacs>=0.6.4,<0.7.0; python_version < '3.14'"]
+cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux' and python_version < '3.14'"]
+qir = ["qbraid[qir]>=0.10.0,<0.11.0; python_version < '3.14'"]
 
 [dependency-groups]
 dev = [
@@ -50,7 +51,7 @@ docs = [
   "sphinx-markdown-tables>=0.0.17,<0.0.18",
   "sphinx-copybutton>=0.5.2,<0.6.0",
   "nbsphinx>=0.8.12,<0.9.0",
-  "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
+  "qulacs>=0.6.4,<0.7.0; python_version < '3.14'",
   "seaborn>=0.13.2,<0.14.0",
   "ipykernel>=6.29.4,<7.0.0",
   "qibojit",
@@ -61,11 +62,11 @@ tests = [
   "matplotlib>=3.7.0,<3.11.0",
   "qibojit",
   "stim>=1.15.0,<2.0.0",
-  "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
+  "qulacs>=0.6.4,<0.7.0; python_version < '3.14'",
   "qiskit>=2.2.3,<3.0.0",
-  "qbraid[qir]>=0.10.0,<0.11.0",
-  "qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux'",
-  "pygridsynth>=2.0.0,<3.0.0",
+  "qbraid[qir]>=0.10.0,<0.11.0; python_version < '3.14'",
+  "qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux' and python_version < '3.14'",
+  "pygridsynth>=2.0.0,<3.0.0; python_version < '3.15'",
 ]
 cuda11 = [
   "cupy-cuda11x>=13.1.0,<14.0.0",
@@ -80,7 +81,7 @@ cuda12 = [
 
 [tool.uv.sources.qibojit]
 git = "https://github.com/qiboteam/qibojit.git"
-branch = "main"
+branch = "uvupgrade"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
