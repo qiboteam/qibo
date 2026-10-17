@@ -30,6 +30,18 @@ class Placer(ABC):
                 :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
 
+    @property
+    def connectivity(self) -> nx.Graph | None:
+        """Hardware topology. A directed graph is stored as an undirected one, because the
+        direction of the connections does not matter to place the qubits."""
+        return self._connectivity
+
+    @connectivity.setter
+    def connectivity(self, connectivity: nx.Graph | None) -> None:
+        if connectivity is not None and connectivity.is_directed():
+            connectivity = connectivity.to_undirected()
+        self._connectivity = connectivity
+
 
 class Router(ABC):
     """Makes the circuit executable on the given topology."""
@@ -53,6 +65,18 @@ class Router(ABC):
             tuple(:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final
             {logical: physical} qubit mapping.
         """
+
+    @property
+    def connectivity(self) -> nx.Graph | None:
+        """Hardware topology. A directed graph is stored as an undirected one, because the
+        direction of the connections does not matter to route the qubits."""
+        return self._connectivity
+
+    @connectivity.setter
+    def connectivity(self, connectivity: nx.Graph | None) -> None:
+        if connectivity is not None and connectivity.is_directed():
+            connectivity = connectivity.to_undirected()
+        self._connectivity = connectivity
 
 
 class Optimizer(ABC):
