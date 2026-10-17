@@ -925,3 +925,36 @@ def test_unroller_gates_with_own_decomposition(backend, gate):
         )
         assert np.isclose(abs(phase), 1.0)
         backend.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)
+
+
+def test_unroller_fused_gate_on_three_qubits(backend):
+    fused_gate = gates.FusedGate(0, 1, 2)
+    for gate in (
+        gates.H(0),
+        gates.CNOT(0, 1),
+        gates.TOFFOLI(2, 1, 0),
+        gates.RZ(2, 0.3),
+        gates.CRX(1, 2, 0.4),
+    ):
+        fused_gate.append(gate)
+    circuit = Circuit(4)
+    circuit.add(gates.H(3))
+    circuit.add(fused_gate)
+    natives = NativeGates.default()
+    state = backend.execute_circuit(circuit).state()
+    # the fused gate is decomposed before the routing, and the unused qubit is a free one
+    partially_unrolled = Unroller(
+        natives, backend=backend, min_qubits=3, use_dirty_ancillas=True
+    )(circuit)
+    assert all(len(gate.qubits) <= 2 for gate in partially_unrolled.queue)
+    fully_unrolled = Unroller(natives, backend=backend, use_dirty_ancillas=True)(
+        circuit
+    )
+    assert_decomposition(fully_unrolled, natives)
+    for translated in (partially_unrolled, fully_unrolled):
+        translated_state = backend.execute_circuit(translated).state()
+        phase = backend.dot(
+            backend.ravel(backend.conj(translated_state)), backend.ravel(state)
+        )
+        assert np.isclose(abs(phase), 1.0)
+        backend.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)

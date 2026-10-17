@@ -438,3 +438,46 @@ def test_kak_decompose_weight(backend):
         backend.assert_allclose(
             new.unitary(backend), circuit.unitary(backend), atol=1e-8
         )
+
+
+def test_count_2q_gates_ignores_barriers():
+    block = Block(qubits=(0, 1), gates=[gates.CZ(0, 1), gates.Barrier(0, 1)])
+    assert block._count_2q_gates() == 1
+    assert block.entangled
+
+    block = Block(qubits=(0, 1), gates=[gates.H(0), gates.Barrier(0, 1)])
+    assert block._count_2q_gates() == 0
+    assert not block.entangled
+
+
+def test_find_successive_gates_stops_at_barrier():
+    gatelist = [gates.H(0), gates.Barrier(0, 1, 2), gates.H(0), gates.H(1)]
+    successive_gates = _find_successive_gates(gatelist, (0, 1))
+    assert_gates_equality(successive_gates, [gatelist[0]])
+
+
+def test_initial_block_decomposition_barrier():
+    circ = Circuit(5)
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.H(2))
+    circ.add(gates.Barrier(0, 1, 2))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(2, 3))
+    blocks = _initial_block_decomposition(circ)
+    assert [block.qubits for block in blocks] == [(0, 1), (0, 1, 2), (2, 3)]
+    assert_gates_equality(blocks[0].gates, [gates.H(0), gates.CZ(0, 1)])
+    assert_gates_equality(
+        blocks[1].gates, [gates.H(2), gates.Barrier(0, 1, 2), gates.H(0)]
+    )
+    assert_gates_equality(blocks[2].gates, [gates.CZ(2, 3)])
+    assert [block.entangled for block in blocks] == [True, False, True]
+
+
+def test_block_decomposition_barrier_only():
+    circ = Circuit(4)
+    circ.add(gates.Barrier(0, 1, 2, 3))
+    blocks = block_decomposition(circ)
+    assert len(blocks) == 1
+    assert blocks[0].qubits == (0, 1, 2, 3)
+    assert not blocks[0].entangled

@@ -19,11 +19,12 @@ def _find_gates_qubits_pairs(circuit: Circuit) -> list[list[int]]:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be translated.
 
     Returns:
-        list[list[int]]: Sorted pairs of qubits targeted by two qubits gates.
+        list[list[int]]: Sorted pairs of qubits targeted by two qubits gates. Measurements
+        and barriers are skipped, since they do not need their qubits to be connected.
     """
     gates_qubits_pairs = []
     for gate in circuit.queue:
-        if isinstance(gate, gates.M):
+        if isinstance(gate, (gates.Barrier, gates.M)):
             continue
         if len(gate.qubits) == 2:
             gates_qubits_pairs.append(sorted(gate.qubits))
@@ -57,7 +58,8 @@ class StarConnectivityPlacer(Placer):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
-                Only single qubit gates and two qubits gates are supported by the router.
+                Only single qubit gates, two qubits gates and barriers are supported by
+                the router.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
                 Not used by this placer, it is accepted to be compatible with
                 :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
@@ -69,10 +71,13 @@ class StarConnectivityPlacer(Placer):
         wire_names = circuit.wire_names.copy()
 
         for i, gate in enumerate(circuit.queue):
+            if isinstance(gate, gates.Barrier):
+                continue
             if len(gate.qubits) > 2:
                 raise_error(
                     PlacementError,
-                    "Gates targeting more than 2 qubits are not supported",
+                    "Gates targeting more than 2 qubits are not supported, "
+                    + "except for barriers.",
                 )
             if len(gate.qubits) == 2 and middle_qubit_idx not in gate.qubits:
                 new_middle = _find_connected_qubit(

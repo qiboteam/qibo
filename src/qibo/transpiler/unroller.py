@@ -329,8 +329,8 @@ def translate_gate(
 
     Raises:
         DecompositionError: If the gate acts on more than two qubits and is not a
-            controlled gate that can be decomposed, or if the native gates are not
-            sufficient.
+            controlled gate or a fused gate that can be decomposed, or if the native
+            gates are not sufficient.
     """
     backend = _check_backend(backend)
 
@@ -342,11 +342,29 @@ def translate_gate(
         gate.basis = []
         return [gate]
 
+    if isinstance(gate, gates.FusedGate) and len(gate.qubits) > 2:
+        # A fused gate is a container, so its gates are translated one by one. The qubits
+        # that it does not act on are free for all of them, as they do for the fused gate.
+        translated = []
+        for fused_gate in gate.gates:
+            translated.extend(
+                translate_gate(
+                    fused_gate,
+                    native_gates,
+                    backend=backend,
+                    free=free,
+                    clean=clean,
+                    minimize_toffolis=minimize_toffolis,
+                    minimize_depth=minimize_depth,
+                )
+            )
+        return translated
+
     if len(gate.qubits) > 2 and (
         gate.is_controlled_by
         or (
             gate.__class__ not in cz_dec.decompositions
-            and not isinstance(gate, (gates.FusedGate, gates.Unitary))
+            and not isinstance(gate, gates.Unitary)
         )
     ):
         # The gate is decomposed by itself into gates acting on less qubits, which
@@ -388,8 +406,7 @@ def translate_gate(
         return _translate_single_qubit_gates(gate, native_gates, backend)
 
     if len(gate.qubits) > 2 and (
-        isinstance(gate, (gates.FusedGate, gates.Unitary))
-        or gate.__class__ not in cz_dec.decompositions
+        isinstance(gate, gates.Unitary) or gate.__class__ not in cz_dec.decompositions
     ):
         raise_error(
             DecompositionError,
