@@ -2611,8 +2611,9 @@ on the determinant of the matrix of the target gate. Matrices with determinant o
 (the special unitary group SU(2), which includes :class:`qibo.gates.RX`, :class:`qibo.gates.RY`,
 :class:`qibo.gates.RZ` and :class:`qibo.gates.U3`) need a number of two-qubit gates that grows
 linearly with the number of controls. Any other :math:`2 \times 2` unitary matrix (the group
-U(2), which includes :class:`qibo.gates.H` and :class:`qibo.gates.X`) needs a number that grows
-quadratically:
+U(2), which includes :class:`qibo.gates.H`) needs a number that grows quadratically. The
+only exception is the :class:`qibo.gates.X` gate with three or four controls, which has a cheaper
+dedicated decomposition:
 
 .. testcode:: multicontrolled
 
@@ -2637,11 +2638,13 @@ quadratically:
     H         32 gates, exact: True
     Unitary   32 gates, exact: True
 
-The number of two-qubit gates for an increasing number of controls is:
+The number of two-qubit gates for an increasing number of controls is, for :class:`qibo.gates.RX`
+and :class:`qibo.gates.X` (which, with three controls, uses the dedicated decomposition and
+thus has the same cost as :class:`qibo.gates.RX`):
 
 .. testcode:: multicontrolled
 
-    print("controls   RX   H and X")
+    print("controls   RX        X")
     for nctrl in (3, 5, 7, 9):
         controls = tuple(range(nctrl))
         special = gates.RX(nctrl, 0.3).controlled_by(*controls)
@@ -2651,7 +2654,7 @@ The number of two-qubit gates for an increasing number of controls is:
 
 .. testoutput:: multicontrolled
 
-    controls   RX   H and X
+    controls   RX        X
            3   14       14
            5   40       82
            7   80      170
