@@ -15,6 +15,10 @@ _CZ_COSTS = {gates.SWAP: 3, gates.iSWAP: 2}
 class Block:
     """A block contains a subset of gates acting on two qubits.
 
+    The only blocks that act on more than two qubits are the ones with a
+    :class:`qibo.gates.special.Barrier` on more than two qubits, which have no other
+    gate acting on more than one qubit.
+
     Args:
         qubits (tuple): qubits where the block is acting.
         gates (list): list of gates that compose the block.
@@ -28,7 +32,7 @@ class Block:
 
     @property
     def entangled(self) -> bool:
-        """Returns ``True`` if the block contains two-qubit gates."""
+        """Returns ``True`` if the block contains two-qubit gates, which are not barriers."""
         return self._count_2q_gates() > 0
 
     def add_gate(self, gate: Gate) -> None:
@@ -286,7 +290,13 @@ def _initial_block_decomposition(circuit: Circuit) -> list[Block]:
     all_gates = list(circuit.queue)
     while _count_multi_qubit_gates(all_gates) > 0:
         for idx, gate in enumerate(all_gates):
-            if len(gate.qubits) == 2:
+            if len(gate.qubits) > 2 and not isinstance(gate, gates.Barrier):
+                raise_error(
+                    BlockingError,
+                    "Gates targeting more than 2 qubits are not supported, "
+                    + "except for barriers.",
+                )
+            if len(gate.qubits) >= 2:
                 qubits = gate.qubits
                 block_gates = _find_previous_gates(all_gates[0:idx], qubits)
                 block_gates.append(gate)
@@ -295,11 +305,6 @@ def _initial_block_decomposition(circuit: Circuit) -> list[Block]:
                 _remove_gates(all_gates, block_gates)
                 blocks.append(block)
                 break
-            elif len(gate.qubits) > 2:
-                raise_error(
-                    BlockingError,
-                    "Gates targeting more than 2 qubits are not supported.",
-                )
 
     # Now we need to deal with the remaining spare single qubit gates
     while len(all_gates) > 0:
@@ -369,8 +374,14 @@ def _remove_gates(gatelist: list, remove_list: list) -> None:
 def _count_2q_gates(gatelist: list[Gate]) -> int:
     """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
-    Return the number of two qubit gates in a list of gates."""
-    return len([gate for gate in gatelist if len(gate.qubits) == 2])
+    Return the number of two qubit gates in a list of gates, without the barriers."""
+    return len(
+        [
+            gate
+            for gate in gatelist
+            if len(gate.qubits) == 2 and not isinstance(gate, gates.Barrier)
+        ]
+    )
 
 
 def _count_multi_qubit_gates(gatelist: list[Gate]) -> int:
@@ -383,14 +394,15 @@ def _count_multi_qubit_gates(gatelist: list[Gate]) -> int:
 def _find_successive_gates(gates_list: list[Gate], qubits: tuple) -> list[Gate]:
     """Helper method for :func:`qibo.transpiler.blocks.block_decomposition`.
 
-    Return a list containing all gates acting on qubits until a new two qubit gate acting on qubits is found.
+    Return a list containing all gates acting on qubits until a new gate acting on
+    more than one qubit, and on one of the qubits, is found.
     """
     successive_gates = []
     for qubit in qubits:
         for gate in gates_list:
             if (len(gate.qubits) == 1) and (gate.qubits[0] == qubit):
                 successive_gates.append(gate)
-            elif (len(gate.qubits) == 2) and (qubit in gate.qubits):
+            elif qubit in gate.qubits:
                 break
     return successive_gates
 
