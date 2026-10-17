@@ -339,7 +339,14 @@ class Sabre(Router):
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
+        _check_connected_components(self.circuit_map, self.connectivity)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
+        # The distance between qubits in different connected components is infinite. The
+        # SWAP gates never change the components of the qubits, so a finite value that is
+        # larger than the other distances is equivalent for the cost of the candidates,
+        # and it keeps the longest path, which sets the swap threshold, finite.
+        finite = np.isfinite(self._dist_matrix)
+        self._dist_matrix[~finite] = self._dist_matrix[finite].max() + 1.0
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._memory_map = []
         self._update_dag_layers()
@@ -789,6 +796,7 @@ class ShortestPaths(Router):
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
+        _check_connected_components(self.circuit_map, self.connectivity)
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._update_front_layer()
 
@@ -925,6 +933,41 @@ class StarConnectivityRouter(Router):
                 raise_error(
                     ConnectivityError,
                     "This connectivity graph is not a star graph. There is a node with degree different from 1 and 4.",
+                )
+
+
+def _check_connected_components(
+    circuit_map: CircuitMap, connectivity: nx.Graph
+) -> None:
+    """Check that the two-qubit gates act on qubits of the same connected component.
+
+    The SWAP gates move the qubits inside their connected component, so a gate between
+    qubits of different components can never be routed, and the routers would not stop.
+
+    Args:
+        circuit_map (:class:`qibo.transpiler.router.CircuitMap`): Circuit with the initial
+            layout.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity, with the nodes
+            relabeled as the physical qubits of ``circuit_map``.
+
+    Raises:
+        ConnectivityError: If a two-qubit gate acts on qubits of different connected
+            components of the connectivity.
+    """
+    component = {
+        node: index
+        for index, nodes in enumerate(nx.connected_components(connectivity))
+        for node in nodes
+    }
+    for block in circuit_map.circuit_blocks():
+        if block.entangled:
+            first, second = circuit_map.get_physical_qubits(block)
+            if component[first] != component[second]:
+                raise_error(
+                    ConnectivityError,
+                    f"A gate acts on the qubits {block.qubits} of the circuit, which are "
+                    + "in different connected components of the connectivity graph, so "
+                    + "it cannot be routed.",
                 )
 
 
