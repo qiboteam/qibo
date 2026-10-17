@@ -508,7 +508,8 @@ def test_minimize_toffolis_prefers_clean_qubits(
     )
 
 
-def test_clean_qubits_are_used_as_dirty_qubits_by_default(backend):
+def test_clean_qubits_are_used_as_dirty_qubits_if_there_are_enough(backend):
+    """With ``k - 2`` auxiliary qubits, the dirty construction is the cheapest one."""
     controls, clean = tuple(range(5)), (6, 7, 8)
     decomposition = multi_controlled_decomposition(
         backend.matrices.X, controls, 5, backend=backend, clean=clean
@@ -670,8 +671,8 @@ def test_minimize_depth_recursion_with_many_controls(monkeypatch, nctrl, clean):
 # of the number of controls (logarithmically), and by increasing amounts if
 # it is not minimized.
 MINIMIZE_DEPTH_DEPTHS = {
-    "clean": [569, 697, 849, 1001],
-    "dirty": [1036, 1292, 1596, 1900],
+    "clean": [584, 724, 882, 1040],
+    "dirty": [1061, 1341, 1657, 1973],
     "default": [1947, 3995, 8091, 16283],
 }
 
@@ -1029,3 +1030,129 @@ def test_free_qubits_make_the_cost_of_x_linear(backend):
     assert len(set(np.diff(with_free))) == 1
     assert len(set(np.diff(without_free, n=2))) == 1
     assert all(w < wo for w, wo in zip(with_free, without_free))
+
+
+def _two_qubit_gates(backend, gate_list, nqubits):
+    """Number of two-qubit gates once the decomposition is unrolled."""
+    circuit = Circuit(nqubits)
+    circuit.add(gate_list)
+    unrolled = Unroller(NativeGates.default(), backend=backend)(circuit)
+    return sum(len(gate.qubits) == 2 for gate in unrolled.queue)
+
+
+def _default_mcx(backend, nctrl, nfree=0, nclean=0, **options):
+    """Multi-controlled ``X`` with auxiliary qubits numbered after the target."""
+    auxiliary = tuple(range(nctrl + 1, nctrl + 1 + nfree + nclean))
+    free, clean = auxiliary[:nfree], auxiliary[nfree:]
+    decomposition = multi_controlled_decomposition(
+        backend.matrices.X,
+        tuple(range(nctrl)),
+        nctrl,
+        free,
+        clean=clean,
+        backend=backend,
+        **options,
+    )
+    return decomposition, nctrl + 1 + nfree + nclean, clean
+
+
+# (controls, dirty qubits, clean qubits, CNOTs of the decomposition). The cost is
+# ``14`` and ``36`` for three and four controls, ``8k - 6`` with ``k - 2`` auxiliary qubits,
+# ``12k - 18`` with at least one clean qubit, and ``16k - 24`` with one dirty qubit.
+DEFAULT_COSTS = [
+    (3, 0, 0, 14),
+    (3, 1, 0, 14),
+    (3, 0, 2, 14),
+    (4, 0, 0, 36),
+    (4, 1, 0, 36),
+    (4, 0, 1, 30),
+    (4, 1, 1, 26),
+    (4, 2, 0, 26),
+    (5, 0, 1, 42),
+    (5, 0, 2, 42),
+    (5, 1, 1, 42),
+    (5, 1, 0, 56),
+    (5, 2, 0, 56),
+    (5, 3, 0, 34),
+    (5, 0, 3, 34),
+    (6, 0, 1, 54),
+    (6, 1, 0, 72),
+    (6, 3, 0, 72),
+    (6, 2, 2, 42),
+    (7, 0, 2, 66),
+    (7, 1, 0, 88),
+    (7, 5, 0, 50),
+    (9, 0, 1, 90),
+    (9, 2, 0, 120),
+    (9, 7, 0, 66),
+]
+
+
+@pytest.mark.parametrize(("nctrl", "nfree", "nclean", "cost"), DEFAULT_COSTS)
+def test_default_x_decomposition_cost(backend, nctrl, nfree, nclean, cost):
+    decomposition, nqubits, _ = _default_mcx(backend, nctrl, nfree, nclean)
+    assert _two_qubit_gates(backend, decomposition, nqubits) == cost
+
+
+@pytest.mark.parametrize(
+    ("nctrl", "nfree", "nclean", "cost"),
+    # the whole unitary matrix is computed, so only up to ten qubits
+    [case for case in DEFAULT_COSTS if case[0] + 1 + case[1] + case[2] <= 10],
+)
+def test_default_x_decomposition_is_exact(backend, nctrl, nfree, nclean, cost):
+    """Dirty qubits can be in any state, and clean ones start in the state 0."""
+    decomposition, nqubits, clean = _default_mcx(backend, nctrl, nfree, nclean)
+    gate = gates.X(nctrl).controlled_by(*range(nctrl))
+    backend.assert_allclose(
+        _clean_columns(
+            backend, _unitary(backend, decomposition, nqubits), nqubits, clean
+        ),
+        _clean_columns(backend, _unitary(backend, [gate], nqubits), nqubits, clean),
+        atol=1e-10,
+    )
+
+
+@pytest.mark.parametrize("nctrl", range(3, 9))
+@pytest.mark.parametrize(
+    ("nfree", "nclean"), [(0, 0), (1, 0), (2, 0), (0, 1), (0, 2), (1, 1), (2, 2)]
+)
+def test_default_x_decomposition_is_the_cheapest(backend, nctrl, nfree, nclean):
+    """It is never more expensive than not using the auxiliary qubits, using all of
+    them as dirty qubits, or minimizing the number of Toffoli gates or the depth."""
+
+    def cost(**options):
+        decomposition, nqubits, _ = _default_mcx(
+            backend, nctrl, nfree, nclean, **options
+        )
+        return _two_qubit_gates(backend, decomposition, nqubits)
+
+    default = cost()
+    assert default <= cost(minimize_toffolis=True)
+    assert default <= cost(minimize_depth=True)
+    assert default <= _two_qubit_gates(backend, *_default_mcx(backend, nctrl)[:2])
+    all_dirty, nqubits, _ = _default_mcx(backend, nctrl, nfree + nclean)
+    assert default <= _two_qubit_gates(backend, all_dirty, nqubits)
+
+
+@pytest.mark.parametrize("nctrl", [3, 4, 5])
+@pytest.mark.parametrize("option", ["minimize_toffolis", "minimize_depth"])
+def test_options_are_ignored_without_auxiliary_qubits(backend, nctrl, option):
+    with_option, _, _ = _default_mcx(backend, nctrl, **{option: True})
+    default, _, _ = _default_mcx(backend, nctrl)
+    assert [type(g) for g in with_option] == [type(g) for g in default]
+    assert [g.qubits for g in with_option] == [g.qubits for g in default]
+
+
+@pytest.mark.parametrize(("nctrl", "nfree"), [(3, 0), (4, 0), (4, 1), (4, 2)])
+def test_default_x_decomposition_is_exact_if_decomposed_again(backend, nctrl, nfree):
+    """The global phase is a relative phase if the gate is controlled by other qubits,
+    so decomposing the gates of the decomposition again must not change it."""
+    decomposition, nqubits, _ = _default_mcx(backend, nctrl, nfree)
+    circuit = Circuit(nqubits)
+    circuit.add(decomposition)
+    gate = gates.X(nctrl).controlled_by(*range(nctrl))
+    backend.assert_allclose(
+        circuit.decompose().unitary(backend),
+        _unitary(backend, [gate], nqubits),
+        atol=1e-10,
+    )
