@@ -1088,3 +1088,17 @@ def test_unroller_preferred_entangling_native(backend, natives, expected):
     _assert_unrolled(circuit, natives, backend)
     unrolled = Unroller(natives, backend=backend)(circuit)
     assert {g.__class__ for g in unrolled.queue if len(g.qubits) == 2} == {expected}
+
+
+@pytest.mark.parametrize(
+    "gate, expected",
+    [(gates.iSWAP(0, 1), gates.iSWAP), (gates.CNOT(0, 1), gates.CZ)],
+    ids=["iSWAP", "CNOT"],
+)
+def test_translate_two_qubit_gates_fewer_two_qubit_gates(backend, gate, expected):
+    # When CZ and iSWAP are native, the decomposition with fewer two-qubit gates is used.
+    # translate_gate keeps native gates, so the helper is called directly for iSWAP.
+    natives = NativeGates.CZ | NativeGates.iSWAP | NativeGates.U3
+    translated = unroller._translate_two_qubit_gates(gate, natives, backend)
+    assert {g.__class__ for g in translated if len(g.qubits) == 2} == {expected}
+    assert sum(len(g.qubits) == 2 for g in translated) == 1
