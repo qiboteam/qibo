@@ -173,8 +173,8 @@ class NativeGates(Flag, metaclass=FlagMeta):
         """Whether the native gates can implement any two-qubit unitary.
 
         This holds when the set contains at least one entangling two-qubit gate, which
-        is any of them except :class:`qibo.gates.gates.SWAP`, and single-qubit gates that implement any
-        single-qubit unitary exactly: :class:`qibo.gates.gates.U3`,
+        is any of them except :class:`qibo.gates.gates.SWAP`, and single-qubit gates
+        that implement any single-qubit unitary exactly: :class:`qibo.gates.gates.U3`,
         :class:`qibo.gates.gates.GPI2`, or gates with two rotations about orthogonal
         axes with free angles, see :attr:`single_qubit_gates`. Single-qubit unitaries
         together with any entangling two-qubit gate can implement every unitary on
