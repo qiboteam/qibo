@@ -2348,6 +2348,10 @@ or the ``on_qubits`` parameter.
     - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
     - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
 
+The connectivity can also be disconnected, as long as every two-qubit gate acts on qubits of the
+same connected component. Otherwise the routers raise a
+:class:`qibo.transpiler._exceptions.ConnectivityError`.
+
 The single-qubit native gates are not limited to :class:`qibo.gates.U3` and :class:`qibo.gates.GPI2`.
 Any combination of single-qubit gates that implements every single-qubit unitary exactly can be
 used, which holds if it has two rotations with free angles about orthogonal axes, such as

@@ -838,3 +838,26 @@ def test_generate_preset_passes_unknown_routing_method(routing_method):
 def test_generate_preset_passes_methods_without_connectivity_error(options):
     with pytest.raises(ConnectivityError):
         generate_preset_passes(**options)
+
+
+@pytest.mark.parametrize("routing_method", ["sabre", "shortest_paths"])
+def test_generate_preset_passes_disconnected_connectivity(backend, routing_method):
+    connectivity = nx.Graph([(0, 1), (1, 2), (3, 4)])
+    pipeline = generate_preset_passes(
+        connectivity, seed=1, routing_method=routing_method, backend=backend
+    )
+    circuit = Circuit(5)
+    circuit.add([gates.H(0), gates.CNOT(0, 2), gates.CNOT(3, 4), gates.M(0, 2, 3, 4)])
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert pipeline.is_satisfied(transpiled_circuit)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=NativeGates.default(),
+    )
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 3))
+    with pytest.raises(ConnectivityError, match="different connected components"):
+        pipeline(circuit, backend=backend)
