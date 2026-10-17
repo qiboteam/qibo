@@ -190,16 +190,15 @@ class Unroller:
             start in the state :math:`\\ket{0}^{\\otimes n}`. The qubits on which no previous
             gate of the circuit acts are then known to be in the state :math:`\\ket{0}`, and
             are used as clean auxiliary qubits in the decomposition of multi-controlled
-            gates, being left in that state. By default, clean auxiliary qubits are used as
-            dirty ones, so they only lower the cost if ``minimize_toffolis`` or
-            ``minimize_depth`` is ``True``. It must be ``False`` if the circuit is executed
-            with another initial state. Defaults to ``False``.
+            gates, being left in that state. They are used as clean qubits if that lowers
+            the number of native gates, and as dirty ones otherwise. It must be ``False``
+            if the circuit is executed with another initial state. Defaults to ``False``.
         minimize_toffolis (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with
-            the lowest number of Toffoli gates. With clean auxiliary qubits (see
-            ``qubits_initially_zero``), this makes the decomposition shallower and, for many
-            controls, also shorter in number of native gates. With dirty auxiliary
-            qubits only, it needs more native gates than the default decomposition. It
+            the lowest number of Toffoli gates, which is useful if they are expensive.
+            This is not the decomposition with the fewest native gates, which is the
+            default one, and it needs more of them with dirty auxiliary qubits. With clean
+            auxiliary qubits (see ``qubits_initially_zero``), it is shallower. It
             cannot be used together with ``minimize_depth``. Defaults to ``False``.
         minimize_depth (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with a
