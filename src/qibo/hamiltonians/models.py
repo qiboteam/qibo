@@ -1,6 +1,6 @@
-import itertools
 import math
 from functools import reduce
+from itertools import combinations
 
 import networkx as nx
 import numpy as np
@@ -79,7 +79,7 @@ def ANNNI(
 
     graph = nx.Graph()
     graph.add_nodes_from(range(nqubits))
-    for qubit_a, qubit_b in itertools.combinations(range(nqubits), 2):
+    for qubit_a, qubit_b in combinations(range(nqubits), 2):
         distance = qubit_b - qubit_a
         if closed_boundary:
             distance = min(distance, nqubits - distance)
@@ -288,6 +288,140 @@ def DisorderedHeisenberg(
     fields = SymbolicHamiltonian(form, nqubits=heisenberg.nqubits, backend=backend)
 
     return heisenberg + (fields.dense if dense else fields)
+
+
+def DMHeisenberg(
+    nqubits: int | nx.Graph,
+    coupling_constants: float | list | tuple,
+    external_field_strengths: float | list | tuple,
+    dm_strengths: float | list | tuple,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Heisenberg model with Dzyaloshinskii-Moriya (DM) interaction.
+
+    .. math::
+        \\begin{align}
+        H &= H_{\\textrm{Heisenberg}} + \\sum_{\\langle j, \\, k \\rangle} \\,
+            \\left[ D_{x} \\, \\left( Y_{j} \\, Z_{k} - Z_{j} \\, Y_{k} \\right)
+            + D_{y} \\, \\left( Z_{j} \\, X_{k} - X_{j} \\, Z_{k} \\right)
+            + D_{z} \\, \\left( X_{j} \\, Y_{k} - Y_{j} \\, X_{k} \\right) \\right] \\, ,
+        \\end{align}
+
+    where :math:`H_{\\textrm{Heisenberg}}` is the :class:`qibo.hamiltonians.Heisenberg` model,
+    :math:`\\langle j, \\, k \\rangle` runs over all pairs of coupled qubits, and
+    :math:`\\{D_{x}, \\, D_{y}, \\, D_{z}\\}` are the components of the DM vector, *i.e.*, the
+    DM term of every bond is
+    :math:`\\vec{D} \\cdot (\\vec{\\sigma}_{j} \\times \\vec{\\sigma}_{k})`.
+    This antisymmetric exchange appears in magnets without inversion symmetry between the
+    coupled spins, and it favors canted spin configurations, *e.g.*, chiral and
+    skyrmionic textures.
+
+    The DM interaction changes sign if the two qubits of a bond are exchanged. Hence, every
+    bond has an orientation. In a chain, bonds are oriented as :math:`j \\to j + 1`, and the
+    bond that closes the ring (if ``closed_boundary=True``) is oriented as
+    :math:`n - 1 \\to 0`. Therefore, for ``nqubits=2``, the two bonds of the ring have opposite
+    orientations and the DM terms cancel. In a :class:`networkx.Graph`, bonds are oriented from
+    the lower to the higher qubit label.
+
+    The conventions for ``nqubits``, for the labels of the qubits, and for ``closed_boundary``
+    are the same as in :class:`qibo.hamiltonians.Heisenberg`. If ``nqubits`` is a weighted
+    graph, the ``"weight"`` of every edge scales both the coupling constants and the DM vector
+    of the corresponding bond.
+
+    Args:
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits in a
+            one-dimensional chain. If a :class:`networkx.Graph`, connectivity graph of the
+            qubits, with one node per qubit and, optionally, a ``"weight"`` attribute per edge.
+        coupling_constants (list or tuple or float or int): list or tuple with the
+            three coupling constants :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}` of the
+            :class:`qibo.hamiltonians.Heisenberg` model.
+            If ``int`` or ``float``, then :math:`J_{x} = J_{y} = J_{z}`.
+        external_field_strengths (list or tuple or float or int): list or tuple with the
+            external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
+            If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
+        dm_strengths (list or tuple or float or int): list or tuple with the three components
+            :math:`\\{D_{x}, \\, D_{y}, \\, D_{z}\\}` of the DM vector.
+            If ``int`` or ``float``, then :math:`D_{x} = D_{y} = D_{z}`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Ignored if ``nqubits`` is a :class:`networkx.Graph`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Heisenberg Hamiltonian with Dzyaloshinskii-Moriya interaction.
+
+    References:
+        1. I. Dzyaloshinsky, *A thermodynamic theory of "weak" ferromagnetism of
+        antiferromagnetics*, `J. Phys. Chem. Solids 4, 241 (1958)
+        <https://doi.org/10.1016/0022-3697(58)90076-3>`.
+        2. T. Moriya, *Anisotropic superexchange interaction and weak ferromagnetism*,
+        `Phys. Rev. 120, 91 (1960) <https://doi.org/10.1103/PhysRev.120.91>`_.
+    """
+    if isinstance(dm_strengths, (list, tuple)) and len(dm_strengths) != 3:
+        raise_error(
+            ValueError,
+            "When `dm_strengths` is type `list` or `tuple`, it must have length == 3.",
+        )
+
+    if isinstance(dm_strengths, (float, int)):
+        dm_strengths = [dm_strengths] * 3
+
+    backend = _check_backend(backend)
+
+    heisenberg = Heisenberg(
+        nqubits,
+        coupling_constants,
+        external_field_strengths,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+    if isinstance(nqubits, nx.Graph):
+        _, weights = _graph_bonds(nqubits)
+        bonds = list(weights.items())
+    else:
+        bonds = [((qubit, qubit + 1), 1) for qubit in range(nqubits - 1)]
+        if closed_boundary:
+            bonds.append(((nqubits - 1, 0), 1))
+
+    # cyclic permutations (y, z), (z, x), (x, y) of the cross product components
+    paulis = (
+        (symbols.Y, symbols.Z),
+        (symbols.Z, symbols.X),
+        (symbols.X, symbols.Y),
+    )
+    form = sum(
+        (
+            weight
+            * strength
+            * (
+                first(qubit_a, backend=backend) * second(qubit_b, backend=backend)
+                - second(qubit_a, backend=backend) * first(qubit_b, backend=backend)
+            )
+            for (qubit_a, qubit_b), weight in bonds
+            for strength, (first, second) in zip(dm_strengths, paulis)
+            if strength != 0
+        ),
+        start=sympy.S.Zero,
+    )
+
+    if form == 0:
+        return heisenberg
+
+    dm_term = SymbolicHamiltonian(form, nqubits=heisenberg.nqubits, backend=backend)
+
+    return heisenberg + (dm_term.dense if dense else dm_term)
 
 
 def FermiHubbard(
@@ -1024,6 +1158,77 @@ def Ising(
     return SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
 
 
+def J1J2(
+    nqubits: int,
+    j1: float = 1.0,
+    j2: float = 0.5,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Heisenberg :math:`J_{1}`-:math:`J_{2}` model on a chain.
+
+    .. math::
+        H = \\sum_{j} \\, \\left[ J_{1} \\, \\left( X_{j} \\, X_{j+1} + Y_{j} \\, Y_{j+1}
+            + Z_{j} \\, Z_{j+1} \\right) + J_{2} \\, \\left( X_{j} \\, X_{j+2}
+            + Y_{j} \\, Y_{j+2} + Z_{j} \\, Z_{j+2} \\right) \\right] \\, ,
+
+    where :math:`J_{1}` couples nearest neighbors and :math:`J_{2}` couples next-nearest
+    neighbors. For :math:`J_{1}, \\, J_{2} > 0`, the two interactions compete, *i.e.*, the
+    chain is frustrated. At :math:`J_{2} = J_{1} / 2`, which is the default, it is the
+    Majumdar-Ghosh model, whose ground states are products of singlets on nearest-neighbor
+    pairs. For :math:`J_{2} = 0`, it is the antiferromagnetic Heisenberg chain.
+
+    The model is the :class:`qibo.hamiltonians.Heisenberg` model on a weighted graph, in which
+    the bonds of nearest neighbors have weight :math:`J_{1}` and the bonds of next-nearest
+    neighbors have weight :math:`J_{2}`. If ``closed_boundary=True``, the chain is a ring.
+    If a pair of qubits is both a nearest and a next-nearest neighbor, which occurs for three
+    qubits in a ring, the two interactions are added.
+
+    Args:
+        nqubits (int): number of qubits. It must be larger than two.
+        j1 (float, optional): nearest-neighbor coupling :math:`J_{1}`.
+            Defaults to :math:`1.0`.
+        j2 (float, optional): next-nearest-neighbor coupling :math:`J_{2}`.
+            Defaults to :math:`0.5`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Heisenberg :math:`J_{1}`-:math:`J_{2}` Hamiltonian.
+
+    References:
+        1. C. K. Majumdar and D. K. Ghosh, *On next-nearest-neighbor interaction in linear
+        chain. I*, 'J. Math. Phys. 10, 1388 (1969) <https://doi.org/10.1063/1.1664978>'.
+        2. K. Okamoto and K. Nomura, *Fluid-dimer critical point in S=1/2 antiferromagnetic
+        Heisenberg chain with next nearest neighbor interactions*, 'Phys. Lett. A 169, 433
+        (1992) <https://doi.org/10.1016/0375-9601(92)90823-5>'.
+    """
+    if nqubits < 3:
+        raise_error(ValueError, "Number of qubits must be larger than two.")
+
+    graph = nx.Graph()
+    graph.add_nodes_from(range(nqubits))
+    for distance, strength in ((1, j1), (2, j2)):
+        for qubit in range(nqubits if closed_boundary else nqubits - distance):
+            bond = (qubit, (qubit + distance) % nqubits)
+            weight = graph.get_edge_data(*bond, default={"weight": 0.0})["weight"]
+            graph.add_edge(*bond, weight=weight + strength)
+
+    return Heisenberg(
+        graph, -1, 0, dense=dense, closed_boundary=closed_boundary, backend=backend
+    )
+
+
 def LABS(
     nqubits: int, dense: bool = True, backend: Backend | None = None
 ) -> Hamiltonian | SymbolicHamiltonian:
@@ -1073,6 +1278,146 @@ def LABS(
         return hamiltonian.dense
 
     return hamiltonian
+
+
+def LMG(
+    nqubits: int,
+    gamma: float = 0.0,
+    h: float = 0.5,
+    dense: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Lipkin-Meshkov-Glick (LMG) model.
+
+    .. math::
+        H = -\\frac{1}{n} \\, \\sum_{j < k} \\, \\left( X_{j} \\, X_{k}
+            + \\gamma \\, Y_{j} \\, Y_{k} \\right) - h \\, \\sum_{j} Z_{j} \\, ,
+
+    where :math:`n` is the number of qubits. It is an XY model in a transverse field in
+    which every pair of qubits is coupled (infinite-range interaction), and the factor
+    :math:`1 / n` keeps the energy per qubit finite as :math:`n` grows. In the limit
+    :math:`n \\to \\infty` and for :math:`\\gamma < 1`, the model has a mean-field quantum phase
+    transition at :math:`h = 1`. For :math:`\\gamma = 1`, the model has a conserved total spin
+    projection along the :math:`Z` axis.
+
+    The model is the :class:`qibo.hamiltonians.Heisenberg` model on the complete graph with
+    edges of weight :math:`1 / n`.
+
+    Args:
+        nqubits (int): number of qubits. It must be larger than one.
+        gamma (float, optional): anisotropy :math:`\\gamma` of the interaction in the
+            :math:`XY` plane. Defaults to :math:`0.0`.
+        h (float, optional): transverse field strength :math:`h`. Defaults to :math:`0.5`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Lipkin-Meshkov-Glick Hamiltonian.
+
+    References:
+        1. H. J. Lipkin, N. Meshkov, and A. J. Glick, *Validity of many-body approximation
+        methods for a solvable model: (I). Exact solutions and perturbation theory*,
+        'Nucl. Phys. 62, 188 (1965) <https://doi.org/10.1016/0029-5582(65)90862-X>'.
+        2. S. Dusuel and J. Vidal, *Finite-size scaling exponents of the Lipkin-Meshkov-Glick
+        model*, `Phys. Rev. Lett. 93, 237204 (2004)
+        <https://doi.org/10.1103/PhysRevLett.93.237204>`_.
+    """
+    if nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
+
+    graph = nx.complete_graph(nqubits)
+    nx.set_edge_attributes(graph, 1 / nqubits, "weight")
+
+    return Heisenberg(graph, [1, gamma, 0], [0, 0, h], dense=dense, backend=backend)
+
+
+def LongRangeHeisenberg(
+    nqubits: int,
+    coupling_constants: float | list | tuple,
+    external_field_strengths: float | list | tuple,
+    alpha: float,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Heisenberg model with power-law decaying interactions on a chain.
+
+    .. math::
+        \\begin{align}
+        H &= -\\sum_{j < k} \\, \\frac{1}{d_{jk}^{\\alpha}} \\, \\left(
+            J_{x} \\, X_{j} \\, X_{k} + J_{y} \\, Y_{j} \\, Y_{k}
+            + J_{z} \\, Z_{j} \\, Z_{k} \\right) \\\\\\\\
+        &\\quad\\,\\, - \\sum_{j} \\left(
+            h_{x} \\, X_{j} + h_{y} \\, Y_{j} + h_{z} \\, Z_{j}
+            \\right) \\, ,
+        \\end{align}
+
+    where :math:`d_{jk} = |j - k|` is the distance between qubits :math:`j` and :math:`k`, and
+    :math:`\\alpha` is the decay exponent of the interactions. If ``closed_boundary=True``, the
+    chain is a ring and :math:`d_{jk} = \\min(|j - k|, \\, n - |j - k|)`, with :math:`n` the
+    number of qubits. For :math:`\\alpha = 0` every pair of qubits is equally coupled, and for
+    :math:`\\alpha \\to \\infty` only nearest neighbors are coupled. Choosing
+    :math:`J_{x} = J_{y} = 0` gives the long-range Ising model, and
+    :math:`J_{z} = 0` gives the long-range XY model, both of which are realized in trapped-ion
+    and Rydberg-atom quantum simulators.
+
+    The model is the :class:`qibo.hamiltonians.Heisenberg` model on the complete graph with
+    edge weights :math:`1 / d_{jk}^{\\alpha}`.
+
+    Args:
+        nqubits (int): number of qubits. It must be larger than one.
+        coupling_constants (list or tuple or float or int): list or tuple with the
+            three coupling constants :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}`.
+            If ``int`` or ``float``, then :math:`J_{x} = J_{y} = J_{z}`.
+        external_field_strengths (list or tuple or float or int): list or tuple with the
+            external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
+            If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
+        alpha (float): decay exponent :math:`\\alpha` of the interactions.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Long-range Heisenberg Hamiltonian.
+
+    References:
+        1. N. Defenu, T. Donner, T. Macrì, G. Pagano, S. Ruffo, and A. Trombettoni,
+        *Long-range interacting quantum systems*,
+        `Rev. Mod. Phys. 95, 035002 (2023) <https://doi.org/10.1103/RevModPhys.95.035002>`_.
+    """
+    if nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
+
+    graph = nx.Graph()
+    graph.add_nodes_from(range(nqubits))
+    for qubit_a, qubit_b in combinations(range(nqubits), 2):
+        distance = qubit_b - qubit_a
+        if closed_boundary:
+            distance = min(distance, nqubits - distance)
+        graph.add_edge(qubit_a, qubit_b, weight=distance ** (-alpha))
+
+    return Heisenberg(
+        graph,
+        coupling_constants,
+        external_field_strengths,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
 
 
 def MaxCut(
