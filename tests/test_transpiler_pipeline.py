@@ -238,6 +238,27 @@ def test_is_satisfied_false_connectivity(star_connectivity):
     assert not default_transpiler.is_satisfied(circuit)
 
 
+def test_is_satisfied_without_connectivity(backend):
+    # there is nothing to place and route, so only the native gates are checked
+    pipeline = generate_preset_passes(seed=1, backend=backend)
+    assert pipeline.connectivity is None
+    circuit = Circuit(3)
+    circuit.add([gates.H(0), gates.TOFFOLI(0, 1, 2)])
+    transpiled_circuit, _ = pipeline(circuit, backend=backend)
+    assert pipeline.is_satisfied(transpiled_circuit)
+    assert not pipeline.is_satisfied(circuit)
+
+
+def test_is_satisfied_without_connectivity_not_native():
+    default_transpiler = Passes(passes=None)
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.Z(0))
+    assert default_transpiler.is_satisfied(circuit)
+    circuit.add(gates.X(0))
+    assert not default_transpiler.is_satisfied(circuit)
+
+
 @pytest.mark.parametrize("nqubits", [2, 3, 5])
 @pytest.mark.parametrize("ngates", [5, 20])
 @pytest.mark.parametrize("placer", [Random, ReverseTraversal])
