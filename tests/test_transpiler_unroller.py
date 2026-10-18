@@ -455,7 +455,6 @@ def test_unroller_controlled_two_qubit_target(backend, gate, natives):
         lambda backend: gates.Unitary(
             random_unitary(4, backend=backend), 2, 3
         ).controlled_by(0, 1),
-        lambda backend: gates.Unitary(random_unitary(8, backend=backend), 0, 1, 2),
     ],
 )
 def test_unroller_unsupported_gates(backend, gate):
@@ -1108,3 +1107,61 @@ def test_translate_two_qubit_gates_fewer_two_qubit_gates(backend, gate, expected
     translated = unroller._translate_two_qubit_gates(gate, natives, backend)
     assert {g.__class__ for g in translated if len(g.qubits) == 2} == {expected}
     assert sum(len(g.qubits) == 2 for g in translated) == 1
+
+
+@pytest.mark.parametrize(
+    "nqubits, natives",
+    [
+        (3, NativeGates.default()),
+        (3, NativeGates.ECR | NativeGates.U3 | NativeGates.M),
+        (
+            3,
+            NativeGates.CNOT
+            | NativeGates.RZ
+            | NativeGates.SX
+            | NativeGates.X
+            | NativeGates.M
+            | NativeGates.I,
+        ),
+        (4, NativeGates.default()),
+    ],
+    ids=["3-default", "3-ECR", "3-CNOT", "4-default"],
+)
+def test_unroller_unitary_on_many_qubits(backend, nqubits, natives):
+    qubits = (3, 0, 2, 1)[:nqubits]
+    circuit = Circuit(4)
+    unitary = random_unitary(2**nqubits, seed=1, backend=backend)
+    circuit.add(gates.Unitary(unitary, *qubits))
+    _assert_unrolled(circuit, natives, backend)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_unroller_unitary_two_qubit_gate_count(backend, nqubits):
+    circuit = Circuit(nqubits)
+    circuit.add(
+        gates.Unitary(
+            random_unitary(2**nqubits, seed=1, backend=backend), *range(nqubits)
+        )
+    )
+    unrolled = Unroller(NativeGates.default(), backend=backend)(circuit)
+    # three gates for each unitary on two qubits and 2^k for each multiplexed rotation
+    expected = 9 * 4**nqubits // 16 - 3 * 2**nqubits // 2
+    assert sum(len(gate.qubits) == 2 for gate in unrolled.queue) == expected
+
+
+def test_unroller_unitary_min_qubits(backend):
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Unitary(random_unitary(8, seed=1, backend=backend), 3, 1, 2))
+    natives = NativeGates.default()
+    unrolled = Unroller(natives, backend=backend, min_qubits=3)(circuit)
+    # the gates on less than three qubits are not translated
+    assert isinstance(unrolled.queue[0], gates.H)
+    assert all(len(gate.qubits) <= 2 for gate in unrolled.queue)
+    target = circuit.unitary(backend)
+    result = unrolled.unitary(backend)
+    backend.assert_allclose(
+        backend.abs(backend.trace(backend.dagger(target) @ result)) / target.shape[0],
+        1.0,
+        atol=1e-6,
+    )
