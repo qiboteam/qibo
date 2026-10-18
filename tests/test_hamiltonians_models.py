@@ -14,17 +14,21 @@ from qibo.hamiltonians._models import _multikron
 from qibo.hamiltonians.models import (
     ANNNI,
     GPP,
+    J1J2,
     LABS,
+    LMG,
     TFIM,
     XXX,
     XXZ,
     XY,
     ClusterIsing,
     DisorderedHeisenberg,
+    DMHeisenberg,
     FermiHubbard,
     FoldedXXZ,
     Heisenberg,
     Ising,
+    LongRangeHeisenberg,
     MaxCut,
     SpinGlass,
 )
@@ -1880,3 +1884,267 @@ def test_folded_xxz(backend, nqubits, dense):
     hamiltonian = FoldedXXZ(nqubits, dense=dense, backend=backend)
 
     backend.assert_allclose(hamiltonian.matrix, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+def test_j1j2(backend, nqubits, closed_boundary, dense):
+    """Nearest and next-nearest neighbors, including the three-qubit ring."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    j1, j2 = 1.0, 0.7
+
+    target = 0
+    for distance, strength in ((1, j1), (2, j2)):
+        nbonds = nqubits if closed_boundary else nqubits - distance
+        for qubit in range(nbonds):
+            other = (qubit + distance) % nqubits
+            target += sum(
+                strength * pauli(qubit, backend=backend) * pauli(other, backend=backend)
+                for pauli in paulis
+            )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+
+    hamiltonian = J1J2(
+        nqubits, j1, j2, dense=dense, closed_boundary=closed_boundary, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_j1j2_heisenberg(backend, closed_boundary, dense):
+    """Without next-nearest-neighbor coupling, it is the antiferromagnetic chain."""
+    kwargs = {"dense": dense, "closed_boundary": closed_boundary, "backend": backend}
+
+    hamiltonian = J1J2(5, 0.6, 0.0, **kwargs)
+    target = Heisenberg(5, -0.6, 0, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [4, 6])
+def test_j1j2_majumdar_ghosh(backend, nqubits):
+    """The Majumdar-Ghosh ground states are two degenerate products of singlets."""
+    hamiltonian = J1J2(nqubits, backend=backend)
+    eigenvalues = hamiltonian.eigenvalues()
+
+    backend.assert_allclose(eigenvalues[:2], -1.5 * nqubits, atol=1e-10)
+    assert eigenvalues[2] > eigenvalues[1] + 1e-6
+
+
+@pytest.mark.parametrize("nqubits", [0, 1, 2])
+def test_j1j2_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        J1J2(nqubits, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("nqubits", [2, 4])
+def test_lmg(backend, nqubits, dense):
+    gamma, h = 0.3, 0.7
+
+    target = sum(
+        -(
+            symbols.X(a, backend=backend) * symbols.X(b, backend=backend)
+            + gamma * symbols.Y(a, backend=backend) * symbols.Y(b, backend=backend)
+        )
+        / nqubits
+        for a, b in combinations(range(nqubits), 2)
+    )
+    target += sum(-h * symbols.Z(qubit, backend=backend) for qubit in range(nqubits))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+
+    hamiltonian = LMG(nqubits, gamma, h, dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_lmg_isotropic_magnetization(backend):
+    """For ``gamma=1``, the total magnetization along the Z axis is conserved."""
+    nqubits = 4
+    hamiltonian = LMG(nqubits, 1.0, 0.4, backend=backend).matrix
+    magnetization = sum(symbols.Z(qubit, backend=backend) for qubit in range(nqubits))
+    magnetization = SymbolicHamiltonian(
+        magnetization, nqubits=nqubits, backend=backend
+    ).matrix
+
+    commutator = hamiltonian @ magnetization - magnetization @ hamiltonian
+
+    backend.assert_allclose(commutator, backend.zeros_like(commutator), atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [0, 1])
+def test_lmg_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        LMG(nqubits, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_long_range_heisenberg(backend, closed_boundary, dense):
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    nqubits, alpha = 5, 1.5
+    couplings, fields = (1.0, -0.4, 0.3), (0.1, -0.2, 0.5)
+
+    target = 0
+    for a, b in combinations(range(nqubits), 2):
+        distance = b - a
+        if closed_boundary:
+            distance = min(distance, nqubits - distance)
+        target += sum(
+            -coupling
+            * pauli(a, backend=backend)
+            * pauli(b, backend=backend)
+            / distance**alpha
+            for coupling, pauli in zip(couplings, paulis)
+        )
+    target += sum(
+        -field * pauli(qubit, backend=backend)
+        for qubit in range(nqubits)
+        for field, pauli in zip(fields, paulis)
+    )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+
+    hamiltonian = LongRangeHeisenberg(
+        nqubits,
+        couplings,
+        fields,
+        alpha,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_long_range_heisenberg_all_to_all(backend, dense):
+    """For ``alpha=0``, every pair of qubits is coupled with the same strength."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = LongRangeHeisenberg(4, [1.0, 0.5, 0.2], 0.3, 0.0, **kwargs)
+    target = Heisenberg(nx.complete_graph(4), [1.0, 0.5, 0.2], 0.3, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [0, 1])
+def test_long_range_heisenberg_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        LongRangeHeisenberg(nqubits, 1.0, 1.0, 1.0, backend=backend)
+
+
+def _dm_target(backend, nqubits, couplings, fields, dm_vector, bonds):
+    """Heisenberg model plus the DM term on ``bonds``, built from symbols."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    cross = ((symbols.Y, symbols.Z), (symbols.Z, symbols.X), (symbols.X, symbols.Y))
+
+    target = sum(
+        -weight * coupling * pauli(a, backend=backend) * pauli(b, backend=backend)
+        for a, b, weight in bonds
+        for coupling, pauli in zip(couplings, paulis)
+    )
+    target += sum(
+        -field * pauli(qubit, backend=backend)
+        for qubit in range(nqubits)
+        for field, pauli in zip(fields, paulis)
+    )
+    target += sum(
+        weight
+        * strength
+        * (
+            first(a, backend=backend) * second(b, backend=backend)
+            - second(a, backend=backend) * first(b, backend=backend)
+        )
+        for a, b, weight in bonds
+        for strength, (first, second) in zip(dm_vector, cross)
+    )
+
+    return SymbolicHamiltonian(target, nqubits=nqubits, backend=backend).matrix
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_dm_heisenberg_chain(backend, closed_boundary, dense):
+    nqubits = 4
+    couplings, fields, dm_vector = (1.0, -0.4, 0.3), (0.1, -0.2, 0.5), (0.3, -0.6, 0.8)
+
+    nbonds = nqubits if closed_boundary else nqubits - 1
+    bonds = [(qubit, (qubit + 1) % nqubits, 1) for qubit in range(nbonds)]
+    target = _dm_target(backend, nqubits, couplings, fields, dm_vector, bonds)
+
+    hamiltonian = DMHeisenberg(
+        nqubits,
+        couplings,
+        fields,
+        dm_vector,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target, atol=1e-10)
+    backend.assert_allclose(
+        hamiltonian.matrix, backend.conj(hamiltonian.matrix).T, atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_graph(backend, dense):
+    """Bonds are oriented from the lower to the higher label, and weights scale the DM."""
+    graph = nx.Graph()
+    graph.add_nodes_from(range(4))
+    graph.add_edge(0, 1, weight=2.0)
+    graph.add_edge(3, 1, weight=0.5)
+    graph.add_edge(2, 3)
+    couplings, fields, dm_vector = (1.0, 0.5, 0.2), (0.0, 0.1, 0.0), (0.3, 0.0, 0.8)
+
+    bonds = [(0, 1, 2.0), (1, 3, 0.5), (2, 3, 1)]
+    target = _dm_target(backend, 4, couplings, fields, dm_vector, bonds)
+
+    hamiltonian = DMHeisenberg(
+        graph, couplings, fields, dm_vector, dense=dense, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_scalar_strengths(backend, dense):
+    """A scalar DM strength is the same as three equal components."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DMHeisenberg(3, 1.0, 0.0, 0.4, **kwargs)
+    target = DMHeisenberg(3, 1.0, 0.0, [0.4, 0.4, 0.4], **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_no_dm(backend, dense):
+    """Without DM interaction, it is the Heisenberg model."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DMHeisenberg(4, [1.0, 0.5, 0.2], 0.3, 0.0, **kwargs)
+    target = Heisenberg(4, [1.0, 0.5, 0.2], 0.3, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_two_qubits(backend, dense):
+    """The two bonds of a two-qubit ring have opposite orientations."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DMHeisenberg(2, 1.0, 0.0, [0.3, 0.5, 0.8], **kwargs)
+    target = Heisenberg(2, 1.0, 0.0, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_dm_heisenberg_value_error(backend):
+    with pytest.raises(ValueError):
+        DMHeisenberg(3, 1.0, 0.0, [0.3, 0.5], backend=backend)
