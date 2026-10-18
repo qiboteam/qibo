@@ -1,3 +1,4 @@
+import networkx as nx
 import pytest
 
 from qibo import gates
@@ -166,3 +167,12 @@ def test_assert_connectivity_3q(star_connectivity):
     circuit.add(gates.TOFFOLI(0, 1, 2))
     with pytest.raises(ConnectivityError):
         assert_connectivity(star_connectivity(), circuit)
+
+
+def test_assert_connectivity_ignores_barriers():
+    connectivity = nx.Graph([(0, 1), (1, 2)])
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.Barrier(0, 2))
+    circuit.add(gates.Barrier(0, 1, 2))
+    assert_connectivity(connectivity, circuit)

@@ -853,7 +853,8 @@ class StarConnectivityRouter(Router):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
-                Only single qubit gates and two qubits gates are supported by the router.
+                Only single qubit gates, two qubits gates and barriers are supported by
+                the router.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
@@ -875,10 +876,15 @@ class StarConnectivityRouter(Router):
                 new.add(new_gate)
                 continue
 
+            if isinstance(gate, gates.Barrier):
+                new.add(gate.on_qubits(dict(zip(gate.qubits, routed_qubits))))
+                continue
+
             if len(routed_qubits) > 2:
                 raise_error(
                     ConnectivityError,
-                    "Gates targeting more than two qubits are not supported.",
+                    "Gates targeting more than two qubits are not supported, "
+                    + "except for barriers.",
                 )
 
             if len(routed_qubits) == 2 and middle_qubit_idx not in routed_qubits:
@@ -929,7 +935,8 @@ def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
     commutativity relations.
 
     Args:
-        gates_qubits_pairs (list): List of qubits tuples where gates/blocks acts.
+        gates_qubits_pairs (list): List of qubits tuples where gates/blocks acts. The tuples
+            have two qubits, except for the ones of barriers, which can have more.
 
     Returns:
         (:class:`networkx.DiGraph`): Adjoint of the circuit.
@@ -949,7 +956,7 @@ def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
                 if (qubit in next_gate) and (qubit not in saturated_qubits):
                     saturated_qubits.append(qubit)
                     connectivity_list.append((idx, next_idx + idx + 1))
-            if len(saturated_qubits) >= 2:
+            if len(saturated_qubits) >= len(gate):
                 break
     dag.add_edges_from(connectivity_list)
 
@@ -967,6 +974,8 @@ def _find_connected_qubit(
     """
     possible_qubits = {qubits[0], qubits[1]}
     for next_gate in queue:
+        if isinstance(next_gate, gates.Barrier):
+            continue
         if len(next_gate.qubits) > 2:
             raise_error(
                 error,
