@@ -23,6 +23,7 @@ from qibo.transpiler.router import (
     Sabre,
     ShortestPaths,
     StarConnectivityRouter,
+    _check_connected_components,
     _create_dag,
 )
 
@@ -864,3 +865,54 @@ def test_star_router_with_barrier(barrier_qubits, star_connectivity):
         final_layout=final_layout,
     )
     assert [gate.name for gate in routed_circuit.queue].count("barrier") == 1
+
+
+DISCONNECTED_CONNECTIVITY = nx.Graph([(0, 1), (1, 2), (2, 3), (4, 5), (5, 6), (7, 8)])
+DISCONNECTED_CONNECTIVITY.add_node(9)
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("qubits", [(0, 4), (3, 9), (6, 7)])
+def test_routing_disconnected_connectivity_error(router_algorithm, qubits):
+    circuit = Circuit(10)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(*qubits))
+    router = router_algorithm(connectivity=DISCONNECTED_CONNECTIVITY, seed=1)
+    with pytest.raises(ConnectivityError, match="different connected components"):
+        router(circuit)
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("seed", range(2))
+def test_routing_disconnected_connectivity(router_algorithm, seed):
+    rng = random.Random(seed)
+    components = [[0, 1, 2, 3], [4, 5, 6], [7, 8]]
+    circuit = Circuit(10)
+    for _ in range(20):
+        circuit.add(gates.RX(rng.randrange(10), rng.random()))
+        qubits = rng.sample(rng.choice(components), 2)
+        circuit.add(gates.CNOT(*qubits))
+    # a barrier does not need its qubits to be connected
+    circuit.add(gates.Barrier(0, 4, 9))
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.M(*range(10)))
+    router = router_algorithm(connectivity=DISCONNECTED_CONNECTIVITY, seed=seed)
+    routed_circuit, final_layout = router(circuit)
+    assert_connectivity(DISCONNECTED_CONNECTIVITY, routed_circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+
+
+def test_check_connected_components():
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(3, 4))
+    circuit_map = CircuitMap(circuit)
+    _check_connected_components(circuit_map, nx.Graph([(0, 1), (3, 4), (1, 2)]))
+    # the layout of the circuit map decides which qubits are connected
+    with pytest.raises(ConnectivityError):
+        _check_connected_components(circuit_map, nx.Graph([(0, 3), (1, 2), (2, 4)]))

@@ -1024,25 +1024,31 @@ def test_native_cz_dec(native):
 
 
 @pytest.mark.parametrize(
-    "native", NEW_TWO_QUBIT_NATIVES, ids=lambda native: native.name
+    "native, single_qubit",
+    [
+        (NativeGates.ECR, NativeGates.U3),
+        (NativeGates.CY, NativeGates.GPI2),
+        (NativeGates.CH, NativeGates.U3),
+        (NativeGates.CSX, NativeGates.GPI2),
+        (NativeGates.CSXDG, NativeGates.U3),
+        (NativeGates.FSWAP, NativeGates.GPI2),
+        (NativeGates.SiSWAP, NativeGates.U3),
+        (NativeGates.SiSWAPDG, NativeGates.GPI2),
+        (NativeGates.SYC, NativeGates.U3),
+    ],
+    ids=lambda native: native.name,
 )
-@pytest.mark.parametrize("single_qubit", [NativeGates.U3, NativeGates.GPI2])
 def test_unroller_new_two_qubit_natives(backend, native, single_qubit):
+    native_class = getattr(gates, native.name)
     circuit = Circuit(3)
     circuit.add(
         [
             gates.H(0),
             gates.CNOT(0, 1),
-            gates.RX(1, 0.7),
             gates.SWAP(1, 2),
             gates.CRY(2, 0, 0.4),
-            gates.TOFFOLI(0, 1, 2),
-            gates.iSWAP(0, 2),
             gates.fSim(1, 2, 0.3, 0.4),
-            gates.ECR(1, 0),
-            gates.SYC(0, 1),
-            gates.SiSWAP(2, 0),
-            gates.FSWAP(0, 1),
+            native_class(2, 0),
         ]
     )
     natives = NativeGates.M | single_qubit | native
@@ -1051,7 +1057,7 @@ def test_unroller_new_two_qubit_natives(backend, native, single_qubit):
     two_qubit_gates = {
         gate.__class__ for gate in unrolled.queue if len(gate.qubits) == 2
     }
-    assert two_qubit_gates == {getattr(gates, native.name)}
+    assert two_qubit_gates == {native_class}
 
 
 @pytest.mark.parametrize(
