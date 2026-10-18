@@ -732,7 +732,7 @@ def _block_diagonal_decomposition(
             the first one selects the block.
         first_block (ArrayLike): Block for the first qubit in the state :math:`\\ket{0}`.
         second_block (ArrayLike): Block for the first qubit in the state :math:`\\ket{1}`.
-        backend (:class:`qibo.backends.abstract.Backend`): Backend to use for the
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use for the
             matrices.
 
     Returns:
