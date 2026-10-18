@@ -391,6 +391,29 @@ rx(pi/2) q[0];"""
     assert circuit.queue[0].parameters == (np.pi / 2,)
 
 
+@pytest.mark.parametrize(
+    "expression, theta",
+    [
+        ("(pi+pi)/4", np.pi / 2),
+        ("pi/(2+2)", np.pi / 4),
+        ("pi-(pi-pi/2)", np.pi / 2),
+        ("-(pi+pi)/4", -np.pi / 2),
+        ("(pi/2)/(1/2)", np.pi),
+    ],
+)
+def test_from_qasm_grouped_expression(backend, expression, theta):
+    target = f"""OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[1];
+rx({expression}) q[0];"""
+    circuit = Circuit.from_qasm(target)
+    backend.assert_allclose(circuit.queue[0].parameters, (theta,))
+    probabilities = backend.execute_circuit(circuit).probabilities()
+    backend.assert_allclose(
+        probabilities, [np.cos(theta / 2) ** 2, np.sin(theta / 2) ** 2]
+    )
+
+
 def test_from_qasm_invalid_script():
 
     # Qubit index out of range
