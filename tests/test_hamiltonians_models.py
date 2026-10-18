@@ -17,6 +17,7 @@ from qibo.hamiltonians.models import (
     J1J2,
     LABS,
     LMG,
+    QUBO,
     TFIM,
     XXX,
     XXZ,
@@ -30,6 +31,8 @@ from qibo.hamiltonians.models import (
     Ising,
     LongRangeHeisenberg,
     MaxCut,
+    MaxIndependentSet,
+    NumberPartitioning,
     SpinGlass,
 )
 
@@ -2148,3 +2151,150 @@ def test_dm_heisenberg_two_qubits(backend, dense):
 def test_dm_heisenberg_value_error(backend):
     with pytest.raises(ValueError):
         DMHeisenberg(3, 1.0, 0.0, [0.3, 0.5], backend=backend)
+
+
+def _qubo_energies(matrix):
+    """Objective function of the QUBO problem on all bitstrings, in qibo's order."""
+    bitstrings = np.array(list(product([0, 1], repeat=len(matrix))))
+    return np.einsum("bj,jk,bk->b", bitstrings, matrix, bitstrings)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("nqubits", [1, 2, 4])
+def test_qubo(backend, nqubits, dense):
+    """The Hamiltonian is diagonal with the QUBO objective function as eigenvalues."""
+    matrix = np.random.default_rng(nqubits).normal(size=(nqubits, nqubits))
+
+    hamiltonian = QUBO(
+        backend.cast(matrix, dtype=backend.float64), dense=dense, backend=backend
+    )
+
+    assert hamiltonian.nqubits == nqubits
+    backend.assert_allclose(
+        hamiltonian.matrix, np.diag(_qubo_energies(matrix)), atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_qubo_linear(backend, dense):
+    """An integer diagonal matrix has no quadratic terms."""
+    matrix = np.diag([1, -2, 3])
+
+    hamiltonian = QUBO(matrix.tolist(), dense=dense, backend=backend)
+
+    backend.assert_allclose(
+        hamiltonian.matrix, np.diag(_qubo_energies(matrix)), atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_qubo_symmetrization(backend, dense):
+    """Only the symmetric part of the off-diagonal elements is relevant."""
+    upper = [[1.0, 2.0, -1.0], [0.0, -0.5, 3.0], [0.0, 0.0, 2.0]]
+    symmetric = [[1.0, 1.0, -0.5], [1.0, -0.5, 1.5], [-0.5, 1.5, 2.0]]
+
+    hamiltonian = QUBO(backend.cast(upper), dense=dense, backend=backend)
+    target = QUBO(backend.cast(symmetric), dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("shape", [(2, 3), (3,), (2, 2, 2)])
+def test_qubo_value_error(backend, shape):
+    with pytest.raises(ValueError):
+        QUBO(backend.ones(shape), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize(
+    "graph,size",
+    [
+        (nx.path_graph(4), 2),
+        (nx.cycle_graph(5), 2),
+        (nx.star_graph(3), 3),
+        (nx.complete_graph(4), 1),
+        (nx.empty_graph(3), 3),
+    ],
+)
+def test_max_independent_set(backend, graph, size, dense):
+    penalty = 2.5
+    matrix = -backend.identity(len(graph))
+    for node_a, node_b in graph.edges:
+        matrix[node_a, node_b] = penalty
+
+    hamiltonian = MaxIndependentSet(graph, penalty, dense=dense, backend=backend)
+
+    backend.assert_allclose(
+        hamiltonian.matrix, backend.diag(_qubo_energies(matrix)), atol=1e-10
+    )
+    # the ground state energy is minus the size of the maximum independent set
+    backend.assert_allclose(float(backend.min(hamiltonian.eigenvalues())), -size)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_max_independent_set_ground_states(backend, dense):
+    """Ground states are independent sets, *i.e.*, no edge has both ends selected."""
+    graph = nx.cycle_graph(5)
+
+    hamiltonian = MaxIndependentSet(graph, dense=dense, backend=backend)
+    energies = backend.real(backend.diag(hamiltonian.matrix))
+
+    for index in backend.flatnonzero(np.isclose(energies, energies.min())):
+        bits = [(index >> (4 - qubit)) & 1 for qubit in range(5)]
+        assert all(not (bits[a] and bits[b]) for a, b in graph.edges)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_max_independent_set_labels(backend, dense):
+    """Qubits are labeled by the order of the nodes if they are not integers."""
+    graph = nx.relabel_nodes(nx.path_graph(4), dict(enumerate("abcd")))
+
+    hamiltonian = MaxIndependentSet(graph, dense=dense, backend=backend)
+    target = MaxIndependentSet(nx.path_graph(4), dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_max_independent_set_value_error(backend):
+    with pytest.raises(ValueError):
+        MaxIndependentSet(nx.path_graph(3), penalty_coeff=1.0, backend=backend)
+
+    with pytest.raises(ValueError):
+        MaxIndependentSet(nx.Graph(), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize(
+    "numbers,minimum",
+    [([3, 1, 1, 2, 2, 1], 0), ([1, 2, 4], 1), ([0.5, 1.5, 2.0], 0)],
+)
+def test_number_partitioning(backend, numbers, minimum, dense):
+    """Eigenvalues are the squared differences between the sums of the two subsets."""
+    signs = 1 - 2 * np.array(list(product([0, 1], repeat=len(numbers))))
+    target = (signs @ np.array(numbers)) ** 2
+
+    hamiltonian = NumberPartitioning(
+        backend.cast(numbers, dtype=backend.float64), dense=dense, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, np.diag(target), atol=1e-10)
+    assert math.isclose(float(backend.min(hamiltonian.eigenvalues())), minimum)
+
+
+@pytest.mark.parametrize("numbers", [[1], [], [[1, 2], [3, 4]]])
+def test_number_partitioning_value_error(backend, numbers):
+    with pytest.raises(ValueError):
+        NumberPartitioning(numbers, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_number_partitioning_list(backend, dense):
+    """Lists are accepted, and give the same Hamiltonian as backend arrays."""
+    numbers = [3, 1, 1, 2, 2, 1]
+
+    hamiltonian = NumberPartitioning(numbers, dense=dense, backend=backend)
+    target = NumberPartitioning(
+        backend.cast(numbers, dtype=backend.float64), dense=dense, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)

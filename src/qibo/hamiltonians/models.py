@@ -1476,6 +1476,217 @@ def MaxCut(
     return ham - float(weights.sum() / 2)
 
 
+def MaxIndependentSet(
+    graph: nx.Graph,
+    penalty_coeff: float = 2.0,
+    dense: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Maximum Independent Set (MIS) problem as a QUBO.
+
+    An independent set of a graph is a subset of its nodes in which no two nodes are
+    connected by an edge. The MIS problem consists of finding the largest independent set,
+    which can be formulated as minimizing the objective function
+
+    .. math::
+        C(x) = -\\sum_{j} x_{j} + \\lambda \\sum_{(j, \\, k) \\in E} x_{j} \\, x_{k} \\, ,
+
+    where :math:`x_{j} \\in \\{0, \\, 1\\}` is equal to :math:`1` if node :math:`j` belongs to
+    the set, :math:`E` is the set of edges of the graph, and :math:`\\lambda` is the penalty
+    coefficient that discourages the selection of connected nodes. For :math:`\\lambda > 1`,
+    every ground state is a maximum independent set, and the ground state energy is minus
+    its size.
+
+    The Hamiltonian is built by :class:`qibo.hamiltonians.QUBO`, and its eigenvalue on the
+    computational basis state :math:`|x\\rangle` is :math:`C(x)`. The labels of the qubits
+    follow the same convention as in :class:`qibo.hamiltonians.Ising`: if the nodes of the
+    graph are exactly the integers :math:`\\{0, \\, 1, \\, \\dots, \\, n - 1\\}`, every node is its
+    own qubit label. Otherwise, qubits are labeled by the order in which the nodes are stored
+    in the graph. The weights of the edges are ignored.
+
+    Args:
+        graph (:class:`networkx.Graph`): graph with one node per qubit.
+        penalty_coeff (float, optional): penalty coefficient :math:`\\lambda`. It must be
+            larger than :math:`1`. Defaults to :math:`2.0`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Maximum independent set Hamiltonian.
+
+    References:
+        1. A. Lucas, *Ising formulations of many NP problems*,
+        `Front. Phys. 2, 5 (2014) <https://doi.org/10.3389/fphy.2014.00005>`_.
+    """
+    if penalty_coeff <= 1:
+        raise_error(
+            ValueError,
+            f"``penalty_coeff`` must be larger than one, but it is {penalty_coeff}.",
+        )
+
+    nnodes, bonds = _graph_bonds(graph)
+
+    matrix = [[-1.0 if j == k else 0.0 for k in range(nnodes)] for j in range(nnodes)]
+    for qubit_a, qubit_b in bonds:
+        matrix[qubit_a][qubit_b] = float(penalty_coeff)
+
+    return QUBO(matrix, dense=dense, backend=backend)
+
+
+def NumberPartitioning(
+    numbers: ArrayLike,
+    dense: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Number partitioning problem.
+
+    Given a set of numbers :math:`\\{a_{j}\\}_{j=0}^{n-1}`, the problem consists of dividing it
+    into two subsets such that the difference between the sums of their elements is minimal.
+    Assigning :math:`s_{j} = +1` or :math:`s_{j} = -1` to every number, depending on the subset
+    it belongs to, the problem is the minimization of
+
+    .. math::
+        H = \\left( \\sum_{j} a_{j} \\, Z_{j} \\right)^{2}
+            = \\sum_{j} a_{j}^{2} + 2 \\sum_{j < k} a_{j} \\, a_{k} \\, Z_{j} \\, Z_{k} \\, ,
+
+    which is the :class:`qibo.hamiltonians.Ising` model, without local fields, on the complete
+    graph with weights :math:`w_{jk} = 2 \\, a_{j} \\, a_{k}`, plus a constant. It is built as a
+    :class:`qibo.hamiltonians.QUBO` in the variables :math:`x_{j} = (1 - Z_{j}) / 2`, with
+    matrix :math:`Q_{jk} = 4 \\, a_{j} \\, a_{k} - 4 \\, \\delta_{jk} \\, a_{j} \\sum_{l} a_{l}`
+    and constant :math:`(\\sum_{j} a_{j})^{2}`. The eigenvalue of
+    :math:`H` on every computational basis state is the squared difference between the sums
+    of the two subsets. Hence, the ground state energy is :math:`0` if, and only if, a perfect
+    partition exists.
+
+    Args:
+        numbers (ArrayLike): one-dimensional array with the :math:`n \\geq 2` numbers
+            :math:`\\{a_{j}\\}_{j}`. The :math:`j`-th number is encoded in qubit :math:`j`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Number partitioning Hamiltonian.
+
+    References:
+        1. A. Lucas, *Ising formulations of many NP problems*,
+        `Front. Phys. 2, 5 (2014) <https://doi.org/10.3389/fphy.2014.00005>`_.
+    """
+    backend = _check_backend(backend)
+
+    numbers = backend.cast(numbers, dtype=backend.float64)
+    if len(numbers.shape) != 1 or numbers.shape[0] < 2:
+        raise_error(
+            ValueError,
+            "``numbers`` must be a one-dimensional array with at least two elements, "
+            + f"but it has shape {tuple(numbers.shape)}.",
+        )
+
+    total = backend.sum(numbers)
+    matrix = 4 * backend.outer(numbers, numbers) - 4 * total * backend.diag(numbers)
+
+    return QUBO(matrix, dense=dense, backend=backend) + float(total**2)
+
+
+def QUBO(
+    matrix: ArrayLike,
+    dense: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """Quadratic unconstrained binary optimization (QUBO) problem.
+
+    Given a real :math:`n \\times n` matrix :math:`Q`, the QUBO problem consists of minimizing
+
+    .. math::
+        C(x) = \\sum_{j, k} Q_{jk} \\, x_{j} \\, x_{k} \\, ,
+
+    over the binary variables :math:`x \\in \\{0, \\, 1\\}^{n}`. Since :math:`x_{j}^{2} = x_{j}`,
+    the diagonal of :math:`Q` is the linear part of the objective function. Only the symmetric
+    part of :math:`Q` is relevant for the off-diagonal terms, because :math:`Q_{jk}` and
+    :math:`Q_{kj}` multiply the same product :math:`x_{j} \\, x_{k}`.
+
+    The Hamiltonian is obtained with the substitution :math:`x_{j} \\to (1 - Z_{j}) / 2`,
+    which gives the :class:`qibo.hamiltonians.Ising` model
+
+    .. math::
+        H = \\sum_{j < k} J_{jk} \\, Z_{j} \\, Z_{k} + \\sum_{j} h_{j} \\, Z_{j} + c \\, ,
+
+    with :math:`J_{jk} = (Q_{jk} + Q_{kj}) / 4`,
+    :math:`h_{j} = -Q_{jj} / 2 - \\sum_{k \\neq j} J_{jk}`, and the constant
+    :math:`c = \\sum_{j} Q_{jj} / 2 + \\sum_{j < k} J_{jk}`. The computational basis state
+    :math:`|x\\rangle`, in which qubit :math:`j` is in the state :math:`|x_{j}\\rangle`, is an
+    eigenstate of :math:`H` with eigenvalue :math:`C(x)`. Thus, the ground states of
+    :math:`H` are the solutions of the QUBO problem.
+
+    Args:
+        matrix (ArrayLike): square matrix :math:`Q` of the QUBO problem. The :math:`j`-th
+            row and column correspond to qubit :math:`j`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        QUBO Hamiltonian.
+
+    References:
+        1. A. Lucas, *Ising formulations of many NP problems*,
+        `Front. Phys. 2, 5 (2014) <https://doi.org/10.3389/fphy.2014.00005>`_.
+    """
+    backend = _check_backend(backend)
+
+    matrix = backend.cast(matrix, dtype=backend.float64)
+    if len(matrix.shape) != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise_error(
+            ValueError,
+            f"``matrix`` must be a square matrix, but it has shape {tuple(matrix.shape)}.",
+        )
+
+    # the ordered pairs (j, k) and (k, j) both contribute to the same product
+    # x_{j} x_{k}, and the diagonal is the linear part since x_{j}^{2} = x_{j}
+    quadratic = matrix + backend.transpose(matrix)
+    quadratic = quadratic - backend.diag(backend.diag(quadratic))
+    linear = backend.diag(matrix)
+
+    fields = -linear / 2 - backend.sum(quadratic, axis=1) / 4
+    offset = backend.sum(linear) / 2 + backend.sum(quadratic) / 8
+
+    graph = nx.Graph()
+    graph.add_nodes_from(range(len(matrix)))
+    rows, columns = backend.nonzero(backend.triu(quadratic, 1))
+    graph.add_weighted_edges_from(
+        (int(qubit_a), int(qubit_b), float(quadratic[qubit_a, qubit_b]) / 4)
+        for qubit_a, qubit_b in zip(rows, columns)
+    )
+
+    hamiltonian = Ising(
+        graph,
+        coupling_constants=1.0,
+        local_field_strengths=backend.cast(
+            [[float(field), 0.0] for field in fields], dtype=backend.float64
+        ),
+        dense=dense,
+        backend=backend,
+    )
+
+    return hamiltonian + float(offset)
+
+
 def SpinGlass(
     nqubits: int | nx.Graph,
     coupling_constant: float = 1.0,
