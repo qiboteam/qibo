@@ -9,7 +9,11 @@ from qibo import gates, matrices
 from qibo.backends import Backend, _check_backend, _numpy_backend
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
-from qibo.quantum_info.linalg_operations import schmidt_decomposition
+from qibo.quantum_info.linalg_operations import (
+    cosine_sin_decomposition,
+    schmidt_decomposition,
+    schur_decomposition,
+)
 from qibo.transpiler._exceptions import DecompositionError
 
 magic_basis = np.array(
@@ -425,6 +429,87 @@ def cnot_decomposition_light(
     ]
 
 
+def quantum_shannon_decomposition(
+    qubits: tuple[int, ...], unitary: ArrayLike, backend: Backend | None = None
+) -> list[Gate]:
+    """Quantum Shannon decomposition of a unitary matrix acting on several qubits.
+
+    The cosine-sine decomposition of an :math:`n`-qubit unitary :math:`U`, whose blocks
+    are defined by the first qubit, is
+
+    .. math::
+        U = (A_{1} \\oplus A_{2}) \\, \begin{pmatrix} C & -S \\ S & C \\end{pmatrix} \\,
+        (B_{1} \\oplus B_{2}) \\, ,
+
+    where the middle matrix is a multiplexed :class:`qibo.gates.gates.RY` rotation of
+    the first qubit, controlled by the other :math:`n - 1` qubits. Each block-diagonal
+    matrix is decomposed as
+
+    .. math::
+        X_{1} \\oplus X_{2} = (\\mathbb{I} \\otimes V) \\, (D \\oplus D^{\\dagger}) \\,
+        (\\mathbb{I} \\otimes W) \\, ,
+
+    with :math:`V D^{2} V^{\\dagger} = X_{1} X_{2}^{\\dagger}` and
+    :math:`W = D V^{\\dagger} X_{2}`, where :math:`D \\oplus D^{\\dagger}` is a
+    multiplexed :class:`qibo.gates.gates.RZ` rotation of the first qubit. The result
+    has four unitaries on the last :math:`n - 1` qubits and three multiplexed
+    rotations, *i.e.* :class:`qibo.gates.gates.Multiplexor` gates. Decomposing the
+    unitaries in the same way until they act on two qubits uses
+    :math:`(9 / 16) \\, 4^{n} - (3 / 2) \\, 2^{n}` two-qubit gates, if the unitaries
+    on two qubits are decomposed with three of them. It does not use auxiliary qubits.
+
+    Args:
+        qubits (tuple[int, ...]): Ids of the qubits that ``unitary`` acts on, with at
+            least two. The first one is the most significant bit of the indices of
+            ``unitary``.
+        unitary (ArrayLike): Unitary matrix of shape :math:`(2^{n}, 2^{n})`, with
+            :math:`n` the number of ``qubits``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use
+            for the matrices. If ``None``, defaults to the global backend.
+            Defaults to ``None``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: Gates, in order of application, that
+        implement ``unitary``: four :class:`qibo.gates.gates.Unitary` gates on
+        ``qubits[1:]`` and three :class:`qibo.gates.gates.Multiplexor` gates. Each
+        of them acts on less qubits than ``unitary``, so they can be decomposed in turn.
+
+    Raises:
+        ValueError: If there are less than two ``qubits``, or ``unitary`` does not have
+            the shape :math:`(2^{n}, 2^{n})`.
+
+    References:
+        1. V. V. Shende, S. S. Bullock, and I. L. Markov,
+        *Synthesis of quantum-logic circuits*,
+        `IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst. 25, 1000 (2006)
+        <https://doi.org/10.1109/TCAD.2005.855930>`_.
+    """
+    backend = _check_backend(backend)
+
+    if len(qubits) < 2 or unitary.shape != (2 ** len(qubits),) * 2:
+        raise_error(
+            ValueError,
+            f"``unitary`` must have shape {(2 ** len(qubits),) * 2} for {len(qubits)} "
+            + f"qubits, and there must be at least two, got shape {unitary.shape}.",
+        )
+
+    half = len(unitary) // 2
+    left, middle, right = cosine_sin_decomposition(unitary, backend=backend)
+    angles = 2 * backend.arctan2(
+        backend.real(backend.diag(middle[half:, :half])),
+        backend.real(backend.diag(middle[:half, :half])),
+    )
+    return [
+        *_block_diagonal_decomposition(
+            qubits, right[:half, :half], right[half:, half:], backend=backend
+        ),
+        gates.Multiplexor(qubits[1:], qubits[0], angles, axis="y"),
+        *_block_diagonal_decomposition(
+            qubits, left[:half, :half], left[half:, half:], backend=backend
+        ),
+    ]
+
+
 def single_qubit_decomposition(
     unitary: ArrayLike,
     qubit: int,
@@ -632,6 +717,43 @@ def two_qubit_decomposition(
     if abs(math.remainder(z_component, math.pi)) < threshold:
         return _two_qubit_decomposition_without_z(q0, q1, unitary, weight, backend)
     return _two_qubit_decomposition_with_z(q0, q1, unitary, weight, backend)
+
+
+def _block_diagonal_decomposition(
+    qubits: tuple[int, ...],
+    first_block: ArrayLike,
+    second_block: ArrayLike,
+    backend: Backend | None = None,
+) -> list[Gate]:
+    """Decompose a block-diagonal unitary, see :func:`quantum_shannon_decomposition`.
+
+    Args:
+        qubits (tuple[int, ...]): Qubits that the block-diagonal unitary acts on, where
+            the first one selects the block.
+        first_block (ArrayLike): Block for the first qubit in the state :math:`\\ket{0}`.
+        second_block (ArrayLike): Block for the first qubit in the state :math:`\\ket{1}`.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend to use for the
+            matrices.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: A unitary and a multiplexed
+        :class:`qibo.gates.gates.RZ` rotation, followed by a unitary, in order of
+        application.
+    """
+    backend = _check_backend(backend)
+
+    schur_form, eigenvectors = schur_decomposition(
+        first_block @ backend.dagger(second_block), backend=backend
+    )
+    eigenphases = backend.angle(backend.diag(schur_form))
+    second_unitary = backend.exp(0.5j * eigenphases)[:, None] * (
+        backend.dagger(eigenvectors) @ second_block
+    )
+    return [
+        gates.Unitary(second_unitary, *qubits[1:]),
+        gates.Multiplexor(qubits[1:], qubits[0], -eigenphases, axis="z"),
+        gates.Unitary(eigenvectors, *qubits[1:]),
+    ]
 
 
 @functools.cache
