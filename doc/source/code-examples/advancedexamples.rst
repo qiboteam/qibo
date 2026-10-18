@@ -2368,6 +2368,15 @@ are decomposed into :class:`qibo.gates.CZ` gates, which are replaced by the lowe
 of native gates that implement them. The :class:`qibo.gates.SWAP` gate can be native, but it
 cannot create entanglement, so it needs another entangling native gate to be universal.
 
+The connectivity can be a directed graph (:class:`networkx.DiGraph`), where an edge ``(a, b)``
+means that a two-qubit gate is only supported with its first qubit on ``a`` and its second qubit
+on ``b``. This matters for native gates that change when their qubits are swapped, such as
+:class:`qibo.gates.CNOT` or :class:`qibo.gates.ECR`. In that case,
+:func:`qibo.transpiler.pipeline.generate_preset_passes` ends the pipeline with
+:class:`qibo.transpiler.optimizer.GateDirection`, which reverses the gates that act against an
+edge, followed by an unroller for the single-qubit gates that it adds.
+The placers and routers ignore the directions.
+
 .. testcode:: python
 
     from qibo import Circuit, gates

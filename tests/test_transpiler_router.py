@@ -798,6 +798,39 @@ def test_shortest_paths_distant_qubits():
     assert router.added_swaps >= 5
 
 
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+def test_routing_directed_connectivity(router_algorithm):
+    connectivity = nx.DiGraph([(0, 1), (2, 1), (2, 3), (3, 4)])
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 4))
+    circuit.add(gates.CNOT(4, 1))
+    router = router_algorithm(connectivity=connectivity, seed=1)
+    routed_circuit, final_layout = router(circuit)
+    # the directions do not matter to the router
+    assert_connectivity(connectivity.to_undirected(), routed_circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+
+
+@pytest.mark.parametrize(
+    "router_algorithm", [Sabre, ShortestPaths, StarConnectivityRouter]
+)
+def test_routers_store_undirected_connectivity(router_algorithm, star_connectivity):
+    assert router_algorithm().connectivity is None
+    undirected = star_connectivity()
+    assert router_algorithm(undirected).connectivity is undirected
+    directed = nx.DiGraph(undirected.edges)
+    router = router_algorithm(directed)
+    assert not router.connectivity.is_directed()
+    assert set(map(frozenset, router.connectivity.edges)) == set(
+        map(frozenset, undirected.edges)
+    )
+    assert directed.is_directed()
+
+
 def test_create_dag_with_barrier():
     # the barrier on three qubits must keep the dependency on the gate on qubit 2,
     # even after it meets the gate on qubits 0 and 1

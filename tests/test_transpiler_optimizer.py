@@ -1,16 +1,19 @@
 import math
 
+import networkx as nx
 import numpy as np
 import pytest
 import sympy
 
 from qibo import Circuit, gates
 from qibo.gates.special import Barrier
-from qibo.transpiler._exceptions import PlacementError
+from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Optimizer
+from qibo.transpiler.decompositions import direction_dec
 from qibo.transpiler.optimizer import (
     ConsolidateBlocks,
     FixedPoint,
+    GateDirection,
     InverseCancellation,
     Optimize1qGatesDecomposition,
     ParametrizedGateFusion,
@@ -1637,3 +1640,132 @@ def test_consolidate_blocks_weight(backend):
     backend.assert_allclose(
         consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
     )
+
+
+def assert_unitaries_equal_up_to_phase(backend, circuit, other):
+    unitary, target = circuit.unitary(backend), other.unitary(backend)
+    phase = backend.dot(backend.ravel(backend.conj(target)), backend.ravel(unitary))
+    backend.assert_allclose(
+        unitary * backend.conj(phase / abs(phase)), target, atol=1e-12
+    )
+
+
+@pytest.mark.parametrize(
+    "gate_class", list(direction_dec), ids=lambda gate: gate.__name__
+)
+def test_gate_direction_reverses_non_symmetric_gates(backend, gate_class):
+    circuit = Circuit(2)
+    circuit.add(gate_class(0, 1))
+    reversed_circuit = GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+    two_qubit_gates = [g for g in reversed_circuit.queue if len(g.qubits) == 2]
+    assert [(g.__class__, g.qubits) for g in two_qubit_gates] == [(gate_class, (1, 0))]
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.CZ(0, 1),
+        gates.iSWAP(0, 1),
+        gates.SWAP(0, 1),
+        gates.FSWAP(0, 1),
+        gates.SiSWAP(0, 1),
+        gates.SiSWAPDG(0, 1),
+        gates.SYC(0, 1),
+        gates.RZZ(0, 1, 0.3),
+    ],
+    ids=lambda gate: gate.name,
+)
+def test_gate_direction_swaps_the_qubits_of_symmetric_gates(backend, gate):
+    circuit = Circuit(2)
+    circuit.add(gate)
+    reversed_circuit = GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+    assert [(g.__class__, g.qubits) for g in reversed_circuit.queue] == [
+        (gate.__class__, (1, 0))
+    ]
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+def test_gate_direction_keeps_gates(backend):
+    connectivity = nx.DiGraph([(0, 1), (1, 2), (2, 1), (3, 4)])
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))  # in the direction of the edge
+    circuit.add(gates.CNOT(2, 1))  # the edge goes in both directions
+    circuit.add(gates.Barrier(0, 1, 2))
+    circuit.add(gates.CNOT(0, 2))  # the qubits are not connected
+    circuit.add(gates.CZ(3, 4))
+    circuit.add(gates.M(0, 2))
+    reversed_circuit = GateDirection(connectivity)(circuit, backend=backend)
+    assert [(g.__class__, g.qubits) for g in reversed_circuit.queue] == [
+        (g.__class__, g.qubits) for g in circuit.queue
+    ]
+
+
+def test_gate_direction_undirected_connectivity(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(1, 0))
+    circuit.add(gates.ECR(2, 1))
+    reversed_circuit = GateDirection(nx.path_graph(3))(circuit, backend=backend)
+    assert [(g.__class__, g.qubits) for g in reversed_circuit.queue] == [
+        (gates.CNOT, (1, 0)),
+        (gates.ECR, (2, 1)),
+    ]
+
+
+def test_gate_direction_wire_names(backend):
+    circuit = Circuit(3, wire_names=["c", "a", "b"])
+    circuit.add(gates.CNOT(0, 1))  # from c to a, but only (a, c) is an edge
+    circuit.add(gates.CNOT(2, 1))
+    reversed_circuit = GateDirection(nx.DiGraph([("a", "c"), ("b", "a")]))(
+        circuit, backend=backend
+    )
+    assert reversed_circuit.wire_names == ["c", "a", "b"]
+    two_qubit_gates = [g for g in reversed_circuit.queue if isinstance(g, gates.CNOT)]
+    assert [g.qubits for g in two_qubit_gates] == [(1, 0), (2, 1)]
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+@pytest.mark.parametrize("phase", [math.pi, 0.7])
+def test_gate_direction_swaps_the_qubits_of_symmetric_controlled_gates(backend, phase):
+    # a gate that is built with ``controlled_by`` is symmetric if it is a controlled phase
+    gate = gates.Unitary(np.diag([1.0, np.exp(1j * phase)]), 1).controlled_by(0)
+    assert gate.is_controlled_by
+    circuit = Circuit(2)
+    circuit.add(gate)
+    reversed_circuit = GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+    (reversed_gate,) = reversed_circuit.queue
+    assert reversed_gate.qubits == (1, 0)
+    assert reversed_gate.control_qubits == (1,)
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.CRX(0, 1, 0.3),
+        gates.GPI2(1, 0.3).controlled_by(0),
+        gates.Unitary(np.diag([-1.0, 1.0]), 1).controlled_by(0),
+    ],
+    ids=["CRX", "controlled", "controlled-diagonal"],
+)
+def test_gate_direction_error_gates_that_cannot_be_reversed(backend, gate):
+    circuit = Circuit(2)
+    circuit.add(gate)
+    with pytest.raises(ConnectivityError, match="cannot be reversed"):
+        GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+
+
+def test_gate_direction_error_without_connectivity():
+    with pytest.raises(ValueError, match="Connectivity graph is not provided"):
+        GateDirection()(Circuit(2))
+
+
+def test_gate_direction_in_passes(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 1))
+    passes = Passes([GateDirection()], connectivity=nx.DiGraph([(1, 0), (1, 2)]))
+    reversed_circuit, _ = passes(circuit, backend=backend)
+    assert [g.qubits for g in reversed_circuit.queue if isinstance(g, gates.CNOT)] == [
+        (1, 0)
+    ]

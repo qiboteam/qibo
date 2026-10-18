@@ -119,6 +119,14 @@ See :ref:`tutorials_multicontrolled` for examples of all the options.
 Optimizer
 ---------
 
+Gate direction
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.GateDirection
+    :members:
+    :member-order: bysource
+
+
 Inverse cancellation
 ^^^^^^^^^^^^^^^^^^^^
 
