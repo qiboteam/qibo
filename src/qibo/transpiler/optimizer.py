@@ -303,7 +303,8 @@ class GateDirection(Optimizer):
     act on the opposite direction of an edge are replaced as follows:
 
     - the gates that are symmetric, *i.e.* that do not change when their qubits are
-      swapped, such as :class:`qibo.gates.gates.CZ`, have their qubits swapped;
+      swapped, such as :class:`qibo.gates.gates.CZ`, have their qubits swapped. This
+      includes the controlled gates, such as a phase gate with one control;
     - the native gates that are not symmetric, which are :class:`qibo.gates.gates.CNOT`,
       :class:`qibo.gates.gates.CH`, :class:`qibo.gates.gates.CSX`,
       :class:`qibo.gates.gates.CSXDG`, :class:`qibo.gates.gates.CY` and
@@ -360,14 +361,12 @@ class GateDirection(Optimizer):
                 qubits = dict(enumerate(gate.qubits))
                 new.add([g.on_qubits(qubits) for g in direction_dec[gate.__class__]])
             else:
-                matrix = (
-                    None
-                    if gate.is_controlled_by
-                    else backend.to_numpy(gate.matrix(backend))
-                )
-                if matrix is None or not backend.allclose(
-                    matrix, matrix[[0, 2, 1, 3]][:, [0, 2, 1, 3]]
-                ):
+                # the matrix of a controlled gate is the one of its target only, so the
+                # matrix on both qubits is taken from a fused gate
+                fused_gate = gates.FusedGate(*gate.qubits)
+                fused_gate.append(gate)
+                matrix = backend.to_numpy(backend.matrix_fused(fused_gate))
+                if not backend.allclose(matrix, matrix[[0, 2, 1, 3]][:, [0, 2, 1, 3]]):
                     raise_error(
                         ConnectivityError,
                         f"{gate.name} acts on {edge}, against the direction of the "

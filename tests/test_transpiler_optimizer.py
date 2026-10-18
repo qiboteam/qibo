@@ -1726,10 +1726,28 @@ def test_gate_direction_wire_names(backend):
     assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
 
 
+@pytest.mark.parametrize("phase", [math.pi, 0.7])
+def test_gate_direction_swaps_the_qubits_of_symmetric_controlled_gates(backend, phase):
+    # a gate that is built with ``controlled_by`` is symmetric if it is a controlled phase
+    gate = gates.Unitary(np.diag([1.0, np.exp(1j * phase)]), 1).controlled_by(0)
+    assert gate.is_controlled_by
+    circuit = Circuit(2)
+    circuit.add(gate)
+    reversed_circuit = GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+    (reversed_gate,) = reversed_circuit.queue
+    assert reversed_gate.qubits == (1, 0)
+    assert reversed_gate.control_qubits == (1,)
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
 @pytest.mark.parametrize(
     "gate",
-    [gates.CRX(0, 1, 0.3), gates.GPI2(1, 0.3).controlled_by(0)],
-    ids=["CRX", "controlled"],
+    [
+        gates.CRX(0, 1, 0.3),
+        gates.GPI2(1, 0.3).controlled_by(0),
+        gates.Unitary(np.diag([-1.0, 1.0]), 1).controlled_by(0),
+    ],
+    ids=["CRX", "controlled", "controlled-diagonal"],
 )
 def test_gate_direction_error_gates_that_cannot_be_reversed(backend, gate):
     circuit = Circuit(2)
