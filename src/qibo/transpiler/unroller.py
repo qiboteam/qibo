@@ -18,6 +18,7 @@ from qibo.transpiler.decompositions import (
 )
 from qibo.transpiler.unitary_decompositions import (
     _euler_frames,
+    quantum_shannon_decomposition,
     single_qubit_decomposition,
     two_qubit_decomposition,
     u3_decomposition,
@@ -374,8 +375,8 @@ def translate_gate(
 
     Raises:
         DecompositionError: If the gate acts on more than two qubits and is not a
-            controlled gate or a fused gate that can be decomposed, or if the native
-            gates are not sufficient.
+            controlled gate, a fused gate or a unitary that can be decomposed, or if
+            the native gates are not sufficient.
     """
     backend = _check_backend(backend)
 
@@ -453,13 +454,15 @@ def translate_gate(
     if len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates, backend)
 
-    if len(gate.qubits) > 2 and (
-        isinstance(gate, gates.Unitary) or gate.__class__ not in cz_dec.decompositions
-    ):
-        raise_error(
-            DecompositionError,
-            f"Cannot decompose {gate.name} acting on {len(gate.qubits)} qubits.",
-        )
+    if isinstance(gate, gates.Unitary) and len(gate.qubits) > 2:
+        # A unitary on more than two qubits is decomposed into gates on less qubits.
+        # The controlled ones are decomposed above.
+        translated = []
+        for decomposed_gate in quantum_shannon_decomposition(
+            gate.qubits, gate.matrix(backend), backend=backend
+        ):
+            translated.extend(translate_gate(decomposed_gate, native_gates, backend))
+        return translated
 
     if gate.__class__ not in cz_dec.decompositions or (
         gate.is_controlled_by and isinstance(gate, (gates.FusedGate, gates.Unitary))

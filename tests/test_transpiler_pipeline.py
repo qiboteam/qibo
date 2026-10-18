@@ -7,6 +7,7 @@ from qiskit.transpiler import PassManager, passes
 
 from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
+from qibo.quantum_info import random_unitary
 from qibo.transpiler import unroller as unroller_module
 from qibo.transpiler._exceptions import (
     BlockingError,
@@ -981,3 +982,25 @@ def test_generate_preset_passes_disconnected_connectivity(backend, routing_metho
     circuit.add(gates.CNOT(0, 3))
     with pytest.raises(ConnectivityError, match="different connected components"):
         pipeline(circuit, backend=backend)
+
+
+@pytest.mark.parametrize("directed", [False, True], ids=["undirected", "directed"])
+def test_generate_preset_passes_unitary_on_many_qubits(backend, directed):
+    connectivity = nx.DiGraph if directed else nx.Graph
+    connectivity = connectivity([(0, 1), (1, 2), (2, 3)])
+    natives = NativeGates.default() | NativeGates.CNOT
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Unitary(random_unitary(8, seed=1, backend=backend), 2, 0, 1))
+    circuit.add(gates.CNOT(1, 3))
+    circuit.add(gates.M(0, 2))
+    pipeline = generate_preset_passes(connectivity, natives, seed=1, backend=backend)
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert pipeline.is_satisfied(transpiled_circuit)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=natives,
+    )
