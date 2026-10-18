@@ -4,7 +4,7 @@ import math
 
 from numpy.typing import ArrayLike
 
-from qibo import Circuit, gates
+from qibo import Circuit
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.quantum_info._superoperator_transformations import (
@@ -327,31 +327,4 @@ class RiemannianStateTomography(Tomography):
             followed by :class:`qibo.gates.H`. The identity and the Pauli :math:`Z` need
             no rotation. The outcomes of the qubits of the identity are not used.
         """
-        self._check_circuit(circuit)
-
-        nqubits = circuit.nqubits
-
-        for observable in observables:
-            if (
-                not isinstance(observable, str)
-                or len(observable) != nqubits
-                or set(observable) - set("IXYZ")
-            ):
-                raise_error(
-                    ValueError,
-                    f"``observables`` must be strings of {nqubits} characters "
-                    + f"``I``, ``X``, ``Y`` or ``Z``, but one is {observable!r}.",
-                )
-
-        circuits = []
-        for observable in observables:
-            tomography_circuit = circuit.copy()
-            for qubit, pauli in enumerate(observable):
-                if pauli == "Y":
-                    tomography_circuit.add(gates.SDG(qubit))
-                if pauli in "XY":
-                    tomography_circuit.add(gates.H(qubit))
-            tomography_circuit.add(gates.M(*range(nqubits)))
-            circuits.append(tomography_circuit)
-
-        return circuits
+        return self._pauli_circuits(circuit, observables)
