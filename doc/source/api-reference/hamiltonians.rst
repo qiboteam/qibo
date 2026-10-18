@@ -136,6 +136,27 @@ LABS
     :members:
     :member-order: bysource
 
+Maximum independent set
+-----------------------
+
+.. autoclass:: qibo.hamiltonians.MaxIndependentSet
+    :members:
+    :member-order: bysource
+
+Number partitioning
+-------------------
+
+.. autoclass:: qibo.hamiltonians.NumberPartitioning
+    :members:
+    :member-order: bysource
+
+QUBO
+----
+
+.. autoclass:: qibo.hamiltonians.QUBO
+    :members:
+    :member-order: bysource
+
 
 Fermi-Hubbard model
 -------------------
