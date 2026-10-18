@@ -116,6 +116,9 @@ class Passes:
     def is_satisfied(self, circuit: Circuit) -> bool:
         """Check if the circuit respects the hardware connectivity and native gates.
 
+        If there is no connectivity, only the native gates are checked, because there is
+        nothing to place and route.
+
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
 
@@ -123,11 +126,12 @@ class Passes:
             (bool): ``True`` if the circuit respects the hardware connectivity and native gates, ``False`` otherwise.
         """
         try:
-            assert_placement(circuit=circuit, connectivity=self.connectivity)
-            assert_connectivity(circuit=circuit, connectivity=self.connectivity)
+            if self.connectivity is not None:
+                assert_placement(circuit=circuit, connectivity=self.connectivity)
+                assert_connectivity(circuit=circuit, connectivity=self.connectivity)
             assert_decomposition(circuit=circuit, native_gates=self.native_gates)
             return True
-        except (ConnectivityError, DecompositionError, PlacementError, ValueError):
+        except (ConnectivityError, DecompositionError, PlacementError):
             return False
 
 
