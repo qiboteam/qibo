@@ -2312,8 +2312,10 @@ of five trials, and decomposes it to the native gates. The ``seed`` makes the tr
 reproducible. The qubits of the circuit that a multi-controlled gate does not act on are used as
 auxiliary qubits in its decomposition, and ``qubits_initially_zero=True`` also uses as clean
 auxiliary qubits the ones that no previous gate acts on, if the circuit starts in the state
-:math:`\ket{0}`. The ``layout_method`` and ``routing_method`` arguments select other placers and
-routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
+:math:`\ket{0}`. A unitary matrix on three or more qubits is decomposed with
+:func:`qibo.transpiler.unitary_decompositions.quantum_shannon_decomposition`, which uses no
+auxiliary qubits. The ``layout_method`` and ``routing_method`` arguments select other placers
+and routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
 
 .. testcode:: python
 
@@ -2348,13 +2350,35 @@ or the ``on_qubits`` parameter.
     - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
     - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
 
-The single-qubit native gates are not limited to :class:`qibo.gates.U3` and :class:`qibo.gates.GPI2`.
-Any combination of single-qubit gates that implements every single-qubit unitary exactly can be used, which
-holds if it has two rotations with free angles about orthogonal axes, such as :class:`qibo.gates.RX` and
-:class:`qibo.gates.RZ`. The axis of a rotation can also be changed by native gates without parameters, as
+The connectivity can also be disconnected, as long as every two-qubit gate acts on qubits of the
+same connected component. Otherwise the routers raise a
+:class:`qibo.transpiler._exceptions.ConnectivityError`.
+
+The single-qubit native gates are not limited to :class:`qibo.gates.U3` and
+:class:`qibo.gates.GPI2`. Any combination of single-qubit gates that implements every
+single-qubit unitary exactly can be used, which holds if it has two rotations with free angles
+about orthogonal axes, such as :class:`qibo.gates.RX` and :class:`qibo.gates.RZ`.
+The axis of a rotation can also be changed by native gates without parameters, as
 :class:`qibo.gates.H` does for :class:`qibo.gates.RZ`. The property
-:attr:`qibo.transpiler.unroller.NativeGates.is_universal` checks whether a set of native gates can
-implement any unitary, and :class:`qibo.transpiler.unroller.Unroller` raises an error if it cannot.
+:attr:`qibo.transpiler.unroller.NativeGates.is_universal` checks whether a set of
+native gates can implement any unitary, and :class:`qibo.transpiler.unroller.Unroller`
+raises an error if it cannot.
+
+Any gate without parameters that acts on two qubits can be native, such as
+:class:`qibo.gates.CNOT`, :class:`qibo.gates.CZ`, :class:`qibo.gates.ECR`, :class:`qibo.gates.SYC`
+or :class:`qibo.gates.iSWAP`. A native two-qubit gate is never decomposed. The other gates
+are decomposed into :class:`qibo.gates.CZ` gates, which are replaced by the lowest number
+of native gates that implement them. The :class:`qibo.gates.SWAP` gate can be native, but it
+cannot create entanglement, so it needs another entangling native gate to be universal.
+
+The connectivity can be a directed graph (:class:`networkx.DiGraph`), where an edge ``(a, b)``
+means that a two-qubit gate is only supported with its first qubit on ``a`` and its second qubit
+on ``b``. This matters for native gates that change when their qubits are swapped, such as
+:class:`qibo.gates.CNOT` or :class:`qibo.gates.ECR`. In that case,
+:func:`qibo.transpiler.pipeline.generate_preset_passes` ends the pipeline with
+:class:`qibo.transpiler.optimizer.GateDirection`, which reverses the gates that act against an
+edge, followed by an unroller for the single-qubit gates that it adds.
+The placers and routers ignore the directions.
 
 .. testcode:: python
 

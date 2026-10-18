@@ -339,7 +339,14 @@ class Sabre(Router):
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
+        _check_connected_components(self.circuit_map, self.connectivity)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
+        # The distance between qubits in different connected components is infinite. The
+        # SWAP gates never change the components of the qubits, so a finite value that is
+        # larger than the other distances is equivalent for the cost of the candidates,
+        # and it keeps the longest path, which sets the swap threshold, finite.
+        finite = np.isfinite(self._dist_matrix)
+        self._dist_matrix[~finite] = self._dist_matrix[finite].max() + 1.0
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._memory_map = []
         self._update_dag_layers()
@@ -789,6 +796,7 @@ class ShortestPaths(Router):
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
+        _check_connected_components(self.circuit_map, self.connectivity)
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._update_front_layer()
 
@@ -853,7 +861,8 @@ class StarConnectivityRouter(Router):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
-                Only single qubit gates and two qubits gates are supported by the router.
+                Only single qubit gates, two qubits gates and barriers are supported by
+                the router.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
@@ -875,10 +884,15 @@ class StarConnectivityRouter(Router):
                 new.add(new_gate)
                 continue
 
+            if isinstance(gate, gates.Barrier):
+                new.add(gate.on_qubits(dict(zip(gate.qubits, routed_qubits))))
+                continue
+
             if len(routed_qubits) > 2:
                 raise_error(
                     ConnectivityError,
-                    "Gates targeting more than two qubits are not supported.",
+                    "Gates targeting more than two qubits are not supported, "
+                    + "except for barriers.",
                 )
 
             if len(routed_qubits) == 2 and middle_qubit_idx not in routed_qubits:
@@ -922,6 +936,41 @@ class StarConnectivityRouter(Router):
                 )
 
 
+def _check_connected_components(
+    circuit_map: CircuitMap, connectivity: nx.Graph
+) -> None:
+    """Check that the two-qubit gates act on qubits of the same connected component.
+
+    The SWAP gates move the qubits inside their connected component, so a gate between
+    qubits of different components can never be routed, and the routers would not stop.
+
+    Args:
+        circuit_map (:class:`qibo.transpiler.router.CircuitMap`): Circuit with the initial
+            layout.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity, with the nodes
+            relabeled as the physical qubits of ``circuit_map``.
+
+    Raises:
+        ConnectivityError: If a two-qubit gate acts on qubits of different connected
+            components of the connectivity.
+    """
+    component = {
+        node: index
+        for index, nodes in enumerate(nx.connected_components(connectivity))
+        for node in nodes
+    }
+    for block in circuit_map.circuit_blocks():
+        if block.entangled:
+            first, second = circuit_map.get_physical_qubits(block)
+            if component[first] != component[second]:
+                raise_error(
+                    ConnectivityError,
+                    f"A gate acts on the qubits {block.qubits} of the circuit, which are "
+                    + "in different connected components of the connectivity graph, so "
+                    + "it cannot be routed.",
+                )
+
+
 def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
     """Helper method for :class:`qibo.transpiler.router.Sabre`.
 
@@ -929,7 +978,8 @@ def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
     commutativity relations.
 
     Args:
-        gates_qubits_pairs (list): List of qubits tuples where gates/blocks acts.
+        gates_qubits_pairs (list): List of qubits tuples where gates/blocks acts. The tuples
+            have two qubits, except for the ones of barriers, which can have more.
 
     Returns:
         (:class:`networkx.DiGraph`): Adjoint of the circuit.
@@ -949,7 +999,7 @@ def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
                 if (qubit in next_gate) and (qubit not in saturated_qubits):
                     saturated_qubits.append(qubit)
                     connectivity_list.append((idx, next_idx + idx + 1))
-            if len(saturated_qubits) >= 2:
+            if len(saturated_qubits) >= len(gate):
                 break
     dag.add_edges_from(connectivity_list)
 
@@ -967,6 +1017,8 @@ def _find_connected_qubit(
     """
     possible_qubits = {qubits[0], qubits[1]}
     for next_gate in queue:
+        if isinstance(next_gate, gates.Barrier):
+            continue
         if len(next_gate.qubits) > 2:
             raise_error(
                 error,

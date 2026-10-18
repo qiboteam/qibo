@@ -154,9 +154,9 @@ def assert_placement(circuit: Circuit, connectivity: nx.Graph | None) -> None:
 def assert_connectivity(connectivity: nx.Graph, circuit: Circuit) -> None:
     """Assert if a circuit can be executed on Hardware.
 
-    No gates acting on more than two qubits, except for measurements.
-    All two-qubit operations can be performed on hardware. Measurements do not
-    require the qubits to be connected.
+    No gates acting on more than two qubits, except for measurements and barriers.
+    All two-qubit operations can be performed on hardware. Measurements and barriers
+    do not require the qubits to be connected.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
@@ -164,7 +164,7 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit) -> None:
     """
     layout = circuit.wire_names
     for gate in circuit.queue:
-        if isinstance(gate, gates.M):
+        if isinstance(gate, (gates.Barrier, gates.M)):
             continue
         if len(gate.qubits) > 2:
             raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
@@ -183,12 +183,22 @@ def assert_decomposition(
 ) -> None:
     """Checks if a circuit has been correctly decomposed into native gates.
 
+    The identity gate, the measurements, the resets and the directives are not checked,
+    and :class:`qibo.gates.gates.Z` and :class:`qibo.gates.gates.RZ` are also accepted
+    if :class:`qibo.gates.gates.U3` or :class:`qibo.gates.gates.GPI2` are native,
+    because they are virtual gates that are assumed to be available together with them,
+    as in :class:`qibo.transpiler.unroller.Unroller`.
+
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`): Native gates supported by the hardware.
     """
+    if native_gates & (NativeGates.U3 | NativeGates.GPI2):
+        native_gates |= NativeGates.Z | NativeGates.RZ
     for gate in circuit.queue:
-        if isinstance(gate, (gates.Align, gates.Barrier, gates.M, gates.ResetChannel)):
+        if isinstance(
+            gate, (gates.Align, gates.Barrier, gates.I, gates.M, gates.ResetChannel)
+        ):
             continue
         if len(gate.qubits) <= 2:
             try:

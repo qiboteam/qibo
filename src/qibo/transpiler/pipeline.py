@@ -17,7 +17,7 @@ from qibo.transpiler.asserts import (
     assert_decomposition,
     assert_placement,
 )
-from qibo.transpiler.optimizer import Preprocessing
+from qibo.transpiler.optimizer import GateDirection, Preprocessing
 from qibo.transpiler.placer import (
     Random,
     ReverseTraversal,
@@ -36,8 +36,11 @@ class Passes:
             If ``None``, no pass is applied. See
             :func:`qibo.transpiler.pipeline.generate_preset_passes` for a ready-to-use list.
             Defaults to ``None``.
-        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
-            It is required if ``on_qubits`` is given. Defaults to ``None``.
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity. It can be
+            a directed graph, in which case an edge ``(a, b)`` means that a two-qubit gate
+            is supported with its first qubit on ``a`` and its second on ``b``, see
+            :class:`qibo.transpiler.optimizer.GateDirection`. It is required if
+            ``on_qubits`` is given. Defaults to ``None``.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware.
             Defaults to :meth:`qibo.transpiler.unroller.NativeGates.default`.
         on_qubits (list, optional): List of qubits to be used in the transpiler.
@@ -113,6 +116,9 @@ class Passes:
     def is_satisfied(self, circuit: Circuit) -> bool:
         """Check if the circuit respects the hardware connectivity and native gates.
 
+        If there is no connectivity, only the native gates are checked, because there is
+        nothing to place and route.
+
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
 
@@ -120,11 +126,12 @@ class Passes:
             (bool): ``True`` if the circuit respects the hardware connectivity and native gates, ``False`` otherwise.
         """
         try:
-            assert_placement(circuit=circuit, connectivity=self.connectivity)
-            assert_connectivity(circuit=circuit, connectivity=self.connectivity)
+            if self.connectivity is not None:
+                assert_placement(circuit=circuit, connectivity=self.connectivity)
+                assert_connectivity(circuit=circuit, connectivity=self.connectivity)
             assert_decomposition(circuit=circuit, native_gates=self.native_gates)
             return True
-        except (ConnectivityError, DecompositionError, PlacementError, ValueError):
+        except (ConnectivityError, DecompositionError, PlacementError):
             return False
 
 
@@ -157,11 +164,16 @@ def generate_preset_passes(
        with the best of five trials.
     5. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates.
 
+    If ``connectivity`` is directed, the pipeline ends with a
+    :class:`qibo.transpiler.optimizer.GateDirection` pass and an unroller, so that the
+    two-qubit gates act in the direction of the edges.
+
     Without ``connectivity`` there is nothing to place and route, so the pipeline only
     decomposes the circuit to the native gates.
 
     Args:
-        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity. It can be
+            directed, see above.
             Defaults to ``None``.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates
             supported by the hardware. Defaults to
@@ -295,6 +307,10 @@ def generate_preset_passes(
         router,
         Unroller(native_gates, backend=backend),
     ]
+    if connectivity.is_directed():
+        # the unroller does not choose the direction of the two-qubit gates, and the
+        # gates that reverse them are not necessarily native
+        passes += [GateDirection(), Unroller(native_gates, backend=backend)]
 
     return Passes(
         passes=passes,
@@ -321,14 +337,14 @@ def restrict_connectivity_qubits(
             ConnectivityError, "Some qubits are not in the original connectivity."
         )
 
-    new_connectivity = nx.Graph()
+    new_connectivity = nx.DiGraph() if connectivity.is_directed() else nx.Graph()
     new_connectivity.add_nodes_from(qubits)
     new_edges = [
         edge for edge in connectivity.edges if edge[0] in qubits and edge[1] in qubits
     ]
     new_connectivity.add_edges_from(new_edges)
 
-    if not nx.is_connected(new_connectivity):
+    if not nx.is_connected(new_connectivity.to_undirected()):
         raise_error(ConnectivityError, "New connectivity graph is not connected.")
 
     return new_connectivity

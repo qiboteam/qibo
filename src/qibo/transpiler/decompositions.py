@@ -503,6 +503,125 @@ cz_dec.add(
     ],
 )
 
+# Angles of the single-qubit gates of the decomposition of CZ into SYC gates, which are
+# the only ones that are not multiples of pi / 12.
+_SYC_ANGLE_1 = math.acos(2 - math.sqrt(3))
+_SYC_ANGLE_2 = math.acos((2 - math.sqrt(3)) ** 2)
+
+# register the decompositions of the CZ gate into the entangling native gates other than
+# iSWAP and CNOT, with the CZ gate acting on the qubits 0 and 1. The other gates are
+# decomposed into CZ gates, which are replaced by these decompositions. Each one has the
+# lowest possible number of native gates, which is one if the gate is equivalent to CZ
+# up to single-qubit gates, and two otherwise. SWAP is not here because it cannot create
+# entanglement, so it cannot be the only entangling native gate.
+native_cz_dec = {
+    gates.CH: [gates.RY(1, math.pi / 4), gates.CH(0, 1), gates.RY(1, -math.pi / 4)],
+    gates.CSX: [gates.H(1), gates.CSX(0, 1), gates.CSX(0, 1), gates.H(1)],
+    gates.CSXDG: [gates.H(1), gates.CSXDG(0, 1), gates.CSXDG(0, 1), gates.H(1)],
+    gates.CY: [gates.H(1), gates.S(1), gates.CY(0, 1), gates.SDG(1), gates.H(1)],
+    gates.ECR: [
+        gates.U3(0, -math.pi, -math.pi, -math.pi / 2),
+        gates.U3(1, math.pi / 2, -math.pi, 0),
+        gates.ECR(0, 1),
+        gates.U3(1, -math.pi / 2, -math.pi / 2, -math.pi),
+    ],
+    gates.FSWAP: [
+        gates.U3(0, -math.pi / 2, -math.pi / 2, -math.pi),
+        gates.U3(1, 0, -math.pi / 2, -math.pi / 2),
+        gates.FSWAP(0, 1),
+        gates.U3(0, 0, math.pi, math.pi / 2),
+        gates.U3(1, math.pi / 2, math.pi / 2, 0),
+        gates.FSWAP(0, 1),
+        gates.U3(0, math.pi / 2, math.pi / 2, 0),
+        gates.U3(1, 0, -math.pi, 0),
+    ],
+    gates.SiSWAP: [
+        gates.U3(0, -math.pi / 2, math.pi / 2, math.pi / 2),
+        gates.U3(1, math.pi / 2, math.pi / 2, -math.pi / 2),
+        gates.SiSWAP(0, 1),
+        gates.U3(0, -math.pi, math.pi / 2, -math.pi / 2),
+        gates.U3(1, 0, 0, -math.pi),
+        gates.SiSWAP(0, 1),
+        gates.U3(0, math.pi / 2, 0, math.pi / 2),
+        gates.U3(1, math.pi / 2, -math.pi, -math.pi / 2),
+    ],
+    gates.SiSWAPDG: [
+        gates.U3(0, math.pi / 2, math.pi / 2, -math.pi),
+        gates.U3(1, -math.pi / 2, math.pi / 2, 0),
+        gates.SiSWAPDG(0, 1),
+        gates.U3(0, 0, -math.pi / 2, -math.pi / 2),
+        gates.U3(1, -math.pi, -math.pi / 2, math.pi / 2),
+        gates.SiSWAPDG(0, 1),
+        gates.U3(0, math.pi / 2, math.pi / 2, -math.pi / 2),
+        gates.U3(1, -math.pi / 2, math.pi / 2, -math.pi / 2),
+    ],
+    gates.SYC: [
+        gates.U3(0, 0, -2 * math.pi / 3, -2 * math.pi / 3),
+        gates.U3(1, _SYC_ANGLE_1 - math.pi, 7 * math.pi / 12, -math.pi / 12),
+        gates.SYC(0, 1),
+        gates.U3(0, math.pi - _SYC_ANGLE_2, -7 * math.pi / 12, -math.pi / 2),
+        gates.U3(1, -math.pi, -5 * math.pi / 6, math.pi / 2),
+        gates.SYC(0, 1),
+        gates.U3(0, -math.pi, math.pi / 12, 7 * math.pi / 12),
+        gates.U3(1, -_SYC_ANGLE_1, 7 * math.pi / 12, -math.pi / 3),
+    ],
+}
+
+# register the decompositions of the native two-qubit gates that are not symmetric, i.e. the
+# ones that change when their qubits are swapped, into the same gate acting in the opposite
+# direction, and single-qubit gates. The decomposed gate acts on the qubits 0 and 1, and
+# the gate of the decomposition acts on the qubits 1 and 0.
+direction_dec = {
+    gates.CH: [
+        gates.RY(0, math.pi / 4),
+        gates.RY(1, -math.pi / 4),
+        gates.CH(1, 0),
+        gates.RY(0, -math.pi / 4),
+        gates.RY(1, math.pi / 4),
+    ],
+    gates.CNOT: [
+        gates.H(0),
+        gates.H(1),
+        gates.CNOT(1, 0),
+        gates.H(0),
+        gates.H(1),
+    ],
+    gates.CSX: [
+        gates.H(0),
+        gates.H(1),
+        gates.CSX(1, 0),
+        gates.H(0),
+        gates.H(1),
+    ],
+    gates.CSXDG: [
+        gates.H(0),
+        gates.H(1),
+        gates.CSXDG(1, 0),
+        gates.H(0),
+        gates.H(1),
+    ],
+    gates.CY: [
+        gates.H(0),
+        gates.S(0),
+        gates.SDG(1),
+        gates.H(1),
+        gates.CY(1, 0),
+        gates.SDG(0),
+        gates.H(0),
+        gates.H(1),
+        gates.S(1),
+    ],
+    gates.ECR: [
+        gates.H(0),
+        gates.H(1),
+        gates.ECR(1, 0),
+        gates.Z(0),
+        gates.H(0),
+        gates.H(1),
+        gates.Z(1),
+    ],
+}
+
 # register other optimized gate decompositions
 opt_dec = GateDecompositions()
 opt_dec.add(

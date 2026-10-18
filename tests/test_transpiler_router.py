@@ -23,6 +23,8 @@ from qibo.transpiler.router import (
     Sabre,
     ShortestPaths,
     StarConnectivityRouter,
+    _check_connected_components,
+    _create_dag,
 )
 
 
@@ -794,3 +796,156 @@ def test_shortest_paths_distant_qubits():
     )
     # a SWAP only acts on neighbours, so a distance of six needs at least five of them
     assert router.added_swaps >= 5
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+def test_routing_directed_connectivity(router_algorithm):
+    connectivity = nx.DiGraph([(0, 1), (2, 1), (2, 3), (3, 4)])
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 4))
+    circuit.add(gates.CNOT(4, 1))
+    router = router_algorithm(connectivity=connectivity, seed=1)
+    routed_circuit, final_layout = router(circuit)
+    # the directions do not matter to the router
+    assert_connectivity(connectivity.to_undirected(), routed_circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+
+
+@pytest.mark.parametrize(
+    "router_algorithm", [Sabre, ShortestPaths, StarConnectivityRouter]
+)
+def test_routers_store_undirected_connectivity(router_algorithm, star_connectivity):
+    assert router_algorithm().connectivity is None
+    undirected = star_connectivity()
+    assert router_algorithm(undirected).connectivity is undirected
+    directed = nx.DiGraph(undirected.edges)
+    router = router_algorithm(directed)
+    assert not router.connectivity.is_directed()
+    assert set(map(frozenset, router.connectivity.edges)) == set(
+        map(frozenset, undirected.edges)
+    )
+    assert directed.is_directed()
+
+
+def test_create_dag_with_barrier():
+    # the barrier on three qubits must keep the dependency on the gate on qubit 2,
+    # even after it meets the gate on qubits 0 and 1
+    dag = _create_dag([(0, 1, 2), (0, 1), (2, 3)])
+    assert sorted(dag.edges) == [(0, 1), (0, 2)]
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("barrier_qubits", [(0, 1, 2), (0, 1, 2, 3, 4), (0, 4)])
+def test_routing_with_barrier(router_algorithm, barrier_qubits):
+    connectivity = line_connectivity(5)
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(1, 4))
+    circuit.add(gates.Barrier(*barrier_qubits))
+    circuit.add(gates.RX(0, 0.3))
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.M(0, 1, 2, 3, 4))
+    router = router_algorithm(connectivity=connectivity)
+    routed_circuit, final_layout = router(circuit)
+    assert_connectivity(connectivity, routed_circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+    names = [gate.name for gate in routed_circuit.queue if gate.name != "swap"]
+    assert names.count("barrier") == 1
+    # every gate acts on a qubit of the barrier, so the ones that are before it in the
+    # circuit stay before, and the ones after it stay after
+    position = names.index("barrier")
+    assert sorted(names[:position]) == ["cx", "cx", "h"]
+    assert sorted(names[position + 1 :]) == ["cx", "measure", "rx"]
+    barrier = next(gate for gate in routed_circuit.queue if gate.name == "barrier")
+    assert len(barrier.qubits) == len(barrier_qubits)
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("barrier_qubits", [(0, 1, 2, 3, 4), (0, 4)])
+def test_routing_barrier_adds_no_swaps(router_algorithm, barrier_qubits):
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Barrier(*barrier_qubits))
+    circuit.add(gates.H(4))
+    router = router_algorithm(connectivity=line_connectivity(5))
+    routed_circuit, _ = router(circuit)
+    assert router.added_swaps == 0
+    assert [gate.name for gate in routed_circuit.queue] == ["h", "barrier", "h"]
+
+
+@pytest.mark.parametrize("barrier_qubits", [(0, 1, 2, 3, 4), (0, 3)])
+def test_star_router_with_barrier(barrier_qubits, star_connectivity):
+    connectivity = star_connectivity(middle_qubit_idx=2)
+    circuit = Circuit(5)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.Barrier(*barrier_qubits))
+    circuit.add(gates.CZ(1, 3))
+    circuit.add(gates.CZ(0, 2))
+    routed_circuit, final_layout = StarConnectivityRouter(connectivity)(circuit)
+    assert_connectivity(connectivity, routed_circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+    assert [gate.name for gate in routed_circuit.queue].count("barrier") == 1
+
+
+DISCONNECTED_CONNECTIVITY = nx.Graph([(0, 1), (1, 2), (2, 3), (4, 5), (5, 6), (7, 8)])
+DISCONNECTED_CONNECTIVITY.add_node(9)
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("qubits", [(0, 4), (3, 9), (6, 7)])
+def test_routing_disconnected_connectivity_error(router_algorithm, qubits):
+    circuit = Circuit(10)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(*qubits))
+    router = router_algorithm(connectivity=DISCONNECTED_CONNECTIVITY, seed=1)
+    with pytest.raises(ConnectivityError, match="different connected components"):
+        router(circuit)
+
+
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("seed", range(2))
+def test_routing_disconnected_connectivity(router_algorithm, seed):
+    rng = random.Random(seed)
+    components = [[0, 1, 2, 3], [4, 5, 6], [7, 8]]
+    circuit = Circuit(10)
+    for _ in range(20):
+        circuit.add(gates.RX(rng.randrange(10), rng.random()))
+        qubits = rng.sample(rng.choice(components), 2)
+        circuit.add(gates.CNOT(*qubits))
+    # a barrier does not need its qubits to be connected
+    circuit.add(gates.Barrier(0, 4, 9))
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.M(*range(10)))
+    router = router_algorithm(connectivity=DISCONNECTED_CONNECTIVITY, seed=seed)
+    routed_circuit, final_layout = router(circuit)
+    assert_connectivity(DISCONNECTED_CONNECTIVITY, routed_circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+
+
+def test_check_connected_components():
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(3, 4))
+    circuit_map = CircuitMap(circuit)
+    _check_connected_components(circuit_map, nx.Graph([(0, 1), (3, 4), (1, 2)]))
+    # the layout of the circuit map decides which qubits are connected
+    with pytest.raises(ConnectivityError):
+        _check_connected_components(circuit_map, nx.Graph([(0, 3), (1, 2), (2, 4)]))

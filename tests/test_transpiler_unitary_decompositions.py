@@ -19,6 +19,7 @@ from qibo.transpiler.unitary_decompositions import (
     cnot_decomposition_light,
     magic_basis,
     magic_decomposition,
+    quantum_shannon_decomposition,
     single_qubit_decomposition,
     to_bell_diagonal,
     two_qubit_decomposition,
@@ -444,3 +445,50 @@ def test_single_qubit_decomposition_euler_bases(backend, gate_classes, maximum):
         ]
         for gate, optimized_gate in zip(decomposition, optimized.queue):
             backend.assert_allclose(gate.parameters, optimized_gate.parameters)
+
+
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_quantum_shannon_decomposition(backend, nqubits):
+    qubits = (3, 0, 2, 4)[:nqubits]
+    unitary = random_unitary(2**nqubits, seed=nqubits, backend=backend)
+    decomposition = quantum_shannon_decomposition(qubits, unitary, backend=backend)
+
+    # the unitaries act on the last qubits, and the multiplexed rotations are
+    # controlled by them, with the first qubit as target
+    assert [type(gate) for gate in decomposition] == [
+        gates.Unitary,
+        gates.Multiplexor,
+        gates.Unitary,
+        gates.Multiplexor,
+        gates.Unitary,
+        gates.Multiplexor,
+        gates.Unitary,
+    ]
+    for gate in decomposition[::2]:
+        assert gate.qubits == qubits[1:]
+    for gate in decomposition[1::2]:
+        assert gate.qubits == qubits[1:] + qubits[:1]
+    assert [gate.init_kwargs["axis"] for gate in decomposition[1::2]] == ["z", "y", "z"]
+
+    nqubits_circuit = max(qubits) + 1
+    circuit = Circuit(nqubits_circuit)
+    circuit.add(decomposition)
+    target = Circuit(nqubits_circuit)
+    target.add(gates.Unitary(unitary, *qubits))
+    result, target = circuit.unitary(backend), target.unitary(backend)
+    phase = backend.dot(backend.ravel(backend.conj(target)), backend.ravel(result))
+    backend.assert_allclose(
+        result * backend.conj(phase / abs(phase)), target, atol=1e-10
+    )
+
+
+@pytest.mark.parametrize(
+    "qubits, dims",
+    [((0,), 2), ((0, 1, 2), 4), ((0, 1), 8)],
+    ids=["one-qubit", "small", "large"],
+)
+def test_quantum_shannon_decomposition_error(backend, qubits, dims):
+    with pytest.raises(ValueError):
+        quantum_shannon_decomposition(
+            qubits, random_unitary(dims, backend=backend), backend=backend
+        )

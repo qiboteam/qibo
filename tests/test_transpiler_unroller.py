@@ -10,6 +10,7 @@ from qibo.quantum_info import lie_closure, random_unitary
 from qibo.transpiler import unroller
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.asserts import assert_decomposition
+from qibo.transpiler.decompositions import native_cz_dec
 from qibo.transpiler.unitary_decompositions import single_qubit_decomposition
 from qibo.transpiler.unroller import NativeGates, Unroller, translate_gate
 
@@ -21,7 +22,7 @@ def test_native_gates_from_gatelist():
 
 def test_native_gates_from_gatelist_fail():
     with pytest.raises(ValueError):
-        NativeGates.from_gatelist([gates.RZ, gates.SWAP(0, 1)])
+        NativeGates.from_gatelist([gates.RZ, gates.RXX(0, 1, 0.1)])
 
 
 def test_native_gate_str_list():
@@ -306,6 +307,16 @@ def _lie_algebra_dimension(natives, backend):
         (NativeGates.CZ, gates.CZ(0, 1)),
         (NativeGates.iSWAP, gates.iSWAP(0, 1)),
         (NativeGates.CNOT, gates.CNOT(0, 1)),
+        (NativeGates.ECR, gates.ECR(0, 1)),
+        (NativeGates.CY, gates.CY(0, 1)),
+        (NativeGates.CH, gates.CH(0, 1)),
+        (NativeGates.CSX, gates.CSX(0, 1)),
+        (NativeGates.CSXDG, gates.CSXDG(0, 1)),
+        (NativeGates.FSWAP, gates.FSWAP(0, 1)),
+        (NativeGates.SiSWAP, gates.SiSWAP(0, 1)),
+        (NativeGates.SiSWAPDG, gates.SiSWAPDG(0, 1)),
+        (NativeGates.SYC, gates.SYC(0, 1)),
+        (NativeGates.SWAP, gates.SWAP(0, 1)),
     ):
         if natives & flag:
             conjugators.extend([to_numpy(gate), swap @ to_numpy(gate) @ swap])
@@ -349,6 +360,7 @@ def test_native_gates_is_universal(backend):
         NativeGates.RZ | NativeGates.CZ,
         NativeGates.GPI2 | NativeGates.Z,
         NativeGates.default() & ~NativeGates.CZ,
+        NativeGates.U3 | NativeGates.SWAP,
     ],
 )
 def test_unroller_not_universal(backend, natives):
@@ -443,7 +455,6 @@ def test_unroller_controlled_two_qubit_target(backend, gate, natives):
         lambda backend: gates.Unitary(
             random_unitary(4, backend=backend), 2, 3
         ).controlled_by(0, 1),
-        lambda backend: gates.Unitary(random_unitary(8, backend=backend), 0, 1, 2),
     ],
 )
 def test_unroller_unsupported_gates(backend, gate):
@@ -658,7 +669,7 @@ def test_translate_gate_registered_decomposition_is_used(
     helper.assert_called()
 
 
-@pytest.mark.parametrize("gate", [gates.CNOT(0, 1), gates.CZ(0, 1), gates.SWAP(0, 1)])
+@pytest.mark.parametrize("gate", [gates.CNOT(0, 1), gates.SWAP(0, 1)])
 def test_translate_gate_unrelated_key_error_is_not_swallowed(
     backend, monkeypatch, gate
 ):
@@ -925,3 +936,232 @@ def test_unroller_gates_with_own_decomposition(backend, gate):
         )
         assert np.isclose(abs(phase), 1.0)
         backend.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)
+
+
+def test_unroller_fused_gate_on_three_qubits(backend):
+    fused_gate = gates.FusedGate(0, 1, 2)
+    for gate in (
+        gates.H(0),
+        gates.CNOT(0, 1),
+        gates.TOFFOLI(2, 1, 0),
+        gates.RZ(2, 0.3),
+        gates.CRX(1, 2, 0.4),
+    ):
+        fused_gate.append(gate)
+    circuit = Circuit(4)
+    circuit.add(gates.H(3))
+    circuit.add(fused_gate)
+    natives = NativeGates.default()
+    state = backend.execute_circuit(circuit).state()
+    # the fused gate is decomposed before the routing, and the unused qubit is a free one
+    partially_unrolled = Unroller(
+        natives, backend=backend, min_qubits=3, use_dirty_ancillas=True
+    )(circuit)
+    assert all(len(gate.qubits) <= 2 for gate in partially_unrolled.queue)
+    fully_unrolled = Unroller(natives, backend=backend, use_dirty_ancillas=True)(
+        circuit
+    )
+    assert_decomposition(fully_unrolled, natives)
+    for translated in (partially_unrolled, fully_unrolled):
+        translated_state = backend.execute_circuit(translated).state()
+        phase = backend.dot(
+            backend.ravel(backend.conj(translated_state)), backend.ravel(state)
+        )
+        assert np.isclose(abs(phase), 1.0)
+        backend.assert_allclose(translated_state * phase / abs(phase), state, atol=1e-8)
+
+
+NEW_TWO_QUBIT_NATIVES = [
+    NativeGates.ECR,
+    NativeGates.CY,
+    NativeGates.CH,
+    NativeGates.CSX,
+    NativeGates.CSXDG,
+    NativeGates.FSWAP,
+    NativeGates.SiSWAP,
+    NativeGates.SiSWAPDG,
+    NativeGates.SYC,
+]
+
+
+def test_native_gates_two_qubit_gates():
+    natives = NativeGates.default() | NativeGates.ECR | NativeGates.SWAP
+    assert natives.two_qubit_gates == (gates.CZ, gates.ECR, gates.SWAP)
+    assert natives.single_qubit_gates == (gates.I, gates.Z, gates.RZ, gates.GPI2)
+    assert NativeGates.from_gatelist([gates.SYC, gates.U3]).two_qubit_gates == (
+        gates.SYC,
+    )
+
+
+@pytest.mark.parametrize("native", NEW_TWO_QUBIT_NATIVES + [NativeGates.SWAP])
+def test_native_gates_is_universal_new_two_qubit_gates(backend, native):
+    natives = NativeGates.I | NativeGates.M | NativeGates.U3 | native
+    dimension = _lie_algebra_dimension(natives, backend)
+    assert natives.is_universal == (dimension == 15)
+    assert natives.is_universal == (native is not NativeGates.SWAP)
+
+
+@pytest.mark.parametrize(
+    "native", NEW_TWO_QUBIT_NATIVES, ids=lambda native: native.name
+)
+def test_native_cz_dec(native):
+    gate_class = getattr(gates, native.name)
+    decomposition = native_cz_dec[gate_class]
+    circuit = Circuit(2)
+    circuit.add(decomposition)
+    cz = np.diag([1, 1, 1, -1])
+    unitary = circuit.unitary()
+    phase = np.vdot(cz.ravel(), unitary.ravel())
+    phase /= abs(phase)
+    np.testing.assert_allclose(unitary * np.conj(phase), cz, atol=1e-12)
+    # one gate if it is equivalent to CZ up to single-qubit gates, and two otherwise
+    two_qubit = [gate for gate in decomposition if len(gate.qubits) == 2]
+    assert all(isinstance(gate, gate_class) for gate in two_qubit)
+    assert len(two_qubit) == (
+        1 if native in (NativeGates.CY, NativeGates.CH, NativeGates.ECR) else 2
+    )
+
+
+@pytest.mark.parametrize(
+    "native, single_qubit",
+    [
+        (NativeGates.ECR, NativeGates.U3),
+        (NativeGates.CY, NativeGates.GPI2),
+        (NativeGates.CH, NativeGates.U3),
+        (NativeGates.CSX, NativeGates.GPI2),
+        (NativeGates.CSXDG, NativeGates.U3),
+        (NativeGates.FSWAP, NativeGates.GPI2),
+        (NativeGates.SiSWAP, NativeGates.U3),
+        (NativeGates.SiSWAPDG, NativeGates.GPI2),
+        (NativeGates.SYC, NativeGates.U3),
+    ],
+    ids=lambda native: native.name,
+)
+def test_unroller_new_two_qubit_natives(backend, native, single_qubit):
+    native_class = getattr(gates, native.name)
+    circuit = Circuit(3)
+    circuit.add(
+        [
+            gates.H(0),
+            gates.CNOT(0, 1),
+            gates.SWAP(1, 2),
+            gates.CRY(2, 0, 0.4),
+            gates.fSim(1, 2, 0.3, 0.4),
+            native_class(2, 0),
+        ]
+    )
+    natives = NativeGates.M | single_qubit | native
+    _assert_unrolled(circuit, natives, backend)
+    unrolled = Unroller(natives, backend=backend)(circuit)
+    two_qubit_gates = {
+        gate.__class__ for gate in unrolled.queue if len(gate.qubits) == 2
+    }
+    assert two_qubit_gates == {native_class}
+
+
+@pytest.mark.parametrize(
+    "native", [NativeGates.SWAP | NativeGates.CZ, NativeGates.SWAP | NativeGates.ECR]
+)
+def test_translate_gate_keeps_native_two_qubit_gates(backend, native):
+    natives = NativeGates.U3 | native
+    for gate in (gates.SWAP(2, 0), gates.CZ(1, 0), gates.ECR(1, 0)):
+        if NativeGates.from_gate(gate) & natives:
+            assert translate_gate(gate, natives, backend=backend) == [gate]
+
+
+def test_translate_gate_controlled_native_class_is_decomposed(backend):
+    natives = NativeGates.U3 | NativeGates.iSWAP
+    gate = gates.iSWAP(1, 2).controlled_by(0)
+    assert translate_gate(gate, natives, backend=backend) != [gate]
+
+
+@pytest.mark.parametrize(
+    "natives, expected",
+    [
+        (NativeGates.CZ | NativeGates.ECR, gates.CZ),
+        (NativeGates.iSWAP | NativeGates.SYC, gates.iSWAP),
+        (NativeGates.CNOT | NativeGates.SYC, gates.CNOT),
+        (NativeGates.ECR | NativeGates.CY, gates.ECR),
+        (NativeGates.SYC | NativeGates.SiSWAP, gates.SiSWAP),
+        (NativeGates.SYC | NativeGates.SWAP, gates.SYC),
+    ],
+)
+def test_unroller_preferred_entangling_native(backend, natives, expected):
+    circuit = Circuit(2)
+    circuit.add([gates.H(0), gates.CRY(0, 1, 0.3), gates.T(1)])
+    natives = natives | NativeGates.U3 | NativeGates.M
+    _assert_unrolled(circuit, natives, backend)
+    unrolled = Unroller(natives, backend=backend)(circuit)
+    assert {g.__class__ for g in unrolled.queue if len(g.qubits) == 2} == {expected}
+
+
+@pytest.mark.parametrize(
+    "gate, expected",
+    [(gates.iSWAP(0, 1), gates.iSWAP), (gates.CNOT(0, 1), gates.CZ)],
+    ids=["iSWAP", "CNOT"],
+)
+def test_translate_two_qubit_gates_fewer_two_qubit_gates(backend, gate, expected):
+    # When CZ and iSWAP are native, the decomposition with fewer two-qubit gates is used.
+    # translate_gate keeps native gates, so the helper is called directly for iSWAP.
+    natives = NativeGates.CZ | NativeGates.iSWAP | NativeGates.U3
+    translated = unroller._translate_two_qubit_gates(gate, natives, backend)
+    assert {g.__class__ for g in translated if len(g.qubits) == 2} == {expected}
+    assert sum(len(g.qubits) == 2 for g in translated) == 1
+
+
+@pytest.mark.parametrize(
+    "nqubits, natives",
+    [
+        (3, NativeGates.default()),
+        (3, NativeGates.ECR | NativeGates.U3 | NativeGates.M),
+        (
+            3,
+            NativeGates.CNOT
+            | NativeGates.RZ
+            | NativeGates.SX
+            | NativeGates.X
+            | NativeGates.M
+            | NativeGates.I,
+        ),
+        (4, NativeGates.default()),
+    ],
+    ids=["3-default", "3-ECR", "3-CNOT", "4-default"],
+)
+def test_unroller_unitary_on_many_qubits(backend, nqubits, natives):
+    qubits = (3, 0, 2, 1)[:nqubits]
+    circuit = Circuit(4)
+    unitary = random_unitary(2**nqubits, seed=1, backend=backend)
+    circuit.add(gates.Unitary(unitary, *qubits))
+    _assert_unrolled(circuit, natives, backend)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_unroller_unitary_two_qubit_gate_count(backend, nqubits):
+    circuit = Circuit(nqubits)
+    circuit.add(
+        gates.Unitary(
+            random_unitary(2**nqubits, seed=1, backend=backend), *range(nqubits)
+        )
+    )
+    unrolled = Unroller(NativeGates.default(), backend=backend)(circuit)
+    # three gates for each unitary on two qubits and 2^k for each multiplexed rotation
+    expected = 9 * 4**nqubits // 16 - 3 * 2**nqubits // 2
+    assert sum(len(gate.qubits) == 2 for gate in unrolled.queue) == expected
+
+
+def test_unroller_unitary_min_qubits(backend):
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gates.Unitary(random_unitary(8, seed=1, backend=backend), 3, 1, 2))
+    natives = NativeGates.default()
+    unrolled = Unroller(natives, backend=backend, min_qubits=3)(circuit)
+    # the gates on less than three qubits are not translated
+    assert isinstance(unrolled.queue[0], gates.H)
+    assert all(len(gate.qubits) <= 2 for gate in unrolled.queue)
+    target = circuit.unitary(backend)
+    result = unrolled.unitary(backend)
+    backend.assert_allclose(
+        backend.abs(backend.trace(backend.dagger(target) @ result)) / target.shape[0],
+        1.0,
+        atol=1e-6,
+    )

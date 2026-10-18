@@ -267,3 +267,60 @@ def test_random_zero_samples(star_connectivity):
     Random(connectivity=connectivity, samples=0)(circuit)
     assert circuit.wire_names == ["A", "B", "C", "D", "E"]
     assert_placement(circuit, connectivity)
+
+
+def test_gates_qubits_pairs_ignore_barriers():
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Barrier(0, 1, 2))
+    circuit.add(gates.Barrier(3, 4))
+    circuit.add(gates.CNOT(1, 2))
+    assert _find_gates_qubits_pairs(circuit) == [[0, 1], [1, 2]]
+
+
+@pytest.mark.parametrize("barrier_qubits", [(0, 1, 2), (0, 1, 2, 3, 4), (0, 4)])
+def test_star_connectivity_placer_barrier(barrier_qubits, star_connectivity):
+    circ = Circuit(5)
+    circ.add(gates.Barrier(*barrier_qubits))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.Barrier(*barrier_qubits))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.CZ(0, 2))
+    connectivity = star_connectivity()
+    placer = StarConnectivityPlacer(connectivity)
+    placer(circ)
+    assert_placement(circ, connectivity)
+    assert circ.wire_names == [0, 2, 1, 3, 4]
+
+
+@pytest.mark.parametrize("placer_class", [Random, Subgraph])
+def test_placers_with_barrier(placer_class, star_connectivity):
+    circ = star_circuit()
+    circ.add(gates.Barrier(0, 1, 2, 3))
+    connectivity = star_connectivity()
+    placer = placer_class(connectivity=connectivity)
+    placer(circ)
+    assert_placement(circ, connectivity)
+
+
+@pytest.mark.parametrize(
+    "placer_class",
+    [
+        Random,
+        Subgraph,
+        StarConnectivityPlacer,
+        lambda connectivity=None: ReverseTraversal(Sabre(), connectivity),
+    ],
+    ids=["Random", "Subgraph", "StarConnectivityPlacer", "ReverseTraversal"],
+)
+def test_placers_store_undirected_connectivity(placer_class, star_connectivity):
+    assert placer_class().connectivity is None
+    undirected = star_connectivity()
+    assert placer_class(undirected).connectivity is undirected
+    directed = nx.DiGraph(undirected.edges)
+    placer = placer_class(directed)
+    assert not placer.connectivity.is_directed()
+    assert set(map(frozenset, placer.connectivity.edges)) == set(
+        map(frozenset, undirected.edges)
+    )
+    assert directed.is_directed()

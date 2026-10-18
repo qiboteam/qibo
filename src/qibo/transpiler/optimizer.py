@@ -9,10 +9,10 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
-from qibo.transpiler._exceptions import PlacementError
+from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
-from qibo.transpiler.decompositions import u3_dec
+from qibo.transpiler.decompositions import direction_dec, u3_dec
 from qibo.transpiler.unitary_decompositions import _EULER_BASES, _euler_sequence
 
 # Gates of :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement`, whose
@@ -293,6 +293,88 @@ class FixedPoint(Optimizer):
                 break
 
         return circuit
+
+
+class GateDirection(Optimizer):
+    """Reverses the two-qubit gates that act against the direction of the connectivity.
+
+    A directed edge ``(a, b)`` of the connectivity means that a two-qubit gate is only
+    supported with its first qubit on ``a`` and its second qubit on ``b``. The gates that
+    act on the opposite direction of an edge are replaced as follows:
+
+    - the gates that are symmetric, *i.e.* that do not change when their qubits are
+      swapped, such as :class:`qibo.gates.gates.CZ`, have their qubits swapped. This
+      includes the controlled gates, such as a phase gate with one control;
+    - the native gates that are not symmetric, which are :class:`qibo.gates.gates.CNOT`,
+      :class:`qibo.gates.gates.CH`, :class:`qibo.gates.gates.CSX`,
+      :class:`qibo.gates.gates.CSXDG`, :class:`qibo.gates.gates.CY` and
+      :class:`qibo.gates.gates.ECR`, are replaced by the same gate acting in the right
+      direction and single-qubit gates, see
+      :data:`qibo.transpiler.decompositions.direction_dec`.
+
+    The gates that act in the direction of an edge, or on qubits that are not connected,
+    are not changed. The added single-qubit gates are not necessarily native, so this
+    pass should be followed by an :class:`qibo.transpiler.unroller.Unroller`, and it
+    should come after the one that decomposes the gates into native gates, because that
+    one does not choose the direction of the two-qubit gates. If the connectivity is not
+    directed, the circuit is not changed.
+
+    Args:
+        connectivity (:class:`networkx.DiGraph`, optional): Hardware connectivity, whose
+            nodes are the ``wire_names`` of the circuit.
+            :class:`qibo.transpiler.pipeline.Passes` sets it. Defaults to ``None``.
+    """
+
+    def __init__(self, connectivity: nx.DiGraph | None = None):
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
+        """Reverse the two-qubit gates that act against the direction of the connectivity.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be reversed.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to get
+                the matrices of the gates that are not in the decompositions. If
+                ``None``, it uses the global backend. Defaults to ``None``.
+
+        Returns:
+            (:class:`qibo.models.circuit.Circuit`): Circuit with the gates in the
+            direction of the connectivity.
+
+        Raises:
+            ConnectivityError: If a gate acts against the direction of the connectivity
+                and it is neither symmetric nor one of the gates that are decomposed.
+        """
+        if self.connectivity is None:
+            raise_error(ValueError, "Connectivity graph is not provided.")
+        backend = _check_backend(backend)
+        edges = self.connectivity.edges
+        new = Circuit(**circuit.init_kwargs)
+        for gate in circuit.queue:
+            if len(gate.qubits) != 2 or isinstance(gate, (gates.Barrier, gates.M)):
+                new.add(gate)
+                continue
+            edge = tuple(circuit.wire_names[qubit] for qubit in gate.qubits)
+            if edge in edges or edge[::-1] not in edges:
+                new.add(gate)
+            elif gate.__class__ in direction_dec and not gate.is_controlled_by:
+                qubits = dict(enumerate(gate.qubits))
+                new.add([g.on_qubits(qubits) for g in direction_dec[gate.__class__]])
+            else:
+                # the matrix of a controlled gate is the one of its target only, so the
+                # matrix on both qubits is taken from a fused gate
+                fused_gate = gates.FusedGate(*gate.qubits)
+                fused_gate.append(gate)
+                matrix = backend.to_numpy(backend.matrix_fused(fused_gate))
+                if not backend.allclose(matrix, matrix[[0, 2, 1, 3]][:, [0, 2, 1, 3]]):
+                    raise_error(
+                        ConnectivityError,
+                        f"{gate.name} acts on {edge}, against the direction of the "
+                        + "connectivity, and it cannot be reversed. Decompose it into "
+                        + "native gates first.",
+                    )
+                new.add(gate.on_qubits(dict(zip(gate.qubits, gate.qubits[::-1]))))
+        return new
 
 
 class InverseCancellation(Optimizer):
