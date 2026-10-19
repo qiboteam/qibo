@@ -444,7 +444,7 @@ def transpile(
     Returns:
         (:class:`qibo.models.circuit.Circuit`, dict) or list: Transpiled circuit and final
         {logical: physical} qubit mapping, see :class:`qibo.transpiler.pipeline.Passes`.
-        If ``circuits`` is a list, the list of these pairs, in the same order.
+        If ``circuits`` is a list or tuple, the list of these pairs, in the same order.
 
     """
     passes = generate_preset_passes(
