@@ -370,6 +370,54 @@ def transpile(
     :func:`qibo.transpiler.pipeline.generate_preset_passes`, and they are shared by all the
     circuits.
 
+    Example:
+        A random unitary on three qubits and a CNOT gate between qubits that are not neighbors
+        are transpiled to a line of four qubits, where :class:`qibo.gates.CNOT` and
+        :class:`qibo.gates.U3` are the native gates. The unitary is decomposed, the SWAP gates
+        that the routing adds are decomposed too, and the transpiled circuit is drawn. If
+        ``circuits`` is a list, the result is a list with a transpiled circuit and a final
+        layout for each circuit.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.quantum_info import random_unitary
+            from qibo.transpiler import NativeGates, transpile
+            from qibo.transpiler.asserts import assert_transpiling
+
+            circuit = Circuit(4)
+            circuit.add(gates.H(0))
+            circuit.add(gates.Unitary(random_unitary(8, seed=42), 0, 1, 2))
+            circuit.add(gates.CNOT(0, 3))
+            circuit.add(gates.M(*range(4)))
+
+            connectivity = nx.path_graph(4)
+            natives = NativeGates.from_gatelist([gates.U3, gates.CNOT, gates.M])
+            transpiled_circuit, final_layout = transpile(circuit, connectivity, natives, seed=42)
+
+            # Raises an error if the circuits are not equivalent, or if the transpiled circuit
+            # does not respect the connectivity and the native gates
+            assert_transpiling(
+                original_circuit=circuit,
+                transpiled_circuit=transpiled_circuit,
+                connectivity=connectivity,
+                final_layout=final_layout,
+                native_gates=natives,
+            )
+
+            print(final_layout)
+            transpiled_circuit.draw(line_wrap=1000, parallel=True)
+
+        .. testoutput::
+
+            {0: 2, 1: 0, 2: 1, 3: 3}
+            0: ──────────────────────────────────o──X─o────────────o─────────o──U3───────o─U3───────o─U3───────o─U3───────────────o─────────o──U3───────o─U3───────o─U3───────o─U3───────────────o─────────o──U3─────o─U3───────o─U3───────o─U3────M─
+            1: ─U3────o─U3───────o─U3───────o─U3─X──o─X─U3─RZ─X─RZ─X─RZ─X─RZ─X──U3─o─X─o─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3─o────X─o─X─X─U3─X─U3─X──RZ─o─X─o─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3─o────X─o─X─X─RZ─X─RZ─X──o──X─o─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3─M─
+            2: ─U3─U3─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3───────────o─────────o─U3─U3────X─o─X───────────────────────────────X─U3─o─X─o──────o─U3─U3────X─o─X───────────────────────────────X─RZ─o─X─o──────o─U3─U3─X──o─X─o─────────────────────────────M─
+            3: ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────X─────────────────────────────M─
+
     Args:
         circuits (:class:`qibo.models.circuit.Circuit` or list): Circuit, or list of
             circuits, to be transpiled.
@@ -397,6 +445,7 @@ def transpile(
         (:class:`qibo.models.circuit.Circuit`, dict) or list: Transpiled circuit and final
         {logical: physical} qubit mapping, see :class:`qibo.transpiler.pipeline.Passes`.
         If ``circuits`` is a list, the list of these pairs, in the same order.
+
     """
     passes = generate_preset_passes(
         connectivity=connectivity,
