@@ -124,6 +124,17 @@ def test_generate_preset_passes_directed_structure():
     assert isinstance(translator, Unroller) and translator.native_gates == natives
 
 
+def test_generate_preset_passes_too_many_qubits(star_connectivity):
+    """A circuit larger than the hardware raises an error that says so."""
+    passes = generate_preset_passes(connectivity=star_connectivity())
+    circuit = Circuit(7)
+    circuit.add(gates.CNOT(0, 6))
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
+        passes(circuit)
+
+
 def test_generate_preset_passes_undirected_has_no_gate_direction():
     pipeline = generate_preset_passes(nx.path_graph(4))
     assert not any(isinstance(p, GateDirection) for p in pipeline.passes)
