@@ -1066,3 +1066,20 @@ def test_transpile_without_connectivity(backend):
     transpiled_circuit, final_layout = transpile(circuit, backend=backend)
     assert final_layout is None
     assert_decomposition(transpiled_circuit, NativeGates.default())
+
+
+def test_transpile_forwards_backend(backend, monkeypatch):
+    """The backend reaches all the passes, not only the unrollers."""
+    received = []
+    call = Passes.__call__
+
+    def spy(self, circuit, backend=None):
+        received.append(backend)
+        return call(self, circuit, backend=backend)
+
+    monkeypatch.setattr(Passes, "__call__", spy)
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    transpile(circuit, backend=backend)
+    transpile([circuit, circuit], backend=backend)
+    assert received == [backend] * 3

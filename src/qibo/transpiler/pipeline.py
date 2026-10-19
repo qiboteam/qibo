@@ -439,7 +439,8 @@ def transpile(
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuits executable. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
-            unrollers to compute the gate matrices. Defaults to ``None``.
+            unrollers to compute the gate matrices, and passed to the other passes that take
+            one. If ``None``, they use the global backend. Defaults to ``None``.
 
     Returns:
         (:class:`qibo.models.circuit.Circuit`, dict) or list: Transpiled circuit and final
@@ -459,6 +460,6 @@ def transpile(
         backend=backend,
     )
     if isinstance(circuits, Circuit):
-        return passes(circuits)
+        return passes(circuits, backend=backend)
 
-    return [passes(circuit) for circuit in circuits]
+    return [passes(circuit, backend=backend) for circuit in circuits]
