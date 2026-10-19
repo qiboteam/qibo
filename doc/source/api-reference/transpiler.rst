@@ -116,6 +116,12 @@ See :ref:`tutorials_multicontrolled` for examples of all the options.
 .. autofunction:: qibo.transpiler.multi_controlled_decomposition
 
 
+Quantum Shannon decomposition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.transpiler.quantum_shannon_decomposition
+
+
 Optimizer
 ---------
 

@@ -440,7 +440,7 @@ def quantum_shannon_decomposition(
     are defined by the first qubit, is
 
     .. math::
-        U = (A_{1} \\oplus A_{2}) \\, \begin{pmatrix} C & -S \\ S & C \\end{pmatrix} \\,
+        U = (A_{1} \\oplus A_{2}) \\, \\begin{pmatrix} C & -S \\\\ S & C \\end{pmatrix} \\,
         (B_{1} \\oplus B_{2}) \\, ,
 
     where the middle matrix is a multiplexed :class:`qibo.gates.gates.RY` rotation of

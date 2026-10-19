@@ -2313,7 +2313,7 @@ reproducible. The qubits of the circuit that a multi-controlled gate does not ac
 auxiliary qubits in its decomposition, and ``qubits_initially_zero=True`` also uses as clean
 auxiliary qubits the ones that no previous gate acts on, if the circuit starts in the state
 :math:`\ket{0}`. A unitary matrix on three or more qubits is decomposed with
-:func:`qibo.transpiler.decompositions.quantum_shannon_decomposition`,
+:func:`qibo.transpiler.quantum_shannon_decomposition`,
 which uses no auxiliary qubits. The ``layout_method`` and ``routing_method`` arguments select other
 placers and routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
 
