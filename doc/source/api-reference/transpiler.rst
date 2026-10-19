@@ -240,6 +240,12 @@ Restrict qubit connectivity
 .. autofunction:: qibo.transpiler.pipeline.restrict_connectivity_qubits
 
 
+Transpile
+^^^^^^^^^
+
+.. autofunction:: qibo.transpiler.transpile
+
+
 Placer
 ------
 
