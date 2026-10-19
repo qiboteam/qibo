@@ -348,3 +348,68 @@ def restrict_connectivity_qubits(
         raise_error(ConnectivityError, "New connectivity graph is not connected.")
 
     return new_connectivity
+
+
+def transpile(
+    circuits: Circuit | list[Circuit],
+    connectivity: nx.Graph | None = None,
+    native_gates: NativeGates | None = None,
+    initial_layout: list[int | str] | None = None,
+    seed: int | None = None,
+    on_qubits: list[int | str] | None = None,
+    qubits_initially_zero: bool = False,
+    layout_method: str | Placer | None = None,
+    routing_method: str | Router | None = None,
+    backend: Backend | None = None,
+) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
+    """Transpile one or more circuits in a single call, without optimizing them.
+
+    It builds the pipeline of :func:`qibo.transpiler.pipeline.generate_preset_passes` once
+    and applies it to the circuits, which makes them executable on the hardware.
+    All the arguments except ``circuits`` are the ones of
+    :func:`qibo.transpiler.pipeline.generate_preset_passes`, and they are shared by all the
+    circuits.
+
+    Args:
+        circuits (:class:`qibo.models.circuit.Circuit` or list): Circuit, or list of
+            circuits, to be transpiled.
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            Defaults to ``None``.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates
+            supported by the hardware. Defaults to
+            :meth:`qibo.transpiler.unroller.NativeGates.default`.
+        initial_layout (list, optional): Physical qubits on which the logical qubits of the
+            circuits are placed. Defaults to ``None``.
+        seed (int, optional): Seed of the random choices of the placer and the router.
+            Defaults to ``None``.
+        on_qubits (list, optional): List of qubits to be used in the transpiler.
+            Defaults to ``None``.
+        qubits_initially_zero (bool, optional): If ``True``, the circuits are assumed to
+            start in the state :math:`\\ket{0}^{\\otimes n}`. Defaults to ``False``.
+        layout_method (str or :class:`qibo.transpiler.abstract.Placer`, optional): Placer
+            that finds the initial layout. Defaults to ``None``.
+        routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
+            that makes the circuits executable. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
+            unrollers to compute the gate matrices. Defaults to ``None``.
+
+    Returns:
+        (:class:`qibo.models.circuit.Circuit`, dict) or list: Transpiled circuit and final
+        {logical: physical} qubit mapping, see :class:`qibo.transpiler.pipeline.Passes`.
+        If ``circuits`` is a list, the list of these pairs, in the same order.
+    """
+    passes = generate_preset_passes(
+        connectivity=connectivity,
+        native_gates=native_gates,
+        initial_layout=initial_layout,
+        seed=seed,
+        on_qubits=on_qubits,
+        qubits_initially_zero=qubits_initially_zero,
+        layout_method=layout_method,
+        routing_method=routing_method,
+        backend=backend,
+    )
+    if isinstance(circuits, Circuit):
+        return passes(circuits)
+
+    return [passes(circuit) for circuit in circuits]
