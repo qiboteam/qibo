@@ -2313,9 +2313,9 @@ reproducible. The qubits of the circuit that a multi-controlled gate does not ac
 auxiliary qubits in its decomposition, and ``qubits_initially_zero=True`` also uses as clean
 auxiliary qubits the ones that no previous gate acts on, if the circuit starts in the state
 :math:`\ket{0}`. A unitary matrix on three or more qubits is decomposed with
-:func:`qibo.transpiler.unitary_decompositions.quantum_shannon_decomposition`, which uses no
-auxiliary qubits. The ``layout_method`` and ``routing_method`` arguments select other placers
-and routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
+:func:`qibo.transpiler.decompositions.quantum_shannon_decomposition`,
+which uses no auxiliary qubits. The ``layout_method`` and ``routing_method`` arguments select other
+placers and routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
 
 .. testcode:: python
 
@@ -2521,7 +2521,7 @@ into native gates:
   the same two qubits with at most three CZ gates, using the KAK (Cartan) decomposition.
   It is useful after routing, where SWAP gates meet the gates of the circuit.
   Its ``weight`` argument, :math:`\sqrt{2}` by default, is described in
-  :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+  :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
 - :class:`qibo.transpiler.optimizer.FixedPoint` applies a list of optimizers repeatedly
   until the circuit stops changing, so that each optimizer can profit from the
   simplifications made by the others.
@@ -2683,7 +2683,7 @@ to most hardware. Qibo decomposes them into gates with at most two qubits.
 The decompositions are exact, and they are available through the
 :meth:`qibo.gates.abstract.Gate.decompose` and :meth:`qibo.models.circuit.Circuit.decompose`
 methods, through the :class:`qibo.transpiler.unroller.Unroller` transpiler pass, and through
-the function :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+the function :func:`qibo.transpiler.multi_controlled_decomposition`.
 
 Throughout this example we count two-qubit gates (CZ, controlled-Z) after unrolling the
 decomposition into CZ and one-qubit gates, and we compare the unitary matrix of each
@@ -2947,7 +2947,7 @@ Using the decomposition function directly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The methods above call the function
-:func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`, which
+:func:`qibo.transpiler.multi_controlled_decomposition`, which
 can also be used directly with the matrix of the target gate, the ids of the control qubits
 and the id of the target qubit. It returns a list of gates, like ``decompose``:
 
