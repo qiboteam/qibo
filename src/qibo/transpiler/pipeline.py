@@ -351,7 +351,7 @@ def restrict_connectivity_qubits(
 
 
 def transpile(
-    circuits: Circuit | list[Circuit],
+    circuits: Circuit | list[Circuit] | tuple[Circuit],
     connectivity: nx.Graph | None = None,
     native_gates: NativeGates | None = None,
     initial_layout: list[int | str] | None = None,
@@ -419,7 +419,7 @@ def transpile(
             3: ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────X─────────────────────────────M─
 
     Args:
-        circuits (:class:`qibo.models.circuit.Circuit` or list): Circuit, or list of
+        circuits (:class:`qibo.models.circuit.Circuit` or list or tuple): Circuit, or list of
             circuits, to be transpiled.
         connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
             Defaults to ``None``.

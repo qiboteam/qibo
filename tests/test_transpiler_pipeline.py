@@ -1029,8 +1029,8 @@ def test_transpile_circuit(backend):
     pipeline = generate_preset_passes(connectivity, natives, seed=0, backend=backend)
     expected_circuit, expected_layout = pipeline(circuit, backend=backend)
     assert final_layout == expected_layout
-    assert [gate.name for gate in transpiled_circuit.queue] == [
-        gate.name for gate in expected_circuit.queue
+    assert [(gate.name, gate.qubits) for gate in transpiled_circuit.queue] == [
+        (gate.name, gate.qubits) for gate in expected_circuit.queue
     ]
     assert_transpiling(
         original_circuit=circuit,
