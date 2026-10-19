@@ -577,7 +577,7 @@ class Gate:
         """
         try:
             if method == "clifford_plus_t":
-                from qibo.transpiler.decompositions import (
+                from qibo.transpiler.decompositions.clifford_plus_t_decompositions import (
                     clifford_plus_t,
                 )
 
@@ -588,7 +588,7 @@ class Gate:
                 func._set_precision_cliff_plus_t(epsilon, mpmath_dps)
 
             else:
-                from qibo.transpiler.decompositions import (
+                from qibo.transpiler.decompositions.standard_decompositions import (
                     standard_decompositions,
                 )
 
