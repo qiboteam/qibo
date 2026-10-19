@@ -314,7 +314,7 @@ class GateDirection(Optimizer):
       :class:`qibo.gates.gates.CSXDG`, :class:`qibo.gates.gates.CY` and
       :class:`qibo.gates.gates.ECR`, are replaced by the same gate acting in the right
       direction and single-qubit gates, see
-      :data:`qibo.transpiler.decompositions.direction_decompositions.direction_dec`.
+      :data:`qibo.transpiler.decompositions.direction_dec`.
 
     The gates that act in the direction of an edge, or on qubits that are not connected,
     are not changed. The added single-qubit gates are not necessarily native, so this
