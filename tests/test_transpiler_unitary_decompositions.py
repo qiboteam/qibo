@@ -10,7 +10,7 @@ from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler import Optimize1qGatesDecomposition
 from qibo.transpiler._exceptions import DecompositionError
-from qibo.transpiler.unitary_decompositions import (
+from qibo.transpiler.decompositions.unitary_decompositions import (
     bell_basis,
     calculate_h_vector,
     calculate_psi,

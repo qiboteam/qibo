@@ -8,8 +8,8 @@ import pytest
 from qibo import Circuit, gates
 from qibo.gates.abstract import GATES_CONTROLLED_BY_DEFAULT
 from qibo.quantum_info.random_ensembles import random_statevector, random_unitary
-from qibo.transpiler import multicontrolled_decompositions
-from qibo.transpiler.multicontrolled_decompositions import (
+from qibo.transpiler.decompositions import multicontrolled_decompositions
+from qibo.transpiler.decompositions.multicontrolled_decompositions import (
     multi_controlled_decomposition,
 )
 from qibo.transpiler.unroller import NativeGates, Unroller

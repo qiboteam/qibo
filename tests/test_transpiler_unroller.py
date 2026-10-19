@@ -11,7 +11,9 @@ from qibo.transpiler import unroller
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.asserts import assert_decomposition
 from qibo.transpiler.decompositions.cz_decompositions import native_cz_dec
-from qibo.transpiler.unitary_decompositions import single_qubit_decomposition
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    single_qubit_decomposition,
+)
 from qibo.transpiler.unroller import NativeGates, Unroller, translate_gate
 
 
