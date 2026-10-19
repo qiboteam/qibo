@@ -2,7 +2,7 @@ import math
 
 from qibo import gates
 from qibo.transpiler.decompositions.abstract import GateDecompositions
-from qibo.transpiler.unitary_decompositions import u3_decomposition
+from qibo.transpiler.decompositions.unitary_decompositions import u3_decomposition
 
 
 def _u3_to_gpi2(t: float, p: float, l: float) -> list[gates.Gate]:

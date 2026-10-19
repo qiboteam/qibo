@@ -2,7 +2,9 @@ import math
 
 from qibo import gates
 from qibo.transpiler.decompositions.abstract import GateDecompositions
-from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    two_qubit_decomposition,
+)
 
 # register CZ decompositions
 cz_dec = GateDecompositions()

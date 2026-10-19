@@ -115,7 +115,7 @@ class X(Gate):
                 For gates controlled by more than two qubits and ``method = "standard"``,
                 the keyword arguments ``clean``, ``minimize_toffolis`` and
                 ``minimize_depth`` are passed to
-                :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+                :func:`qibo.transpiler.multi_controlled_decomposition`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Set of one-qubit, :class:`qibo.gates.CNOT`,
@@ -134,7 +134,7 @@ class X(Gate):
         if len(controls) < 3:
             return [self.__class__(target).controlled_by(*controls)]
 
-        from qibo.transpiler.multicontrolled_decompositions import (
+        from qibo.transpiler.decompositions.multicontrolled_decompositions import (
             multi_controlled_decomposition,
         )
 

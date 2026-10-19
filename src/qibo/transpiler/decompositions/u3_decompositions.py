@@ -2,7 +2,7 @@ import math
 
 from qibo import gates
 from qibo.transpiler.decompositions.abstract import GateDecompositions
-from qibo.transpiler.unitary_decompositions import u3_decomposition
+from qibo.transpiler.decompositions.unitary_decompositions import u3_decomposition
 
 # Decompose single qubit gates using U3
 u3_dec = GateDecompositions()

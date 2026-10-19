@@ -14,7 +14,10 @@ from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
 from qibo.transpiler.decompositions.u3_decompositions import u3_dec
-from qibo.transpiler.unitary_decompositions import _EULER_BASES, _euler_sequence
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    _EULER_BASES,
+    _euler_sequence,
+)
 
 # Gates of :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement`, whose
 # matrices are diagonal in the computational basis. A gate stays diagonal when more
@@ -105,7 +108,7 @@ class ConsolidateBlocks(Optimizer):
     Args:
         weight (float, optional): Weight of the imaginary part in the matrix that is
             diagonalized to find the local gates of the decomposition, see
-            :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
             Defaults to :math:`\\sqrt{2}`.
 
     Example:
