@@ -1164,7 +1164,7 @@ class Preprocessing(Optimizer):
             default_wire_names = list(self.connectivity.nodes)[:logical_qubits]
             log.warning(
                 "Some wire_names in the circuit are not in the connectivity graph. "
-                + f"Using wire name {default_wire_names}."
+                + f"Using wire names {default_wire_names}."
             )
             circuit.wire_names = default_wire_names
 
