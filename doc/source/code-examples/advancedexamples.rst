@@ -2340,6 +2340,111 @@ and routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
     True
 
 
+The function :func:`qibo.transpiler.transpile` builds this pipeline and applies it to a
+circuit, or to a list of circuits, in a single call. The arguments are the ones of
+:func:`qibo.transpiler.pipeline.generate_preset_passes`, and they are shared by all the
+circuits, which are transpiled with the same pipeline and returned in the same order.
+In the following example, a quantum Fourier transform, a circuit with a multi-controlled gate
+and a star-shaped circuit are transpiled to a seven-qubit hardware with a directed
+connectivity, where :class:`qibo.gates.ECR` is the only native two-qubit gate. The circuits
+are transpiled twice, to compare two ways of placing the qubits: ``"trivial"`` keeps the
+qubits on the first nodes of the connectivity, and ``"subgraph"``
+(:class:`qibo.transpiler.placer.Subgraph`) looks for a placement that needs fewer
+:class:`qibo.gates.SWAP` gates. The circuits start in the state :math:`\ket{0}`, so the qubits
+that no previous gate acts on are used as clean auxiliary qubits to decompose the
+multi-controlled gate. Each transpiled circuit is checked against the original one, taking the
+final layout into account, and the number of :class:`qibo.gates.ECR` gates is printed.
+Finally, the transpiled star-shaped circuit is drawn, with all the gates that act on disjoint
+qubits in the same column (``parallel=True``) and without wrapping the lines
+(``line_wrap=1000``).
+
+.. testcode:: python
+
+    import networkx as nx
+
+    from qibo import Circuit, gates
+    from qibo.models import QFT
+    from qibo.transpiler import NativeGates, transpile
+    from qibo.transpiler.asserts import assert_transpiling
+
+    # Directed connectivity: an edge (a, b) is supported with its first qubit on a
+    connectivity = nx.DiGraph([(0, 1), (1, 2), (1, 3), (3, 5), (4, 5), (5, 6)])
+    natives = NativeGates.from_gatelist([gates.U3, gates.ECR, gates.M])
+
+    qft = QFT(3)
+    qft.add(gates.M(*range(3)))
+
+    multi_controlled = Circuit(4)
+    multi_controlled.add(gates.H(0))
+    multi_controlled.add(gates.H(1))
+    multi_controlled.add(gates.X(3).controlled_by(0, 1, 2))
+    multi_controlled.add(gates.M(*range(4)))
+
+    star = Circuit(4)
+    star.add(gates.H(0))
+    star.add(gates.CNOT(0, 1))
+    star.add(gates.CNOT(0, 2))
+    star.add(gates.CNOT(0, 3))
+    star.add(gates.M(*range(4)))
+
+    names = ("QFT", "multi-controlled", "star")
+    circuits = [qft, multi_controlled, star]
+
+    for layout_method in ("trivial", "subgraph"):
+        results = transpile(
+            circuits,
+            connectivity,
+            natives,
+            seed=1,
+            qubits_initially_zero=True,
+            layout_method=layout_method,
+        )
+
+        for name, circuit, (transpiled_circuit, final_layout) in zip(
+            names, circuits, results
+        ):
+            # Raises an error if the circuits are not equivalent, or if the transpiled
+            # circuit does not respect the connectivity and the native gates
+            assert_transpiling(
+                original_circuit=circuit,
+                transpiled_circuit=transpiled_circuit,
+                connectivity=connectivity,
+                final_layout=final_layout,
+                native_gates=natives,
+            )
+            ecr_count = sum(isinstance(gate, gates.ECR) for gate in transpiled_circuit.queue)
+            print(f"{layout_method} layout, {name}: {ecr_count} ECR gates")
+
+        # The last circuit is the star-shaped one
+        print(f"Star-shaped circuit with the {layout_method} layout:")
+        transpiled_circuit.draw(line_wrap=1000, parallel=True)
+
+.. testoutput:: python
+
+    trivial layout, QFT: 12 ECR gates
+    trivial layout, multi-controlled: 20 ECR gates
+    trivial layout, star: 6 ECR gates
+    Star-shaped circuit with the trivial layout:
+    0: ─U3─U3─ECR─U3──────────ECR─U3─U3─U3────ECR─U3─Z──U3─U3─U3─ECR──────────────────────────────M─
+    1: ─U3─U3─ECR─U3─U3─U3─U3─ECR─U3─U3─U3─U3─ECR─Z──U3─U3─U3────ECR─U3─U3─U3─ECR─U3────ECR───────M─
+    2: ─U3─U3─────────────────────────────────────────────────────────────────ECR─U3─U3─|─────────M─
+    3: ─U3─U3───────────────────────────────────────────────────────────────────────────ECR─U3─U3─M─
+    5: ─────────────────────────────────────────────────────────────────────────────────────────────
+    4: ─────────────────────────────────────────────────────────────────────────────────────────────
+    6: ─────────────────────────────────────────────────────────────────────────────────────────────
+    subgraph layout, QFT: 12 ECR gates
+    subgraph layout, multi-controlled: 20 ECR gates
+    subgraph layout, star: 3 ECR gates
+    Star-shaped circuit with the subgraph layout:
+    1: ─U3─U3─U3─ECR─Z──U3─U3────ECR─U3────ECR───────M─
+    0: ─U3─U3─U3─ECR─U3─Z──U3─U3─|─────────|─────────M─
+    2: ─U3─U3────────────────────ECR─U3─U3─|─────────M─
+    3: ─U3─U3──────────────────────────────ECR─U3─U3─M─
+    5: ────────────────────────────────────────────────
+    4: ────────────────────────────────────────────────
+    6: ────────────────────────────────────────────────
+
+
 In the current Qibo version, transpiler passes require that
 ``wire_names`` match the qubit names in the given connectivity graph.
 This can be done manually or by using :class:`qibo.transpiler.optimizer.Preprocessing`
