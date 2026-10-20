@@ -4,6 +4,7 @@ from qibo.transpiler.decompositions.multicontrolled_decompositions import (
 from qibo.transpiler.decompositions.unitary_decompositions import (
     quantum_shannon_decomposition,
 )
+from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import (
     BarrierBeforeFinalMeasurements,
     ConsolidateBlocks,
@@ -56,6 +57,7 @@ __all__ = [
     "StarConnectivityRouter",
     "Subgraph",
     "TGateRules",
+    "TranspileLayout",
     "Unroller",
     "generate_preset_passes",
     "multi_controlled_decomposition",

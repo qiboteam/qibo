@@ -574,7 +574,9 @@ def test_generate_preset_passes_without_connectivity(backend, ngates):
     pipeline = generate_preset_passes(native_gates=natives, backend=backend)
     assert len(pipeline.passes) == 1
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
-    assert final_layout is None
+    assert final_layout == {0: 0, 1: 1, 2: 2}
+    assert final_layout.initial_layout == [0, 1, 2]
+    assert final_layout.nqubits_input == 3
     assert transpiled_circuit.nqubits == circuit.nqubits
     assert_decomposition(transpiled_circuit, natives)
     assert_circuit_equivalence(
@@ -1064,7 +1066,7 @@ def test_transpile_without_connectivity(backend):
     circuit = Circuit(2)
     circuit.add(gates.CNOT(0, 1))
     transpiled_circuit, final_layout = transpile(circuit, backend=backend)
-    assert final_layout is None
+    assert final_layout.routing_permutation == [0, 1]
     assert_decomposition(transpiled_circuit, NativeGates.default())
 
 
