@@ -26,6 +26,7 @@ from qibo.transpiler.pipeline import (
     Passes,
     generate_preset_passes,
     restrict_connectivity_qubits,
+    transpile,
 )
 from qibo.transpiler.placer import (
     Random,
@@ -122,6 +123,17 @@ def test_generate_preset_passes_directed_structure():
     ]
     assert isinstance(direction, GateDirection)
     assert isinstance(translator, Unroller) and translator.native_gates == natives
+
+
+def test_generate_preset_passes_too_many_qubits(star_connectivity):
+    """A circuit larger than the hardware raises an error that says so."""
+    passes = generate_preset_passes(connectivity=star_connectivity())
+    circuit = Circuit(7)
+    circuit.add(gates.CNOT(0, 6))
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
+        passes(circuit)
 
 
 def test_generate_preset_passes_undirected_has_no_gate_direction():
@@ -1004,3 +1016,70 @@ def test_generate_preset_passes_unitary_on_many_qubits(backend, directed):
         final_layout=final_layout,
         native_gates=natives,
     )
+
+
+def test_transpile_circuit(backend):
+    connectivity = nx.path_graph(5)
+    natives = NativeGates.default()
+    circuit = generate_random_circuit(nqubits=4, ngates=10)
+    circuit.add(gates.M(*range(4)))
+    transpiled_circuit, final_layout = transpile(
+        circuit, connectivity, natives, seed=0, backend=backend
+    )
+    pipeline = generate_preset_passes(connectivity, natives, seed=0, backend=backend)
+    expected_circuit, expected_layout = pipeline(circuit, backend=backend)
+    assert final_layout == expected_layout
+    assert [(gate.name, gate.qubits) for gate in transpiled_circuit.queue] == [
+        (gate.name, gate.qubits) for gate in expected_circuit.queue
+    ]
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=natives,
+    )
+
+
+def test_transpile_list_of_circuits(backend):
+    connectivity = nx.path_graph(5)
+    natives = NativeGates.default()
+    circuits = [
+        generate_random_circuit(nqubits=nqubits, ngates=10, seed=nqubits)
+        for nqubits in (2, 5)
+    ]
+    results = transpile(circuits, connectivity, natives, seed=0, backend=backend)
+    assert len(results) == len(circuits)
+    for circuit, (transpiled_circuit, final_layout) in zip(circuits, results):
+        assert_transpiling(
+            original_circuit=circuit,
+            transpiled_circuit=transpiled_circuit,
+            connectivity=connectivity,
+            final_layout=final_layout,
+            native_gates=natives,
+        )
+
+
+def test_transpile_without_connectivity(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    transpiled_circuit, final_layout = transpile(circuit, backend=backend)
+    assert final_layout is None
+    assert_decomposition(transpiled_circuit, NativeGates.default())
+
+
+def test_transpile_forwards_backend(backend, monkeypatch):
+    """The backend reaches all the passes, not only the unrollers."""
+    received = []
+    call = Passes.__call__
+
+    def spy(self, circuit, backend=None):
+        received.append(backend)
+        return call(self, circuit, backend=backend)
+
+    monkeypatch.setattr(Passes, "__call__", spy)
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    transpile(circuit, backend=backend)
+    transpile([circuit, circuit], backend=backend)
+    assert received == [backend] * 3

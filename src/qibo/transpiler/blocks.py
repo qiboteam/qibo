@@ -5,7 +5,9 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates import Gate
 from qibo.transpiler._exceptions import BlockingError
-from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    two_qubit_decomposition,
+)
 
 # Number of controlled-Z (CZ) gates that implement the two-qubit gates costing more than
 # one. The cost of any other two-qubit gate is taken to be one, which is a lower bound.
@@ -117,7 +119,7 @@ class Block:
         Args:
             weight (float, optional): Weight of the imaginary part in the matrix that is
                 diagonalized to find the local gates, see
-                :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+                :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
                 Defaults to :math:`\\sqrt{2}`.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
                 build the matrix of the block. If ``None``, defaults to the global

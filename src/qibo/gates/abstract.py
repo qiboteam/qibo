@@ -208,7 +208,7 @@ class Gate:
         If the gate is already controlled, it recursively decomposes the base gate and updates
         the control qubits accordingly. The exception are one-qubit gates controlled by more
         than one qubit, which are decomposed by
-        :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`
+        :func:`qibo.transpiler.multi_controlled_decomposition`
         (only if ``method="standard"``). Without ``free`` qubits no (dirty) auxiliary qubits
         are used. The decomposition is applied recursively, so that the returned
         gates are controlled by at most one qubit.
@@ -235,7 +235,7 @@ class Gate:
                 ``mpmmath_dps`` defaults to :math:`256`. For gates controlled by more than one
                 qubit and ``method = "standard"``, the keyword arguments ``clean``,
                 ``minimize_toffolis`` and ``minimize_depth`` are passed to
-                :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+                :func:`qibo.transpiler.multi_controlled_decomposition`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
@@ -255,7 +255,7 @@ class Gate:
             # Step 2: Multi-controlled one-qubit gates have a dedicated decomposition
             if ncontrols > 1 and len(self.target_qubits) == 1 and method == "standard":
                 from qibo.backends import _numpy_backend
-                from qibo.transpiler.multicontrolled_decompositions import (
+                from qibo.transpiler.decompositions.multicontrolled_decompositions import (
                     multi_controlled_decomposition,
                 )
 
@@ -577,7 +577,7 @@ class Gate:
         """
         try:
             if method == "clifford_plus_t":
-                from qibo.transpiler.decompositions import (
+                from qibo.transpiler.decompositions.clifford_plus_t_decompositions import (
                     clifford_plus_t,
                 )
 
@@ -588,7 +588,7 @@ class Gate:
                 func._set_precision_cliff_plus_t(epsilon, mpmath_dps)
 
             else:
-                from qibo.transpiler.decompositions import (
+                from qibo.transpiler.decompositions.standard_decompositions import (
                     standard_decompositions,
                 )
 

@@ -1,5 +1,8 @@
-from qibo.transpiler.multicontrolled_decompositions import (
+from qibo.transpiler.decompositions.multicontrolled_decompositions import (
     multi_controlled_decomposition,
+)
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    quantum_shannon_decomposition,
 )
 from qibo.transpiler.optimizer import (
     ConsolidateBlocks,
@@ -16,7 +19,7 @@ from qibo.transpiler.optimizer import (
     ResetAfterMeasureSimplification,
     TGateRules,
 )
-from qibo.transpiler.pipeline import Passes, generate_preset_passes
+from qibo.transpiler.pipeline import Passes, generate_preset_passes, transpile
 from qibo.transpiler.placer import (
     Random,
     ReverseTraversal,
@@ -52,4 +55,6 @@ __all__ = [
     "Unroller",
     "generate_preset_passes",
     "multi_controlled_decomposition",
+    "quantum_shannon_decomposition",
+    "transpile",
 ]

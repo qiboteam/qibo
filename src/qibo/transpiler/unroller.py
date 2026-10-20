@@ -7,16 +7,15 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates import Gate
 from qibo.transpiler._exceptions import DecompositionError
-from qibo.transpiler.decompositions import (
-    cz_dec,
-    gpi2_dec,
-    iswap_dec,
-    native_cz_dec,
-    opt_dec,
+from qibo.transpiler.decompositions.cz_decompositions import cz_dec, native_cz_dec
+from qibo.transpiler.decompositions.gpi2_decompositions import gpi2_dec
+from qibo.transpiler.decompositions.iswap_decompositions import iswap_dec
+from qibo.transpiler.decompositions.opt_decompositions import opt_dec
+from qibo.transpiler.decompositions.standard_decompositions import (
     standard_decompositions,
-    u3_dec,
 )
-from qibo.transpiler.unitary_decompositions import (
+from qibo.transpiler.decompositions.u3_decompositions import u3_dec
+from qibo.transpiler.decompositions.unitary_decompositions import (
     _euler_frames,
     quantum_shannon_decomposition,
     single_qubit_decomposition,
@@ -65,7 +64,7 @@ class NativeGates(Flag, metaclass=FlagMeta):
     single-qubit unitary. These are :class:`qibo.gates.gates.U3`,
     :class:`qibo.gates.gates.GPI2`, or a combination of the other single-qubit gates
     that has two rotations with free angles about orthogonal axes, see
-    :func:`qibo.transpiler.unitary_decompositions.single_qubit_decomposition`.
+    :func:`qibo.transpiler.decompositions.unitary_decompositions.single_qubit_decomposition`.
     For example, :class:`qibo.gates.gates.RX` and :class:`qibo.gates.gates.RZ`, or
     :class:`qibo.gates.gates.RZ` and :class:`qibo.gates.gates.H`.
     :class:`qibo.gates.gates.Z` and :class:`qibo.gates.gates.RZ` are virtual gates,
@@ -250,7 +249,7 @@ class Unroller:
             :class:`qibo.gates.X` with at least one auxiliary qubit is decomposed with a
             depth that is logarithmic in the number of controls. It cannot be used together
             with ``minimize_toffolis``. See
-            :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+            :func:`qibo.transpiler.multi_controlled_decomposition`.
             Defaults to ``False``.
     """
 
@@ -364,7 +363,7 @@ def translate_gate(
         minimize_toffolis (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` is decomposed with the lowest number of Toffoli gates
             when it has auxiliary qubits, see
-            :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+            :func:`qibo.transpiler.multi_controlled_decomposition`.
             Defaults to ``False``.
         minimize_depth (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` is decomposed with a logarithmic depth when it has

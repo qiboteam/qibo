@@ -348,3 +348,118 @@ def restrict_connectivity_qubits(
         raise_error(ConnectivityError, "New connectivity graph is not connected.")
 
     return new_connectivity
+
+
+def transpile(
+    circuits: Circuit | list[Circuit] | tuple[Circuit],
+    connectivity: nx.Graph | None = None,
+    native_gates: NativeGates | None = None,
+    initial_layout: list[int | str] | None = None,
+    seed: int | None = None,
+    on_qubits: list[int | str] | None = None,
+    qubits_initially_zero: bool = False,
+    layout_method: str | Placer | None = None,
+    routing_method: str | Router | None = None,
+    backend: Backend | None = None,
+) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
+    """Transpile one or more circuits in a single call, without optimizing them.
+
+    It builds the pipeline of :func:`qibo.transpiler.pipeline.generate_preset_passes` once
+    and applies it to the circuits, which makes them executable on the hardware.
+    All the arguments except ``circuits`` are the ones of
+    :func:`qibo.transpiler.pipeline.generate_preset_passes`, and they are shared by all the
+    circuits.
+
+    Example:
+        A random unitary on three qubits and a CNOT gate between qubits that are not neighbors
+        are transpiled to a line of four qubits, where :class:`qibo.gates.CNOT` and
+        :class:`qibo.gates.U3` are the native gates. The unitary is decomposed, the SWAP gates
+        that the routing adds are decomposed too, and the transpiled circuit is drawn. If
+        ``circuits`` is a list, the result is a list with a transpiled circuit and a final
+        layout for each circuit.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.quantum_info import random_unitary
+            from qibo.transpiler import NativeGates, transpile
+            from qibo.transpiler.asserts import assert_transpiling
+
+            circuit = Circuit(4)
+            circuit.add(gates.H(0))
+            circuit.add(gates.Unitary(random_unitary(8, seed=42), 0, 1, 2))
+            circuit.add(gates.CNOT(0, 3))
+            circuit.add(gates.M(*range(4)))
+
+            connectivity = nx.path_graph(4)
+            natives = NativeGates.from_gatelist([gates.U3, gates.CNOT, gates.M])
+            transpiled_circuit, final_layout = transpile(circuit, connectivity, natives, seed=42)
+
+            # Raises an error if the circuits are not equivalent, or if the transpiled circuit
+            # does not respect the connectivity and the native gates
+            assert_transpiling(
+                original_circuit=circuit,
+                transpiled_circuit=transpiled_circuit,
+                connectivity=connectivity,
+                final_layout=final_layout,
+                native_gates=natives,
+            )
+
+            print(final_layout)
+            transpiled_circuit.draw(line_wrap=1000, parallel=True)
+
+        .. testoutput::
+
+            {0: 2, 1: 0, 2: 1, 3: 3}
+            0: ──────────────────────────────────o──X─o────────────o─────────o──U3───────o─U3───────o─U3───────o─U3───────────────o─────────o──U3───────o─U3───────o─U3───────o─U3───────────────o─────────o──U3─────o─U3───────o─U3───────o─U3────M─
+            1: ─U3────o─U3───────o─U3───────o─U3─X──o─X─U3─RZ─X─RZ─X─RZ─X─RZ─X──U3─o─X─o─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3─o────X─o─X─X─U3─X─U3─X──RZ─o─X─o─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3─o────X─o─X─X─RZ─X─RZ─X──o──X─o─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3─M─
+            2: ─U3─U3─X─U3─U3─U3─X─U3─U3─U3─X─U3─U3───────────o─────────o─U3─U3────X─o─X───────────────────────────────X─U3─o─X─o──────o─U3─U3────X─o─X───────────────────────────────X─RZ─o─X─o──────o─U3─U3─X──o─X─o─────────────────────────────M─
+            3: ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────X─────────────────────────────M─
+
+    Args:
+        circuits (:class:`qibo.models.circuit.Circuit` or list or tuple): Circuit, or list of
+            circuits, to be transpiled.
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            Defaults to ``None``.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates
+            supported by the hardware. Defaults to
+            :meth:`qibo.transpiler.unroller.NativeGates.default`.
+        initial_layout (list, optional): Physical qubits on which the logical qubits of the
+            circuits are placed. Defaults to ``None``.
+        seed (int, optional): Seed of the random choices of the placer and the router.
+            Defaults to ``None``.
+        on_qubits (list, optional): List of qubits to be used in the transpiler.
+            Defaults to ``None``.
+        qubits_initially_zero (bool, optional): If ``True``, the circuits are assumed to
+            start in the state :math:`\\ket{0}^{\\otimes n}`. Defaults to ``False``.
+        layout_method (str or :class:`qibo.transpiler.abstract.Placer`, optional): Placer
+            that finds the initial layout. Defaults to ``None``.
+        routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
+            that makes the circuits executable. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
+            unrollers to compute the gate matrices, and passed to the other passes that take
+            one. If ``None``, they use the global backend. Defaults to ``None``.
+
+    Returns:
+        (:class:`qibo.models.circuit.Circuit`, dict) or list: Transpiled circuit and final
+        {logical: physical} qubit mapping, see :class:`qibo.transpiler.pipeline.Passes`.
+        If ``circuits`` is a list or tuple, the list of these pairs, in the same order.
+
+    """
+    passes = generate_preset_passes(
+        connectivity=connectivity,
+        native_gates=native_gates,
+        initial_layout=initial_layout,
+        seed=seed,
+        on_qubits=on_qubits,
+        qubits_initially_zero=qubits_initially_zero,
+        layout_method=layout_method,
+        routing_method=routing_method,
+        backend=backend,
+    )
+    if isinstance(circuits, Circuit):
+        return passes(circuits, backend=backend)
+
+    return [passes(circuit, backend=backend) for circuit in circuits]

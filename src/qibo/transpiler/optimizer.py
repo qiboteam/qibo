@@ -12,8 +12,12 @@ from qibo.gates.abstract import Gate, SpecialGate
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
-from qibo.transpiler.decompositions import direction_dec, u3_dec
-from qibo.transpiler.unitary_decompositions import _EULER_BASES, _euler_sequence
+from qibo.transpiler.decompositions.direction_decompositions import direction_dec
+from qibo.transpiler.decompositions.u3_decompositions import u3_dec
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    _EULER_BASES,
+    _euler_sequence,
+)
 
 # Gates of :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement`, whose
 # matrices are diagonal in the computational basis. A gate stays diagonal when more
@@ -104,7 +108,7 @@ class ConsolidateBlocks(Optimizer):
     Args:
         weight (float, optional): Weight of the imaginary part in the matrix that is
             diagonalized to find the local gates of the decomposition, see
-            :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
             Defaults to :math:`\\sqrt{2}`.
 
     Example:
@@ -1134,6 +1138,7 @@ class Preprocessing(Optimizer):
         Raises:
             PlacementError: If ``initial_layout`` does not have a distinct node of the
                 connectivity for every qubit of the circuit.
+            ValueError: If the circuit has more qubits than the connectivity has nodes.
         """
         if self.initial_layout is not None:
             layout = list(self.initial_layout)
@@ -1149,21 +1154,24 @@ class Preprocessing(Optimizer):
                 )
             circuit.wire_names = layout
 
-        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
-            default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
-            log.warning(
-                f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {default_wire_names}."
-            )
-            circuit.wire_names = default_wire_names
-
         physical_qubits = self.connectivity.number_of_nodes()
         logical_qubits = circuit.nqubits
+        # checked before the ``wire_names`` are replaced, which needs enough nodes
         if logical_qubits > physical_qubits:
             raise_error(
                 ValueError,
                 f"The number of qubits in the circuit ({logical_qubits}) "
                 + f"can't be greater than the number of physical qubits ({physical_qubits}).",
             )
+
+        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
+            default_wire_names = list(self.connectivity.nodes)[:logical_qubits]
+            log.warning(
+                "Some wire_names in the circuit are not in the connectivity graph. "
+                + f"Using wire names {default_wire_names}."
+            )
+            circuit.wire_names = default_wire_names
+
         if logical_qubits == physical_qubits:
             return circuit
 

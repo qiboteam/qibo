@@ -113,7 +113,13 @@ Multi-controlled gate decomposition
 
 See :ref:`tutorials_multicontrolled` for examples of all the options.
 
-.. autofunction:: qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition
+.. autofunction:: qibo.transpiler.multi_controlled_decomposition
+
+
+Quantum Shannon decomposition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.transpiler.quantum_shannon_decomposition
 
 
 Optimizer
@@ -238,6 +244,12 @@ Restrict qubit connectivity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: qibo.transpiler.pipeline.restrict_connectivity_qubits
+
+
+Transpile
+^^^^^^^^^
+
+.. autofunction:: qibo.transpiler.transpile
 
 
 Placer
