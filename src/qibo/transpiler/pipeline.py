@@ -17,6 +17,7 @@ from qibo.transpiler.asserts import (
     assert_decomposition,
     assert_placement,
 )
+from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import GateDirection, Preprocessing
 from qibo.transpiler.placer import (
     Random,
@@ -80,15 +81,18 @@ class Passes:
                 Defaults to ``None``.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final
-            {logical: physical} qubit mapping. The mapping is ``None`` if the pipeline
-            has no router.
+            (:class:`qibo.models.circuit.Circuit`,
+            :class:`qibo.transpiler.layout.TranspileLayout`): Transpiled circuit and final
+            {logical: physical} qubit mapping, which also stores the layout before the
+            routing. If the pipeline has no router, the qubits are not moved, so the
+            mapping is the identity.
         """
         # an unroller uses its own backend unless one is explicitly given
         unroller_backend = backend
         backend = _check_backend(backend)
 
         final_layout = None
+        nqubits_input = circuit.nqubits
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
                 transpiler_pass.connectivity = self.connectivity
@@ -101,7 +105,11 @@ class Passes:
                 final_layout = transpiler_pass(circuit, backend=backend)
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
+                initial_layout = circuit.wire_names
                 circuit, final_layout = transpiler_pass(circuit)
+                final_layout = TranspileLayout(
+                    final_layout, initial_layout, nqubits_input
+                )
             elif isinstance(transpiler_pass, Unroller):
                 circuit = transpiler_pass(circuit, backend=unroller_backend)
             elif transpiler_pass.__class__.__name__ == "QiskitPasses":
@@ -111,6 +119,14 @@ class Passes:
                     TranspilerPipelineError,
                     f"Unrecognised transpiler pass: {transpiler_pass}",
                 )
+
+        if final_layout is None:
+            final_layout = TranspileLayout(
+                {name: index for index, name in enumerate(circuit.wire_names)},
+                circuit.wire_names,
+                nqubits_input,
+            )
+
         return circuit, final_layout
 
     def is_satisfied(self, circuit: Circuit) -> bool:
@@ -443,9 +459,11 @@ def transpile(
             one. If ``None``, they use the global backend. Defaults to ``None``.
 
     Returns:
-        (:class:`qibo.models.circuit.Circuit`, dict) or list: Transpiled circuit and final
-        {logical: physical} qubit mapping, see :class:`qibo.transpiler.pipeline.Passes`.
-        If ``circuits`` is a list or tuple, the list of these pairs, in the same order.
+        (:class:`qibo.models.circuit.Circuit`,
+        :class:`qibo.transpiler.layout.TranspileLayout`) or list: Transpiled circuit and
+        final {logical: physical} qubit mapping, see
+        :class:`qibo.transpiler.pipeline.Passes`. If ``circuits`` is a list or tuple, the
+        list of these pairs, in the same order.
 
     """
     passes = generate_preset_passes(
