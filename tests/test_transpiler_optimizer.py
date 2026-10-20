@@ -32,7 +32,9 @@ from qibo.transpiler.pipeline import Passes
 def test_preprocessing_error(star_connectivity):
     circ = Circuit(7)
     preprocesser = Preprocessing(connectivity=star_connectivity())
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
         preprocesser(circuit=circ)
 
     wire_names = [0, 1, 2, "q3", "q4"]
@@ -48,7 +50,9 @@ def test_preprocessing_too_many_logical_qubits(star_connectivity):
     """
     circ = Circuit(6, wire_names=[0, 1, 2, 0, 1, 2])
     preprocesser = Preprocessing(connectivity=star_connectivity())
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
         preprocesser(circuit=circ)
 
 
@@ -67,6 +71,17 @@ def test_preprocessing_add(star_connectivity):
     new_circuit = preprocesser(circuit=circ)
     assert new_circuit.ngates == 1
     assert new_circuit.nqubits == 5
+
+
+def test_preprocessing_wire_names_not_in_connectivity(star_connectivity):
+    """``wire_names`` outside the connectivity are replaced by its first nodes."""
+    circ = Circuit(2, wire_names=["a", "b"])
+    circ.add(gates.CNOT(0, 1))
+    preprocesser = Preprocessing(connectivity=star_connectivity())
+    new_circuit = preprocesser(circuit=circ)
+    assert new_circuit.wire_names == [0, 1, 2, 3, 4]
+    assert new_circuit.nqubits == 5
+    assert new_circuit.queue[0].qubits == (0, 1)
 
 
 def test_preprocessing_initial_layout(star_connectivity):

@@ -1134,6 +1134,7 @@ class Preprocessing(Optimizer):
         Raises:
             PlacementError: If ``initial_layout`` does not have a distinct node of the
                 connectivity for every qubit of the circuit.
+            ValueError: If the circuit has more qubits than the connectivity has nodes.
         """
         if self.initial_layout is not None:
             layout = list(self.initial_layout)
@@ -1149,21 +1150,24 @@ class Preprocessing(Optimizer):
                 )
             circuit.wire_names = layout
 
-        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
-            default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
-            log.warning(
-                f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {default_wire_names}."
-            )
-            circuit.wire_names = default_wire_names
-
         physical_qubits = self.connectivity.number_of_nodes()
         logical_qubits = circuit.nqubits
+        # checked before the ``wire_names`` are replaced, which needs enough nodes
         if logical_qubits > physical_qubits:
             raise_error(
                 ValueError,
                 f"The number of qubits in the circuit ({logical_qubits}) "
                 + f"can't be greater than the number of physical qubits ({physical_qubits}).",
             )
+
+        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
+            default_wire_names = list(self.connectivity.nodes)[:logical_qubits]
+            log.warning(
+                "Some wire_names in the circuit are not in the connectivity graph. "
+                + f"Using wire names {default_wire_names}."
+            )
+            circuit.wire_names = default_wire_names
+
         if logical_qubits == physical_qubits:
             return circuit
 
