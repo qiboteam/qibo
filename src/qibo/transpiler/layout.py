@@ -11,8 +11,15 @@ class TranspileLayout(dict):
     transpiled circuit.
 
     Example:
-        A CNOT gate between the first and last qubits of a line of three qubits needs a
-        SWAP gate, which exchanges the second and last qubits.
+        A circuit on four qubits is transpiled to a line of five qubits. It is drawn
+        before and after the transpilation with ``parallel=True``, so that the gates
+        on disjoint qubits share a column, and with ``line_wrap=12``, which splits the
+        wider transpiled circuit in two blocks. The routing adds the SWAP gates, drawn as
+        ``x``, and the preprocessing adds the fifth qubit of the line as an auxiliary
+        qubit, which is not used. The :math:`i`-th element of the routing permutation is
+        the physical qubit on which the :math:`i`-th qubit ends: the first qubit does
+        not move, while the second, third and fourth qubits end on the third, fourth and
+        second physical qubits.
 
         .. testcode::
 
@@ -21,24 +28,48 @@ class TranspileLayout(dict):
             from qibo import Circuit, gates
             from qibo.transpiler import Passes, Preprocessing, ShortestPaths
 
-            circuit = Circuit(3)
-            circuit.add(gates.CNOT(0, 2))
+            circuit = Circuit(4)
+            circuit.add(gates.H(0))
+            circuit.add(gates.H(2))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(2, 3))
+            circuit.add(gates.CNOT(0, 3))
+            circuit.add(gates.CNOT(1, 2))
+            circuit.add(gates.M(0, 1, 2, 3))
 
-            connectivity = nx.path_graph(3)
+            circuit.draw(parallel=True)
+            print()
+
             pipeline = Passes(
-                [Preprocessing(), ShortestPaths(seed=1)], connectivity=connectivity
+                [Preprocessing(), ShortestPaths(seed=1)], connectivity=nx.path_graph(5)
             )
-            _, layout = pipeline(circuit)
+            transpiled_circuit, layout = pipeline(circuit)
+
+            transpiled_circuit.draw(parallel=True)
+            print()
 
             print(dict(layout))
             print(layout.initial_layout)
             print(layout.routing_permutation)
+            print(layout.nqubits_input)
 
         .. testoutput::
 
-            {0: 0, 1: 2, 2: 1}
-            [0, 1, 2]
-            [0, 2, 1]
+            0: ─H─o─o───M─
+            1: ───X─|─o─M─
+            2: ─H─o─|─X─M─
+            3: ───X─X───M─
+
+            0: ─H─o───────o─M─
+            1: ───X─o───x─X─M─
+            2: ─H─o─X─x─x───M─
+            3: ───X───x─────M─
+            4: ───────────────
+
+            {0: 0, 1: 2, 2: 3, 3: 1, 4: 4}
+            [0, 1, 2, 3, 4]
+            [0, 2, 3, 1, 4]
+            4
 
     Args:
         final_layout (dict): Mapping from the label of the physical qubit on which each
