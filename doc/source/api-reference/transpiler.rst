@@ -125,6 +125,22 @@ Quantum Shannon decomposition
 Optimizer
 ---------
 
+Barrier before final measurements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.BarrierBeforeFinalMeasurements
+    :members:
+    :member-order: bysource
+
+
+Filter gates
+^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.FilterGates
+    :members:
+    :member-order: bysource
+
+
 Gate direction
 ^^^^^^^^^^^^^^
 

@@ -5,7 +5,9 @@ from qibo.transpiler.decompositions.unitary_decompositions import (
     quantum_shannon_decomposition,
 )
 from qibo.transpiler.optimizer import (
+    BarrierBeforeFinalMeasurements,
     ConsolidateBlocks,
+    FilterGates,
     FixedPoint,
     InverseCancellation,
     Optimize1qGatesDecomposition,
@@ -30,7 +32,9 @@ from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 __all__ = [
+    "BarrierBeforeFinalMeasurements",
     "ConsolidateBlocks",
+    "FilterGates",
     "FixedPoint",
     "InverseCancellation",
     "NativeGates",
