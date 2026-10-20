@@ -268,6 +268,14 @@ Transpile
 .. autofunction:: qibo.transpiler.transpile
 
 
+Transpile layout
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.layout.TranspileLayout
+    :members:
+    :member-order: bysource
+
+
 Placer
 ------
 
