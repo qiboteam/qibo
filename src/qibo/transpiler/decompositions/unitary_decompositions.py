@@ -25,7 +25,8 @@ bell_basis = np.array(
 ) / np.sqrt(2)
 
 
-# Euler bases of :func:`qibo.transpiler.unitary_decompositions.single_qubit_decomposition`
+# Euler bases of
+# :func:`qibo.transpiler.decompositions.unitary_decompositions.single_qubit_decomposition`
 # and :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`. Each name maps
 # to the names of the gates that the basis needs.
 _EULER_BASES = {
@@ -329,7 +330,8 @@ def magic_decomposition(
 ) -> tuple[ArrayLike, ...]:
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050.
 
-    The argument ``weight`` is defined in :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+    The argument ``weight`` is defined in
+    :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
     """
     backend = _check_backend(backend)
     unitary = backend.cast(unitary, dtype=unitary.dtype)
@@ -438,7 +440,7 @@ def quantum_shannon_decomposition(
     are defined by the first qubit, is
 
     .. math::
-        U = (A_{1} \\oplus A_{2}) \\, \begin{pmatrix} C & -S \\ S & C \\end{pmatrix} \\,
+        U = (A_{1} \\oplus A_{2}) \\, \\begin{pmatrix} C & -S \\\\ S & C \\end{pmatrix} \\,
         (B_{1} \\oplus B_{2}) \\, ,
 
     where the middle matrix is a multiplexed :class:`qibo.gates.gates.RY` rotation of
@@ -621,7 +623,7 @@ def two_qubit_decomposition(
             if the operator-Schmidt coefficients of the unitary vanish or coincide.
         weight (float, optional): Weight of the imaginary part in the matrix that is
             diagonalized to find the local gates, see
-            :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
             Defaults to :math:`\\sqrt{2}`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.

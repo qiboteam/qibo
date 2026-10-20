@@ -8,7 +8,9 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
-from qibo.transpiler.decompositions import standard_decompositions
+from qibo.transpiler.decompositions.standard_decompositions import (
+    standard_decompositions,
+)
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):

@@ -7,9 +7,9 @@ from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.asserts import assert_decomposition
-from qibo.transpiler.decompositions import (
+from qibo.transpiler.decompositions.direction_decompositions import direction_dec
+from qibo.transpiler.decompositions.standard_decompositions import (
     _mottonen_compute_theta,
-    direction_dec,
     standard_decompositions,
 )
 from qibo.transpiler.unroller import (

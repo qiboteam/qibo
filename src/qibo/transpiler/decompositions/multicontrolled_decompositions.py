@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 from qibo import gates
 from qibo.backends import Backend, _check_backend, _numpy_backend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.transpiler.unitary_decompositions import u3_decomposition
+from qibo.transpiler.decompositions.unitary_decompositions import u3_decomposition
 
 
 def multi_controlled_decomposition(

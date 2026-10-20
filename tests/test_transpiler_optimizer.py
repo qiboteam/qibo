@@ -9,7 +9,7 @@ from qibo import Circuit, gates
 from qibo.gates.special import Barrier
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Optimizer
-from qibo.transpiler.decompositions import direction_dec
+from qibo.transpiler.decompositions.direction_decompositions import direction_dec
 from qibo.transpiler.optimizer import (
     ConsolidateBlocks,
     FixedPoint,
