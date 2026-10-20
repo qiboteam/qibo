@@ -11,7 +11,9 @@ from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
 from qibo.transpiler.optimizer import (
+    BarrierBeforeFinalMeasurements,
     ConsolidateBlocks,
+    FilterGates,
     FixedPoint,
     GateDirection,
     InverseCancellation,
@@ -27,6 +29,7 @@ from qibo.transpiler.optimizer import (
     TGateRules,
 )
 from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.router import Sabre
 
 
 def test_preprocessing_error(star_connectivity):
@@ -1784,3 +1787,93 @@ def test_gate_direction_in_passes(backend):
     assert [g.qubits for g in reversed_circuit.queue if isinstance(g, gates.CNOT)] == [
         (1, 0)
     ]
+
+
+def test_barrier_before_final_measurements():
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0))
+    circuit.add(gates.X(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Barrier(1))
+    circuit.add(gates.M(1))
+    circuit.add(gates.M(2))
+    new = BarrierBeforeFinalMeasurements()(circuit)
+    assert [gate.name for gate in new.queue] == [
+        "h",
+        "measure",
+        "x",
+        "cx",
+        "barrier",
+        "barrier",
+        "measure",
+        "measure",
+    ]
+    assert new.queue[4].qubits == (0, 1, 2)
+    assert new.queue[5].qubits == (1,)
+    assert [gate.qubits for gate in new.queue[-2:]] == [(1,), (2,)]
+    assert new.nqubits == circuit.nqubits
+    assert len(new.measurements) == len(circuit.measurements)
+
+
+def test_barrier_before_final_measurements_without_final_measurements():
+    circuit = Circuit(2)
+    circuit.add(gates.M(0))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    assert BarrierBeforeFinalMeasurements()(circuit) is circuit
+
+    circuit = Circuit(2)
+    assert BarrierBeforeFinalMeasurements()(circuit) is circuit
+
+
+def test_barrier_before_final_measurements_circuit_kwargs():
+    circuit = Circuit(2, wire_names=["a", "b"], density_matrix=True)
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(1))
+    new = BarrierBeforeFinalMeasurements()(circuit)
+    assert new.wire_names == ["a", "b"]
+    assert new.density_matrix
+    assert [gate.name for gate in new.queue] == ["h", "barrier", "measure"]
+
+
+def test_filter_gates(backend):
+    circuit = Circuit(2, wire_names=["a", "b"])
+    circuit.add(gates.H(0))
+    circuit.add(gates.Barrier(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.X(1))
+    new = FilterGates(lambda gate: not isinstance(gate, gates.Barrier))(circuit)
+    assert [gate.name for gate in new.queue] == ["h", "cx", "x"]
+    assert new.wire_names == ["a", "b"]
+    assert [gate.name for gate in circuit.queue][1] == "barrier"
+    backend.assert_allclose(
+        backend.execute_circuit(new).state(),
+        backend.execute_circuit(circuit).state(),
+    )
+
+    assert FilterGates(lambda gate: False)(circuit).ngates == 0
+    assert FilterGates(lambda gate: True)(circuit).ngates == circuit.ngates
+
+
+def test_barrier_before_final_measurements_in_pipeline(backend):
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.M(0, 1, 2, 3))
+    pipeline = Passes(
+        [
+            Preprocessing(),
+            BarrierBeforeFinalMeasurements(),
+            Sabre(seed=1),
+            FilterGates(lambda gate: not isinstance(gate, gates.Barrier)),
+        ],
+        connectivity=nx.path_graph(4),
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    names = [gate.name for gate in transpiled.queue]
+    assert "barrier" not in names
+    assert names[-1] == "measure"
+    assert names.count("measure") == 1

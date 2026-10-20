@@ -1,6 +1,7 @@
 import heapq
 import math
 import random
+from collections.abc import Callable
 from inspect import signature
 
 import networkx as nx
@@ -83,6 +84,76 @@ _T_RULES = (
     (gates.SDG,),
     (gates.TDG,),
 )
+
+
+class BarrierBeforeFinalMeasurements(Optimizer):
+    """Inserts a barrier before the final measurements of a circuit.
+
+    A measurement or a barrier is final if no other gate acts on its qubits after it. The
+    final measurements and barriers are placed after a new
+    :class:`qibo.gates.special.Barrier` that acts on all the qubits of the circuit, in
+    their original order, while the other gates stay before the barrier. A circuit
+    without final measurements is not changed.
+
+    The barrier keeps the tools that rearrange the gates, such as the routers, from
+    moving them across the final measurements. It can be removed afterwards with
+    :class:`qibo.transpiler.optimizer.FilterGates`.
+
+    Example:
+
+        The measurement of the first qubit is not final, because a Hadamard gate acts on
+        the qubit after it, so it stays before the barrier.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import BarrierBeforeFinalMeasurements
+
+            circuit = Circuit(2)
+            circuit.add(gates.M(0))
+            circuit.add(gates.H(0))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.M(0, 1))
+
+            new_circuit = BarrierBeforeFinalMeasurements()(circuit)
+            print([gate.name for gate in new_circuit.queue])
+
+        .. testoutput::
+
+            ['measure', 'h', 'cx', 'barrier', 'measure']
+    """
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Insert a barrier on all the qubits before the final measurements.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be processed.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the barrier before the
+            final measurements.
+        """
+        used = set()
+        kept = []
+        final = []
+        for gate in reversed(circuit.queue):
+            if isinstance(gate, (gates.M, gates.Barrier)) and not used.intersection(
+                gate.qubits
+            ):
+                final.append(gate)
+            else:
+                used.update(gate.qubits)
+                kept.append(gate)
+
+        if len(final) == 0:
+            return circuit
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(kept[::-1])
+        new.add(gates.Barrier(*range(circuit.nqubits)))
+        new.add(final[::-1])
+
+        return new
 
 
 class ConsolidateBlocks(Optimizer):
@@ -192,6 +263,55 @@ class ConsolidateBlocks(Optimizer):
                 if isinstance(item, Block)
                 else item
             )
+
+        return new
+
+
+class FilterGates(Optimizer):
+    """Removes the gates of a circuit that do not satisfy a condition.
+
+    Args:
+        predicate (Callable): Function that takes a :class:`qibo.gates.abstract.Gate` and
+            returns ``True`` if the gate is kept in the circuit and ``False`` if it is
+            removed.
+
+    Example:
+
+        The barrier is removed, while the other gates are kept.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import FilterGates
+
+            circuit = Circuit(2)
+            circuit.add(gates.H(0))
+            circuit.add(gates.Barrier(0, 1))
+            circuit.add(gates.CNOT(0, 1))
+
+            filter_barriers = FilterGates(lambda gate: not isinstance(gate, gates.Barrier))
+            print([gate.name for gate in filter_barriers(circuit).queue])
+
+        .. testoutput::
+
+            ['h', 'cx']
+    """
+
+    def __init__(self, predicate: Callable[[Gate], bool]):
+        self.predicate = predicate
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Remove the gates for which the predicate is ``False``.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be filtered.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the gates that satisfy the
+            predicate, in their original order.
+        """
+        new = Circuit(**circuit.init_kwargs)
+        new.add([gate for gate in circuit.queue if self.predicate(gate)])
 
         return new
 
