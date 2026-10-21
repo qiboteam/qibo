@@ -261,6 +261,7 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
+        global_phase = circuit.global_phase
         # The connectivity is relabeled during the preprocessing, so it is restored before
         # every trial and at the end, so that the router can be used again with the same
         # ``wire_names``.
@@ -298,6 +299,8 @@ class Sabre(Router):
                     routed_circuit = self._append_final_measurements(
                         routed_circuit=routed_circuit
                     )
+                if global_phase != 0:
+                    routed_circuit.add(gates.GlobalPhase(global_phase))
 
                 # the first trial among the ones with the fewest swaps is kept
                 if best_trial is None or self.circuit_map._swaps < best_trial[0]:
@@ -337,6 +340,12 @@ class Sabre(Router):
         )
 
         copied_circuit = circuit.copy(deep=True)
+        # global phases act on no qubits, so they are not routed, see ``__call__``
+        copied_circuit.queue[:] = [
+            gate
+            for gate in copied_circuit.queue
+            if not isinstance(gate, gates.GlobalPhase)
+        ]
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
         _check_connected_components(self.circuit_map, self.connectivity)
@@ -595,6 +604,7 @@ class ShortestPaths(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
+        global_phase = circuit.global_phase
         # The connectivity is relabeled during the preprocessing. It is restored at the
         # end so that the router can be used again with the same ``wire_names``.
         connectivity = self.connectivity
@@ -615,6 +625,8 @@ class ShortestPaths(Router):
                 routed_circuit = self._append_final_measurements(
                     routed_circuit=routed_circuit
                 )
+            if global_phase != 0:
+                routed_circuit.add(gates.GlobalPhase(global_phase))
         finally:
             self.connectivity = connectivity
 
@@ -794,6 +806,12 @@ class ShortestPaths(Router):
             self.connectivity, {v: i for i, v in enumerate(circuit.wire_names)}
         )
         copied_circuit = circuit.copy(deep=True)
+        # global phases act on no qubits, so they are not routed, see ``__call__``
+        copied_circuit.queue[:] = [
+            gate
+            for gate in copied_circuit.queue
+            if not isinstance(gate, gates.GlobalPhase)
+        ]
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
         _check_connected_components(self.circuit_map, self.connectivity)

@@ -295,8 +295,11 @@ class Gate:
                     **kwargs,
                 )
                 mask = self._control_mask_after_stripping(decomposed)
-                for bool_value, gate in zip(mask, decomposed):
-                    if bool_value:
+                for i, (bool_value, gate) in enumerate(zip(mask, decomposed)):
+                    if bool_value and not gate.qubits:
+                        # a global phase that is controlled is a phase gate on the controls
+                        decomposed[i] = gate.controlled_by(*self.control_qubits)
+                    elif bool_value:
                         gate.is_controlled_by = True
                         gate.control_qubits += self.control_qubits
         else:

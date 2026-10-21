@@ -9,8 +9,20 @@ if find_spec("pygridsynth") and find_spec("mpmath"):
     METHOD = "clifford_plus_t"
     clifford_plus_t = GateDecompositions()
     clifford_plus_t._set_precision_cliff_plus_t()
-    clifford_plus_t.add(gates.SDG, [gates.Y(0), gates.S(0), gates.Y(0)])
-    clifford_plus_t.add(gates.TDG, [gates.T(0), gates.Y(0), gates.S(0), gates.Y(0)])
+    clifford_plus_t.add(
+        gates.SDG,
+        [gates.Y(0), gates.S(0), gates.Y(0), gates.GlobalPhase(-math.pi / 2)],
+    )
+    clifford_plus_t.add(
+        gates.TDG,
+        [
+            gates.T(0),
+            gates.Y(0),
+            gates.S(0),
+            gates.Y(0),
+            gates.GlobalPhase(-math.pi / 2),
+        ],
+    )
     clifford_plus_t.add(
         gates.RX,
         lambda gate: (
@@ -39,7 +51,11 @@ if find_spec("pygridsynth") and find_spec("mpmath"):
         ),
     )
     clifford_plus_t.add(
-        gates.U1, lambda gate: clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0])
+        gates.U1,
+        lambda gate: (
+            clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0])
+            + [gates.GlobalPhase(gate.parameters[0] / 2)]
+        ),
     )
     clifford_plus_t.add(
         gates.U2,
@@ -57,6 +73,7 @@ if find_spec("pygridsynth") and find_spec("mpmath"):
             + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0] + math.pi)
             + [gates.SX(0)]
             + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[1] + math.pi)
+            + [gates.GlobalPhase(math.pi / 2)]
         ),
     )
     clifford_plus_t.add(
@@ -105,6 +122,7 @@ if find_spec("pygridsynth") and find_spec("mpmath"):
             + gates.RZ(1, -gate.parameters[0] / 2.0).decompose(method=METHOD)
             + [gates.CNOT(0, 1)]
             + gates.RZ(1, gate.parameters[0] / 2.0).decompose(method=METHOD)
+            + [gates.GlobalPhase(gate.parameters[0] / 4.0)]
         ),
     )
     clifford_plus_t.add(

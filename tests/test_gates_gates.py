@@ -25,7 +25,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
             assert nqubits == int(np.log2(len(state)))
 
     for gate in gatelist:
-        state = backend.apply_gate(gate, state, nqubits)
+        state = gate.apply(backend, state, nqubits)
 
     return state
 
@@ -1579,6 +1579,51 @@ def test_ecr_decomposition_is_exact_in_clifford_plus_t(backend):
     assert gates.ECR(0, 1).unitary
 
 
+@pytest.mark.parametrize(
+    "name,args",
+    [
+        ("SDG", (0,)),
+        ("TDG", (0,)),
+        ("RZ", (0, 0.3)),
+        ("RZ", (0, 1.1)),
+        ("RZ", (0, 2.9)),
+        ("RX", (0, 0.7)),
+        ("RY", (0, -0.7)),
+        ("PRX", (0, 0.3, 0.8)),
+        ("U1", (0, 0.3)),
+        ("U3", (0, 0.3, 0.5, 0.9)),
+        ("CU1", (0, 1, 0.9)),
+        ("CU3", (0, 1, 0.3, 0.5, 0.9)),
+        ("CSX", (0, 1)),
+        ("CRY", (0, 1, 0.4)),
+        ("SiSWAP", (0, 1)),
+        ("RXXYY", (0, 1, 0.5)),
+        ("TOFFOLI", (0, 1, 2)),
+    ],
+)
+def test_clifford_plus_t_decomposition_is_exact(backend, name, args):
+    """The ``W`` gates of the synthesis are kept as a global phase gate."""
+    pytest.importorskip("pygridsynth")
+    gate = getattr(gates, name)(*args)
+    nqubits = len(gate.qubits)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    decomposed_gates = gate.decompose(method="clifford_plus_t")
+    # the phases of the synthesis of every rotation are merged into the last gate
+    global_phases = [
+        i for i, g in enumerate(decomposed_gates) if isinstance(g, gates.GlobalPhase)
+    ]
+    assert global_phases in ([], [len(decomposed_gates) - 1])
+
+    decomposed = Circuit(nqubits)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        decomposed.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
 @pytest.mark.parametrize("applyx", [False, True])
 def test_toffoli(backend, applyx):
     if applyx:
@@ -2213,6 +2258,57 @@ def test_dagger(backend, gate, args):
     backend.assert_allclose(final_state, initial_state, atol=1e-6)
 
 
+@pytest.mark.parametrize("gate,args", GATES)
+def test_decompose_is_exact(backend, gate, args):
+    """The decomposition is equal to the gate, including its global phase."""
+    gate = getattr(gates, gate)(*args)
+    nqubits = len(gate.qubits)
+
+    decomposed_gates = gate.decompose()
+    # the global phase gate is unique and the last one, if the decomposition is not exact
+    global_phases = [
+        i for i, g in enumerate(decomposed_gates) if isinstance(g, gates.GlobalPhase)
+    ]
+    assert global_phases in ([], [len(decomposed_gates) - 1])
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    decomposed = Circuit(nqubits)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        decomposed.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.fSim(0, 1, 0.37, 0.81),
+        gates.fSim(2, 0, -1.2, 2.5),
+        gates.fSim(1, 2, 0.0, 0.3),
+        gates.SYC(0, 1),
+        gates.SYC(2, 0),
+    ],
+)
+def test_fsim_and_syc_decomposition(backend, gate):
+    """The fSim and SYC gates decompose exactly into CNOT and single-qubit gates."""
+    decomposed_gates = gate.decompose()
+    for decomposed_gate in decomposed_gates:
+        if len(decomposed_gate.qubits) > 1:
+            assert isinstance(decomposed_gate, gates.CNOT)
+            assert set(decomposed_gate.qubits) == set(gate.qubits)
+
+    circuit = Circuit(3)
+    circuit.add(gate)
+    decomposed = Circuit(3)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        decomposed.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
 GATES = [
     ("H", (3,)),
     ("X", (3,)),
@@ -2234,6 +2330,38 @@ def test_controlled_dagger(backend, gate, args):
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(backend, [gate, gate.dagger()], 4, initial_state)
     backend.assert_allclose(final_state, initial_state, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "name,args",
+    [("SX", (0,)), ("SXDG", (0,)), ("RX", (0, 0.1)), ("GPI2", (0, 0.2)), ("S", (0,))],
+)
+def test_controlled_decompose_is_exact(backend, name, args):
+    """A global phase in the decomposition of a controlled gate is a phase on the control.
+
+    The states are executed, because the unitary of a circuit with a controlled global
+    phase gate is correct even if the gate cannot be executed.
+    """
+    nqubits = 3
+    gate = getattr(gates, name)(*args).controlled_by(2)
+    decomposed_gates = gate.decompose()
+    assert not any(isinstance(gate, gates.GlobalPhase) for gate in decomposed_gates)
+
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    decomposed = Circuit(nqubits)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        backend.execute_circuit(
+            decomposed, initial_state=backend.cast(initial_state, copy=True)
+        ).state(),
+        backend.execute_circuit(
+            circuit, initial_state=backend.cast(initial_state, copy=True)
+        ).state(),
+        atol=1e-6,
+    )
 
 
 @pytest.mark.parametrize("gate_1,gate_2", [("S", "SDG"), ("T", "TDG")])

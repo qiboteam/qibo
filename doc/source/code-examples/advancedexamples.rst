@@ -2436,6 +2436,7 @@ qubits in the same column (``parallel=True``) and without wrapping the lines
     subgraph layout, multi-controlled: 20 ECR gates
     subgraph layout, star: 3 ECR gates
     Star-shaped circuit with the subgraph layout:
+    Global phase = exp(i * 0.25π)
     1: ─U3─U3─U3─ECR─Z──U3─U3────ECR─U3────ECR───────M─
     0: ─U3─U3─U3─ECR─U3─Z──U3─U3─|─────────|─────────M─
     2: ─U3─U3────────────────────ECR─U3─U3─|─────────M─
@@ -2507,7 +2508,14 @@ The placers and routers ignore the directions.
 
     True
     False
-    ['cz', 'h', 'rz']
+    ['cz', 'global_phase', 'h', 'rz']
+
+The decompositions that are equal to a gate only up to a global phase are corrected with
+a :class:`qibo.gates.GlobalPhase` gate, which is why the unrolled circuit has one. The
+unroller and :meth:`qibo.models.circuit.Circuit.decompose` merge all of them into a single
+gate at the end of the circuit, and the total phase is the
+:attr:`qibo.models.circuit.Circuit.global_phase` of the circuit, so that the unrolled
+circuit is exactly equal to the original one.
 
 The optimization passes can be combined to simplify the circuit before it is decomposed
 into native gates:
