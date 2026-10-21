@@ -1,4 +1,5 @@
 import itertools
+import math
 import random
 from collections.abc import Sequence
 from copy import deepcopy
@@ -261,7 +262,7 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
-        global_phase = circuit.global_phase
+        global_phase = circuit.global_phase % (2 * math.pi)
         # The connectivity is relabeled during the preprocessing, so it is restored before
         # every trial and at the end, so that the router can be used again with the same
         # ``wire_names``.
@@ -299,7 +300,7 @@ class Sabre(Router):
                     routed_circuit = self._append_final_measurements(
                         routed_circuit=routed_circuit
                     )
-                if global_phase != 0:
+                if abs(math.remainder(global_phase, 2 * math.pi)) > 1e-12:
                     routed_circuit.add(gates.GlobalPhase(global_phase))
 
                 # the first trial among the ones with the fewest swaps is kept
@@ -604,7 +605,7 @@ class ShortestPaths(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
-        global_phase = circuit.global_phase
+        global_phase = circuit.global_phase % (2 * math.pi)
         # The connectivity is relabeled during the preprocessing. It is restored at the
         # end so that the router can be used again with the same ``wire_names``.
         connectivity = self.connectivity
@@ -625,7 +626,7 @@ class ShortestPaths(Router):
                 routed_circuit = self._append_final_measurements(
                     routed_circuit=routed_circuit
                 )
-            if global_phase != 0:
+            if abs(math.remainder(global_phase, 2 * math.pi)) > 1e-12:
                 routed_circuit.add(gates.GlobalPhase(global_phase))
         finally:
             self.connectivity = connectivity
