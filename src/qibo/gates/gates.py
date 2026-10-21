@@ -591,7 +591,7 @@ class GlobalPhase(ParametrizedGate):
         if len(state.shape) == 2:
             return state
 
-        return self.matrix(backend)[0, 0] * state
+        return backend.exp(1j * self.init_kwargs["theta"]) * state
 
     @Gate.check_controls
     def controlled_by(self, *q: int) -> Gate:
@@ -613,14 +613,16 @@ class GlobalPhase(ParametrizedGate):
         if not q:
             return self
 
-        return U1(q[-1], self.parameters[0]).controlled_by(*q[:-1])
+        return U1(q[-1], self.parameters[0], trainable=self.trainable).controlled_by(
+            *q[:-1]
+        )
 
     @property
     def hamming_weight(self) -> bool:
         return True
 
     def _dagger(self) -> Gate:
-        return self.__class__(-self.parameters[0])
+        return self.__class__(-self.parameters[0], trainable=self.trainable)
 
 
 class _Rn_(ParametrizedGate):
