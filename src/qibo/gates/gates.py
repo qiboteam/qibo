@@ -557,6 +557,72 @@ class Align(ParametrizedGate):
         self.nparams = 1
 
 
+class GlobalPhase(ParametrizedGate):
+    """The global phase gate.
+
+    Acts on no qubits and multiplies the state of the whole system by the phase
+    :math:`e^{i \\theta}`.
+
+    .. note::
+        A global phase has no observable effect on its own. It becomes relevant when the
+        gate is controlled, in which case it is a relative phase between the states of
+        the control qubits, or when the unitary matrix of a circuit is required.
+
+    Args:
+        theta (float): the phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, theta: float, trainable: bool = True):
+        super().__init__(trainable)
+        self.name = "global_phase"
+        self.draw_label = "GP"
+        self.unitary = True
+
+        self.parameters = theta
+        self.init_args = []
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def apply(self, backend, state: ArrayLike, nqubits: int) -> ArrayLike:
+        # density matrices are invariant under a global phase, which in turn
+        # is a simple scalar multiplication for state vectors
+        if len(state.shape) == 2:
+            return state
+
+        return self.matrix(backend)[0, 0] * state
+
+    @Gate.check_controls
+    def controlled_by(self, *q: int) -> Gate:
+        """Fall back to a phase gate acting on the control qubits.
+
+        A global phase controlled by some qubits is a phase applied only when all of them
+        are in the state :math:`|1\\rangle`. Therefore, a :class:`qibo.gates.U1` gate
+        acting on the last control qubit is returned, which is itself controlled by the
+        remaining control qubits, if any (*i.e.*, one control yields a
+        :class:`qibo.gates.U1` gate and two controls yield a :class:`qibo.gates.CU1` gate).
+        If no control is given, the gate itself is returned.
+
+        Args:
+            *q (int): ids of the control qubits.
+
+        Returns:
+            :class:`qibo.gates.abstract.Gate`: equivalent phase gate acting on the control qubits.
+        """
+        if not q:
+            return self
+
+        return U1(q[-1], self.parameters[0]).controlled_by(*q[:-1])
+
+    @property
+    def hamming_weight(self) -> bool:
+        return True
+
+    def _dagger(self) -> Gate:
+        return self.__class__(-self.parameters[0])
+
+
 class _Rn_(ParametrizedGate):
     """Abstract class for defining the RX, RY and RZ rotations.
 
