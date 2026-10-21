@@ -1,5 +1,6 @@
 """Test gates defined in `qibo/gates/gates.py`."""
 
+import math
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -255,6 +256,107 @@ def test_align_name_and_on_qubits():
 
     assert not gates.Align(0, delay=0).clifford
     assert not gates.Align(0, delay=0).unitary
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("theta", [0.1234, -math.pi / 2, math.pi])
+def test_global_phase(backend, theta, density_matrix):
+    nqubits = 2
+
+    reference = Circuit(nqubits, density_matrix=density_matrix)
+    reference.add(gates.H(0))
+    reference.add(gates.CNOT(0, 1))
+    target_state = backend.execute_circuit(reference).state()
+
+    circuit = Circuit(nqubits, density_matrix=density_matrix)
+    circuit.add(gates.H(0))
+    circuit.add(gates.GlobalPhase(theta))
+    circuit.add(gates.CNOT(0, 1))
+    final_state = backend.execute_circuit(circuit).state()
+
+    # the phase is only visible in state vectors, it cancels out in density matrices
+    if not density_matrix:
+        target_state = backend.exp(1j * theta) * target_state
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
+
+    gate = gates.GlobalPhase(theta)
+    target_matrix = backend.cast([[backend.exp(1j * theta)]])
+    backend.assert_allclose(gate.matrix(backend), target_matrix, atol=1e-6)
+
+    assert gate.name == "global_phase"
+    assert gate.qubits == ()
+    assert gate.parameters == (theta,)
+    assert not gate.clifford
+    assert gate.hamming_weight
+    assert gate.unitary
+    with pytest.raises(NotImplementedError):
+        gate.qasm_label
+
+
+@pytest.mark.parametrize(
+    "controls,name", [((0,), "U1"), ((1, 0), "CU1"), ((0, 1, 2), "U1")]
+)
+def test_global_phase_controlled_by(backend, controls, name):
+    theta = 0.1234
+    nqubits = 3
+
+    gate = gates.GlobalPhase(theta)
+    assert gate.controlled_by() is gate
+
+    gate = gate.controlled_by(*controls)
+    assert gate.__class__.__name__ == name
+    assert gate.control_qubits == tuple(sorted(controls[:-1]))
+    assert gate.parameters == (theta,)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+
+    # the phase is applied only if all controls are in the state 1
+    target = backend.identity(2**nqubits, dtype=backend.complex128)
+    for k in range(2**nqubits):
+        bits = f"{k:0{nqubits}b}"
+        if all(bits[qubit] == "1" for qubit in controls):
+            target[k, k] = backend.exp(1j * theta)
+
+    backend.assert_allclose(circuit.unitary(backend), target, atol=1e-6)
+
+
+def test_global_phase_dagger(backend):
+    theta = 0.1234
+
+    gate = gates.GlobalPhase(theta)
+    dagger = gate.dagger()
+    assert isinstance(dagger, gates.GlobalPhase)
+    assert dagger.parameters == (-theta,)
+
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gate)
+    circuit.add(dagger)
+
+    reference = Circuit(2)
+    reference.add(gates.H(0))
+
+    backend.assert_allclose(
+        backend.execute_circuit(circuit).state(),
+        backend.execute_circuit(reference).state(),
+        atol=1e-6,
+    )
+
+
+def test_global_phase_on_qubits_and_serialization():
+    theta = 0.1234
+    gate = gates.GlobalPhase(theta)
+
+    new_gate = gate.on_qubits({0: 1})
+    assert isinstance(new_gate, gates.GlobalPhase)
+    assert new_gate.qubits == ()
+    assert new_gate.parameters == (theta,)
+
+    loaded_gate = gates.Gate.from_dict(gate.raw)
+    assert isinstance(loaded_gate, gates.GlobalPhase)
+    assert loaded_gate.qubits == ()
+    assert loaded_gate.parameters == (theta,)
 
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
@@ -2262,6 +2364,7 @@ def test_clifford_condition_update(backend, gate):
         ["I", (2,), ()],
         ["I", (2, 3), ()],
         ["Align", (0,), (1,)],
+        ["GlobalPhase", (), (0.1,)],
         ["FanOut", (0, 2, 3), ()],
         ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1,)],
         ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1, 0.5)],
