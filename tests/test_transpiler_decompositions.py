@@ -144,6 +144,48 @@ def test_unitary_decompositions_are_exact(backend, table, seed):
     backend.assert_allclose(circuit.unitary(backend), unitary, atol=1e-8)
 
 
+@pytest.mark.parametrize(
+    "table,gate_name,args",
+    [
+        (table, gate_name, args)
+        for table in TABLES
+        for gate_name, args in [
+            *GATES_TO_DECOMPOSE,
+            ("U1", (0, -0.37)),
+            ("U1", (0, -5.0)),
+            ("CU1", (0, 1, -0.37)),
+            ("CU1", (0, 1, -5.0)),
+            ("SXDG", (0,)),
+            ("SDG", (0,)),
+            ("TDG", (0,)),
+        ]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_global_phases_are_positive(backend, table, gate_name, args):
+    """The global phases of the decompositions are in the interval [0, 2 pi)."""
+    gate = getattr(gates, gate_name)(*args)
+    for g in TABLES[table]._check_instance(gate, backend):
+        if isinstance(g, gates.GlobalPhase):
+            assert 0 <= g.parameters[0] < 2 * math.pi
+
+
+@pytest.mark.parametrize("table", ["gpi2", "u3"])
+@pytest.mark.parametrize("seed", range(8))
+def test_unitary_global_phases_are_positive(backend, table, seed):
+    gate = gates.Unitary(random_unitary(2, backend=backend, seed=seed), 0)
+    for g in TABLES[table]._check_instance(gate, backend):
+        if isinstance(g, gates.GlobalPhase):
+            assert 0 <= g.parameters[0] < 2 * math.pi
+
+
+@pytest.mark.parametrize("gate_class", list(native_cz_dec))
+def test_native_cz_global_phases_are_positive(gate_class):
+    for g in native_cz_dec[gate_class]:
+        if isinstance(g, gates.GlobalPhase):
+            assert 0 <= g.parameters[0] < 2 * math.pi
+
+
 def test_merge_global_phases():
     decomposition = [
         gates.H(0),

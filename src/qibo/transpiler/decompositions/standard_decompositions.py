@@ -146,7 +146,7 @@ standard_decompositions.add(
 )
 standard_decompositions.add(
     gates.SXDG,
-    [gates.RX(0, -math.pi / 2, trainable=False), gates.GlobalPhase(-math.pi / 4)],
+    [gates.RX(0, -math.pi / 2, trainable=False), gates.GlobalPhase(7 * math.pi / 4)],
 )
 standard_decompositions.add(
     gates.PRX,
@@ -225,7 +225,7 @@ standard_decompositions.add(
         gates.RZ(1, -gate.parameters[0] / 2.0),
         gates.CNOT(0, 1),
         gates.RZ(1, gate.parameters[0] / 2.0),
-        gates.GlobalPhase(gate.parameters[0] / 4.0),
+        gates.GlobalPhase((gate.parameters[0] / 4.0) % (2 * math.pi)),
     ],
 )
 standard_decompositions.add(

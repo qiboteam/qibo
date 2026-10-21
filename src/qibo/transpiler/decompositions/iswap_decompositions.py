@@ -16,7 +16,7 @@ iswap_dec.add(
         gates.iSWAP(0, 1),
         gates.U3(0, math.pi / 2, math.pi / 2, math.pi),
         gates.U3(1, math.pi / 2, math.pi, -math.pi / 2),
-        gates.GlobalPhase(-math.pi / 4),
+        gates.GlobalPhase(7 * math.pi / 4),
     ],
 )
 iswap_dec.add(
@@ -32,7 +32,7 @@ iswap_dec.add(
         gates.U3(0, math.pi / 2, math.pi / 2, math.pi),
         gates.U3(1, math.pi / 2, math.pi, -math.pi / 2),
         gates.U3(1, -math.pi / 2, math.pi, 0),
-        gates.GlobalPhase(-math.pi / 4),
+        gates.GlobalPhase(7 * math.pi / 4),
     ],
 )
 iswap_dec.add(

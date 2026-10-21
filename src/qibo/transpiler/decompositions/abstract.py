@@ -118,7 +118,7 @@ class GateDecompositions:
             sequence = gridsynth_gates(theta=theta, epsilon=self._epsilon)
             # the "W" gates are global phases equal to exp(i pi / 4), which are kept
             # as a single global phase gate, so that the decomposition is exact
-            phase = math.remainder(sequence.count("W"), 8) * math.pi / 4
+            phase = (sequence.count("W") % 8) * math.pi / 4
             sequence = sequence.replace("W", "")
 
             gate_list = [

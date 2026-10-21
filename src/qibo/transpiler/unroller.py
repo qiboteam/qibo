@@ -543,7 +543,11 @@ def _translate_single_qubit_gates(
     if gate.__class__ not in decomposer.decompositions:
         matrix = gate.matrix(backend)
         # the U3 gate equals the gate only up to half the phase of its determinant
-        phase = [gates.GlobalPhase(float(backend.angle(backend.det(matrix))) / 2)]
+        phase = [
+            gates.GlobalPhase(
+                (float(backend.angle(backend.det(matrix))) / 2) % (2 * math.pi)
+            )
+        ]
         gate = gates.U3(gate.qubits[0], *u3_decomposition(matrix, backend))
 
     return merge_global_phases(decomposer(gate, backend) + phase)

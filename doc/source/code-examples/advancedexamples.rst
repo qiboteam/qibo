@@ -2436,7 +2436,7 @@ qubits in the same column (``parallel=True``) and without wrapping the lines
     subgraph layout, multi-controlled: 20 ECR gates
     subgraph layout, star: 3 ECR gates
     Star-shaped circuit with the subgraph layout:
-    Global phase = exp(i * 0.25π)
+    Global phase = exp(i * π/4)
     1: ─U3─U3─U3─ECR─Z──U3─U3────ECR─U3────ECR───────M─
     0: ─U3─U3─U3─ECR─U3─Z──U3─U3─|─────────|─────────M─
     2: ─U3─U3────────────────────ECR─U3─U3─|─────────M─
