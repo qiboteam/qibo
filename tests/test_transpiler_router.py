@@ -1,4 +1,5 @@
 import itertools
+import math
 import random
 
 import networkx as nx
@@ -258,6 +259,31 @@ def test_routing_with_global_phase(star_connectivity, router_class, measurements
         transpiled_circuit=transpiled_circuit,
         final_layout=final_layout,
     )
+
+
+@pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
+@pytest.mark.parametrize(
+    "phase,expected",
+    [
+        (1e-15, 0.0),
+        (2 * math.pi, 0.0),
+        (2 * math.pi - 1e-14, 0.0),
+        (2 * math.pi + 0.3, 0.3),
+        (-0.3, 2 * math.pi - 0.3),
+    ],
+)
+def test_routing_global_phase_modulo(star_connectivity, router_class, phase, expected):
+    """The global phase is added modulo 2 pi, and it is dropped if it is zero."""
+    circuit = Circuit(5)
+    circuit.add([gates.CNOT(0, 1), gates.GlobalPhase(phase)])
+
+    transpiled_circuit, _ = router_class(star_connectivity())(circuit)
+
+    global_phases = [
+        gate for gate in transpiled_circuit.queue if isinstance(gate, gates.GlobalPhase)
+    ]
+    assert len(global_phases) == int(expected != 0)
+    assert transpiled_circuit.global_phase == pytest.approx(expected)
 
 
 def test_sabre_looping():

@@ -799,6 +799,15 @@ class Circuit:
         return have a single :class:`qibo.gates.GlobalPhase` gate at their end, if
         the decomposition of some of their gates is equal to the gate only up to a global
         phase, which the decomposition compensates for.
+
+        .. note::
+            The phase is only defined modulo :math:`2 \\pi`, and the property is not reduced:
+            it is the plain sum of the parameters of the gates, which can be outside the
+            interval :math:`[0, 2\\pi)` if the circuit has several global phase gates. The
+            circuits that :meth:`qibo.models.circuit.Circuit.decompose` and the transpiler
+            return have it in :math:`[0, 2\\pi)`, since they add the phases modulo
+            :math:`2 \\pi`, and :meth:`qibo.models.circuit.Circuit.draw` always reduces it
+            to that interval.
         """
         return sum(
             (
