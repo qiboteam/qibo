@@ -1,5 +1,6 @@
 """Test all methods defined in `qibo/models/circuit.py`."""
 
+import math
 from collections import Counter
 
 import numpy as np
@@ -532,6 +533,92 @@ def test_circuit_decompose(measurements):
         assert decomp_circuitircuit.measurement_tuples == {"register0": (0, 2)}
 
 
+def test_circuit_global_phase():
+    circuit = Circuit(2)
+    assert circuit.global_phase == 0
+
+    circuit.add(gates.H(0))
+    assert circuit.global_phase == 0
+
+    circuit.add(gates.GlobalPhase(0.1234))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.GlobalPhase(0.4321))
+    assert circuit.global_phase == pytest.approx(0.1234 + 0.4321)
+    assert circuit.invert().global_phase == pytest.approx(-0.1234 - 0.4321)
+
+
+@pytest.mark.parametrize("measurements", [False, True])
+def test_circuit_decompose_global_phase(measurements):
+    """The global phases of the decompositions are merged into a single gate at the end."""
+    circuit = Circuit(2)
+    circuit.add(gates.GlobalPhase(0.1))
+    circuit.add([gates.SX(0), gates.CU1(0, 1, 0.4), gates.CNOT(0, 1)])
+    circuit.add(gates.U3(1, 0.1, 0.2, 0.3))
+    if measurements:
+        circuit.add(gates.M(0, 1))
+    assert circuit.global_phase == 0.1
+
+    decomposed = circuit.decompose()
+    global_phases = [g for g in decomposed.queue if isinstance(g, gates.GlobalPhase)]
+    assert len(global_phases) == 1
+    assert decomposed.queue[-1] is global_phases[0]
+    assert decomposed.global_phase == pytest.approx(
+        0.1 + math.pi / 4 + 0.4 / 4 + math.pi / 2
+    )
+
+
+def test_circuit_decompose_global_phase_modulo():
+    """The global phases of the decompositions are added modulo 2 pi."""
+    # the decomposition of SX has a global phase of pi / 4, so eight gates add to 2 pi
+    circuit = Circuit(1)
+    circuit.add([gates.SX(0)] * 8)
+    decomposed = circuit.decompose()
+    assert decomposed.global_phase == 0
+    assert not any(isinstance(gate, gates.GlobalPhase) for gate in decomposed.queue)
+
+    circuit = Circuit(1)
+    circuit.add([gates.SX(0)] * 9)
+    decomposed = circuit.decompose()
+    assert isinstance(decomposed.queue[-1], gates.GlobalPhase)
+    assert decomposed.global_phase == pytest.approx(math.pi / 4)
+
+    # the global phase gates of the circuit are added too, in any order
+    circuit = Circuit(1)
+    circuit.add([gates.GlobalPhase(3 * math.pi / 2), gates.SX(0), gates.SX(0)])
+    assert circuit.decompose().global_phase == 0
+    circuit = Circuit(1)
+    circuit.add([gates.SX(0), gates.GlobalPhase(-math.pi), gates.SXDG(0)])
+    decomposed = circuit.decompose()
+    assert decomposed.global_phase == pytest.approx(math.pi)
+    assert isinstance(decomposed.queue[-1], gates.GlobalPhase)
+
+
+def test_circuit_decompose_is_exact(backend):
+    circuit = Circuit(3)
+    circuit.add([gates.H(0), gates.SX(1), gates.CU1(0, 1, 0.4), gates.TOFFOLI(0, 1, 2)])
+    circuit.add([gates.U3(2, 0.1, 0.2, 0.3), gates.SXDG(0), gates.CSX(1, 2)])
+    circuit.add(gates.SX(2).controlled_by(0))
+
+    backend.assert_allclose(
+        circuit.decompose().unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
+def test_circuit_decompose_without_global_phase():
+    """No gate is added if the decompositions are exact or their phases cancel out."""
+    circuit = Circuit(2)
+    circuit.add([gates.H(0), gates.CNOT(0, 1), gates.RZ(1, 0.3)])
+    assert circuit.decompose().global_phase == 0
+    assert not any(
+        isinstance(gate, gates.GlobalPhase) for gate in circuit.decompose().queue
+    )
+
+    circuit.add([gates.SX(0), gates.SXDG(0)])
+    decomposed = circuit.decompose()
+    assert decomposed.global_phase == 0
+    assert not any(isinstance(gate, gates.GlobalPhase) for gate in decomposed.queue)
+
+
 @pytest.mark.parametrize("measurements", [False, True])
 @pytest.mark.parametrize(
     "noise_map",
@@ -723,18 +810,51 @@ def test_circuit_draw():
 
 
 def test_circuit_draw_global_phase(capsys):
-    """Check that gates that act on no qubits are drawn on every wire."""
+    """The global phase acts on no wire, so it is written above the diagram."""
     circuit = Circuit(3, wire_names=["q0", "q1", "q2"])
     circuit.add(gates.H(0))
-    circuit.add(gates.GlobalPhase(0.1234))
+    circuit.add(gates.GlobalPhase(math.pi / 4))
     circuit.add(gates.CNOT(0, 2))
     circuit.add(gates.X(1))
 
-    ref = "q0: ─H─GP─o───\n" + "q1: ───GP─|─X─\n" + "q2: ───GP─X───"
+    ref = (
+        "Global phase = exp(i * 0.25π)\n"
+        + "q0: ─H─o───\n"
+        + "q1: ───|─X─\n"
+        + "q2: ───X───"
+    )
 
     circuit.draw()
     out, _ = capsys.readouterr()
     assert out.rstrip("\n") == ref
+    assert str(circuit) == ref
+
+
+def test_circuit_draw_without_global_phase():
+    """Nothing is written if the global phase is zero, even with global phase gates."""
+    circuit = Circuit(1)
+    circuit.add([gates.GlobalPhase(0.1234), gates.GlobalPhase(-0.1234)])
+    assert str(circuit) == "0: ─"
+
+    # a phase that is a multiple of 2 pi is not written either
+    circuit = Circuit(1)
+    circuit.add(gates.GlobalPhase(2 * math.pi))
+    assert str(circuit) == "0: ─"
+
+    circuit = Circuit(1)
+    circuit.add(gates.X(0))
+    assert str(circuit) == "0: ─X─"
+
+
+def test_circuit_draw_global_phase_reduced():
+    """The global phase is written in the interval [-pi, pi]."""
+    circuit = Circuit(1)
+    circuit.add(gates.GlobalPhase(2 * math.pi + math.pi / 4))
+    assert str(circuit) == "Global phase = exp(i * 0.25π)\n0: ─"
+
+    circuit = Circuit(1)
+    circuit.add(gates.GlobalPhase(-math.pi / 2))
+    assert str(circuit) == "Global phase = exp(i * -0.5π)\n0: ─"
 
 
 def test_circuit_wire_names():

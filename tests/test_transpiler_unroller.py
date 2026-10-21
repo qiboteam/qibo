@@ -1,4 +1,5 @@
 import itertools
+import math
 from unittest.mock import Mock
 
 import numpy as np
@@ -97,6 +98,132 @@ def test_unroller(backend, natives_1q, natives_2q):
         translated_circuit,
         native_gates=natives_1q | natives_2q | NativeGates.RZ | NativeGates.Z,
     )
+
+
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.CZ | NativeGates.U3,
+        NativeGates.CZ | NativeGates.GPI2 | NativeGates.Z | NativeGates.RZ,
+        NativeGates.iSWAP | NativeGates.U3,
+        NativeGates.CZ | NativeGates.iSWAP | NativeGates.U3,
+        NativeGates.CNOT | NativeGates.U3,
+        NativeGates["CZ"] | NativeGates["RZ"] | NativeGates["SX"],
+        NativeGates["ECR"] | NativeGates["RZ"] | NativeGates["SX"],
+        NativeGates["SYC"] | NativeGates.U3,
+        NativeGates["SiSWAP"] | NativeGates.U3,
+        NativeGates["FSWAP"] | NativeGates.U3,
+        NativeGates["CY"] | NativeGates["RZ"] | NativeGates["RX"],
+        NativeGates["CSX"] | NativeGates["PRX"],
+    ],
+)
+def test_unroller_is_exact(backend, natives):
+    """The decompositions that are exact up to a global phase are corrected by a single
+    global phase gate at the end, so the unrolled circuit is equal to the original one.
+    """
+    circuit = Circuit(3)
+    circuit.add(gates.GlobalPhase(0.1234))
+    circuit.add([gates.H(0), gates.SX(1), gates.SXDG(2), gates.T(0), gates.U1(1, 0.3)])
+    circuit.add(gates.Unitary(random_unitary(2, backend=backend, seed=1), 1))
+    circuit.add([gates.CNOT(0, 1), gates.CU1(1, 2, 0.4), gates.iSWAP(0, 2)])
+    circuit.add([gates.SWAP(1, 2), gates.RYY(0, 1, 0.5), gates.ECR(0, 2)])
+    circuit.add([gates.FSWAP(1, 2), gates.SiSWAP(0, 1), gates.TOFFOLI(0, 1, 2)])
+
+    unrolled = Unroller(natives, backend=backend)(circuit)
+
+    assert_decomposition(unrolled, natives)
+    global_phases = [g for g in unrolled.queue if isinstance(g, gates.GlobalPhase)]
+    assert len(global_phases) == 1
+    assert unrolled.queue[-1] is global_phases[0]
+    assert unrolled.global_phase != 0
+    backend.assert_allclose(
+        unrolled.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
+def test_unroller_global_phase_min_qubits(backend):
+    """The gates that are not decomposed are kept, and the global phases are merged."""
+    natives = NativeGates.CZ | NativeGates.U3
+    circuit = Circuit(3)
+    circuit.add([gates.GlobalPhase(0.3), gates.SX(0), gates.TOFFOLI(0, 1, 2)])
+    circuit.add(gates.GlobalPhase(-0.1))
+
+    unrolled = Unroller(natives, min_qubits=3, backend=backend)(circuit)
+
+    assert unrolled.queue[0].name == "sx"
+    assert isinstance(unrolled.queue[-1], gates.GlobalPhase)
+    assert sum(isinstance(g, gates.GlobalPhase) for g in unrolled.queue) == 1
+    backend.assert_allclose(
+        unrolled.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.SX(0),
+        gates.T(0),
+        gates.U1(0, 0.3),
+        gates.CU1(0, 1, 0.4),
+        gates.iSWAP(0, 1),
+        gates.ECR(0, 1),
+        gates.CCZ(0, 1, 2),
+        gates.TOFFOLI(0, 1, 2),
+        gates.X(2).controlled_by(0, 1),
+        gates.Unitary(random_unitary(4, seed=1), 0, 1),
+    ],
+)
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.CZ | NativeGates.U3,
+        NativeGates.CZ | NativeGates.GPI2 | NativeGates.Z | NativeGates.RZ,
+        NativeGates["ECR"] | NativeGates["RZ"] | NativeGates["SX"],
+    ],
+)
+def test_translate_gate_global_phase_is_last(backend, gate, natives):
+    """If the translation is not exact, the global phase is its unique and last gate."""
+    translated = translate_gate(gate, natives, backend=backend)
+
+    global_phases = [
+        i for i, g in enumerate(translated) if isinstance(g, gates.GlobalPhase)
+    ]
+    assert global_phases in ([], [len(translated) - 1])
+    for i in global_phases:
+        assert 0 < translated[i].parameters[0] < 2 * math.pi
+
+
+def test_unroller_global_phase_modulo(backend):
+    """The global phases are added modulo 2 pi, so exact circuits have no global phase."""
+    natives = NativeGates.CZ | NativeGates.U3
+    # SX has a global phase of pi / 4 in its decomposition
+    circuit = Circuit(1)
+    circuit.add([gates.SX(0)] * 8)
+    unrolled = Unroller(natives, backend=backend)(circuit)
+    assert unrolled.global_phase == 0
+    assert not any(isinstance(g, gates.GlobalPhase) for g in unrolled.queue)
+
+    circuit = Circuit(1)
+    circuit.add([gates.GlobalPhase(math.pi / 2)] + [gates.SX(0)] * 7)
+    unrolled = Unroller(natives, backend=backend)(circuit)
+    assert isinstance(unrolled.queue[-1], gates.GlobalPhase)
+    # 7 * pi / 4 from the gates plus pi / 2 from the circuit is pi / 4 modulo 2 pi
+    assert unrolled.global_phase == pytest.approx(math.pi / 4)
+    backend.assert_allclose(
+        unrolled.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
+def test_unroller_without_global_phase(backend):
+    """No global phase gate is added if the decompositions are exact."""
+    natives = NativeGates.CZ | NativeGates.U3
+    circuit = Circuit(2)
+    circuit.add([gates.RZ(0, 0.3), gates.CZ(0, 1), gates.RY(1, 0.2)])
+
+    unrolled = Unroller(natives, backend=backend)(circuit)
+
+    assert unrolled.global_phase == 0
+    assert not any(isinstance(g, gates.GlobalPhase) for g in unrolled.queue)
 
 
 def test_measurements_non_comp_basis(backend):
@@ -449,8 +576,6 @@ def test_unroller_controlled_two_qubit_target(backend, gate, natives):
 @pytest.mark.parametrize(
     "gate",
     [
-        lambda backend: gates.fSim(1, 2, 0.3, 0.4).controlled_by(0),
-        lambda backend: gates.fSim(2, 3, 0.3, 0.4).controlled_by(0, 1),
         lambda backend: gates.Unitary(
             random_unitary(4, backend=backend), 1, 2
         ).controlled_by(0),
@@ -465,6 +590,22 @@ def test_unroller_unsupported_gates(backend, gate):
     circuit.add(gate)
     with pytest.raises(DecompositionError):
         Unroller(NativeGates.default(), backend=backend)(circuit)
+
+
+@pytest.mark.parametrize("controls", [(0,), (0, 1)])
+def test_unroller_controlled_fsim(backend, controls):
+    """The decomposition of the fSim gate is also applied if the gate is controlled."""
+    natives = NativeGates.CZ | NativeGates.U3
+    nqubits = len(controls) + 2
+    circuit = Circuit(nqubits)
+    circuit.add(gates.fSim(nqubits - 2, nqubits - 1, 0.3, 0.4).controlled_by(*controls))
+
+    unrolled = Unroller(natives, backend=backend)(circuit)
+
+    assert_decomposition(unrolled, natives)
+    backend.assert_allclose(
+        unrolled.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
 
 
 _FLEXIBLE_NATIVES = [

@@ -70,6 +70,10 @@ def u3_decomposition(
 ) -> tuple[float, float, float]:
     """Decomposes arbitrary one-qubit gates to U3.
 
+    The :class:`qibo.gates.gates.U3` gate is equal to the unitary divided by the square
+    root of its determinant, so it implements the unitary up to a global phase, which
+    is half the phase of the determinant of the unitary.
+
     Args:
         unitary (ArrayLike): Unitary :math:`2 \\times 2` matrix to be decomposed.
         backend (:class:`qibo.backends.abstract.Backend`): Backend to be used in the
@@ -533,8 +537,9 @@ def single_qubit_decomposition(
     :class:`qibo.gates.H`, :class:`qibo.gates.S`, :class:`qibo.gates.SDG`,
     :class:`qibo.gates.SX`, :class:`qibo.gates.SXDG`, :class:`qibo.gates.T`,
     :class:`qibo.gates.TDG`, :class:`qibo.gates.X`, :class:`qibo.gates.Y` and
-    :class:`qibo.gates.Z`, which are conjugated with the rotation. The decomposition
-    is equal to the unitary up to a global phase.
+    :class:`qibo.gates.Z`, which are conjugated with the rotation. These gates are
+    equal to the unitary up to a global phase, which is added as a
+    :class:`qibo.gates.GlobalPhase` gate at the end if it is not zero.
 
     Args:
         unitary (ArrayLike): Unitary :math:`2 \\times 2` matrix to be decomposed.
@@ -548,7 +553,9 @@ def single_qubit_decomposition(
             Defaults to ``None``.
 
     Returns:
-        list[:class:`qibo.gates.abstract.Gate`]: Gates that implement the unitary.
+        list[:class:`qibo.gates.abstract.Gate`]: Gates that implement the unitary,
+        followed by a :class:`qibo.gates.GlobalPhase` gate if the gates implement
+        the unitary only up to a global phase.
 
     Raises:
         DecompositionError: If the gates have no Euler basis and no two rotations about
@@ -563,38 +570,49 @@ def single_qubit_decomposition(
         hadamard = gates.H(0).matrix(backend)
         angles = u3_decomposition(unitary, backend)
         angles_x = u3_decomposition(hadamard @ unitary @ hadamard, backend)
-        return min(
+        decomposition = min(
             (
                 _euler_sequence(name, qubit, angles, angles_x, atol, backend)
                 for name in bases
             ),
             key=len,
         )
+    else:
+        frames = _euler_frames(tuple(gate_classes))
+        if frames is None:
+            raise_error(
+                DecompositionError,
+                "The single-qubit native gates must include rotations about two "
+                + "orthogonal axes with free angles, which can be rotated by native "
+                + "gates without parameters. U3 and GPI2 can be used as well.",
+            )
 
-    frames = _euler_frames(tuple(gate_classes))
-    if frames is None:
-        raise_error(
-            DecompositionError,
-            "The single-qubit native gates must include rotations about two orthogonal "
-            + "axes with free angles, which can be rotated by native gates without "
-            + "parameters. U3 and GPI2 can be used as well.",
+        frame = backend.cast(frames[0], dtype=unitary.dtype)
+        theta, phi, lam = u3_decomposition(
+            backend.conj(frame).T @ unitary @ frame, backend
         )
 
-    frame = backend.cast(frames[0], dtype=unitary.dtype)
-    theta, phi, lam = u3_decomposition(backend.conj(frame).T @ unitary @ frame, backend)
+        # If the middle rotation is the identity, the two outer rotations are merged.
+        if abs(math.remainder(theta, 2 * math.pi)) < atol:
+            rotations = [(lam + phi, frames[1])]
+        else:
+            rotations = [(lam, frames[1]), (theta, frames[2]), (phi, frames[1])]
 
-    # If the middle rotation is the identity, the two outer rotations are merged.
-    if abs(math.remainder(theta, 2 * math.pi)) < atol:
-        rotations = [(lam + phi, frames[1])]
-    else:
-        rotations = [(lam, frames[1]), (theta, frames[2]), (phi, frames[1])]
+        decomposition = []
+        for angle, (gate_class, extra, word, inverse_word) in rotations:
+            if abs(math.remainder(angle, 2 * math.pi)) > atol:
+                decomposition.extend(gate(qubit) for gate in inverse_word)
+                decomposition.append(gate_class(qubit, angle, *extra))
+                decomposition.extend(gate(qubit) for gate in word)
 
-    decomposition = []
-    for angle, (gate_class, extra, word, inverse_word) in rotations:
-        if abs(math.remainder(angle, 2 * math.pi)) > atol:
-            decomposition.extend(gate(qubit) for gate in inverse_word)
-            decomposition.append(gate_class(qubit, angle, *extra))
-            decomposition.extend(gate(qubit) for gate in word)
+    # The gates implement the unitary up to a global phase, which is the phase of the
+    # overlap between the unitary and the product of the gates.
+    product = backend.identity(2, dtype=unitary.dtype)
+    for gate in decomposition:
+        product = gate.matrix(backend) @ product
+    phase = float(backend.angle(backend.sum(backend.conj(product) * unitary)))
+    if abs(math.remainder(phase, 2 * math.pi)) > atol:
+        decomposition.append(gates.GlobalPhase(phase))
 
     return decomposition
 

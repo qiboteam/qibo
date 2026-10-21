@@ -232,6 +232,34 @@ def test_routing_with_measurements(star_connectivity):
     )
 
 
+@pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("measurements", [False, True])
+def test_routing_with_global_phase(star_connectivity, router_class, measurements):
+    """The global phase gates act on no qubits, so they are merged after the routing."""
+    connectivity = star_connectivity()
+    circuit = Circuit(5)
+    circuit.add([gates.GlobalPhase(0.1234), gates.CNOT(0, 1), gates.H(2)])
+    circuit.add([gates.GlobalPhase(0.1), gates.CNOT(1, 3)])
+    if measurements:
+        circuit.add(gates.M(0, 2, 3))
+
+    transpiled_circuit, final_layout = router_class(connectivity)(circuit)
+
+    global_phases = [
+        gate for gate in transpiled_circuit.queue if isinstance(gate, gates.GlobalPhase)
+    ]
+    assert len(global_phases) == 1
+    assert transpiled_circuit.global_phase == pytest.approx(0.2234)
+    assert transpiled_circuit.queue[-1] is global_phases[0]
+    if measurements:
+        assert isinstance(transpiled_circuit.queue[-2], gates.M)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_layout=final_layout,
+    )
+
+
 def test_sabre_looping():
     # Setup where the looping occurs
     # Line connectivity, gates with gate_array
