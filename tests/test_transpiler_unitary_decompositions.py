@@ -374,6 +374,9 @@ def test_single_qubit_decomposition(backend, gate_classes):
         assert all(gate.qubits in ((), (1,)) for gate in decomposition)
         # the global phase gate makes the decomposition exact
         assert sum(isinstance(gate, gates.GlobalPhase) for gate in decomposition) <= 1
+        for gate in decomposition:
+            if isinstance(gate, gates.GlobalPhase):
+                assert 0 <= gate.parameters[0] < 2 * math.pi
 
         circuit = Circuit(2)
         circuit.add(decomposition)

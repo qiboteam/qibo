@@ -50,9 +50,11 @@ gpi2_dec.add(
 )
 gpi2_dec.add(gates.Z, [gates.Z(0)])
 gpi2_dec.add(gates.S, [gates.RZ(0, math.pi / 2), gates.GlobalPhase(math.pi / 4)])
-gpi2_dec.add(gates.SDG, [gates.RZ(0, -math.pi / 2), gates.GlobalPhase(-math.pi / 4)])
+gpi2_dec.add(gates.SDG, [gates.RZ(0, -math.pi / 2), gates.GlobalPhase(7 * math.pi / 4)])
 gpi2_dec.add(gates.T, [gates.RZ(0, math.pi / 4), gates.GlobalPhase(math.pi / 8)])
-gpi2_dec.add(gates.TDG, [gates.RZ(0, -math.pi / 4), gates.GlobalPhase(-math.pi / 8)])
+gpi2_dec.add(
+    gates.TDG, [gates.RZ(0, -math.pi / 4), gates.GlobalPhase(15 * math.pi / 8)]
+)
 gpi2_dec.add(gates.SX, [gates.GPI2(0, 0), gates.GlobalPhase(math.pi / 4)])
 gpi2_dec.add(
     gates.RX,
@@ -80,7 +82,7 @@ gpi2_dec.add(
     gates.U1,
     lambda gate: [
         gates.RZ(0, gate.parameters[0]),
-        gates.GlobalPhase(gate.parameters[0] / 2),
+        gates.GlobalPhase((gate.parameters[0] / 2) % (2 * math.pi)),
     ],
 )
 gpi2_dec.add(
@@ -96,7 +98,11 @@ gpi2_dec.add(
         _u3_to_gpi2(*u3_decomposition(gate.parameters[0], backend))
         + [
             gates.GlobalPhase(
-                float(backend.angle(backend.det(backend.cast(gate.parameters[0])))) / 2
+                (
+                    float(backend.angle(backend.det(backend.cast(gate.parameters[0]))))
+                    / 2
+                )
+                % (2 * math.pi)
             )
         ]
     ),
@@ -107,7 +113,8 @@ gpi2_dec.add(
         _u3_to_gpi2(*u3_decomposition(gate.matrix(backend), backend))
         + [
             gates.GlobalPhase(
-                float(backend.angle(backend.det(gate.matrix(backend)))) / 2
+                (float(backend.angle(backend.det(gate.matrix(backend)))) / 2)
+                % (2 * math.pi)
             )
         ]
     ),

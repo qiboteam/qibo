@@ -5,6 +5,7 @@ import math
 import sys
 from collections import Counter
 from collections.abc import Iterable
+from fractions import Fraction
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -1492,8 +1493,9 @@ class Circuit:
 
         If the circuit has a global phase different from zero, see
         :attr:`qibo.models.circuit.Circuit.global_phase`, it is written above the diagram
-        as a multiple of :math:`\\pi` that is reduced to the interval
-        :math:`[-\\pi, \\pi]`, since it acts on no wire.
+        since it acts on no wire. It is reduced to the interval :math:`[0, 2\\pi)` and
+        written as a fraction of :math:`\\pi`, such as ``3π/4``, or as a decimal multiple of
+        :math:`\\pi` if it is not a fraction with a small denominator.
 
         See :meth:`qibo.models.circuit.Circuit.draw` for the arguments.
         """
@@ -1598,10 +1600,21 @@ class Circuit:
             output += table
 
         # the global phase is not a gate on any wire, so it is written above the diagram
-        # only the phase modulo 2 pi is relevant, so it is reduced to [-pi, pi]
-        global_phase = math.remainder(self.global_phase, 2 * math.pi)
-        if not math.isclose(global_phase, 0.0, abs_tol=1e-12):
-            output = f"Global phase = exp(i * {global_phase / math.pi:.6g}π)\n" + output
+        # only the phase modulo 2 pi is relevant, so it is reduced to [0, 2 pi)
+        global_phase = float(self.global_phase) % (2 * math.pi)
+        if abs(math.remainder(global_phase, 2 * math.pi)) > 1e-9:
+            # as a fraction of pi if it is one, and as a decimal number otherwise
+            ratio = global_phase / math.pi
+            fraction = Fraction(ratio).limit_denominator(64)
+            if abs(fraction - ratio) < 1e-9:
+                numerator = "" if fraction.numerator == 1 else str(fraction.numerator)
+                denominator = (
+                    "" if fraction.denominator == 1 else f"/{fraction.denominator}"
+                )
+                phase = f"{numerator}π{denominator}"
+            else:
+                phase = f"{ratio:.6g}π"
+            output = f"Global phase = exp(i * {phase})\n" + output
 
         return output.rstrip("\n")
 
@@ -1614,7 +1627,8 @@ class Circuit:
         """Draw text circuit using unicode symbols.
 
         The :attr:`qibo.models.circuit.Circuit.global_phase` of the circuit is written above
-        the diagram, as a multiple of :math:`\\pi`, if it is different from zero.
+        the diagram, as a fraction of :math:`\\pi` whenever possible, if it is different
+        from zero.
 
         Args:
             line_wrap (int, optional): maximum number of characters per line. This option

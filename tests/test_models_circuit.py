@@ -818,7 +818,7 @@ def test_circuit_draw_global_phase(capsys):
     circuit.add(gates.X(1))
 
     ref = (
-        "Global phase = exp(i * 0.25π)\n"
+        "Global phase = exp(i * π/4)\n"
         + "q0: ─H─o───\n"
         + "q1: ───|─X─\n"
         + "q2: ───X───"
@@ -846,15 +846,29 @@ def test_circuit_draw_without_global_phase():
     assert str(circuit) == "0: ─X─"
 
 
-def test_circuit_draw_global_phase_reduced():
-    """The global phase is written in the interval [-pi, pi]."""
+@pytest.mark.parametrize(
+    "global_phase,text",
+    [
+        (math.pi / 4, "π/4"),
+        (3 * math.pi / 4, "3π/4"),
+        (math.pi, "π"),
+        (2 * math.pi / 3, "2π/3"),
+        (5 * math.pi / 12, "5π/12"),
+        (19 * math.pi / 24, "19π/24"),
+        # the phase is reduced to the interval [0, 2 pi)
+        (2 * math.pi + math.pi / 4, "π/4"),
+        (-math.pi / 4, "7π/4"),
+        (-math.pi / 2, "3π/2"),
+        # decimals are only used if the phase is not a fraction of pi
+        (1.0, "0.31831π"),
+        (0.3, "0.095493π"),
+    ],
+)
+def test_circuit_draw_global_phase_fractions(global_phase, text):
+    """The global phase is written as a fraction of pi, and as a decimal if it is not."""
     circuit = Circuit(1)
-    circuit.add(gates.GlobalPhase(2 * math.pi + math.pi / 4))
-    assert str(circuit) == "Global phase = exp(i * 0.25π)\n0: ─"
-
-    circuit = Circuit(1)
-    circuit.add(gates.GlobalPhase(-math.pi / 2))
-    assert str(circuit) == "Global phase = exp(i * -0.5π)\n0: ─"
+    circuit.add(gates.GlobalPhase(global_phase))
+    assert str(circuit) == f"Global phase = exp(i * {text})\n0: ─"
 
 
 def test_circuit_wire_names():
