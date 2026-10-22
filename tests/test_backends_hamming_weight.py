@@ -229,6 +229,28 @@ def test_ccz(backend, weight):
     backend.assert_allclose(hamming_state, state, atol=1e-8)
 
 
+@pytest.mark.parametrize("weight", [0, 1, 2, 3])
+def test_global_phase(backend, weight):
+    hamming_bkd = construct_hamming_weight_backend(backend)
+    nqubits = 3
+    dim = int(binom(nqubits, weight))
+    initial_state = random_statevector(dim, backend=backend, seed=1237)
+
+    circuit = Circuit(nqubits, density_matrix=False)
+    circuit.add(gates.GlobalPhase(0.1234))
+    hamming_result = hamming_bkd.execute_circuit(
+        circuit, weight=weight, initial_state=initial_state
+    )
+    hamming_full_state = hamming_result.full_state()
+
+    initial_state_full = get_full_initial_state(
+        initial_state, weight, nqubits, hamming_bkd
+    )
+    state = backend.execute_circuit(circuit, initial_state=initial_state_full).state()
+
+    backend.assert_allclose(hamming_full_state, state, atol=1e-8)
+
+
 @pytest.mark.parametrize("weight", [1, 2, 3, 4])
 def test_apply_gate_n_qubit_single(backend, weight):
     hamming_bkd = construct_hamming_weight_backend(backend)

@@ -147,6 +147,18 @@ def test_circuit_add():
     assert list(circuit.queue) == [g1, g2, g3]
 
 
+def test_circuit_add_global_phase():
+    circuit = Circuit(2)
+    g1, g2, g3 = gates.H(0), gates.GlobalPhase(0.1234), gates.CNOT(0, 1)
+    circuit.add(g1)
+    circuit.add(g2)
+    circuit.add(g3)
+    # gates that act on no qubits do not occupy a moment
+    assert circuit.depth == 2
+    assert circuit.ngates == 3
+    assert list(circuit.queue) == [g1, g2, g3]
+
+
 def test_circuit_add_errors():
     circuit = Circuit(2)
     with pytest.raises(TypeError):
@@ -708,6 +720,21 @@ def test_circuit_draw():
     circuit.add(gates.SWAP(1, 3))
 
     assert str(circuit) == ref
+
+
+def test_circuit_draw_global_phase(capsys):
+    """Check that gates that act on no qubits are drawn on every wire."""
+    circuit = Circuit(3, wire_names=["q0", "q1", "q2"])
+    circuit.add(gates.H(0))
+    circuit.add(gates.GlobalPhase(0.1234))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.X(1))
+
+    ref = "q0: ─H─GP─o───\n" + "q1: ───GP─|─X─\n" + "q2: ───GP─X───"
+
+    circuit.draw()
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref
 
 
 def test_circuit_wire_names():
