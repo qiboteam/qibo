@@ -591,7 +591,8 @@ class GlobalPhase(ParametrizedGate):
         if len(state.shape) == 2:
             return state
 
-        return backend.exp(1j * self.init_kwargs["theta"]) * state
+        phase = backend.exp(1j * self.parameters[0])
+        return backend.cast(phase, dtype=state.dtype) * state
 
     @Gate.check_controls
     def controlled_by(self, *q: int) -> Gate:
