@@ -293,6 +293,15 @@ def test_global_phase(backend, theta, density_matrix):
         gate.qasm_label
 
 
+def test_global_phase_preserves_dtype(backend):
+    backend.set_dtype("complex64")
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.GlobalPhase(0.1234))
+    assert backend.execute_circuit(circuit).state().dtype == backend.complex64
+    backend.set_dtype("complex128")
+
+
 @pytest.mark.parametrize(
     "controls,name", [((0,), "U1"), ((1, 0), "CU1"), ((0, 1, 2), "U1")]
 )
