@@ -3,7 +3,6 @@
 import math
 
 import numpy as np
-import sympy
 from numpy.typing import ArrayLike
 
 from qibo.backends import _check_backend, _numpy_backend
@@ -3002,7 +3001,7 @@ def _is_clifford_given_angle(angle: float, precision_tol: float = 1e-8):
     )
 
 
-def is_nonzero_phase(phase: float | sympy.Expr, atol: float = 1e-12) -> bool:
+def is_nonzero_phase(phase: float, atol: float = 1e-12) -> bool:
     """Whether a phase is not a multiple of :math:`2 \\pi`.
 
     Symbolic phases, *i.e.* the ones that depend on symbols, are always nonzero.
@@ -3014,6 +3013,8 @@ def is_nonzero_phase(phase: float | sympy.Expr, atol: float = 1e-12) -> bool:
     Returns:
         bool: ``True`` if the phase is not a multiple of :math:`2 \\pi`.
     """
+    import sympy
+
     if isinstance(phase, sympy.Expr) and phase.free_symbols:
         return True
 
