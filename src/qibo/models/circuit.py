@@ -107,6 +107,10 @@ class _Queue(list):
                 else tuple(range(self.nqubits))  # special gate acting on all qubits
             )
 
+            # gates that act on no qubits, e.g. the global phase, do not occupy a moment
+            if not qubits:
+                continue
+
             # calculate moment index for this gate
             idx = max(moment_index[q] for q in qubits)
             for q in qubits:
@@ -1400,7 +1404,8 @@ class Circuit:
                     f"{gate.__class__.__name__} gate is not supported by `circuit.draw`",
                 )
 
-        if isinstance(gate, gates.CallbackGate):
+        if isinstance(gate, gates.CallbackGate) or not gate.qubits:
+            # gates that act on the whole system are drawn on every wire
             targets = list(range(self.nqubits))
         else:
             targets = list(gate.target_qubits)

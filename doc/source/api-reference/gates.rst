@@ -87,6 +87,13 @@ Align (A)
     :members:
     :member-order: bysource
 
+Global phase (GP)
+^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.GlobalPhase
+    :members:
+    :member-order: bysource
+
 Measurement (M)
 ^^^^^^^^^^^^^^^
 
