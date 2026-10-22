@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 import pytest
+import sympy
 
 from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
@@ -144,30 +145,113 @@ def test_unitary_decompositions_are_exact(backend, table, seed):
     backend.assert_allclose(circuit.unitary(backend), unitary, atol=1e-8)
 
 
+_FIXED_PHASE_GATES = [("SXDG", (0,)), ("SDG", (0,)), ("TDG", (0,))]
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,args",
+    [
+        (table, gate_name, args)
+        for table in TABLES
+        for gate_name, args in [*GATES_TO_DECOMPOSE, *_FIXED_PHASE_GATES]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_global_phases_are_positive(backend, table, gate_name, args):
+    """The global phases of the entries of the tables are in the interval [0, 2 pi)."""
+    gate = getattr(gates, gate_name)(*args)
+    for g in TABLES[table]._check_instance(gate, backend):
+        if isinstance(g, gates.GlobalPhase):
+            assert 0 <= g.parameters[0] < 2 * math.pi
+
+
 @pytest.mark.parametrize(
     "table,gate_name,args",
     [
         (table, gate_name, args)
         for table in TABLES
         for gate_name, args in [
-            *GATES_TO_DECOMPOSE,
             ("U1", (0, -0.37)),
             ("U1", (0, -5.0)),
             ("CU1", (0, 1, -0.37)),
             ("CU1", (0, 1, -5.0)),
-            ("SXDG", (0,)),
-            ("SDG", (0,)),
-            ("TDG", (0,)),
         ]
         if getattr(gates, gate_name) in TABLES[table].decompositions
     ],
 )
-def test_global_phases_are_positive(backend, table, gate_name, args):
-    """The global phases of the decompositions are in the interval [0, 2 pi)."""
+def test_global_phases_are_reduced(backend, table, gate_name, args):
+    """The phases that depend on parameters are reduced when the decomposition is built,
+    since their entries do not reduce them."""
     gate = getattr(gates, gate_name)(*args)
+    decomposition = TABLES[table](gate, backend)
+    assert isinstance(decomposition[-1], gates.GlobalPhase)
+    assert 0 < decomposition[-1].parameters[0] < 2 * math.pi
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,args",
+    [
+        (table, gate_name, args)
+        for table in TABLES
+        for gate_name, args in [*GATES_TO_DECOMPOSE, *_FIXED_PHASE_GATES]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_global_phases_are_not_trainable(backend, table, gate_name, args):
+    """The global phase gates of the decompositions must not add trainable parameters."""
+    gate = getattr(gates, gate_name)(*args)
+    for decomposition in (
+        TABLES[table]._check_instance(gate, backend),
+        TABLES[table](gate, backend),
+    ):
+        for g in decomposition:
+            if isinstance(g, gates.GlobalPhase):
+                assert not g.trainable
+
+
+@pytest.mark.parametrize("table", ["gpi2", "u3"])
+@pytest.mark.parametrize("seed", range(3))
+def test_unitary_global_phases_are_not_trainable(backend, table, seed):
+    gate = gates.Unitary(random_unitary(2, backend=backend, seed=seed), 0)
     for g in TABLES[table]._check_instance(gate, backend):
         if isinstance(g, gates.GlobalPhase):
-            assert 0 <= g.parameters[0] < 2 * math.pi
+            assert not g.trainable
+
+
+@pytest.mark.parametrize("gate_class", list(native_cz_dec))
+def test_native_cz_global_phases_are_not_trainable(gate_class):
+    for g in native_cz_dec[gate_class]:
+        if isinstance(g, gates.GlobalPhase):
+            assert not g.trainable
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,sign",
+    [
+        (table, gate_name, sign)
+        for table in ["standard", "cz", "gpi2", "u3"]
+        for gate_name in ["U1", "CU1"]
+        for sign in [1, -1]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_symbolic_global_phases(backend, table, gate_name, sign):
+    """Decompositions with a symbolic parameter have a symbolic global phase."""
+    x = sympy.Symbol("x")
+    qubits = (0,) if gate_name == "U1" else (0, 1)
+    gate = getattr(gates, gate_name)(*qubits, sign * x)
+
+    decomposition = TABLES[table](gate, backend)
+
+    phase = decomposition[-1]
+    assert isinstance(phase, gates.GlobalPhase)
+    assert not phase.trainable
+    assert phase.parameters[0].free_symbols == {x}
+    # the symbolic phase is a quarter of the parameter of CU1 and half of the one of U1,
+    # up to the sign and the reduction modulo 2 pi
+    value = float(phase.parameters[0].subs(x, 0.4) % (2 * math.pi))
+    expected = sign * 0.4 / (4 if gate_name == "CU1" else 2)
+    assert value == pytest.approx(expected % (2 * math.pi))
 
 
 @pytest.mark.parametrize("table", ["gpi2", "u3"])

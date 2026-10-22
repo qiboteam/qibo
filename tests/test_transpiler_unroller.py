@@ -214,6 +214,26 @@ def test_unroller_global_phase_modulo(backend):
     )
 
 
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.CZ | NativeGates.U3,
+        NativeGates["ECR"] | NativeGates["RZ"] | NativeGates["SX"],
+    ],
+)
+def test_unroller_global_phase_is_not_trainable(backend, natives):
+    """The global phase gate of the unrolled circuit does not add trainable parameters."""
+    circuit = Circuit(2)
+    circuit.add(
+        [gates.GlobalPhase(0.3, trainable=True), gates.SX(0), gates.CU1(0, 1, 0.4)]
+    )
+    unrolled = Unroller(natives, backend=backend)(circuit)
+
+    assert isinstance(unrolled.queue[-1], gates.GlobalPhase)
+    assert not unrolled.queue[-1].trainable
+    assert not any(isinstance(g, gates.GlobalPhase) for g in unrolled.trainable_gates)
+
+
 def test_unroller_without_global_phase(backend):
     """No global phase gate is added if the decompositions are exact."""
     natives = NativeGates.CZ | NativeGates.U3

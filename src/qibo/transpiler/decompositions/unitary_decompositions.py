@@ -612,7 +612,7 @@ def single_qubit_decomposition(
         product = gate.matrix(backend) @ product
     phase = float(backend.angle(backend.sum(backend.conj(product) * unitary)))
     if abs(math.remainder(phase, 2 * math.pi)) > atol:
-        decomposition.append(gates.GlobalPhase(phase % (2 * math.pi)))
+        decomposition.append(gates.GlobalPhase(phase % (2 * math.pi), trainable=False))
 
     return decomposition
 

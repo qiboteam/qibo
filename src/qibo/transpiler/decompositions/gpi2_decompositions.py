@@ -28,7 +28,7 @@ def _u3_to_gpi2(t: float, p: float, l: float) -> list[gates.Gate]:
     decomposition.append(gates.GPI2(0, 0))
     if p != -math.pi:
         decomposition.append(gates.RZ(0, p + math.pi))
-    decomposition.append(gates.GlobalPhase(math.pi))
+    decomposition.append(gates.GlobalPhase(math.pi, trainable=False))
     return decomposition
 
 
@@ -41,21 +41,36 @@ gpi2_dec.add(
         gates.GPI2(0, math.pi / 2),
         gates.GPI2(0, math.pi / 2),
         gates.Z(0),
-        gates.GlobalPhase(math.pi),
+        gates.GlobalPhase(math.pi, trainable=False),
     ],
 )
 gpi2_dec.add(
     gates.Y,
-    [gates.Z(0), gates.GPI2(0, 0), gates.GPI2(0, 0), gates.GlobalPhase(math.pi)],
+    [
+        gates.Z(0),
+        gates.GPI2(0, 0),
+        gates.GPI2(0, 0),
+        gates.GlobalPhase(math.pi, trainable=False),
+    ],
 )
 gpi2_dec.add(gates.Z, [gates.Z(0)])
-gpi2_dec.add(gates.S, [gates.RZ(0, math.pi / 2), gates.GlobalPhase(math.pi / 4)])
-gpi2_dec.add(gates.SDG, [gates.RZ(0, -math.pi / 2), gates.GlobalPhase(7 * math.pi / 4)])
-gpi2_dec.add(gates.T, [gates.RZ(0, math.pi / 4), gates.GlobalPhase(math.pi / 8)])
 gpi2_dec.add(
-    gates.TDG, [gates.RZ(0, -math.pi / 4), gates.GlobalPhase(15 * math.pi / 8)]
+    gates.S, [gates.RZ(0, math.pi / 2), gates.GlobalPhase(math.pi / 4, trainable=False)]
 )
-gpi2_dec.add(gates.SX, [gates.GPI2(0, 0), gates.GlobalPhase(math.pi / 4)])
+gpi2_dec.add(
+    gates.SDG,
+    [gates.RZ(0, -math.pi / 2), gates.GlobalPhase(7 * math.pi / 4, trainable=False)],
+)
+gpi2_dec.add(
+    gates.T, [gates.RZ(0, math.pi / 4), gates.GlobalPhase(math.pi / 8, trainable=False)]
+)
+gpi2_dec.add(
+    gates.TDG,
+    [gates.RZ(0, -math.pi / 4), gates.GlobalPhase(15 * math.pi / 8, trainable=False)],
+)
+gpi2_dec.add(
+    gates.SX, [gates.GPI2(0, 0), gates.GlobalPhase(math.pi / 4, trainable=False)]
+)
 gpi2_dec.add(
     gates.RX,
     lambda gate: [
@@ -63,7 +78,7 @@ gpi2_dec.add(
         gates.GPI2(0, math.pi / 2),
         gates.RZ(0, gate.parameters[0] + math.pi),
         gates.GPI2(0, math.pi / 2),
-        gates.GlobalPhase(math.pi / 2),
+        gates.GlobalPhase(math.pi / 2, trainable=False),
     ],
 )
 gpi2_dec.add(
@@ -73,7 +88,7 @@ gpi2_dec.add(
         gates.RZ(0, gate.parameters[0] + math.pi),
         gates.GPI2(0, 0),
         gates.Z(0),
-        gates.GlobalPhase(math.pi / 2),
+        gates.GlobalPhase(math.pi / 2, trainable=False),
     ],
 )
 gpi2_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
@@ -82,7 +97,7 @@ gpi2_dec.add(
     gates.U1,
     lambda gate: [
         gates.RZ(0, gate.parameters[0]),
-        gates.GlobalPhase((gate.parameters[0] / 2) % (2 * math.pi)),
+        gates.GlobalPhase(gate.parameters[0] / 2, trainable=False),
     ],
 )
 gpi2_dec.add(
@@ -102,7 +117,8 @@ gpi2_dec.add(
                     float(backend.angle(backend.det(backend.cast(gate.parameters[0]))))
                     / 2
                 )
-                % (2 * math.pi)
+                % (2 * math.pi),
+                trainable=False,
             )
         ]
     ),
@@ -114,7 +130,8 @@ gpi2_dec.add(
         + [
             gates.GlobalPhase(
                 (float(backend.angle(backend.det(gate.matrix(backend)))) / 2)
-                % (2 * math.pi)
+                % (2 * math.pi),
+                trainable=False,
             )
         ]
     ),

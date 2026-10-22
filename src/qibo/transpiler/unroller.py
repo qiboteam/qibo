@@ -7,6 +7,7 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates import Gate
+from qibo.gates.gates import is_nonzero_phase
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.decompositions.abstract import merge_global_phases
 from qibo.transpiler.decompositions.cz_decompositions import cz_dec, native_cz_dec
@@ -346,8 +347,8 @@ class Unroller:
             translated_circuit.add(translated)
             if not isinstance(gate, (gates.Align, gates.Barrier, gates.I)):
                 touched.update(gate.qubits)
-        if abs(math.remainder(global_phase, 2 * math.pi)) > 1e-12:
-            translated_circuit.add(gates.GlobalPhase(global_phase))
+        if is_nonzero_phase(global_phase):
+            translated_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
         return translated_circuit
 
 
@@ -545,7 +546,8 @@ def _translate_single_qubit_gates(
         # the U3 gate equals the gate only up to half the phase of its determinant
         phase = [
             gates.GlobalPhase(
-                (float(backend.angle(backend.det(matrix))) / 2) % (2 * math.pi)
+                (float(backend.angle(backend.det(matrix))) / 2) % (2 * math.pi),
+                trainable=False,
             )
         ]
         gate = gates.U3(gate.qubits[0], *u3_decomposition(matrix, backend))

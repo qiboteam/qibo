@@ -262,6 +262,19 @@ def test_routing_with_global_phase(star_connectivity, router_class, measurements
 
 
 @pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
+def test_routing_global_phase_is_not_trainable(star_connectivity, router_class):
+    circuit = Circuit(5)
+    circuit.add([gates.CNOT(0, 1), gates.GlobalPhase(0.3, trainable=True)])
+    assert len(circuit.trainable_gates) == 1
+
+    transpiled_circuit, _ = router_class(star_connectivity())(circuit)
+
+    assert isinstance(transpiled_circuit.queue[-1], gates.GlobalPhase)
+    assert not transpiled_circuit.queue[-1].trainable
+    assert len(transpiled_circuit.trainable_gates) == 0
+
+
+@pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
 @pytest.mark.parametrize(
     "phase,expected",
     [

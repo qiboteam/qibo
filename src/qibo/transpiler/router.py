@@ -9,6 +9,7 @@ import numpy as np
 
 from qibo import Circuit, gates
 from qibo.config import raise_error
+from qibo.gates.gates import is_nonzero_phase
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.asserts import assert_placement
@@ -300,8 +301,8 @@ class Sabre(Router):
                     routed_circuit = self._append_final_measurements(
                         routed_circuit=routed_circuit
                     )
-                if abs(math.remainder(global_phase, 2 * math.pi)) > 1e-12:
-                    routed_circuit.add(gates.GlobalPhase(global_phase))
+                if is_nonzero_phase(global_phase):
+                    routed_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
 
                 # the first trial among the ones with the fewest swaps is kept
                 if best_trial is None or self.circuit_map._swaps < best_trial[0]:
@@ -626,8 +627,8 @@ class ShortestPaths(Router):
                 routed_circuit = self._append_final_measurements(
                     routed_circuit=routed_circuit
                 )
-            if abs(math.remainder(global_phase, 2 * math.pi)) > 1e-12:
-                routed_circuit.add(gates.GlobalPhase(global_phase))
+            if is_nonzero_phase(global_phase):
+                routed_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
         finally:
             self.connectivity = connectivity
 

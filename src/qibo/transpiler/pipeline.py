@@ -399,19 +399,24 @@ def transpile(
             import networkx as nx
 
             from qibo import Circuit, gates
+            from qibo.backends import NumpyBackend
             from qibo.quantum_info import random_unitary
             from qibo.transpiler import NativeGates, transpile
             from qibo.transpiler.asserts import assert_transpiling
 
+            backend = NumpyBackend()
+
             circuit = Circuit(4)
             circuit.add(gates.H(0))
-            circuit.add(gates.Unitary(random_unitary(8, seed=42), 0, 1, 2))
+            circuit.add(gates.Unitary(random_unitary(8, seed=42, backend=backend), 0, 1, 2))
             circuit.add(gates.CNOT(0, 3))
             circuit.add(gates.M(*range(4)))
 
             connectivity = nx.path_graph(4)
             natives = NativeGates.from_gatelist([gates.U3, gates.CNOT, gates.M])
-            transpiled_circuit, final_layout = transpile(circuit, connectivity, natives, seed=42)
+            transpiled_circuit, final_layout = transpile(
+                circuit, connectivity, natives, seed=42, backend=backend
+            )
 
             # Raises an error if the circuits are not equivalent, or if the transpiled circuit
             # does not respect the connectivity and the native gates

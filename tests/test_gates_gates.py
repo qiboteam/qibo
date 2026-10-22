@@ -5,8 +5,10 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+import sympy
 
 from qibo import Circuit, gates, matrices
+from qibo.gates.gates import is_nonzero_phase
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
 from qibo.transpiler.decompositions.standard_decompositions import (
@@ -291,6 +293,36 @@ def test_global_phase(backend, theta, density_matrix):
     assert gate.unitary
     with pytest.raises(NotImplementedError):
         gate.qasm_label
+
+
+@pytest.mark.parametrize(
+    "phase,expected",
+    [
+        (0, False),
+        (0.0, False),
+        (1e-15, False),
+        (2 * math.pi, False),
+        (-4 * math.pi, False),
+        (2 * math.pi - 1e-14, False),
+        (1e-9, True),
+        (math.pi / 4, True),
+        (-math.pi / 2, True),
+        (sympy.pi, True),
+        (4 * sympy.pi, False),
+        (sympy.Symbol("x"), True),
+        (sympy.Symbol("x") / 4, True),
+        (0 * sympy.Symbol("x"), False),
+        (sympy.Mod(sympy.Symbol("x"), 2 * math.pi), True),
+    ],
+)
+def test_is_nonzero_phase(phase, expected):
+    """Phases are compared modulo 2 pi, and symbolic phases are always nonzero."""
+    assert is_nonzero_phase(phase) is expected
+
+
+def test_is_nonzero_phase_tolerance():
+    assert not is_nonzero_phase(1e-9, atol=1e-8)
+    assert is_nonzero_phase(1e-9, atol=1e-10)
 
 
 def test_global_phase_preserves_dtype(backend):

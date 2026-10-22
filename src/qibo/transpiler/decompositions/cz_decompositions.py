@@ -36,7 +36,7 @@ cz_dec.add(
         gates.CZ(0, 1),
         gates.H(0),
         gates.H(1),
-        gates.GlobalPhase(3 * math.pi / 2),
+        gates.GlobalPhase(3 * math.pi / 2, trainable=False),
     ],
 )
 cz_dec.add(
@@ -78,7 +78,7 @@ cz_dec.add(
         gates.CZ(0, 1),
         gates.H(1),
         gates.RZ(1, gate.parameters[0] / 2.0),
-        gates.GlobalPhase((gate.parameters[0] / 4.0) % (2 * math.pi)),
+        gates.GlobalPhase(gate.parameters[0] / 4.0, trainable=False),
     ],
 )
 cz_dec.add(
@@ -147,7 +147,7 @@ cz_dec.add(
         gates.CZ(0, 1),
         gates.RX(0, -math.pi / 2),
         gates.U3(1, math.pi / 2, 0, math.pi / 2),
-        gates.GlobalPhase(math.pi),
+        gates.GlobalPhase(math.pi, trainable=False),
     ],
 )
 cz_dec.add(
@@ -178,7 +178,7 @@ cz_dec.add(
         gates.RX(1, -math.pi / 4),
         gates.CZ(0, 1),
         gates.H(1),
-        gates.GlobalPhase(math.pi / 8),
+        gates.GlobalPhase(math.pi / 8, trainable=False),
     ],
 )
 cz_dec.add(
@@ -233,7 +233,7 @@ cz_dec.add(
         gates.RX(1, -math.pi / 4),
         gates.CZ(0, 1),
         gates.H(1),
-        gates.GlobalPhase(math.pi / 8),
+        gates.GlobalPhase(math.pi / 8, trainable=False),
     ],
 )
 
@@ -260,7 +260,7 @@ native_cz_dec = {
         gates.U3(1, math.pi / 2, -math.pi, 0),
         gates.ECR(0, 1),
         gates.U3(1, -math.pi / 2, -math.pi / 2, -math.pi),
-        gates.GlobalPhase(math.pi / 4),
+        gates.GlobalPhase(math.pi / 4, trainable=False),
     ],
     gates.FSWAP: [
         gates.U3(0, -math.pi / 2, -math.pi / 2, -math.pi),
@@ -271,7 +271,7 @@ native_cz_dec = {
         gates.FSWAP(0, 1),
         gates.U3(0, math.pi / 2, math.pi / 2, 0),
         gates.U3(1, 0, -math.pi, 0),
-        gates.GlobalPhase(7 * math.pi / 4),
+        gates.GlobalPhase(7 * math.pi / 4, trainable=False),
     ],
     gates.SiSWAP: [
         gates.U3(0, -math.pi / 2, math.pi / 2, math.pi / 2),
@@ -282,7 +282,7 @@ native_cz_dec = {
         gates.SiSWAP(0, 1),
         gates.U3(0, math.pi / 2, 0, math.pi / 2),
         gates.U3(1, math.pi / 2, -math.pi, -math.pi / 2),
-        gates.GlobalPhase(3 * math.pi / 4),
+        gates.GlobalPhase(3 * math.pi / 4, trainable=False),
     ],
     gates.SiSWAPDG: [
         gates.U3(0, math.pi / 2, math.pi / 2, -math.pi),
@@ -293,7 +293,7 @@ native_cz_dec = {
         gates.SiSWAPDG(0, 1),
         gates.U3(0, math.pi / 2, math.pi / 2, -math.pi / 2),
         gates.U3(1, -math.pi / 2, math.pi / 2, -math.pi / 2),
-        gates.GlobalPhase(5 * math.pi / 4),
+        gates.GlobalPhase(5 * math.pi / 4, trainable=False),
     ],
     gates.SYC: [
         gates.U3(0, 0, -2 * math.pi / 3, -2 * math.pi / 3),
@@ -304,6 +304,6 @@ native_cz_dec = {
         gates.SYC(0, 1),
         gates.U3(0, -math.pi, math.pi / 12, 7 * math.pi / 12),
         gates.U3(1, -_SYC_ANGLE_1, 7 * math.pi / 12, -math.pi / 3),
-        gates.GlobalPhase(4 * math.pi / 3),
+        gates.GlobalPhase(4 * math.pi / 3, trainable=False),
     ],
 }

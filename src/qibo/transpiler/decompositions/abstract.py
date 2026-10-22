@@ -3,13 +3,16 @@ import math
 from qibo import gates
 from qibo.backends import Backend
 from qibo.config import raise_error
+from qibo.gates.gates import is_nonzero_phase
 
 
 def merge_global_phases(decomposition: list[gates.Gate]) -> list[gates.Gate]:
     """Merge the global phases of a decomposition into a single gate at its end.
 
     The phases are added modulo :math:`2 \\pi`. The :class:`qibo.gates.GlobalPhase` gate is
-    only added if the total phase is not zero, *i.e.* if the decomposition is not exact.
+    only added if the total phase is not zero, *i.e.* if the decomposition is not exact, and it
+    is not trainable, so it does not add parameters to the circuits. Symbolic phases are kept
+    symbolic.
 
     Args:
         decomposition (list[:class:`qibo.gates.abstract.Gate`]): Gates of a decomposition.
@@ -28,8 +31,8 @@ def merge_global_phases(decomposition: list[gates.Gate]) -> list[gates.Gate]:
 
     merged = [gate for gate in decomposition if not isinstance(gate, gates.GlobalPhase)]
     phase = sum(phases) % (2 * math.pi)
-    if abs(math.remainder(phase, 2 * math.pi)) > 1e-12:
-        merged.append(gates.GlobalPhase(phase))
+    if is_nonzero_phase(phase):
+        merged.append(gates.GlobalPhase(phase, trainable=False))
 
     return merged
 
@@ -125,7 +128,7 @@ class GateDecompositions:
                 getattr(gates, gate_name)(qubit) for gate_name in reversed(sequence)
             ]
             if phase != 0:
-                gate_list.append(gates.GlobalPhase(phase))
+                gate_list.append(gates.GlobalPhase(phase, trainable=False))
 
             return gate_list
         except ModuleNotFoundError:  # pragma: no cover

@@ -5,6 +5,7 @@ from collections import Counter
 
 import numpy as np
 import pytest
+import sympy
 from networkx import Graph
 
 from qibo import Circuit, gates
@@ -591,6 +592,88 @@ def test_circuit_decompose_global_phase_modulo():
     decomposed = circuit.decompose()
     assert decomposed.global_phase == pytest.approx(math.pi)
     assert isinstance(decomposed.queue[-1], gates.GlobalPhase)
+
+
+def test_circuit_decompose_global_phase_is_not_trainable():
+    """The global phase gate of the decomposition does not add trainable parameters."""
+    circuit = Circuit(2)
+    circuit.add([gates.RX(0, 0.3), gates.SX(1), gates.CU1(0, 1, 0.4)])
+    decomposed = circuit.decompose()
+
+    global_phases = [g for g in decomposed.queue if isinstance(g, gates.GlobalPhase)]
+    assert len(global_phases) == 1
+    assert not global_phases[0].trainable
+    assert not any(isinstance(g, gates.GlobalPhase) for g in decomposed.trainable_gates)
+    # RX and the three RZ gates of the decomposition of CU1 are the trainable ones
+    assert len(decomposed.get_parameters()) == 4
+    decomposed.set_parameters(decomposed.get_parameters())
+
+
+def test_circuit_decompose_trainable_global_phase_of_the_circuit():
+    """The global phase gates of the circuit are replaced by a non trainable one."""
+    circuit = Circuit(1)
+    circuit.add([gates.GlobalPhase(0.3, trainable=True), gates.SX(0)])
+    assert len(circuit.trainable_gates) == 1
+
+    decomposed = circuit.decompose()
+    assert isinstance(decomposed.queue[-1], gates.GlobalPhase)
+    assert not decomposed.queue[-1].trainable
+    assert len(decomposed.trainable_gates) == 0
+
+
+def test_circuit_decompose_symbolic_global_phase():
+    """Parameters that are symbols give a symbolic global phase."""
+    x = sympy.Symbol("x")
+    circuit = Circuit(2)
+    circuit.add([gates.H(0), gates.CU1(0, 1, x)])
+    decomposed = circuit.decompose()
+
+    assert isinstance(decomposed.queue[-1], gates.GlobalPhase)
+    assert not decomposed.queue[-1].trainable
+    assert decomposed.global_phase.free_symbols == {x}
+    assert float(decomposed.global_phase.subs(x, 0.4)) == pytest.approx(0.1)
+
+    # the symbolic phase is added to the numeric ones
+    circuit.add(gates.SX(0))
+    decomposed = circuit.decompose()
+    assert decomposed.global_phase.free_symbols == {x}
+    assert float(decomposed.global_phase.subs(x, 0.4)) == pytest.approx(
+        0.1 + math.pi / 4
+    )
+
+
+def test_circuit_draw_symbolic_global_phase():
+    x = sympy.Symbol("x")
+    circuit = Circuit(1)
+    circuit.add(gates.GlobalPhase(x / 4, trainable=False))
+    assert str(circuit) == "Global phase = exp(i * (x/4))\n0: ─"
+
+
+def test_circuit_to_qasm_warns_about_global_phase(caplog):
+    """The global phase is not exported, so a warning is logged if it is not zero."""
+    circuit = Circuit(1)
+    circuit.add([gates.H(0), gates.GlobalPhase(0.1234)])
+    with caplog.at_level("WARNING"):
+        qasm = circuit.to_qasm()
+    assert "global phase" in caplog.text
+    assert "gphase" not in qasm
+
+    # numeric and symbolic phases that are not zero modulo 2 pi are also warned about
+    caplog.clear()
+    circuit = Circuit(1)
+    circuit.add([gates.H(0), gates.GlobalPhase(sympy.Symbol("x"))])
+    with caplog.at_level("WARNING"):
+        circuit.to_qasm()
+    assert "global phase" in caplog.text
+
+    # nothing is logged if the global phase is zero
+    for phases in ([], [0.3, -0.3], [2 * math.pi]):
+        caplog.clear()
+        circuit = Circuit(1)
+        circuit.add([gates.H(0)] + [gates.GlobalPhase(phase) for phase in phases])
+        with caplog.at_level("WARNING"):
+            circuit.to_qasm()
+        assert "global phase" not in caplog.text
 
 
 def test_circuit_decompose_is_exact(backend):
