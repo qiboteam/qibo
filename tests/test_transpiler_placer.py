@@ -1,8 +1,8 @@
 import networkx as nx
-import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.models.encodings import entangling_layer
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import assert_placement, assert_transpiling
 from qibo.transpiler.optimizer import Preprocessing
@@ -334,15 +334,6 @@ def count_swaps(circuit, connectivity):
     return sum(isinstance(gate, gates.SWAP) for gate in routed_circuit.queue)
 
 
-def grid_circuit(nqubits=9, ngates=40, seed=3):
-    rng = np.random.default_rng(seed)
-    circuit = Circuit(nqubits)
-    for _ in range(ngates):
-        qubits = rng.choice(nqubits, 2, replace=False)
-        circuit.add(gates.CNOT(int(qubits[0]), int(qubits[1])))
-    return circuit
-
-
 @pytest.mark.parametrize("names", [[0, 1, 2, 3, 4], ["A", "B", "C", "D", "E"]])
 def test_dense(backend, names):
     # triangle on the last three nodes, and a tail
@@ -437,8 +428,8 @@ def test_dense_in_passes(backend, grid_connectivity):
 
 
 def test_reverse_traversal_trials(backend):
-    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(3, 3))
-    circuit = grid_circuit()
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(2, 4))
+    circuit = entangling_layer(8, "pyramid")
     swaps = {}
     for trials in (1, 10):
         copy = circuit.copy()
@@ -463,10 +454,10 @@ def test_reverse_traversal_one_trial_is_the_default(backend, star_connectivity):
 
 
 def test_reverse_traversal_trials_seed(backend):
-    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(3, 3))
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(2, 4))
     layouts = []
     for _ in range(2):
-        circuit = grid_circuit()
+        circuit = entangling_layer(8, "pyramid")
         placer = ReverseTraversal(Sabre(seed=1), connectivity, trials=4, seed=7)
         placer(circuit, backend=backend)
         layouts.append(circuit.wire_names)

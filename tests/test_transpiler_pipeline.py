@@ -1,4 +1,5 @@
 import random
+from unittest.mock import patch
 
 import networkx as nx
 import numpy as np
@@ -1136,20 +1137,17 @@ def test_transpile_forwards_backend(backend, monkeypatch):
     assert received == [backend] * 3
 
 
-class CountingSabre(Sabre):
-    """Sabre router that counts the circuits it routes."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.calls = 0
-
-    def __call__(self, circuit):
-        self.calls += 1
-        return super().__call__(circuit)
+@pytest.fixture
+def sabre_spy():
+    """Counts the circuits that Sabre routes, which are still routed."""
+    with patch.object(
+        Sabre, "__call__", autospec=True, side_effect=Sabre.__call__
+    ) as spy:
+        yield spy
 
 
 @pytest.mark.parametrize("directed", [False, True])
-def test_passes_router_skipped_if_circuit_is_mapped(backend, directed):
+def test_passes_router_skipped_if_circuit_is_mapped(backend, sabre_spy, directed):
     connectivity = (
         nx.DiGraph([(0, 1), (2, 1), (2, 3)]) if directed else nx.path_graph(4)
     )
@@ -1158,10 +1156,9 @@ def test_passes_router_skipped_if_circuit_is_mapped(backend, directed):
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.M(0, 1, 2))
-    router = CountingSabre(seed=1)
-    pipeline = Passes([Preprocessing(), router], connectivity=connectivity)
+    pipeline = Passes([Preprocessing(), Sabre(seed=1)], connectivity=connectivity)
     transpiled_circuit, layout = pipeline(circuit, backend=backend)
-    assert router.calls == 0
+    assert sabre_spy.call_count == 0
     assert [gate.name for gate in transpiled_circuit.queue] == [
         "h",
         "cx",
@@ -1179,7 +1176,7 @@ def test_passes_skipped_router_does_not_modify_measurement_basis(backend):
     circuit.add(gates.M(0, 1, basis=[gates.X, gates.Y]))
     natives = NativeGates.default()
     pipeline = Passes(
-        [Preprocessing(), CountingSabre(seed=1), Unroller(natives, backend=backend)],
+        [Preprocessing(), Sabre(seed=1), Unroller(natives, backend=backend)],
         connectivity=nx.path_graph(2),
         native_gates=natives,
     )
@@ -1192,13 +1189,12 @@ def test_passes_skipped_router_does_not_modify_measurement_basis(backend):
     assert measurement[-1].basis_gates == [gates.Z, gates.Z]
 
 
-def test_passes_router_runs_if_circuit_is_not_mapped(backend):
+def test_passes_router_runs_if_circuit_is_not_mapped(backend, sabre_spy):
     circuit = Circuit(3)
     circuit.add(gates.CNOT(0, 2))
-    router = CountingSabre(seed=1)
-    pipeline = Passes([Preprocessing(), router], connectivity=nx.path_graph(3))
+    pipeline = Passes([Preprocessing(), Sabre(seed=1)], connectivity=nx.path_graph(3))
     transpiled_circuit, layout = pipeline(circuit, backend=backend)
-    assert router.calls == 1
+    assert sabre_spy.call_count == 1
     assert any(isinstance(gate, gates.SWAP) for gate in transpiled_circuit.queue)
     assert layout.routing_permutation != [0, 1, 2]
 
@@ -1214,14 +1210,13 @@ def test_passes_router_check_does_not_log_errors(backend, caplog):
 
 def test_passes_router_without_connectivity_error(backend):
     with pytest.raises(ValueError):
-        Passes([CountingSabre()])(Circuit(2), backend=backend)
+        Passes([Sabre()])(Circuit(2), backend=backend)
 
 
-def test_passes_router_placement_error(backend):
-    router = CountingSabre()
+def test_passes_router_placement_error(backend, sabre_spy):
     with pytest.raises(PlacementError):
-        Passes([router], connectivity=nx.path_graph(4))(Circuit(3), backend=backend)
-    assert router.calls == 0
+        Passes([Sabre()], connectivity=nx.path_graph(4))(Circuit(3), backend=backend)
+    assert sabre_spy.call_count == 0
 
 
 def test_passes_callback(backend):
