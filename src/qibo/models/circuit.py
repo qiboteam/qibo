@@ -7,7 +7,6 @@ from collections.abc import Iterable
 
 import numpy as np
 from numpy.typing import ArrayLike
-from tabulate import tabulate
 
 from qibo import __version__, gates
 from qibo.backends import Backend, _check_backend, _Global
@@ -18,6 +17,20 @@ from qibo.models._openqasm import QASMParser
 from qibo.result import CircuitResult, QuantumState
 
 NoiseMapType = tuple[int, int, int] | dict[int, tuple[int, int, int]]
+
+
+def _org_table(headers, rows):
+    """Format ``rows`` as a left-aligned Emacs org-mode table."""
+    widths = [
+        max([len(header) + 2] + [len(str(row[i])) for row in rows])
+        for i, header in enumerate(headers)
+    ]
+
+    def line(cells):
+        return "| " + " | ".join(f"{c!s:<{w}}" for c, w in zip(cells, widths)) + " |"
+
+    separator = "|-" + "-+-".join("-" * w for w in widths) + "-|"
+    return "\n".join([line(headers), separator] + [line(row) for row in rows])
 
 
 class _ParametrizedGates(list):
@@ -1504,11 +1517,7 @@ class Circuit:
                 if isinstance(gate, (gates.SpecialGate, gates.Channel))
             }
 
-            table = tabulate(
-                [list(l) for l in sorted(legend_rows)],
-                headers=["Gate", "Symbol"],
-                tablefmt="orgtbl",
-            )
+            table = _org_table(["Gate", "Symbol"], sorted(legend_rows))
             table = "\n Legend for callbacks and channels: \n" + table
 
         # line wrap
