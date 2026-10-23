@@ -1,4 +1,5 @@
 import networkx as nx
+import numpy as np
 import pytest
 
 from qibo import Circuit, gates
@@ -7,6 +8,7 @@ from qibo.transpiler.asserts import assert_placement, assert_transpiling
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
 from qibo.transpiler.placer import (
+    Dense,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
@@ -324,3 +326,170 @@ def test_placers_store_undirected_connectivity(placer_class, star_connectivity):
         map(frozenset, undirected.edges)
     )
     assert directed.is_directed()
+
+
+def count_swaps(circuit, connectivity):
+    """Number of SWAP gates that Sabre adds to route the circuit."""
+    routed_circuit, _ = Sabre(connectivity, seed=1)(circuit.copy())
+    return sum(isinstance(gate, gates.SWAP) for gate in routed_circuit.queue)
+
+
+def grid_circuit(nqubits=9, ngates=40, seed=3):
+    rng = np.random.default_rng(seed)
+    circuit = Circuit(nqubits)
+    for _ in range(ngates):
+        qubits = rng.choice(nqubits, 2, replace=False)
+        circuit.add(gates.CNOT(int(qubits[0]), int(qubits[1])))
+    return circuit
+
+
+@pytest.mark.parametrize("names", [[0, 1, 2, 3, 4], ["A", "B", "C", "D", "E"]])
+def test_dense(backend, names):
+    # triangle on the last three nodes, and a tail
+    edges = [(0, 1), (1, 2), (2, 3), (3, 4), (2, 4)]
+    connectivity = nx.Graph([(names[i], names[j]) for i, j in edges])
+    circuit = Circuit(5, wire_names=names)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(0, 2))
+    Dense(connectivity)(circuit, backend=backend)
+    assert_placement(circuit, connectivity)
+    assert circuit.wire_names == [names[i] for i in (2, 3, 4, 0, 1)]
+    assert count_swaps(circuit, connectivity) == 0
+
+
+def test_dense_busiest_qubits_on_best_connected_nodes():
+    connectivity = nx.Graph([(0, 1), (1, 2), (2, 3), (1, 3), (3, 4)])
+    circuit = Circuit(5)
+    for qubits in [(0, 1), (0, 1), (0, 1), (0, 2), (1, 2)]:
+        circuit.add(gates.CNOT(*qubits))
+    Dense(connectivity)(circuit)
+    assert_placement(circuit, connectivity)
+    assert circuit.wire_names == [1, 2, 3, 0, 4]
+
+
+def test_dense_degrees_in_region():
+    # all the nodes are used, and node 3 has the most connections, followed by node 1
+    connectivity = nx.Graph([(0, 1), (1, 2), (2, 3), (3, 0), (1, 3), (3, 4)])
+    circuit = Circuit(5)
+    for qubits in [(2, 4), (2, 4), (2, 4), (4, 3), (3, 0), (0, 1), (1, 2)]:
+        circuit.add(gates.CNOT(*qubits))
+    Dense(connectivity)(circuit)
+    assert_placement(circuit, connectivity)
+    # the qubits with more gates are placed first, on the most connected nodes
+    assert circuit.wire_names[2] == 3
+    assert circuit.wire_names[4] == 1
+
+
+def test_dense_no_two_qubit_gates():
+    circuit = Circuit(4, wire_names=[3, 2, 1, 0])
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(1))
+    Dense(nx.path_graph(4))(circuit)
+    assert circuit.wire_names == [3, 2, 1, 0]
+
+
+def test_dense_error():
+    connectivity = nx.Graph([(0, 1), (2, 3)])
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    with pytest.raises(PlacementError):
+        Dense(connectivity)(circuit)
+
+
+def test_dense_multi_qubit_gate_error():
+    circuit = Circuit(4)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    with pytest.raises(ValueError):
+        Dense(nx.path_graph(4))(circuit)
+
+
+def test_dense_directed_connectivity(backend):
+    connectivity = nx.DiGraph([(0, 1), (2, 1), (2, 3)])
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    Dense(connectivity)(circuit, backend=backend)
+    assert_placement(circuit, connectivity)
+
+
+def test_dense_in_passes(backend, grid_connectivity):
+    connectivity = grid_connectivity()
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(0, 2))
+    natives = NativeGates.default()
+    pipeline = Passes(
+        [Preprocessing(), Dense(), ShortestPaths(seed=1), Unroller(natives)],
+        connectivity=connectivity,
+        native_gates=natives,
+    )
+    transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=natives,
+    )
+
+
+def test_reverse_traversal_trials(backend):
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(3, 3))
+    circuit = grid_circuit()
+    swaps = {}
+    for trials in (1, 10):
+        copy = circuit.copy()
+        placer = ReverseTraversal(Sabre(seed=1), connectivity, trials=trials, seed=1)
+        placer(copy, backend=backend)
+        assert_placement(copy, connectivity)
+        swaps[trials] = count_swaps(copy, connectivity)
+    assert swaps[10] < swaps[1]
+
+
+def test_reverse_traversal_one_trial_is_the_default(backend, star_connectivity):
+    connectivity = star_connectivity()
+    layouts = []
+    for kwargs in ({}, {"trials": 1, "seed": 5}):
+        circuit = star_circuit()
+        placer = ReverseTraversal(
+            ShortestPaths(connectivity, seed=1), connectivity, **kwargs
+        )
+        placer(circuit, backend=backend)
+        layouts.append(circuit.wire_names)
+    assert layouts[0] == layouts[1]
+
+
+def test_reverse_traversal_trials_seed(backend):
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(3, 3))
+    layouts = []
+    for _ in range(2):
+        circuit = grid_circuit()
+        placer = ReverseTraversal(Sabre(seed=1), connectivity, trials=4, seed=7)
+        placer(circuit, backend=backend)
+        layouts.append(circuit.wire_names)
+    assert layouts[0] == layouts[1]
+
+
+@pytest.mark.parametrize("trials", [0, -1])
+def test_reverse_traversal_trials_error(trials):
+    with pytest.raises(ValueError):
+        ReverseTraversal(Sabre(), trials=trials)
+
+
+@pytest.mark.parametrize("depth", [None, 6])
+def test_reverse_traversal_trials_depth(backend, depth, star_connectivity):
+    names = ["A", "B", "C", "D", "E"]
+    connectivity = star_connectivity(names=names)
+    circuit = star_circuit(names=names)
+    placer = ReverseTraversal(
+        ShortestPaths(connectivity, seed=1),
+        connectivity,
+        depth=depth,
+        trials=5,
+        seed=1,
+    )
+    placer(circuit, backend=backend)
+    assert_placement(circuit, connectivity)
