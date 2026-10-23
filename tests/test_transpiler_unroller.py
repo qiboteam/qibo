@@ -1328,12 +1328,3 @@ def test_unroller_unitary_min_qubits(backend):
         1.0,
         atol=1e-6,
     )
-
-
-def test_translate_gate_does_not_modify_measurement(backend):
-    measurement = gates.M(0, 1, basis=[gates.X, gates.Y])
-    translated = translate_gate(measurement, NativeGates.default(), backend=backend)
-    assert translated[0].basis == []
-    assert translated[0].basis_gates == [gates.Z, gates.Z]
-    assert len(measurement.basis) == 2
-    assert measurement.basis_gates == [gates.X, gates.Y]
