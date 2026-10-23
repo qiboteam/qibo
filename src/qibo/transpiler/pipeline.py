@@ -387,12 +387,13 @@ def transpile(
     circuits.
 
     Example:
-        A rotation, the exponential of a Pauli string on three qubits and a CNOT gate between
-        qubits that are not neighbors are transpiled to a line of four qubits, where
-        :class:`qibo.gates.CNOT` and :class:`qibo.gates.U3` are the native gates. The unitary
-        is decomposed, the SWAP gates that the routing adds are decomposed too, and the
-        transpiled circuit, which has no global phase, is drawn. If ``circuits`` is a list,
-        the result is a list with a transpiled circuit and a final layout for each circuit.
+        A rotation, a Toffoli gate and a CNOT gate between qubits that are not neighbors are
+        transpiled to a line of four qubits, where :class:`qibo.gates.CNOT` and
+        :class:`qibo.gates.U3` are the native gates. The Toffoli gate is decomposed, the SWAP
+        gates that the routing adds are decomposed too, and the transpiled circuit is drawn.
+        The decomposition of the Toffoli gate leaves a global phase, which the drawing
+        reports. If ``circuits`` is a list, the result is a list with a transpiled circuit
+        and a final layout for each circuit.
 
         .. testcode::
 
@@ -400,21 +401,14 @@ def transpile(
 
             from qibo import Circuit, gates
             from qibo.backends import NumpyBackend
-            from qibo.quantum_info import matrix_exponentiation
             from qibo.transpiler import NativeGates, transpile
             from qibo.transpiler.asserts import assert_transpiling
 
             backend = NumpyBackend()
 
-            # exponential of the tensor product of three Pauli X matrices
-            pauli_string = backend.kron(
-                backend.kron(backend.matrices.X, backend.matrices.X), backend.matrices.X
-            )
-            unitary = matrix_exponentiation(pauli_string, -0.3j, backend=backend)
-
             circuit = Circuit(4)
             circuit.add(gates.RY(0, 0.5))
-            circuit.add(gates.Unitary(unitary, 0, 1, 2))
+            circuit.add(gates.TOFFOLI(0, 1, 2))
             circuit.add(gates.CNOT(0, 3))
             circuit.add(gates.M(*range(4)))
 
@@ -439,11 +433,12 @@ def transpile(
 
         .. testoutput::
 
-            {0: 2, 1: 0, 2: 1, 3: 3}
-            0: ────────────o──X─o────────────o─────────o──U3───────o─U3───────────────o─────────o──U3───────o─U3───────o─U3───────────────o─────────o──U3─────o─U3───────o─U3────M─
-            1: ─U3────o─U3─X──o─X─U3─RZ─X─RZ─X─RZ─X─RZ─X──U3─o─X─o─X─U3─U3─o────X─o─X─X─U3─X─U3─X──RZ─o─X─o─X─U3─U3─U3─X─U3─U3─o────X─o─X─X─RZ─X─RZ─X──o──X─o─X─U3─U3─U3─X─U3─U3─M─
-            2: ─U3─U3─X─U3─U3───────────o─────────o─U3─U3────X─o─X─────────X─U3─o─X─o──────o─U3─U3────X─o─X────────────────────X─RZ─o─X─o──────o─U3─U3─X──o─X─o──────────────────M─
-            3: ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────X──────────────────M─
+            {0: 1, 1: 3, 2: 0, 3: 2}
+            Global phase = exp(i * 9π/8)
+            0: ─U3────────────o─────────o───────o─X─o────────────────M─
+            1: ────o────o─X─o─X─RZ─X─RZ─X─RZ─U3─X─o─X─o─RZ─o───────o─M─
+            2: ─U3─X─RZ─X─o─X──────o─RZ───────────────X─RZ─X─o─X─o─X─M─
+            3: ──────────────────────────────────────────────X─o─X───M─
 
     Args:
         circuits (:class:`qibo.models.circuit.Circuit` or list or tuple): Circuit, or list of
