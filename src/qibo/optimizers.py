@@ -1,3 +1,5 @@
+from importlib.util import find_spec
+
 import numpy as np
 
 from qibo.config import log, raise_error
@@ -132,14 +134,14 @@ def cmaes(loss, initial_parameters, args=(), callback=None, options=None):
             optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
             available options.
     """
-    try:
-        import cma
-    except ModuleNotFoundError:  # pragma: no cover
+    if find_spec("cma") is None:  # pragma: no cover
         raise_error(
             ModuleNotFoundError,
             "The 'cma' optimizer requires the ``cma`` package. "
             + "Install it with ``pip install qibo[cma]``.",
         )
+
+    import cma
 
     es = cma.CMAEvolutionStrategy(initial_parameters, sigma0=1.7, inopts=options)
 
