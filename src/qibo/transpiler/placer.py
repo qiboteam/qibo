@@ -35,6 +35,121 @@ def _find_gates_qubits_pairs(circuit: Circuit) -> list[list[int]]:
     return gates_qubits_pairs
 
 
+class Dense(Placer):
+    """Places the qubits on the most connected region of the hardware.
+
+    The :math:`n` qubits that take part in two-qubit gates are placed on a connected
+    region of :math:`n` physical qubits with the largest number of connections among them.
+    The qubits with more two-qubit gates are placed on the physical qubits with more
+    connections in the region, and the other qubits take the remaining physical qubits
+    in the order of the nodes of the connectivity.
+
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            Defaults to ``None``.
+
+    Example:
+        The three qubits of a triangle of CNOT gates are placed on the triangle of the
+        connectivity, which needs no SWAP gate, instead of on the first three nodes.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Dense
+
+            connectivity = nx.Graph([(0, 1), (1, 2), (2, 3), (3, 4), (2, 4)])
+
+            circuit = Circuit(5)
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(1, 2))
+            circuit.add(gates.CNOT(0, 2))
+
+            Dense(connectivity)(circuit)
+            print(circuit.wire_names)
+
+        .. testoutput::
+
+            [2, 3, 4, 0, 1]
+    """
+
+    def __init__(self, connectivity: nx.Graph | None = None):
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
+        """Find the initial layout of the given circuit on the most connected region.
+
+        Method works in-place.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
+                Not used by this placer, it is accepted to be compatible with
+                :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+
+        Raises:
+            PlacementError: If no connected region of the hardware has as many qubits as
+                the circuit has qubits in two-qubit gates.
+        """
+        assert_placement(circuit, self.connectivity)
+        weights = {}
+        for pair in _find_gates_qubits_pairs(circuit):
+            for qubit in pair:
+                weights[qubit] = weights.get(qubit, 0) + 1
+        if not weights:
+            return
+
+        # qubits with more two-qubit gates first, then in the order of the circuit
+        active = sorted(weights, key=lambda qubit: (-weights[qubit], qubit))
+        nodes = list(self.connectivity.nodes)
+        best_region, best_edges = None, -1
+        for start in nodes:
+            region = [start]
+            while len(region) < len(active):
+                frontier = {
+                    node for member in region for node in self.connectivity[member]
+                } - set(region)
+                if not frontier:
+                    break
+                # the first node, in the order of the connectivity, among the ties
+                region.append(
+                    max(
+                        (node for node in nodes if node in frontier),
+                        key=lambda node: sum(
+                            member in region for member in self.connectivity[node]
+                        ),
+                    )
+                )
+            if len(region) == len(active):
+                edges = self.connectivity.subgraph(region).number_of_edges()
+                if edges > best_edges:
+                    best_region, best_edges = region, edges
+
+        if best_region is None:
+            raise_error(
+                PlacementError,
+                f"No connected region of {len(active)} qubits in the connectivity.",
+            )
+
+        position = {node: index for index, node in enumerate(nodes)}
+        members = set(best_region)
+        region_order = sorted(
+            best_region,
+            key=lambda node: (
+                -len(members.intersection(self.connectivity[node])),
+                position[node],
+            ),
+        )
+        placement = dict(zip(active, region_order))
+        remaining_nodes = [node for node in nodes if node not in members]
+        remaining_qubits = [
+            qubit for qubit in range(circuit.nqubits) if qubit not in placement
+        ]
+        placement.update(zip(remaining_qubits, remaining_nodes))
+        circuit.wire_names = [placement[qubit] for qubit in range(circuit.nqubits)]
+
+
 class StarConnectivityPlacer(Placer):
     """Find an optimized qubit placement for the following connectivity::
 
@@ -270,6 +385,14 @@ class ReverseTraversal(Placer):
             Example: on a circuit with four two-qubit gates :math:`A-B-C-D`
             using depth :math:`d = 6`, the routing will be performed
             on the circuit :math:`C-D-D-C-B-A`.
+        trials (int, optional): Number of independent layout attempts. The first one
+            starts from the layout of the circuit, and the others from random
+            permutations of it. Each attempt finds a layout with the reverse traversal,
+            and the one for which the router adds the fewest SWAP gates to the circuit
+            is kept, the first one among ties. With one attempt, no routing of the
+            circuit is needed to choose the layout. Defaults to :math:`1`.
+        seed (int, optional): Seed of the random permutations of the attempts, which
+            makes them reproducible. Defaults to ``None``.
 
     References:
         1. G. Li, Y. Ding, and Y. Xie,
@@ -282,10 +405,17 @@ class ReverseTraversal(Placer):
         routing_algorithm: Router,
         connectivity: nx.Graph | None = None,
         depth: int | None = None,
+        trials: int = 1,
+        seed: int | None = None,
     ):
+        if trials < 1:
+            raise_error(ValueError, f"``trials`` must be positive, but it is {trials}.")
         self.connectivity = connectivity
         self.routing_algorithm = routing_algorithm
         self.depth = depth
+        self.trials = trials
+        self.seed = seed
+        self._rng = np.random.default_rng(seed)
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Find the initial layout of the given circuit using Reverse Traversal placement.
@@ -300,12 +430,33 @@ class ReverseTraversal(Placer):
         """
         assert_placement(circuit, self.connectivity)
         self.routing_algorithm.connectivity = self.connectivity
-        new_circuit = self._assemble_circuit(circuit)
-        final_layout = self._routing_step(new_circuit)
-
-        # The final layout of the reversed circuit is the initial layout of the circuit.
         wire_names = circuit.wire_names.copy()
-        circuit.wire_names = [wire_names[final_layout[name]] for name in wire_names]
+
+        best_swaps, best_layout = None, None
+        for trial in range(self.trials):
+            # the first attempt starts from the layout of the circuit
+            start = (
+                wire_names
+                if trial == 0
+                else [wire_names[i] for i in self._rng.permutation(len(wire_names))]
+            )
+            circuit.wire_names = start
+            final_layout = self._routing_step(self._assemble_circuit(circuit))
+
+            # The final layout of the reversed circuit is the initial layout of the circuit.
+            layout = [start[final_layout[name]] for name in start]
+            if self.trials == 1:
+                best_layout = layout
+                break
+
+            candidate = circuit.copy()
+            candidate.wire_names = layout
+            routed_circuit, _ = self.routing_algorithm(candidate)
+            swaps = sum(isinstance(gate, gates.SWAP) for gate in routed_circuit.queue)
+            if best_swaps is None or swaps < best_swaps:
+                best_swaps, best_layout = swaps, layout
+
+        circuit.wire_names = best_layout
 
     def _assemble_circuit(self, circuit: Circuit) -> Circuit:
         """Assemble a single circuit to apply Reverse Traversal placement based on depth.
