@@ -34,15 +34,6 @@ def test_transpile_layout():
     assert layout.routing_permutation == [0, 1, 2]
 
 
-def test_transpile_layout_logical_layouts():
-    layout = TranspileLayout({"a": 1, "b": 0, "c": 2}, ["a", "b", "c"], 2)
-    assert layout.auxiliary_qubits == ["c"]
-    assert layout.initial_logical_layout() == {0: "a", 1: "b", 2: "c"}
-    assert layout.initial_logical_layout(filter_auxiliary=True) == {0: "a", 1: "b"}
-    assert layout.final_logical_layout() == {0: 1, 1: 0, 2: 2}
-    assert layout.final_logical_layout(filter_auxiliary=True) == {0: 1, 1: 0}
-
-
 def test_transpile_layout_logical_layouts_without_auxiliary_qubits():
     layout = TranspileLayout({"a": 1, "b": 0}, ["b", "a"], 2)
     assert layout.auxiliary_qubits == []

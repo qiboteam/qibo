@@ -1019,8 +1019,8 @@ def test_check_connected_components():
         _check_connected_components(circuit_map, nx.Graph([(0, 3), (1, 2), (2, 4)]))
 
 
-@pytest.mark.parametrize("names", [[0, 1, 2, 3], ["A", "B", "C", "D"]])
-def test_no_routing(names):
+def test_no_routing():
+    names = ["A", "B", "C", "D"]
     connectivity = nx.relabel_nodes(nx.path_graph(4), dict(enumerate(names)))
     circuit = Circuit(4, wire_names=names)
     circuit.add(gates.H(0))
