@@ -956,7 +956,7 @@ def test_generate_preset_passes_initial_layout_with_placer_error(layout_method):
         )
 
 
-@pytest.mark.parametrize("layout_method", ["dense", "Random", 3])
+@pytest.mark.parametrize("layout_method", ["grid", "Random", 3])
 def test_generate_preset_passes_unknown_layout_method(layout_method):
     with pytest.raises(ValueError, match="layout method"):
         generate_preset_passes(nx.path_graph(5), layout_method=layout_method)
@@ -1134,3 +1134,197 @@ def test_transpile_forwards_backend(backend, monkeypatch):
     transpile(circuit, backend=backend)
     transpile([circuit, circuit], backend=backend)
     assert received == [backend] * 3
+
+
+class CountingSabre(Sabre):
+    """Sabre router that counts the circuits it routes."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.calls = 0
+
+    def __call__(self, circuit):
+        self.calls += 1
+        return super().__call__(circuit)
+
+
+@pytest.mark.parametrize("directed", [False, True])
+def test_passes_router_skipped_if_circuit_is_mapped(backend, directed):
+    connectivity = (
+        nx.DiGraph([(0, 1), (2, 1), (2, 3)]) if directed else nx.path_graph(4)
+    )
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.M(0, 1, 2))
+    router = CountingSabre(seed=1)
+    pipeline = Passes([Preprocessing(), router], connectivity=connectivity)
+    transpiled_circuit, layout = pipeline(circuit, backend=backend)
+    assert router.calls == 0
+    assert [gate.name for gate in transpiled_circuit.queue] == [
+        "h",
+        "cx",
+        "cx",
+        "measure",
+    ]
+    assert dict(layout) == {0: 0, 1: 1, 2: 2, 3: 3}
+    assert layout.initial_layout == [0, 1, 2, 3]
+    assert layout.routing_permutation == [0, 1, 2, 3]
+
+
+def test_passes_skipped_router_does_not_modify_measurement_basis(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(0, 1, basis=[gates.X, gates.Y]))
+    natives = NativeGates.default()
+    pipeline = Passes(
+        [Preprocessing(), CountingSabre(seed=1), Unroller(natives, backend=backend)],
+        connectivity=nx.path_graph(2),
+        native_gates=natives,
+    )
+    transpiled_circuit, _ = pipeline(circuit)
+    assert circuit.queue[-1].basis_gates == [gates.X, gates.Y]
+    assert len(circuit.queue[-1].basis) == 2
+    measurement = [
+        gate for gate in transpiled_circuit.queue if isinstance(gate, gates.M)
+    ]
+    assert measurement[-1].basis_gates == [gates.Z, gates.Z]
+
+
+def test_passes_router_runs_if_circuit_is_not_mapped(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 2))
+    router = CountingSabre(seed=1)
+    pipeline = Passes([Preprocessing(), router], connectivity=nx.path_graph(3))
+    transpiled_circuit, layout = pipeline(circuit, backend=backend)
+    assert router.calls == 1
+    assert any(isinstance(gate, gates.SWAP) for gate in transpiled_circuit.queue)
+    assert layout.routing_permutation != [0, 1, 2]
+
+
+def test_passes_router_check_does_not_log_errors(backend, caplog):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 2))
+    pipeline = Passes([Preprocessing(), Sabre(seed=1)], connectivity=nx.path_graph(3))
+    with caplog.at_level("ERROR"):
+        pipeline(circuit, backend=backend)
+    assert not [record for record in caplog.records if record.levelname == "ERROR"]
+
+
+def test_passes_router_without_connectivity_error(backend):
+    with pytest.raises(ValueError):
+        Passes([CountingSabre()])(Circuit(2), backend=backend)
+
+
+def test_passes_router_placement_error(backend):
+    router = CountingSabre()
+    with pytest.raises(PlacementError):
+        Passes([router], connectivity=nx.path_graph(4))(Circuit(3), backend=backend)
+    assert router.calls == 0
+
+
+def test_passes_callback(backend):
+    calls = []
+
+    def callback(transpiler_pass, circuit, time, count):
+        calls.append((type(transpiler_pass).__name__, circuit.nqubits, time, count))
+
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 2))
+    natives = NativeGates.default()
+    pipeline = Passes(
+        [Preprocessing(), Sabre(seed=1), Unroller(natives)],
+        connectivity=nx.path_graph(4),
+        native_gates=natives,
+        callback=callback,
+    )
+    pipeline(circuit, backend=backend)
+    assert [call[0] for call in calls] == ["Preprocessing", "Sabre", "Unroller"]
+    assert [call[1] for call in calls] == [4, 4, 4]
+    assert [call[3] for call in calls] == [0, 1, 2]
+    assert all(call[2] >= 0 for call in calls)
+
+
+def test_passes_callback_skipped_router(backend):
+    names = []
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 1))
+    pipeline = Passes(
+        [Preprocessing(), Sabre(seed=1), Preprocessing()],
+        connectivity=nx.path_graph(4),
+        callback=lambda **kwargs: names.append(kwargs["count"]),
+    )
+    pipeline(circuit, backend=backend)
+    assert names == [0, 2]
+
+
+def test_generate_preset_passes_callback_and_transpile_list(backend):
+    counts = []
+    circuits = []
+    for qubits in [(0, 1), (1, 2)]:
+        circuit = Circuit(3)
+        circuit.add(gates.CNOT(*qubits))
+        circuits.append(circuit)
+    results = transpile(
+        circuits,
+        nx.path_graph(3),
+        seed=1,
+        callback=lambda **kwargs: counts.append(kwargs["count"]),
+        backend=backend,
+    )
+    assert len(results) == 2
+    # unroller, preprocessing, unroller; the router is skipped
+    assert counts == [0, 1, 3, 0, 1, 3]
+
+
+def test_generate_preset_passes_no_routing(backend):
+    connectivity = nx.path_graph(4)
+    natives = NativeGates.default()
+    mapped = Circuit(3)
+    mapped.add(gates.CNOT(0, 1))
+    mapped.add(gates.CNOT(1, 2))
+    transpiled_circuit, layout = transpile(
+        mapped, connectivity, natives, routing_method="none", backend=backend
+    )
+    assert dict(layout) == {0: 0, 1: 1, 2: 2, 3: 3}
+    assert_transpiling(
+        original_circuit=mapped,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=layout,
+        native_gates=natives,
+    )
+
+    unmapped = Circuit(3)
+    unmapped.add(gates.CNOT(0, 2))
+    with pytest.raises(ConnectivityError):
+        transpile(
+            unmapped, connectivity, natives, routing_method="none", backend=backend
+        )
+
+
+@pytest.mark.parametrize("trials", [1, 3])
+@pytest.mark.parametrize("layout_method", ["dense", "reverse_traversal"])
+def test_generate_preset_passes_layout_methods(
+    backend, grid_connectivity, layout_method, trials
+):
+    connectivity = grid_connectivity()
+    natives = NativeGates.default()
+    circuit = generate_random_circuit(5, 10)
+    transpiled_circuit, layout = transpile(
+        circuit,
+        connectivity,
+        natives,
+        seed=1,
+        layout_method=layout_method,
+        layout_trials=trials,
+        backend=backend,
+    )
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=layout,
+        native_gates=natives,
+    )
