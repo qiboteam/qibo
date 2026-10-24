@@ -592,12 +592,10 @@ def folded_xxz_eigenstate(
             configuration. Each block is a list of at least two consecutive sites, numbered
             from :math:`1`. The first block must start at site :math:`2M + 1` or later, and
             each following block must start at least three sites after the end of the previous
-            one. At most two blocks are supported. If ``None``, there are no domain walls.
-            Defaults to ``None``.
+            one. If ``None``, there are no domain walls. Defaults to ``None``.
         modes (list[int], optional): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta
             of the magnons. If ``None``, uses :math:`M` evenly spaced integers between :math:`2`
-            and :math:`n_{0}`, rounded to the nearest integer, or :math:`m_{a} = a` if they
-            are not distinct. Defaults to ``None``.
+            and :math:`n_{0}`, rounded to the nearest integer. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -634,8 +632,6 @@ def folded_xxz_eigenstate(
     if modes is None:
         step = (nsqueezed - 2) / (nmagnons - 1) if nmagnons > 1 else 0
         modes = [round(2 + a * step) for a in range(nmagnons)]
-        if len(set(modes)) < nmagnons or modes[-1] > nsqueezed:
-            modes = list(range(1, nmagnons + 1))
     modes = list(modes)
 
     if (
@@ -648,12 +644,6 @@ def folded_xxz_eigenstate(
             ValueError,
             f"``modes`` must be {nmagnons} distinct increasing integers in [1, {nsqueezed}], "
             + f"but it is {modes}.",
-        )
-
-    if len(domains) > 2:
-        raise_error(
-            NotImplementedError,
-            f"At most two domains are supported, but {len(domains)} were given.",
         )
 
     previous_end = 2 * nmagnons - 2
@@ -831,14 +821,15 @@ def folded_xxz_eigenstate(
         # reset the registers that count the domain walls
         if n >= 1:
             sweeps = []
+            # blocks of at most three qubits, which contain at most one ``01`` transition
             for end, inverse in ((n, False), (n + nwalls - 2, True)):
-                nblocks, rest = divmod(end, 4)
+                nblocks, rest = divmod(end, 2)
                 blocks = [(0, rest, True)] if rest else []
                 blocks.extend(
                     (
-                        (0, 4, True)
+                        (0, 2, True)
                         if i == 0 and rest == 0
-                        else (rest - 1 + 4 * i, rest + 4 * (i + 1), False)
+                        else (rest - 1 + 2 * i, rest + 2 * (i + 1), False)
                     )
                     for i in range(nblocks)
                 )

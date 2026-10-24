@@ -1010,28 +1010,25 @@ def test_fanout_and_ladder_synthesis(backend, nqubits, method):
 
 
 @pytest.mark.parametrize(
-    "exception,nqubits,nmagnons,domains,modes",
+    "nqubits,nmagnons,domains,modes",
     [
-        (ValueError, 6, 0, None, None),
-        (ValueError, 4, 3, None, None),
-        (ValueError, 7, 3, None, None),
-        (ValueError, 6, 2, None, [1, 2, 3]),
-        (ValueError, 6, 2, None, [0, 1]),
-        (ValueError, 6, 2, None, [2, 2]),
-        (ValueError, 6, 2, None, [1, 6]),
-        (ValueError, 7, 1, [[]], None),
-        (ValueError, 7, 1, [[3]], None),
-        (ValueError, 7, 1, [[3, 5]], None),
-        (ValueError, 7, 1, [[2, 3]], None),
-        (ValueError, 7, 1, [[6, 8]], None),
-        (ValueError, 12, 1, [[3, 4], [6, 7]], None),
-        (NotImplementedError, 14, 1, [[3, 4], [7, 8], [11, 12]], None),
+        (6, 0, None, None),
+        (4, 3, None, None),
+        (7, 3, None, None),
+        (6, 2, None, [1, 2, 3]),
+        (6, 2, None, [0, 1]),
+        (6, 2, None, [2, 2]),
+        (6, 2, None, [1, 6]),
+        (7, 1, [[]], None),
+        (7, 1, [[3]], None),
+        (7, 1, [[3, 5]], None),
+        (7, 1, [[2, 3]], None),
+        (7, 1, [[6, 8]], None),
+        (12, 1, [[3, 4], [6, 7]], None),
     ],
 )
-def test_folded_xxz_eigenstate_errors(
-    backend, exception, nqubits, nmagnons, domains, modes
-):
-    with pytest.raises(exception):
+def test_folded_xxz_eigenstate_errors(backend, nqubits, nmagnons, domains, modes):
+    with pytest.raises(ValueError):
         folded_xxz_eigenstate(nqubits, nmagnons, domains, modes, backend=backend)
 
 
@@ -1068,3 +1065,56 @@ def test_folded_xxz_eigenstate(
     )
     energy = -backend.sum(backend.cos(momenta))
     backend.assert_allclose(hamiltonian.matrix @ state, energy * state, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nqubits,nmagnons,domains,target_modes",
+    [
+        (12, 1, [[3, 4], [7, 8], [11, 12]], [2]),
+        (13, 1, [[4, 5], [8, 9], [12, 13]], [2]),
+        (16, 1, [[3, 4], [7, 8], [11, 12]], [2]),
+        (14, 2, [[5, 6], [9, 10], [13, 14]], [2, 7]),
+    ],
+)
+def test_folded_xxz_eigenstate_many_domains(
+    backend, nqubits, nmagnons, domains, target_modes
+):
+    """The circuits are too large to be simulated, so the first stage is simulated alone, and the
+    other stages, which only permute basis states, are applied to the bit strings of its state."""
+    circuit = folded_xxz_eigenstate(nqubits, nmagnons, domains, backend=backend)
+    nsites = nqubits - 2 * len(domains)
+
+    first_stage = [gate for gate in circuit.queue if isinstance(gate, gates.Unitary)]
+    free_fermions = Circuit(nsites)
+    free_fermions.add(
+        gate.on_qubits({q: q - nqubits for q in gate.qubits}) for gate in first_stage
+    )
+    amplitudes = backend.to_numpy(backend.execute_circuit(free_fermions).state())
+
+    chain = np.zeros(2**nqubits, dtype=complex)
+    for index in np.flatnonzero(abs(amplitudes) > 1e-12):
+        bits = [0] * circuit.nqubits
+        bits[nqubits : nqubits + nsites] = [int(bit) for bit in f"{index:0{nsites}b}"]
+        for gate in circuit.queue[len(first_stage) :]:
+            if all(bits[qubit] for qubit in gate.control_qubits):
+                first, *others = gate.target_qubits
+                if others:
+                    bits[first], bits[others[0]] = bits[others[0]], bits[first]
+                else:
+                    bits[first] ^= 1
+        assert not any(bits[nqubits:])
+        chain[int("".join(map(str, bits[:nqubits])), 2)] += amplitudes[index]
+
+    chain = backend.cast(chain, dtype=backend.complex128)
+    backend.assert_allclose(backend.vector_norm(chain), 1.0, atol=1e-8)
+
+    vacuum = backend.zero_state(1)
+    state = backend.kron(backend.kron(vacuum, chain), vacuum)
+    hamiltonian = FoldedXXZ(nqubits + 2, dense=False, backend=backend)
+
+    nsqueezed = nsites - nmagnons + 1
+    momenta = (
+        math.pi * backend.cast(target_modes, dtype=backend.float64) / (nsqueezed + 1)
+    )
+    energy = -backend.sum(backend.cos(momenta))
+    backend.assert_allclose(hamiltonian @ state, energy * state, atol=1e-8)

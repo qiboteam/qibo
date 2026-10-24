@@ -764,7 +764,7 @@ def _folded_xxz_move_before(
         workspace (list[int]): the two workspace qubits.
         magnon (int): qubit of the current magnon.
         counter (list[int]): qubits of the register that counts the domain walls. The module
-            acts on its first three (if ``first is True``) or four qubits.
+            acts on its first three qubits if ``first is True``, and on all of them otherwise.
         first (bool, optional): if ``True``, returns the module for the first four qubits of
             the chain. Defaults to ``False``.
 
@@ -779,7 +779,7 @@ def _folded_xxz_move_before(
     q = list(chain)
     q.extend(workspace)
     q.append(magnon)
-    q.extend(counter[:3] if first else counter[:4])
+    q.extend(counter[:3] if first else counter)
     if first:
         return [
             gates.CNOT(q[1], q[4]),
