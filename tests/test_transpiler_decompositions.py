@@ -2,11 +2,20 @@ import math
 
 import numpy as np
 import pytest
+import sympy
 
 from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.asserts import assert_decomposition
+from qibo.transpiler.decompositions import (
+    gpi2_dec,
+    iswap_dec,
+    native_cz_dec,
+    opt_dec,
+    u3_dec,
+)
+from qibo.transpiler.decompositions.abstract import merge_global_phases
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
 from qibo.transpiler.decompositions.standard_decompositions import (
     _mottonen_compute_theta,
@@ -29,16 +38,272 @@ def assert_matrices_allclose(gate, natives, backend):
     circuit.add(translate_gate(gate, natives, backend=backend))
     native_matrix = circuit.unitary(backend)
 
-    # The matrices are equal up to a global phase, which is the one of their overlap.
-    # It is not computed from the determinants, because their roots are ambiguous for a
-    # determinant on the branch cut, as the one of some gates which is exactly -1.
-    overlap = backend.dot(
-        backend.ravel(backend.conj(target_matrix)), backend.ravel(native_matrix)
-    )
-    backend.assert_allclose(
-        native_matrix, overlap / backend.abs(overlap) * target_matrix, atol=1e-6
-    )
+    # the matrices are equal, including the global phase
+    backend.assert_allclose(native_matrix, target_matrix, atol=1e-6)
     assert_decomposition(circuit, natives)
+
+
+TABLES = {
+    "standard": standard_decompositions,
+    "cz": cz_dec,
+    "iswap": iswap_dec,
+    "opt": opt_dec,
+    "gpi2": gpi2_dec,
+    "u3": u3_dec,
+}
+GATES_TO_DECOMPOSE = [
+    ("H", (0,)),
+    ("X", (0,)),
+    ("Y", (0,)),
+    ("Z", (0,)),
+    ("S", (0,)),
+    ("SDG", (0,)),
+    ("T", (0,)),
+    ("TDG", (0,)),
+    ("SX", (0,)),
+    ("SXDG", (0,)),
+    ("RX", (0, 0.37)),
+    ("RY", (0, 0.37)),
+    ("RZ", (0, 0.37)),
+    ("PRX", (0, 0.37, 0.91)),
+    ("GPI2", (0, 0.37)),
+    ("U1", (0, 0.37)),
+    ("U2", (0, 0.37, 0.91)),
+    ("U3", (0, 0.37, 0.91, -0.6)),
+    ("CNOT", (0, 1)),
+    ("CY", (0, 1)),
+    ("CZ", (0, 1)),
+    ("CH", (0, 1)),
+    ("CSX", (0, 1)),
+    ("CSXDG", (0, 1)),
+    ("CRX", (0, 1, 0.37)),
+    ("CRY", (0, 1, 0.37)),
+    ("CRZ", (0, 1, 0.37)),
+    ("CU1", (0, 1, 0.37)),
+    ("CU2", (0, 1, 0.37, 0.91)),
+    ("CU3", (0, 1, 0.37, 0.91, -0.6)),
+    ("SWAP", (0, 1)),
+    ("iSWAP", (0, 1)),
+    ("SiSWAP", (0, 1)),
+    ("SiSWAPDG", (0, 1)),
+    ("FSWAP", (0, 1)),
+    ("ECR", (0, 1)),
+    ("RXX", (0, 1, 0.37)),
+    ("RYY", (0, 1, 0.37)),
+    ("RZZ", (0, 1, 0.37)),
+    ("RZX", (0, 1, 0.37)),
+    ("RXXYY", (0, 1, 0.37)),
+    ("GIVENS", (0, 1, 0.37)),
+    ("RBS", (0, 1, 0.37)),
+    ("fSim", (0, 1, 0.37, 0.91)),
+    ("SYC", (0, 1)),
+    ("TOFFOLI", (0, 1, 2)),
+    ("CCZ", (0, 1, 2)),
+    ("DEUTSCH", (0, 1, 2, 0.37)),
+]
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,args",
+    [
+        (table, gate_name, args)
+        for table in TABLES
+        for gate_name, args in GATES_TO_DECOMPOSE
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_decompositions_are_exact(backend, table, gate_name, args):
+    """The decompositions are equal to the gates, including their global phase."""
+    gate = getattr(gates, gate_name)(*args)
+    nqubits = len(gate.qubits)
+
+    decomposition = TABLES[table](gate, backend)
+    # the global phase gate is unique and the last one, if the decomposition is not exact
+    global_phases = [
+        i for i, g in enumerate(decomposition) if isinstance(g, gates.GlobalPhase)
+    ]
+    assert global_phases in ([], [len(decomposition) - 1])
+    for i in global_phases:
+        assert 0 < decomposition[i].parameters[0] < 2 * math.pi
+
+    circuit = Circuit(nqubits)
+    circuit.add(decomposition)
+
+    backend.assert_allclose(circuit.unitary(backend), gate.matrix(backend), atol=1e-8)
+
+
+@pytest.mark.parametrize("table", ["gpi2", "u3"])
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_unitary_decompositions_are_exact(backend, table, seed):
+    """The U3 gate of a unitary is equal to it up to the phase of its determinant."""
+    unitary = random_unitary(2, backend=backend, seed=seed)
+    gate = gates.Unitary(unitary, 0)
+
+    circuit = Circuit(1)
+    circuit.add(TABLES[table](gate, backend))
+
+    backend.assert_allclose(circuit.unitary(backend), unitary, atol=1e-8)
+
+
+_FIXED_PHASE_GATES = [("SXDG", (0,)), ("SDG", (0,)), ("TDG", (0,))]
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,args",
+    [
+        (table, gate_name, args)
+        for table in TABLES
+        for gate_name, args in [*GATES_TO_DECOMPOSE, *_FIXED_PHASE_GATES]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_global_phases_are_positive(backend, table, gate_name, args):
+    """The global phases of the entries of the tables are in the interval [0, 2 pi)."""
+    gate = getattr(gates, gate_name)(*args)
+    for g in TABLES[table]._check_instance(gate, backend):
+        if isinstance(g, gates.GlobalPhase):
+            assert 0 <= g.parameters[0] < 2 * math.pi
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,args",
+    [
+        (table, gate_name, args)
+        for table in TABLES
+        for gate_name, args in [
+            ("U1", (0, -0.37)),
+            ("U1", (0, -5.0)),
+            ("CU1", (0, 1, -0.37)),
+            ("CU1", (0, 1, -5.0)),
+        ]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_global_phases_are_reduced(backend, table, gate_name, args):
+    """The phases that depend on parameters are reduced when the decomposition is built,
+    since their entries do not reduce them."""
+    gate = getattr(gates, gate_name)(*args)
+    decomposition = TABLES[table](gate, backend)
+    assert isinstance(decomposition[-1], gates.GlobalPhase)
+    assert 0 < decomposition[-1].parameters[0] < 2 * math.pi
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,args",
+    [
+        (table, gate_name, args)
+        for table in TABLES
+        for gate_name, args in [*GATES_TO_DECOMPOSE, *_FIXED_PHASE_GATES]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_global_phases_are_not_trainable(backend, table, gate_name, args):
+    """The global phase gates of the decompositions must not add trainable parameters."""
+    gate = getattr(gates, gate_name)(*args)
+    for decomposition in (
+        TABLES[table]._check_instance(gate, backend),
+        TABLES[table](gate, backend),
+    ):
+        for g in decomposition:
+            if isinstance(g, gates.GlobalPhase):
+                assert not g.trainable
+
+
+@pytest.mark.parametrize("table", ["gpi2", "u3"])
+@pytest.mark.parametrize("seed", range(3))
+def test_unitary_global_phases_are_not_trainable(backend, table, seed):
+    gate = gates.Unitary(random_unitary(2, backend=backend, seed=seed), 0)
+    for g in TABLES[table]._check_instance(gate, backend):
+        if isinstance(g, gates.GlobalPhase):
+            assert not g.trainable
+
+
+@pytest.mark.parametrize("gate_class", list(native_cz_dec))
+def test_native_cz_global_phases_are_not_trainable(gate_class):
+    for g in native_cz_dec[gate_class]:
+        if isinstance(g, gates.GlobalPhase):
+            assert not g.trainable
+
+
+@pytest.mark.parametrize(
+    "table,gate_name,sign",
+    [
+        (table, gate_name, sign)
+        for table in ["standard", "cz", "gpi2", "u3"]
+        for gate_name in ["U1", "CU1"]
+        for sign in [1, -1]
+        if getattr(gates, gate_name) in TABLES[table].decompositions
+    ],
+)
+def test_symbolic_global_phases(backend, table, gate_name, sign):
+    """Decompositions with a symbolic parameter have a symbolic global phase."""
+    x = sympy.Symbol("x")
+    qubits = (0,) if gate_name == "U1" else (0, 1)
+    gate = getattr(gates, gate_name)(*qubits, sign * x)
+
+    decomposition = TABLES[table](gate, backend)
+
+    phase = decomposition[-1]
+    assert isinstance(phase, gates.GlobalPhase)
+    assert not phase.trainable
+    assert phase.parameters[0].free_symbols == {x}
+    # the symbolic phase is a quarter of the parameter of CU1 and half of the one of U1,
+    # up to the sign and the reduction modulo 2 pi
+    value = float(phase.parameters[0].subs(x, 0.4) % (2 * math.pi))
+    expected = sign * 0.4 / (4 if gate_name == "CU1" else 2)
+    assert value == pytest.approx(expected % (2 * math.pi))
+
+
+@pytest.mark.parametrize("table", ["gpi2", "u3"])
+@pytest.mark.parametrize("seed", range(8))
+def test_unitary_global_phases_are_positive(backend, table, seed):
+    gate = gates.Unitary(random_unitary(2, backend=backend, seed=seed), 0)
+    for g in TABLES[table]._check_instance(gate, backend):
+        if isinstance(g, gates.GlobalPhase):
+            assert 0 <= g.parameters[0] < 2 * math.pi
+
+
+@pytest.mark.parametrize("gate_class", list(native_cz_dec))
+def test_native_cz_global_phases_are_positive(gate_class):
+    for g in native_cz_dec[gate_class]:
+        if isinstance(g, gates.GlobalPhase):
+            assert 0 <= g.parameters[0] < 2 * math.pi
+
+
+def test_merge_global_phases():
+    decomposition = [
+        gates.H(0),
+        gates.GlobalPhase(1.0),
+        gates.CNOT(0, 1),
+        gates.GlobalPhase(2 * math.pi - 0.5),
+        gates.X(1),
+    ]
+    merged = merge_global_phases(decomposition)
+    assert [g.name for g in merged] == ["h", "cx", "x", "global_phase"]
+    assert merged[-1].parameters[0] == pytest.approx(0.5)
+
+    # phases that cancel modulo 2 pi are not kept, as the decomposition is exact
+    decomposition = [gates.GlobalPhase(math.pi), gates.H(0), gates.GlobalPhase(math.pi)]
+    assert [g.name for g in merge_global_phases(decomposition)] == ["h"]
+
+    # the phase is reduced to the interval [0, 2 pi)
+    merged = merge_global_phases([gates.H(0), gates.GlobalPhase(-math.pi / 4)])
+    assert merged[-1].parameters[0] == pytest.approx(7 * math.pi / 4)
+
+    # nothing is changed if there are no global phases
+    decomposition = [gates.H(0), gates.X(0)]
+    assert merge_global_phases(decomposition) is decomposition
+
+
+@pytest.mark.parametrize("gate_class", list(native_cz_dec))
+def test_native_cz_decompositions_are_exact(backend, gate_class):
+    """The decompositions of the CZ gate into the native gates keep its global phase."""
+    circuit = Circuit(2)
+    circuit.add(native_cz_dec[gate_class])
+
+    backend.assert_allclose(
+        circuit.unitary(backend), gates.CZ(0, 1).matrix(backend), atol=1e-8
+    )
 
 
 @pytest.mark.parametrize("natives", [NativeGates.U3, NativeGates.GPI2])
