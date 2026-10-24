@@ -8,7 +8,7 @@ import sys
 import networkx as nx
 import pytest
 
-from qibo.backends import _Global, construct_backend
+from qibo.backends import MissingBackend, construct_backend, set_backend
 
 
 def pytest_addoption(parser):
@@ -52,7 +52,7 @@ for backend_name in BACKENDS:
         AVAILABLE_BACKENDS.append(backend_name)
         if _backend.supports_multigpu:  # pragma: no cover
             MULTIGPU_BACKENDS.append(backend_name)
-    except (ImportError, RuntimeError):
+    except (ImportError, MissingBackend, RuntimeError):
         # RuntimeError covers, e.g., cupy's CUDARuntimeError raised when the
         # cupy package is installed but no GPU/driver is available.
         pass
@@ -95,8 +95,7 @@ def backend(backend_name, request):
 @pytest.fixture(autouse=True)
 def clear():
     yield
-    _Global._backend = None
-    _Global._transpiler = None
+    set_backend()
 
 
 @pytest.fixture
