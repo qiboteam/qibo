@@ -23,6 +23,7 @@ from qibo.models.encodings import (
     dicke_state,
     entangling_layer,
     fanout_synthesis,
+    folded_xxz_eigenstate,
     ghz_state,
     graph_state,
     hamming_weight_encoder,
@@ -1005,3 +1006,176 @@ def test_fanout_and_ladder_synthesis(backend, nqubits, method):
     target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
     target = target.invert()
     backend.assert_allclose(ladder.unitary(backend), target.unitary(backend))
+
+
+def _folded_xxz_configuration(positions, nqubits, domains):
+    """Basis state of the folded XXZ chain obtained by inserting magnons in the domains.
+
+    ``positions`` are the (1-indexed) positions of the magnons in the chain without domain
+    walls, which are inserted from right to left following Eqs. (41) and (42) of the paper
+    by Ruiz, Sopena, Pozsgay, and Lopez, PRX Quantum 6, 030316 (2025).
+    """
+    bits = [0] * nqubits
+    walls = []
+    for domain in domains:
+        for site in domain:
+            bits[site - 1] = 1
+        walls.extend([domain[0] - 1, domain[-1]])
+
+    for position in reversed(positions):
+        crossed = max(
+            (j for j, wall in enumerate(walls, 1) if wall < position + j), default=0
+        )
+        for j in range(crossed):
+            bits[walls[j] - 2] ^= 1
+            bits[walls[j] - 1] ^= 1
+            walls[j] -= 2
+        bits[position + crossed - 1] ^= 1
+
+    return bits
+
+
+def _folded_xxz_residual(state, nqubits, energy):
+    """Norm of :math:`(H - E) |psi>` for the folded XXZ chain with boundary spins in 0."""
+    paulis = {
+        "I": np.eye(2),
+        "X": np.array([[0, 1], [1, 0]]),
+        "Y": np.array([[0, -1j], [1j, 0]]),
+        "Z": np.diag([1, -1]),
+    }
+
+    def pauli_string(operators):
+        return reduce(
+            np.kron, (paulis[operators.get(i, "I")] for i in range(nqubits + 2))
+        )
+
+    identity = np.eye(2 ** (nqubits + 2))
+    hamiltonian = np.zeros_like(identity, dtype=complex)
+    for j in range(nqubits - 1):
+        hopping = pauli_string({j + 1: "X", j + 2: "X"}) + pauli_string(
+            {j + 1: "Y", j + 2: "Y"}
+        )
+        hamiltonian -= (identity + pauli_string({j: "Z", j + 3: "Z"})) @ hopping / 8
+
+    vacuum = np.array([1, 0])
+    state = np.kron(np.kron(vacuum, state), vacuum)
+
+    return np.linalg.norm(hamiltonian @ state - energy * state)
+
+
+@pytest.mark.parametrize(
+    "nqubits,nmagnons,domains,modes",
+    [
+        (5, 1, [[3, 4]], [2]),
+        (6, 1, [[3, 4, 5]], None),
+        (7, 2, [[5, 6]], [2, 3]),
+        (6, 1, None, [3]),
+        (8, 3, [], [1, 3, 4]),
+        (8, 3, None, None),
+    ],
+)
+def test_folded_xxz_eigenstate(backend, nqubits, nmagnons, domains, modes):
+    circuit = folded_xxz_eigenstate(nqubits, nmagnons, domains, modes, backend=backend)
+    nwalls = 2 * len(domains or [])
+    nsites = nqubits - nwalls
+    nauxiliary = max(nwalls + 5 if nwalls else 0, nmagnons + 1 if nmagnons > 1 else 0)
+    assert circuit.nqubits == nqubits + (nsites if nwalls else 0) + nauxiliary
+
+    # the chain is the first block of qubits, and the other qubits end in the zero state
+    state = backend.to_numpy(backend.execute_circuit(circuit).state())
+    chain = state[:: 2 ** (circuit.nqubits - nqubits)]
+    np.testing.assert_allclose(np.linalg.norm(chain), 1.0, atol=1e-8)
+
+    if modes is None:
+        modes = [round(m) for m in np.linspace(2, nsites - nmagnons + 1, nmagnons)]
+    momenta = np.pi * np.array(modes) / (nsites - nmagnons + 2)
+    residual = _folded_xxz_residual(chain, nqubits, -np.sum(np.cos(momenta)))
+    np.testing.assert_allclose(residual, 0.0, atol=1e-8)
+
+
+def test_folded_xxz_eigenstate_known_states(backend):
+    # one magnon and two domain walls, with the two configurations of the eigenstate
+    circuit = folded_xxz_eigenstate(5, 1, [[3, 4]], [2], backend=backend)
+    state = backend.to_numpy(backend.execute_circuit(circuit).state())
+    target = np.zeros(2**5)
+    target[[0b10110, 0b11001]] = [1, -1]
+    target = np.kron(target / np.sqrt(2), np.eye(2 ** (circuit.nqubits - 5))[0])
+    np.testing.assert_allclose(abs(np.vdot(target, state)), 1.0, atol=1e-8)
+
+    # without domain walls, amplitudes are Slater determinants of hard-core magnons
+    nqubits, modes = 8, [1, 3, 5]
+    circuit = folded_xxz_eigenstate(nqubits, 3, modes=modes, backend=backend)
+    state = backend.to_numpy(backend.execute_circuit(circuit).state())
+    momenta = np.pi * np.array(modes) / (nqubits - 3 + 2)
+    target = np.zeros(2**nqubits)
+    for positions in combinations(range(1, nqubits + 1), 3):
+        if np.all(np.diff(positions) >= 2):
+            shifted = np.array(positions) - np.arange(3)
+            index = sum(2 ** (nqubits - position) for position in positions)
+            target[index] = np.linalg.det(np.sin(np.outer(momenta, shifted)))
+    target = np.kron(target / np.linalg.norm(target), np.eye(2**4)[0])
+    np.testing.assert_allclose(abs(np.vdot(target, state)), 1.0, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nqubits,nmagnons,domains",
+    [
+        (11, 4, []),
+        (11, 3, [[7, 8]]),
+        (10, 1, [[3, 4], [7, 8]]),
+        (12, 2, [[5, 6], [9, 10]]),
+        (14, 2, [[5, 6, 7], [11, 12]]),
+        (16, 3, [[7, 8, 9, 10], [14, 15, 16]]),
+    ],
+)
+def test_folded_xxz_eigenstate_magnons(nqubits, nmagnons, domains):
+    """Check the hard-core and domain-wall stages on every basis state of the squeezed chain."""
+    circuit = folded_xxz_eigenstate(nqubits, nmagnons, domains)
+    domains = domains or []
+    nsites = nqubits - 2 * len(domains)
+    magnonic = range(nqubits, nqubits + nsites) if domains else range(nqubits)
+    # skip the first stage, which prepares the state of the free fermions
+    stage = sum(isinstance(gate, gates.Unitary) for gate in circuit.queue)
+
+    for sites in combinations(range(1, nsites - nmagnons + 2), nmagnons):
+        bits = [0] * circuit.nqubits
+        for site in sites:
+            bits[magnonic[site - 1]] = 1
+        for gate in circuit.queue[stage:]:
+            if all(bits[qubit] for qubit in gate.control_qubits):
+                if isinstance(gate, gates.SWAP):
+                    first, second = gate.target_qubits
+                    bits[first], bits[second] = bits[second], bits[first]
+                else:
+                    bits[gate.target_qubits[0]] ^= 1
+
+        positions = [site + j for j, site in enumerate(sites)]
+        expected = _folded_xxz_configuration(positions, nqubits, domains)
+        assert bits == expected + [0] * (circuit.nqubits - nqubits)
+
+
+@pytest.mark.parametrize(
+    "nqubits,nmagnons,domains,modes",
+    [
+        (6, 0, None, None),
+        (4, 3, None, None),
+        (7, 3, None, None),
+        (7, 2, [[5, 6]], [1, 5]),
+        (6, 2, None, [0, 1]),
+        (6, 2, None, [2, 2]),
+        (6, 2, None, [1, 2, 3]),
+        (7, 1, [[3]], None),
+        (7, 1, [[3, 5]], None),
+        (7, 1, [[2, 3]], None),
+        (7, 1, [[6, 8]], None),
+        (12, 1, [[3, 4], [6, 7]], None),
+    ],
+)
+def test_folded_xxz_eigenstate_errors(nqubits, nmagnons, domains, modes):
+    with pytest.raises(ValueError):
+        folded_xxz_eigenstate(nqubits, nmagnons, domains, modes)
+
+
+def test_folded_xxz_eigenstate_three_domains():
+    with pytest.raises(NotImplementedError):
+        folded_xxz_eigenstate(14, 1, [[3, 4], [7, 8], [11, 12]])
