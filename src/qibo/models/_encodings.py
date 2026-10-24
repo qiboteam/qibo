@@ -618,6 +618,455 @@ def _fanout_parity_tree(
     return circuit
 
 
+def _folded_xxz_matchgate(
+    roots: ArrayLike, j: int, k: int, backend: Backend | None = None
+) -> ArrayLike:
+    """Two-qubit matchgate :math:`M_{j,k}` of the free-fermion stage of Ref. [1].
+
+    The entries are ratios of determinants of Gram matrices of the Bethe roots, see Ref. [2].
+
+    Args:
+        roots (ArrayLike): the :math:`2M` Bethe roots, :math:`\\exp(\\pm i p_{a})`.
+        j (int): index :math:`j \\in \\{1, \\ldots, 2M\\}` of the matchgate in its block.
+        k (int): index :math:`k \\geq 1` of the block.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ArrayLike: :math:`4 \\times 4` unitary matrix.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
+        Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+    """
+    backend = _check_backend(backend)
+
+    # Gram matrices with k + 1 and k terms, i.e. C_{k}(x, y) = sum_{i <= k} conj(x)^i y^i
+    products = backend.outer(backend.conj(roots), roots)
+    gram_previous = sum(products**i for i in range(k))
+    gram = gram_previous + products**k
+
+    # leading principal minors of the two matrices, with the empty minor equal to one
+    minors = [
+        [1.0] + [backend.det(matrix[:size, :size]) for size in range(1, j + 1)]
+        for matrix in (gram, gram_previous)
+    ]
+    ones = backend.ones((1, j), dtype=backend.complex128)
+    determinant = backend.det(backend.concatenate((gram[: j - 1, :j], ones), axis=0))
+
+    a = (
+        (-1) ** (j - 1)
+        * determinant
+        / backend.prod(backend.conj(roots[: j - 1]))
+        / backend.sqrt(minors[1][j - 1] * minors[0][j])
+    )
+    b = roots[j - 1] * backend.sqrt(
+        minors[0][j - 1] * minors[1][j] / (minors[1][j - 1] * minors[0][j])
+    )
+    norm = backend.sqrt(backend.abs(a) ** 2 + backend.abs(b) ** 2)
+    a, b = a / norm, b / norm
+
+    return backend.cast(
+        [
+            [1, 0, 0, 0],
+            [0, a, -backend.conj(b), 0],
+            [0, b, backend.conj(a), 0],
+            [0, 0, 0, 1],
+        ],
+        dtype=backend.complex128,
+    )
+
+
+def _folded_xxz_move_after(
+    chain: list[int], workspace: list[int], counter: list[int], start: int
+) -> list[Gate]:
+    """Gates that shift the domain walls located after the current magnon.
+
+    Module of Figs. 5 and 7 of Ref. [1]. The walls are shifted, and the counter of walls is
+    updated, only if the second qubit of ``counter`` is active.
+
+    Args:
+        chain (list[int]): five consecutive qubits of the chain.
+        workspace (list[int]): the two workspace qubits.
+        counter (list[int]): qubits of the register that counts the domain walls.
+        start (int): position in ``counter`` of the first of the ``counter[start:]`` qubits that
+            are updated, in addition to the first two qubits.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = list(chain)
+    q.extend(workspace)
+    q.extend(counter[:2])
+    q.extend(counter[start:])
+    gate_list = [
+        gates.X(q[2]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.X(q[2]),
+        gates.X(q[8]),
+        gates.TOFFOLI(q[5], q[8], q[6]),
+        gates.CNOT(q[6], q[1]),
+        gates.CNOT(q[6], q[2]),
+        gates.CNOT(q[6], q[7]),
+    ]
+    gate_list.extend(
+        gates.SWAP(q[8 + i], q[9 + i]).controlled_by(q[6])
+        for i in reversed(range(1, len(q) - 9))
+    )
+    gate_list.extend(
+        [
+            gates.TOFFOLI(q[5], q[8], q[6]),
+            gates.X(q[0]),
+            gates.TOFFOLI(q[0], q[1], q[5]),
+            gates.X(q[0]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[3], q[4], q[5]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[5], q[8], q[6]),
+            gates.CNOT(q[6], q[2]),
+            gates.CNOT(q[6], q[3]),
+            gates.CNOT(q[6], q[7]),
+            gates.TOFFOLI(q[5], q[8], q[6]),
+            gates.X(q[8]),
+            gates.X(q[2]),
+            gates.TOFFOLI(q[1], q[2], q[5]),
+            gates.X(q[2]),
+        ]
+    )
+
+    return gate_list
+
+
+def _folded_xxz_move_before(
+    chain: list[int],
+    workspace: list[int],
+    magnon: int,
+    counter: list[int],
+    first: bool = False,
+) -> list[Gate]:
+    """Gates that shift the domain walls located before the current magnon.
+
+    Module of Figs. 5 and 6 of Ref. [1]. The walls are shifted, and the counter of walls is
+    updated, only if the qubit ``magnon`` is active.
+
+    Args:
+        chain (list[int]): four (if ``first is True``) or five consecutive qubits of the chain.
+        workspace (list[int]): the two workspace qubits.
+        magnon (int): qubit of the current magnon.
+        counter (list[int]): qubits of the register that counts the domain walls. The module
+            acts on its first three qubits if ``first is True``, and on all of them otherwise.
+        first (bool, optional): if ``True``, returns the module for the first four qubits of
+            the chain. Defaults to ``False``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = list(chain)
+    q.extend(workspace)
+    q.append(magnon)
+    q.extend(counter[:3] if first else counter)
+    if first:
+        return [
+            gates.CNOT(q[1], q[4]),
+            gates.X(q[1]),
+            gates.TOFFOLI(q[1], q[2], q[4]),
+            gates.X(q[1]),
+            gates.TOFFOLI(q[4], q[6], q[5]),
+            gates.CNOT(q[5], q[0]),
+            gates.CNOT(q[5], q[1]),
+            gates.CNOT(q[5], q[7]),
+            gates.SWAP(q[8], q[9]).controlled_by(q[5]),
+            gates.TOFFOLI(q[4], q[6], q[5]),
+            gates.CNOT(q[0], q[4]),
+            gates.X(q[2]),
+            gates.TOFFOLI(q[1], q[2], q[4]),
+            gates.X(q[2]),
+            gates.X(q[3]),
+            gates.TOFFOLI(q[2], q[3], q[4]),
+            gates.X(q[3]),
+        ]
+
+    gate_list = [
+        gates.X(q[2]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.X(q[2]),
+        gates.TOFFOLI(q[5], q[7], q[6]),
+        gates.CNOT(q[6], q[1]),
+        gates.CNOT(q[6], q[2]),
+        gates.CNOT(q[6], q[8]),
+    ]
+    gate_list.extend(
+        gates.SWAP(q[8 + i], q[9 + i]).controlled_by(q[6])
+        for i in reversed(range(1, len(q) - 9))
+    )
+    gate_list.extend(
+        [
+            gates.TOFFOLI(q[5], q[7], q[6]),
+            gates.X(q[0]),
+            gates.TOFFOLI(q[0], q[1], q[5]),
+            gates.X(q[0]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[3], q[4], q[5]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[5], q[7], q[6]),
+            gates.CNOT(q[6], q[2]),
+            gates.CNOT(q[6], q[3]),
+            gates.CNOT(q[6], q[8]),
+            gates.TOFFOLI(q[5], q[7], q[6]),
+            gates.X(q[2]),
+            gates.TOFFOLI(q[1], q[2], q[5]),
+            gates.X(q[2]),
+        ]
+    )
+
+    return gate_list
+
+
+def _folded_xxz_reset(
+    parity: int,
+    chain: list[int],
+    workspace: list[int],
+    magnon: int,
+    counter: list[int],
+    last: bool = False,
+) -> list[Gate]:
+    """Gates that uncompute the registers that count the domain walls.
+
+    Module ``RESET`` of Fig. 9 of Ref. [1].
+
+    Args:
+        parity (int): qubit of the register that guarantees that the chain is decoupled from
+            the auxiliary qubits.
+        chain (list[int]): four (or three, if ``last is True``) consecutive qubits of the chain.
+        workspace (list[int]): the two workspace qubits.
+        magnon (int): qubit of the current magnon.
+        counter (list[int]): two qubits of the register that counts the domain walls.
+        last (bool, optional): if ``True``, returns the module for the last three qubits of the
+            chain. Defaults to ``False``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = [parity]
+    q.extend(chain)
+    q.extend(workspace)
+    q.append(magnon)
+    q.extend(counter)
+    if last:
+        return [
+            gates.X(q[2]),
+            gates.TOFFOLI(q[2], q[3], q[4]),
+            gates.TOFFOLI(q[1], q[4], q[6]),
+            gates.TOFFOLI(q[0], q[6], q[7]),
+            gates.X(q[1]),
+            gates.CNOT(q[1], q[5]),
+            gates.TOFFOLI(q[4], q[5], q[6]),
+            gates.TOFFOLI(q[0], q[6], q[8]),
+            gates.TOFFOLI(q[4], q[5], q[6]),
+            gates.CNOT(q[1], q[5]),
+            gates.X(q[1]),
+            gates.TOFFOLI(q[1], q[4], q[6]),
+            gates.TOFFOLI(q[2], q[3], q[4]),
+            gates.X(q[2]),
+        ]
+
+    return [
+        gates.X(q[2]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.TOFFOLI(q[1], q[5], q[7]),
+        gates.TOFFOLI(q[0], q[7], q[8]),
+        gates.X(q[4]),
+        gates.X(q[1]),
+        gates.TOFFOLI(q[1], q[4], q[6]),
+        gates.TOFFOLI(q[5], q[6], q[7]),
+        gates.TOFFOLI(q[0], q[7], q[9]),
+        gates.TOFFOLI(q[5], q[6], q[7]),
+        gates.TOFFOLI(q[1], q[4], q[6]),
+        gates.X(q[1]),
+        gates.TOFFOLI(q[1], q[5], q[7]),
+        gates.X(q[4]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.X(q[2]),
+    ]
+
+
+def _folded_xxz_scan(
+    parity: list[int],
+    chain: list[int],
+    workspace: int,
+    inverse: bool = False,
+    boundary: bool = False,
+) -> list[Gate]:
+    """Gates that search and count the domain walls in a block of consecutive chain qubits.
+
+    Module ``SCAN`` of Fig. 9 of Ref. [1].
+
+    Args:
+        parity (list[int]): qubits of the register that guarantees that the chain is decoupled
+            from the auxiliary qubits.
+        chain (list[int]): consecutive qubits of the chain that are scanned.
+        workspace (int): workspace qubit.
+        inverse (bool, optional): if ``True``, returns the inverse module. Defaults to ``False``.
+        boundary (bool, optional): if ``True``, ``chain`` starts at the first site of the
+            chain, which is adjacent to the left boundary qubit. Defaults to ``False``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = list(parity)
+    q.extend(chain)
+    q.append(workspace)
+    ncounter, work = len(parity), len(q) - 1
+    gate_list = []
+    for i in reversed(range(ncounter + 1, work)):
+        gate_list.extend(
+            [
+                gates.X(q[i - 1]),
+                gates.TOFFOLI(q[i - 1], q[i], q[work]),
+                gates.X(q[i - 1]),
+            ]
+        )
+    if boundary:
+        gate_list.append(gates.CNOT(q[ncounter], q[work]))
+    if inverse:
+        gate_list.extend(
+            gates.SWAP(q[i], q[i + 1]).controlled_by(q[work])
+            for i in range(ncounter - 1)
+        )
+    else:
+        gate_list.extend(
+            gates.SWAP(q[i - 1], q[i]).controlled_by(q[work])
+            for i in reversed(range(1, ncounter))
+        )
+    if boundary:
+        gate_list.append(gates.CNOT(q[ncounter], q[work]))
+    for i in range(ncounter, work - 1):
+        gate_list.extend(
+            [gates.X(q[i]), gates.TOFFOLI(q[i], q[i + 1], q[work]), gates.X(q[i])]
+        )
+
+    return gate_list
+
+
+def _folded_xxz_seed(
+    roots: ArrayLike, nsites: int, backend: Backend | None = None
+) -> ArrayLike:
+    """Dense unitary that loads the seed state of the free-fermion stage of Ref. [1].
+
+    The seed state of :math:`2M` qubits has :math:`M` excitations. Its amplitudes are the product
+    of a Cholesky factor of the :math:`M`-th compound matrix of a Gram matrix of the Bethe roots,
+    and of a product state of :math:`M` pairs of qubits, see Ref. [2]. The unitary is obtained
+    by completing the seed state into an orthonormal basis with a QR decomposition.
+
+    Args:
+        roots (ArrayLike): the :math:`2M` Bethe roots, :math:`\\exp(\\pm i p_{a})`.
+        nsites (int): number of sites of the free-fermion chain.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ArrayLike: unitary matrix of dimension :math:`2^{2M}` whose first column is the seed state.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
+        Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+    """
+    backend = _check_backend(backend)
+
+    nmagnons = len(roots) // 2
+    products = backend.outer(backend.conj(roots), roots)
+    gram = sum(products**i for i in range(nsites))
+    # subsets of the roots with M elements, sorted by the integer with those bits set
+    subsets = sorted(
+        itertools.combinations(range(2 * nmagnons), nmagnons), key=lambda s: s[::-1]
+    )
+    dim = len(subsets)
+    compound = backend.cast(
+        [
+            [backend.det(gram[list(rows)][:, list(cols)]) for cols in subsets]
+            for rows in subsets
+        ],
+        dtype=backend.complex128,
+    )
+
+    lower = backend.zeros((dim, dim), dtype=backend.complex128)
+    for row in range(dim):
+        for col in range(row + 1):
+            value = compound[row, col] - backend.sum(
+                lower[row, :col] * backend.conj(lower[col, :col])
+            )
+            lower[row, col] = (
+                backend.sqrt(backend.real(value))
+                if row == col
+                else value / lower[col, col]
+            )
+
+    # product state of the pairs of qubits (2a, 2a + 1), with one excitation on each pair
+    pairs = range(nmagnons)
+    product_state = backend.cast(
+        [
+            (
+                backend.prod(
+                    backend.cast(
+                        [
+                            roots[2 * a] if 2 * a in subset else -roots[2 * a + 1]
+                            for a in pairs
+                        ],
+                        dtype=backend.complex128,
+                    )
+                )
+                if all((2 * a in subset) != (2 * a + 1 in subset) for a in pairs)
+                else 0.0
+            )
+            for subset in subsets
+        ],
+        dtype=backend.complex128,
+    )
+    amplitudes = backend.matmul(backend.conj(lower).T, product_state)
+
+    state = backend.zeros(2 ** (2 * nmagnons), dtype=backend.complex128)
+    for subset, amplitude in zip(subsets, amplitudes):
+        state[sum(2 ** (2 * nmagnons - 1 - qubit) for qubit in subset)] = amplitude
+    state = state / backend.vector_norm(state)
+
+    matrix = backend.identity(2 ** (2 * nmagnons), dtype=backend.complex128)
+    matrix[:, 0] = state
+    q, r = backend.qr(matrix)
+    phases = backend.diag(r)
+
+    return q * (phases / backend.abs(phases))
+
+
 def _gate_params(
     bsi: list[int], bsip1: list[int], keep_antictrls: bool = False
 ) -> tuple[list[int], ...]:
