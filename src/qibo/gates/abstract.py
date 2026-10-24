@@ -327,6 +327,11 @@ class Gate:
             measurements,
         )
 
+        if raw["_class"] == "ParametrizedFusedGate":
+            from qibo.gates.special import ParametrizedFusedGate
+
+            return ParametrizedFusedGate._from_dict(raw)
+
         for mod in (gates, measurements):
             try:
                 cls = getattr(mod, raw["_class"])
