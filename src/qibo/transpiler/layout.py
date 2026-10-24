@@ -52,6 +52,9 @@ class TranspileLayout(dict):
             print(layout.initial_layout)
             print(layout.routing_permutation)
             print(layout.nqubits_input)
+            print(layout.auxiliary_qubits)
+            print(layout.initial_logical_layout(filter_auxiliary=True))
+            print(layout.final_logical_layout(filter_auxiliary=True))
 
         .. testoutput::
 
@@ -70,6 +73,9 @@ class TranspileLayout(dict):
             [0, 1, 2, 3, 4]
             [0, 2, 3, 1, 4]
             4
+            [4]
+            {0: 0, 1: 1, 2: 2, 3: 3}
+            {0: 0, 1: 2, 2: 3, 3: 1}
 
     Args:
         final_layout (dict): Mapping from the label of the physical qubit on which each
@@ -88,6 +94,12 @@ class TranspileLayout(dict):
         self.nqubits_input = nqubits_input
 
     @property
+    def auxiliary_qubits(self) -> list:
+        """Labels of the physical qubits that the preprocessing adds to the circuit as
+        auxiliary qubits."""
+        return self.initial_layout[self.nqubits_input :]
+
+    @property
     def final_layout(self) -> dict:
         """Mapping from the physical qubit on which each qubit is placed before the
         routing, to the one on which it ends after the routing, as a plain dictionary.
@@ -101,3 +113,34 @@ class TranspileLayout(dict):
         circuit ends after the routing. The elements from ``nqubits_input`` onward are
         the auxiliary qubits."""
         return [self[label] for label in self.initial_layout]
+
+    def final_logical_layout(self, filter_auxiliary: bool = False) -> dict[int, int]:
+        """Index of the physical qubit on which each qubit of the circuit ends.
+
+        Args:
+            filter_auxiliary (bool, optional): If ``True``, the auxiliary qubits are left
+                out. Defaults to ``False``.
+
+        Returns:
+            dict: Mapping from the index of each qubit of the circuit to the index of the
+            physical qubit on which it ends after the routing, see
+            :attr:`qibo.transpiler.layout.TranspileLayout.routing_permutation`.
+        """
+        stop = self.nqubits_input if filter_auxiliary else len(self.initial_layout)
+        return dict(enumerate(self.routing_permutation[:stop]))
+
+    def initial_logical_layout(
+        self, filter_auxiliary: bool = False
+    ) -> dict[int, int | str]:
+        """Label of the physical qubit on which each qubit of the circuit is placed.
+
+        Args:
+            filter_auxiliary (bool, optional): If ``True``, the auxiliary qubits are left
+                out. Defaults to ``False``.
+
+        Returns:
+            dict: Mapping from the index of each qubit of the circuit to the label of the
+            physical qubit on which it is placed before the routing.
+        """
+        stop = self.nqubits_input if filter_auxiliary else len(self.initial_layout)
+        return dict(enumerate(self.initial_layout[:stop]))
