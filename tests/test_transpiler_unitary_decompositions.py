@@ -2,9 +2,8 @@ import math
 
 import numpy as np
 import pytest
-from scipy.linalg import expm
 
-from qibo import Circuit, gates, matrices
+from qibo import Circuit, gates
 from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_unitary
@@ -28,11 +27,12 @@ from qibo.transpiler.decompositions.unitary_decompositions import (
 
 def bell_unitary(hx, hy, hz, backend):
     ham = (
-        hx * backend.cast(np.kron(matrices.X, matrices.X))
-        + hy * backend.cast(np.kron(matrices.Y, matrices.Y))
-        + hz * backend.cast(np.kron(matrices.Z, matrices.Z))
+        hx * backend.kron(backend.matrices.X, backend.matrices.X)
+        + hy * backend.kron(backend.matrices.Y, backend.matrices.Y)
+        + hz * backend.kron(backend.matrices.Z, backend.matrices.Z)
     )
-    return backend.cast(expm(-1j * backend.to_numpy(ham)))
+
+    return backend.expm(-1j * ham)
 
 
 def assert_single_qubits(backend, psi, ua, ub):
@@ -368,15 +368,20 @@ def test_single_qubit_decomposition(backend, gate_classes):
         decomposition = single_qubit_decomposition(
             unitary, 1, gate_classes, backend=backend
         )
-        assert all(type(gate) in gate_classes for gate in decomposition)
-        assert all(gate.qubits == (1,) for gate in decomposition)
+        assert all(
+            type(gate) in (*gate_classes, gates.GlobalPhase) for gate in decomposition
+        )
+        assert all(gate.qubits in ((), (1,)) for gate in decomposition)
+        # the global phase gate makes the decomposition exact
+        assert sum(isinstance(gate, gates.GlobalPhase) for gate in decomposition) <= 1
+        for gate in decomposition:
+            if isinstance(gate, gates.GlobalPhase):
+                assert 0 <= gate.parameters[0] < 2 * math.pi
 
         circuit = Circuit(2)
         circuit.add(decomposition)
-        result = backend.to_numpy(circuit.unitary(backend))[:2, :2]
-        target = backend.to_numpy(unitary)
-        overlap = np.abs(np.trace(target.conj().T @ result)) / 2
-        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+        result = circuit.unitary(backend)[:2, :2]
+        backend.assert_allclose(result, unitary, atol=1e-8)
 
 
 @pytest.mark.parametrize(
@@ -394,10 +399,9 @@ def test_single_qubit_decomposition_special_unitaries(backend, gate_classes):
                 gate.matrix(backend), 0, gate_classes, backend=backend
             )
         )
-        result = backend.to_numpy(circuit.unitary(backend))
-        target = backend.to_numpy(gate.matrix(backend))
-        overlap = np.abs(np.trace(target.conj().T @ result)) / 2
-        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+        result = circuit.unitary(backend)
+        target = gate.matrix(backend)
+        backend.assert_allclose(result, target, atol=1e-8)
 
 
 @pytest.mark.parametrize(
@@ -435,6 +439,10 @@ def test_single_qubit_decomposition_euler_bases(backend, gate_classes, maximum):
         decomposition = single_qubit_decomposition(
             unitary, 0, gate_classes, backend=backend
         )
+        # the optimizer does not add the global phase gate
+        decomposition = [
+            gate for gate in decomposition if not isinstance(gate, gates.GlobalPhase)
+        ]
         assert len(decomposition) <= maximum
 
         circuit = Circuit(1)

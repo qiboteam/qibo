@@ -1,3 +1,4 @@
+import math
 from enum import EnumMeta, Flag, auto
 from functools import reduce
 from operator import or_
@@ -6,7 +7,9 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates import Gate
+from qibo.gates.gates import is_nonzero_phase
 from qibo.transpiler._exceptions import DecompositionError
+from qibo.transpiler.decompositions.abstract import merge_global_phases
 from qibo.transpiler.decompositions.cz_decompositions import cz_dec, native_cz_dec
 from qibo.transpiler.decompositions.gpi2_decompositions import gpi2_dec
 from qibo.transpiler.decompositions.iswap_decompositions import iswap_dec
@@ -294,15 +297,22 @@ class Unroller:
                 to ``None``.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): Decomposed circuit.
+            (:class:`qibo.models.circuit.Circuit`): Decomposed circuit. The decompositions
+            that are equal to a gate only up to a global phase end with the
+            :class:`qibo.gates.GlobalPhase` gate that corrects them. All of them, including
+            the ones of the input circuit, are added modulo :math:`2 \\pi` into a single
+            :class:`qibo.gates.GlobalPhase` gate at the end of the circuit, which is not
+            added if the total phase is zero, see
+            :attr:`qibo.models.circuit.Circuit.global_phase`.
         """
         backend = self.backend if backend is None else backend
         translated_circuit = Circuit(**circuit.init_kwargs)
+        global_phase = 0.0
         # qubits that a previous gate acts on, so that they may not be in the state 0
         touched = set()
         for gate in circuit.queue:
             if len(gate.qubits) < self.min_qubits:
-                translated_circuit.add(gate)
+                translated = [gate]
             else:
                 idle = (
                     tuple(q for q in range(circuit.nqubits) if q not in gate.qubits)
@@ -319,19 +329,26 @@ class Unroller:
                     if self.use_dirty_ancillas
                     else ()
                 )
-                translated_circuit.add(
-                    translate_gate(
-                        gate,
-                        self.native_gates,
-                        backend=backend,
-                        free=free,
-                        clean=clean,
-                        minimize_toffolis=self.minimize_toffolis,
-                        minimize_depth=self.minimize_depth,
-                    )
+                translated = translate_gate(
+                    gate,
+                    self.native_gates,
+                    backend=backend,
+                    free=free,
+                    clean=clean,
+                    minimize_toffolis=self.minimize_toffolis,
+                    minimize_depth=self.minimize_depth,
                 )
+            # the global phase, if any, is the last gate of a translation
+            if translated and isinstance(translated[-1], gates.GlobalPhase):
+                global_phase = (global_phase + translated[-1].parameters[0]) % (
+                    2 * math.pi
+                )
+                translated = translated[:-1]
+            translated_circuit.add(translated)
             if not isinstance(gate, (gates.Align, gates.Barrier, gates.I)):
                 touched.update(gate.qubits)
+        if is_nonzero_phase(global_phase):
+            translated_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
         return translated_circuit
 
 
@@ -371,6 +388,8 @@ def translate_gate(
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Native gates that decompose the input gate.
+        If the decomposition is equal to the gate only up to a global phase, its last gate
+        is the :class:`qibo.gates.GlobalPhase` gate that corrects it.
 
     Raises:
         DecompositionError: If the gate acts on more than two qubits and is not a
@@ -379,7 +398,10 @@ def translate_gate(
     """
     backend = _check_backend(backend)
 
-    if isinstance(gate, (gates.Align, gates.Barrier, gates.I, gates.ResetChannel)):
+    if isinstance(
+        gate,
+        (gates.Align, gates.Barrier, gates.GlobalPhase, gates.I, gates.ResetChannel),
+    ):
         return [gate]
 
     if isinstance(gate, gates.M):
@@ -403,7 +425,7 @@ def translate_gate(
                     minimize_depth=minimize_depth,
                 )
             )
-        return translated
+        return merge_global_phases(translated)
 
     if len(gate.qubits) == 2 and gate.__class__ in native_gates.two_qubit_gates:
         return [gate]
@@ -448,7 +470,7 @@ def translate_gate(
         translated = []
         for decomposed_gate in decomposed_gates:
             translated.extend(translate_gate(decomposed_gate, native_gates, backend))
-        return translated
+        return merge_global_phases(translated)
 
     if len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates, backend)
@@ -461,7 +483,7 @@ def translate_gate(
             gate.qubits, gate.matrix(backend), backend=backend
         ):
             translated.extend(translate_gate(decomposed_gate, native_gates, backend))
-        return translated
+        return merge_global_phases(translated)
 
     if gate.__class__ not in cz_dec.decompositions or (
         gate.is_controlled_by and isinstance(gate, (gates.FusedGate, gates.Unitary))
@@ -475,7 +497,7 @@ def translate_gate(
             *gate.qubits, circuit.unitary(backend), backend=backend
         ):
             translated.extend(translate_gate(decomposed_gate, native_gates, backend))
-        return translated
+        return merge_global_phases(translated)
 
     decomposition_2q = _translate_two_qubit_gates(gate, native_gates, backend)
 
@@ -487,7 +509,7 @@ def translate_gate(
             )
         else:
             final_decomposition.append(decomposed_2q_gate)
-    return final_decomposition
+    return merge_global_phases(final_decomposition)
 
 
 def _translate_single_qubit_gates(
@@ -518,12 +540,19 @@ def _translate_single_qubit_gates(
         )
 
     decomposer = gpi2_dec if NativeGates.GPI2 & single_qubit_natives else u3_dec
+    phase = []
     if gate.__class__ not in decomposer.decompositions:
-        gate = gates.U3(
-            gate.qubits[0], *u3_decomposition(gate.matrix(backend), backend)
-        )
+        matrix = gate.matrix(backend)
+        # the U3 gate equals the gate only up to half the phase of its determinant
+        phase = [
+            gates.GlobalPhase(
+                (float(backend.angle(backend.det(matrix))) / 2) % (2 * math.pi),
+                trainable=False,
+            )
+        ]
+        gate = gates.U3(gate.qubits[0], *u3_decomposition(matrix, backend))
 
-    return decomposer(gate, backend)
+    return merge_global_phases(decomposer(gate, backend) + phase)
 
 
 def _translate_two_qubit_gates(
