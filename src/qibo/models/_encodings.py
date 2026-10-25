@@ -730,21 +730,29 @@ def _folded_merged(
                 groups.append([m + left + shift, left, left])
         for x, first, last in groups:
             controls = [magnonic[m - 1]]
-            if first > 0:
+            if first > lefts[0]:
                 controls.append(tally[first])
-            negated = [tally[last + 1]] if last + 1 < nmagnons else []
+            negated = [tally[last + 1]] if last < lefts[-1] else []
             circuit.add(
                 _folded_xxz_multicontrolled(controls, negated, chain[x - 1], workspace)
             )
         if m > 0:
+            # a magnon in the site ``m`` has ``lefts[0]`` to ``lefts[-1]`` magnons before it, so
+            # the tally qubits below ``lefts[0]`` are always in the state 1, and the ones above
+            # ``lefts[-1] + 1`` in the state 0, and only the ones in between are shifted
             circuit.add(
                 gates.SWAP(tally[v - 1], tally[v]).controlled_by(magnonic[m - 1])
-                for v in range(nmagnons, 0, -1)
+                for v in range(lefts[-1] + 1, lefts[0], -1)
             )
-            circuit.add(gates.CNOT(magnonic[m - 1], tally[0]))
+            circuit.add(gates.CNOT(magnonic[m - 1], tally[lefts[0]]))
+        # the number of magnons passed is between these bounds, and a tally qubit that is
+        # always in the state 1 makes the two gates of the snapshot cancel
+        passed = (max(0, nmagnons - nsqueezed + m), min(m, nmagnons))
         for count, site in snapshots[m]:
-            circuit.add(gates.X(chain[site - 1]))
-            circuit.add(gates.CNOT(tally[count], chain[site - 1]))
+            if count > passed[0]:
+                circuit.add(gates.X(chain[site - 1]))
+            if passed[0] < count <= passed[1]:
+                circuit.add(gates.CNOT(tally[count], chain[site - 1]))
     circuit.add(gates.X(qubit) for qubit in tally[1:])
 
     # the input is cleared from the output, from right to left, with a one-hot counter
@@ -755,27 +763,32 @@ def _folded_merged(
             negated = [] if parity_bit else [chain[x - 1]]
             circuit.add(_folded_xxz_multicontrolled(controls, negated, flag, workspace))
         for right, position, m in hosts[x]:
+            # with a single host, the flag already implies the state of the counter
+            controls = [flag] if len(hosts[x]) == 1 else [flag, tally[right]]
             circuit.add(
-                _folded_xxz_multicontrolled(
-                    [flag, tally[right]], [], magnonic[m - 1], workspace
-                )
+                _folded_xxz_multicontrolled(controls, [], magnonic[m - 1], workspace)
             )
-        if hosts[x]:
-            circuit.add(
-                gates.SWAP(tally[v], tally[v + 1]).controlled_by(flag)
-                for v in reversed(range(nmagnons))
-            )
+        # the counter can only be in the states of the hosts when the flag is on
+        circuit.add(
+            gates.SWAP(tally[v], tally[v + 1]).controlled_by(flag)
+            for v in sorted({right for right, _, _ in hosts[x]}, reverse=True)
+        )
         for right, position, m in hosts[x]:
             parity_bit = (x - position + 1) % 2
             if x < nqubits or parity_bit:
-                controls = (
-                    [tally[right + 1], chain[x - 1]]
-                    if parity_bit
-                    else [tally[right + 1]]
-                )
-                negated = [] if parity_bit else [chain[x - 1]]
-                if x < nqubits:
-                    (negated if parity_bit else controls).append(chain[x])
+                controls, negated = [tally[right + 1]], []
+                # a site that is not a magnon needs ``right + 1`` magnons to its right to have
+                # the counter in this state, which takes at least ``2 * (right + 1)`` sites.
+                # Otherwise, the counter is enough, and, if not, the state of the site or of
+                # the next one tells the two cases apart, depending on whether a domain wall
+                # is displaced to one of the two positions where it would be
+                if x + 2 * (right + 1) <= nqubits + 1:
+                    if any(
+                        wall in (x + 2 * right, x + 2 * right + 1) for wall in walls
+                    ):
+                        (negated if parity_bit else controls).append(chain[x])
+                    else:
+                        (controls if parity_bit else negated).append(chain[x - 1])
                 circuit.add(
                     _folded_xxz_multicontrolled(controls, negated, flag, workspace)
                 )
