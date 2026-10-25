@@ -1010,26 +1010,33 @@ def test_fanout_and_ladder_synthesis(backend, nqubits, method):
 
 
 @pytest.mark.parametrize(
-    "nqubits,nmagnons,domains,modes",
+    "nqubits,nmagnons,domains,modes,method",
     [
-        (6, 0, None, None),
-        (4, 3, None, None),
-        (7, 3, None, None),
-        (6, 2, None, [1, 2, 3]),
-        (6, 2, None, [0, 1]),
-        (6, 2, None, [2, 2]),
-        (6, 2, None, [1, 6]),
-        (7, 1, [[]], None),
-        (7, 1, [[3]], None),
-        (7, 1, [[3, 5]], None),
-        (7, 1, [[2, 3]], None),
-        (7, 1, [[6, 8]], None),
-        (12, 1, [[3, 4], [6, 7]], None),
+        (6, 0, None, None, "sopena"),
+        (4, 3, None, None, "sopena"),
+        (7, 3, None, None, "sopena"),
+        (6, 2, None, [1, 2, 3], "sopena"),
+        (6, 2, None, [0, 1], "sopena"),
+        (6, 2, None, [2, 2], "sopena"),
+        (6, 2, None, [1, 6], "sopena"),
+        (7, 1, [[]], None, "sopena"),
+        (7, 1, [[3]], None, "sopena"),
+        (7, 1, [[3, 5]], None, "sopena"),
+        (7, 1, [[2, 3]], None, "sopena"),
+        (7, 1, [[6, 8]], None, "sopena"),
+        (12, 1, [[3, 4], [6, 7]], None, "sopena"),
+        (6, 0, None, None, "merged"),
+        (7, 1, [[3, 5]], None, "merged"),
+        (5, 1, [[3, 4]], None, "other"),
     ],
 )
-def test_folded_xxz_eigenstate_errors(backend, nqubits, nmagnons, domains, modes):
+def test_folded_xxz_eigenstate_errors(
+    backend, nqubits, nmagnons, domains, modes, method
+):
     with pytest.raises(ValueError):
-        folded_xxz_eigenstate(nqubits, nmagnons, domains, modes, backend=backend)
+        folded_xxz_eigenstate(
+            nqubits, nmagnons, domains, modes, method=method, backend=backend
+        )
 
 
 @pytest.mark.parametrize(
@@ -1038,16 +1045,20 @@ def test_folded_xxz_eigenstate_errors(backend, nqubits, nmagnons, domains, modes
         (4, 1, None, None, [2]),
         (5, 2, [], [1, 3], [1, 3]),
         (5, 2, None, None, [2, 4]),
+        (8, 3, None, None, [2, 4, 6]),
         (5, 1, [[3, 4]], None, [2]),
         (6, 1, [[3, 4, 5]], [1], [1]),
         (7, 2, [[5, 6]], None, [2, 4]),
         (8, 1, [[3, 4], [7, 8]], None, [2]),
     ],
 )
+@pytest.mark.parametrize("method", ["sopena", "merged"])
 def test_folded_xxz_eigenstate(
-    backend, nqubits, nmagnons, domains, modes, target_modes
+    backend, nqubits, nmagnons, domains, modes, target_modes, method
 ):
-    circuit = folded_xxz_eigenstate(nqubits, nmagnons, domains, modes, backend=backend)
+    circuit = folded_xxz_eigenstate(
+        nqubits, nmagnons, domains, modes, method=method, backend=backend
+    )
 
     # the chain is in the first qubits, and the auxiliary qubits are in the zero state
     state = backend.execute_circuit(circuit).state()
@@ -1076,15 +1087,23 @@ def test_folded_xxz_eigenstate(
         (14, 2, [[5, 6], [9, 10], [13, 14]], [2, 7]),
     ],
 )
+@pytest.mark.parametrize("method", ["sopena", "merged"])
 def test_folded_xxz_eigenstate_many_domains(
-    backend, nqubits, nmagnons, domains, target_modes
+    backend, nqubits, nmagnons, domains, target_modes, method
 ):
     """The circuits are too large to be simulated, so the first stage is simulated alone, and the
     other stages, which only permute basis states, are applied to the bit strings of its state."""
-    circuit = folded_xxz_eigenstate(nqubits, nmagnons, domains, backend=backend)
+    circuit = folded_xxz_eigenstate(
+        nqubits, nmagnons, domains, method=method, backend=backend
+    )
     nsites = nqubits - 2 * len(domains)
 
-    first_stage = [gate for gate in circuit.queue if isinstance(gate, gates.Unitary)]
+    last = max(
+        i
+        for i, gate in enumerate(circuit.queue)
+        if isinstance(gate, (gates.Unitary, gates.RBS))
+    )
+    first_stage = circuit.queue[: last + 1]
     free_fermions = Circuit(nsites)
     free_fermions.add(
         gate.on_qubits({q: q - nqubits for q in gate.qubits}) for gate in first_stage
@@ -1118,3 +1137,17 @@ def test_folded_xxz_eigenstate_many_domains(
     )
     energy = -backend.sum(backend.cos(momenta))
     backend.assert_allclose(hamiltonian @ state, energy * state, atol=1e-8)
+
+
+@pytest.mark.parametrize("nqubits,nmagnons,domains", [(8, 3, None), (7, 2, [[5, 6]])])
+def test_folded_xxz_eigenstate_methods(backend, nqubits, nmagnons, domains):
+    chains = []
+    for method in ("sopena", "merged"):
+        circuit = folded_xxz_eigenstate(
+            nqubits, nmagnons, domains, method=method, backend=backend
+        )
+        state = backend.execute_circuit(circuit).state()
+        chains.append(state[:: 2 ** (circuit.nqubits - nqubits)])
+
+    overlap = backend.sum(backend.conj(chains[0]) * chains[1])
+    backend.assert_allclose(backend.abs(overlap), 1.0, atol=1e-8)
