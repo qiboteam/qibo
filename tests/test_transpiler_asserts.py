@@ -107,6 +107,13 @@ def test_assert_decomposition():
     assert_decomposition(circuit, native_gates=NativeGates.default())
 
 
+def test_assert_decomposition_ignores_global_phase():
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.GlobalPhase(0.1234))
+    assert_decomposition(circuit, native_gates=NativeGates.RZ | NativeGates.CZ)
+
+
 def test_assert_decomposition_ignores_directives_and_resets():
     circuit = Circuit(2)
     circuit.add(gates.CZ(0, 1))

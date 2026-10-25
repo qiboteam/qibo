@@ -1,4 +1,5 @@
 import itertools
+import math
 import random
 
 import networkx as nx
@@ -230,6 +231,72 @@ def test_routing_with_measurements(star_connectivity):
         transpiled_circuit=transpiled_circuit,
         final_layout=final_layout,
     )
+
+
+@pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
+@pytest.mark.parametrize("measurements", [False, True])
+def test_routing_with_global_phase(star_connectivity, router_class, measurements):
+    """The global phase gates act on no qubits, so they are merged after the routing."""
+    connectivity = star_connectivity()
+    circuit = Circuit(5)
+    circuit.add([gates.GlobalPhase(0.1234), gates.CNOT(0, 1), gates.H(2)])
+    circuit.add([gates.GlobalPhase(0.1), gates.CNOT(1, 3)])
+    if measurements:
+        circuit.add(gates.M(0, 2, 3))
+
+    transpiled_circuit, final_layout = router_class(connectivity)(circuit)
+
+    global_phases = [
+        gate for gate in transpiled_circuit.queue if isinstance(gate, gates.GlobalPhase)
+    ]
+    assert len(global_phases) == 1
+    assert transpiled_circuit.global_phase == pytest.approx(0.2234)
+    assert transpiled_circuit.queue[-1] is global_phases[0]
+    if measurements:
+        assert isinstance(transpiled_circuit.queue[-2], gates.M)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_layout=final_layout,
+    )
+
+
+@pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
+def test_routing_global_phase_is_not_trainable(star_connectivity, router_class):
+    circuit = Circuit(5)
+    circuit.add([gates.CNOT(0, 1), gates.GlobalPhase(0.3, trainable=True)])
+    assert len(circuit.trainable_gates) == 1
+
+    transpiled_circuit, _ = router_class(star_connectivity())(circuit)
+
+    assert isinstance(transpiled_circuit.queue[-1], gates.GlobalPhase)
+    assert not transpiled_circuit.queue[-1].trainable
+    assert len(transpiled_circuit.trainable_gates) == 0
+
+
+@pytest.mark.parametrize("router_class", [Sabre, ShortestPaths])
+@pytest.mark.parametrize(
+    "phase,expected",
+    [
+        (1e-15, 0.0),
+        (2 * math.pi, 0.0),
+        (2 * math.pi - 1e-14, 0.0),
+        (2 * math.pi + 0.3, 0.3),
+        (-0.3, 2 * math.pi - 0.3),
+    ],
+)
+def test_routing_global_phase_modulo(star_connectivity, router_class, phase, expected):
+    """The global phase is added modulo 2 pi, and it is dropped if it is zero."""
+    circuit = Circuit(5)
+    circuit.add([gates.CNOT(0, 1), gates.GlobalPhase(phase)])
+
+    transpiled_circuit, _ = router_class(star_connectivity())(circuit)
+
+    global_phases = [
+        gate for gate in transpiled_circuit.queue if isinstance(gate, gates.GlobalPhase)
+    ]
+    assert len(global_phases) == int(expected != 0)
+    assert transpiled_circuit.global_phase == pytest.approx(expected)
 
 
 def test_sabre_looping():

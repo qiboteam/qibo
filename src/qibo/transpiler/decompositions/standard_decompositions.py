@@ -140,8 +140,20 @@ def _mottonen_gray_code(rank: int, backend: Backend | None = None) -> ArrayLike:
 # standard gate decompositions used by :meth:`qibo.gates.gates.Gate.decompose`
 standard_decompositions = GateDecompositions()
 standard_decompositions.add(gates.CNOT, [gates.CNOT(0, 1)])
-standard_decompositions.add(gates.SX, [gates.RX(0, math.pi / 2, trainable=False)])
-standard_decompositions.add(gates.SXDG, [gates.RX(0, -math.pi / 2, trainable=False)])
+standard_decompositions.add(
+    gates.SX,
+    [
+        gates.RX(0, math.pi / 2, trainable=False),
+        gates.GlobalPhase(math.pi / 4, trainable=False),
+    ],
+)
+standard_decompositions.add(
+    gates.SXDG,
+    [
+        gates.RX(0, -math.pi / 2, trainable=False),
+        gates.GlobalPhase(7 * math.pi / 4, trainable=False),
+    ],
+)
 standard_decompositions.add(
     gates.PRX,
     lambda gate: [
@@ -158,6 +170,7 @@ standard_decompositions.add(
         gates.RZ(0, gate.parameters[0] + math.pi),
         gates.SX(0),
         gates.RZ(0, gate.parameters[1] + math.pi),
+        gates.GlobalPhase(math.pi / 2, trainable=False),
     ],
 )
 standard_decompositions.add(gates.CY, [gates.SDG(1), gates.CNOT(0, 1), gates.S(1)])
@@ -218,6 +231,7 @@ standard_decompositions.add(
         gates.RZ(1, -gate.parameters[0] / 2.0),
         gates.CNOT(0, 1),
         gates.RZ(1, gate.parameters[0] / 2.0),
+        gates.GlobalPhase(gate.parameters[0] / 4.0, trainable=False),
     ],
 )
 standard_decompositions.add(
@@ -355,6 +369,16 @@ standard_decompositions.add(
 standard_decompositions.add(
     gates.FSWAP,
     [gates.X(1)] + gates.GIVENS(0, 1, math.pi / 2).decompose() + [gates.X(0)],
+)
+standard_decompositions.add(
+    gates.fSim,
+    lambda gate, backend=None: (
+        gates.RXXYY(0, 1, 2 * gate.parameters[0]).decompose()
+        + gates.CU1(0, 1, -gate.parameters[1]).decompose()
+    ),
+)
+standard_decompositions.add(
+    gates.SYC, gates.fSim(0, 1, math.pi / 2, math.pi / 6).decompose()
 )
 standard_decompositions.add(
     gates.ECR,

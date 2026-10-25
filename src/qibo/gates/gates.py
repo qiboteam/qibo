@@ -3001,6 +3001,26 @@ def _is_clifford_given_angle(angle: float, precision_tol: float = 1e-8):
     )
 
 
+def is_nonzero_phase(phase: float, atol: float = 1e-12) -> bool:
+    """Whether a phase is not a multiple of :math:`2 \\pi`.
+
+    Symbolic phases, *i.e.* the ones that depend on symbols, are always nonzero.
+
+    Args:
+        phase (float or :class:`sympy.Expr`): Phase, in radians.
+        atol (float, optional): Absolute tolerance, in radians. Defaults to :math:`10^{-12}`.
+
+    Returns:
+        bool: ``True`` if the phase is not a multiple of :math:`2 \\pi`.
+    """
+    import sympy
+
+    if isinstance(phase, sympy.Expr) and phase.free_symbols:
+        return True
+
+    return abs(math.remainder(float(phase), 2 * math.pi)) > atol
+
+
 def _is_hamming_weight_given_angle(angle: float, target: float = 2 * np.pi):
     """Helper function to update Hamming weight boolean condition according to
     the given angles ``angle`` and ``target``."""

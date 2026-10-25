@@ -183,11 +183,12 @@ def assert_decomposition(
 ) -> None:
     """Checks if a circuit has been correctly decomposed into native gates.
 
-    The identity gate, the measurements, the resets and the directives are not checked,
-    and :class:`qibo.gates.gates.Z` and :class:`qibo.gates.gates.RZ` are also accepted
-    if :class:`qibo.gates.gates.U3` or :class:`qibo.gates.gates.GPI2` are native,
-    because they are virtual gates that are assumed to be available together with them,
-    as in :class:`qibo.transpiler.unroller.Unroller`.
+    The identity gate, the global phase gates, the measurements, the resets and the
+    directives are not checked, and :class:`qibo.gates.gates.Z` and
+    :class:`qibo.gates.gates.RZ` are also accepted if :class:`qibo.gates.gates.U3` or
+    :class:`qibo.gates.gates.GPI2` are native, because they are virtual gates that are
+    assumed to be available together with them, as in
+    :class:`qibo.transpiler.unroller.Unroller`.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
@@ -197,7 +198,15 @@ def assert_decomposition(
         native_gates |= NativeGates.Z | NativeGates.RZ
     for gate in circuit.queue:
         if isinstance(
-            gate, (gates.Align, gates.Barrier, gates.I, gates.M, gates.ResetChannel)
+            gate,
+            (
+                gates.Align,
+                gates.Barrier,
+                gates.GlobalPhase,
+                gates.I,
+                gates.M,
+                gates.ResetChannel,
+            ),
         ):
             continue
         if len(gate.qubits) <= 2:

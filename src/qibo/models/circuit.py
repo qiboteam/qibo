@@ -1,18 +1,21 @@
 """Module for the Circuit class."""
 
 import copy
+import math
 import sys
 from collections import Counter
 from collections.abc import Iterable
+from fractions import Fraction
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 from qibo import __version__, gates
 from qibo.backends import Backend, _check_backend, _Global
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.gates import ParametrizedGate
 from qibo.gates.abstract import Gate
+from qibo.gates.gates import is_nonzero_phase
 from qibo.models._openqasm import QASMParser
 from qibo.result import CircuitResult, QuantumState
 
@@ -120,7 +123,7 @@ class _Queue(list):
                 else tuple(range(self.nqubits))  # special gate acting on all qubits
             )
 
-            # gates that act on no qubits, e.g. the global phase, do not occupy a moment
+            # gates that act on no qubits, such as the global phase, do not occupy a moment
             if not qubits:
                 continue
 
@@ -545,13 +548,28 @@ class Circuit:
         Returns:
             :class:`qibo.models.circuit.Circuit`: Circuit that contains only
             gates that are supported by OpenQASM and has the same effect as
-            the original circuit.
+            the original circuit. The decompositions that are equal to the gate only up
+            to a global phase end with a :class:`qibo.gates.GlobalPhase` gate that
+            corrects them. All of them are added modulo :math:`2 \\pi` into a single
+            :class:`qibo.gates.GlobalPhase` gate that is the last gate of the circuit, and
+            which is not trainable and is not added if the total phase is zero, see
+            :attr:`qibo.models.circuit.Circuit.global_phase`.
         """
         # FIXME: This method is not completed until the ``decompose`` is
         # implemented for all gates not supported by OpenQASM.
         decomp_circuit = self.__class__(self.nqubits)
+        global_phase = 0.0
         for gate in self.queue:
-            decomp_circuit.add(gate.decompose(*free, method=method, **kwargs))
+            decomposed_gates = gate.decompose(*free, method=method, **kwargs)
+            # the global phase, if any, is the last gate of a decomposition
+            if decomposed_gates and isinstance(decomposed_gates[-1], gates.GlobalPhase):
+                global_phase = (global_phase + decomposed_gates[-1].parameters[0]) % (
+                    2 * math.pi
+                )
+                decomposed_gates = decomposed_gates[:-1]
+            decomp_circuit.add(decomposed_gates)
+        if is_nonzero_phase(global_phase):
+            decomp_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
         return decomp_circuit
 
     def with_pauli_noise(self, noise_map: NoiseMapType):
@@ -783,6 +801,36 @@ class Circuit:
             return [(i, g) for i, g in enumerate(self.queue) if g.name == gate]
 
         return [(i, g) for i, g in enumerate(self.queue) if isinstance(g, gate)]
+
+    @property
+    def global_phase(self) -> float:
+        """Global phase :math:`\\theta` of the circuit, in radians.
+
+        It is the sum of the phases of all :class:`qibo.gates.GlobalPhase` gates of the
+        circuit, so that the unitary of the circuit contains the global factor
+        :math:`e^{i \\theta}`. It is :math:`0` unless the circuit has such gates. In particular,
+        the circuits that :meth:`qibo.models.circuit.Circuit.decompose` and the transpiler
+        return have a single :class:`qibo.gates.GlobalPhase` gate at their end, if
+        the decomposition of some of their gates is equal to the gate only up to a global
+        phase, which the decomposition compensates for.
+
+        .. note::
+            The phase is only defined modulo :math:`2 \\pi`, and the property is not reduced:
+            it is the plain sum of the parameters of the gates, which can be outside the
+            interval :math:`[0, 2\\pi)` if the circuit has several global phase gates. The
+            circuits that :meth:`qibo.models.circuit.Circuit.decompose` and the transpiler
+            return have it in :math:`[0, 2\\pi)`, since they add the phases modulo
+            :math:`2 \\pi`, and :meth:`qibo.models.circuit.Circuit.draw` always reduces it
+            to that interval.
+        """
+        return sum(
+            (
+                gate.parameters[0]
+                for gate in self.queue
+                if isinstance(gate, gates.GlobalPhase)
+            ),
+            0.0,
+        )
 
     def _set_parameters_list(self, parameters: ArrayLike, n: int) -> None:
         """Helper method for ``set_parameters`` when a list is given.
@@ -1194,7 +1242,10 @@ class Circuit:
 
         .. note::
             This method does not support multi-controlled gates
-            and gates with ``torch.Tensor`` as parameters.
+            and gates with ``torch.Tensor`` as parameters. The
+            :class:`qibo.gates.GlobalPhase` gates are not exported, because OpenQASM 2
+            cannot represent them. A warning is logged if the global phase of the circuit
+            is not zero.
         """
         code = [f"// Generated by QIBO {__version__}"]
         code += ["OPENQASM 2.0;"]
@@ -1213,9 +1264,13 @@ class Circuit:
                 )
             code.append(f"creg {register}[{len(qubits)}];")
 
+        # Global phases are not representable in OpenQASM 2, so they are not exported
+        if is_nonzero_phase(self.global_phase):
+            log.warning("The global phase of the circuit is not exported to OpenQASM.")
+
         # Add gates
         for gate in self.queue:
-            if isinstance(gate, gates.M):
+            if isinstance(gate, (gates.M, gates.GlobalPhase)):
                 continue
 
             if gate.is_controlled_by:
@@ -1417,8 +1472,7 @@ class Circuit:
                     f"{gate.__class__.__name__} gate is not supported by `circuit.draw`",
                 )
 
-        if isinstance(gate, gates.CallbackGate) or not gate.qubits:
-            # gates that act on the whole system are drawn on every wire
+        if isinstance(gate, gates.CallbackGate):
             targets = list(range(self.nqubits))
         else:
             targets = list(gate.target_qubits)
@@ -1464,6 +1518,12 @@ class Circuit:
     ) -> str:
         """Build the string representation of the circuit diagram.
 
+        If the circuit has a global phase different from zero, see
+        :attr:`qibo.models.circuit.Circuit.global_phase`, it is written above the diagram
+        since it acts on no wire. It is reduced to the interval :math:`[0, 2\\pi)` and
+        written as a fraction of :math:`\\pi`, such as ``3π/4``, or as a decimal multiple of
+        :math:`\\pi` if it is not a fraction with a small denominator.
+
         See :meth:`qibo.models.circuit.Circuit.draw` for the arguments.
         """
         # build string representation of gates
@@ -1472,6 +1532,10 @@ class Circuit:
         idx = [0] * self.nqubits
 
         for gate in self.queue:
+            if isinstance(gate, gates.GlobalPhase):
+                # global phases act on no wire, they are written above the diagram
+                continue
+
             if isinstance(gate, gates.FusedGate):
                 # start fused gate
                 matrix, idx = self._update_draw_matrix(
@@ -1558,6 +1622,27 @@ class Circuit:
         if legend:
             output += table
 
+        # the global phase is not a gate on any wire, so it is written above the diagram
+        global_phase = self.global_phase
+        if getattr(global_phase, "free_symbols", None):
+            # symbolic phases cannot be reduced, nor written as a fraction of pi
+            output = f"Global phase = exp(i * ({global_phase}))\n" + output
+        elif is_nonzero_phase(global_phase, atol=1e-9):
+            # only the phase modulo 2 pi is relevant, so it is reduced to [0, 2 pi)
+            global_phase = float(global_phase) % (2 * math.pi)
+            # as a fraction of pi if it is one, and as a decimal number otherwise
+            ratio = global_phase / math.pi
+            fraction = Fraction(ratio).limit_denominator(64)
+            if abs(fraction - ratio) < 1e-9:
+                numerator = "" if fraction.numerator == 1 else str(fraction.numerator)
+                denominator = (
+                    "" if fraction.denominator == 1 else f"/{fraction.denominator}"
+                )
+                phase = f"{numerator}π{denominator}"
+            else:
+                phase = f"{ratio:.6g}π"
+            output = f"Global phase = exp(i * {phase})\n" + output
+
         return output.rstrip("\n")
 
     def __str__(self):
@@ -1567,6 +1652,10 @@ class Circuit:
         self, line_wrap: int = 100, legend: bool = False, parallel: bool = False
     ) -> None:
         """Draw text circuit using unicode symbols.
+
+        The :attr:`qibo.models.circuit.Circuit.global_phase` of the circuit is written above
+        the diagram, as a fraction of :math:`\\pi` whenever possible, if it is different
+        from zero.
 
         Args:
             line_wrap (int, optional): maximum number of characters per line. This option
