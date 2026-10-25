@@ -4,6 +4,7 @@ name: Build wheels and deploy
 on:
   workflow_dispatch:
   push:
+    branches-ignore: ["gh-readonly-queue/**"]
   merge_group:
   release:
     types:

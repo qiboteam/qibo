@@ -804,6 +804,16 @@ def test_remove_identity_equivalent(backend):
     assert reduced.nqubits == circuit.nqubits
 
 
+def test_remove_identity_equivalent_keeps_global_phase(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.I(0))
+    circuit.add(gates.GlobalPhase(0.1234))
+    circuit.add(gates.RZ(1, 2 * np.pi))
+    reduced = RemoveIdentityEquivalent()(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["global_phase"]
+    assert reduced.global_phase == 0.1234
+
+
 def test_remove_identity_equivalent_approximation_degree(backend):
     circuit = Circuit(1)
     circuit.add(gates.RX(0, 1e-3))

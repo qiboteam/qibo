@@ -1528,9 +1528,10 @@ class RemoveIdentityEquivalent(Optimizer):
     gate built with ``controlled_by`` that phase is a relative phase between the
     control states, so the gate is removed only if its target matrix is the identity.
 
-    Measurements, alignments, barriers, noise channels and fused gates are never
-    removed. Gates are evaluated at their current parameter values, so a removed
-    parametrized gate is not tracked by the returned circuit anymore.
+    Measurements, alignments, barriers, noise channels, fused gates and global phase
+    gates are never removed, the latter to keep the global phase of the circuit. Gates
+    are evaluated at their current parameter values, so a removed parametrized gate is
+    not tracked by the returned circuit anymore.
 
     A gate with sympy parameters is evaluated at fixed random values of its symbols. It
     is removed only if it is the identity there up to numerical precision, whatever the
@@ -1595,7 +1596,13 @@ class RemoveIdentityEquivalent(Optimizer):
         backend = _check_backend(backend)
 
         tolerance = max(1 - self.approximation_degree, 1e-14)
-        unremovable = (gates.M, gates.Align, gates.Channel, SpecialGate)
+        unremovable = (
+            gates.M,
+            gates.Align,
+            gates.Channel,
+            gates.GlobalPhase,
+            SpecialGate,
+        )
 
         kept = []
         for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):

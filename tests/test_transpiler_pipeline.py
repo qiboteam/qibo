@@ -7,7 +7,7 @@ from qiskit.transpiler import PassManager, passes
 
 from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
-from qibo.quantum_info import random_unitary
+from qibo.quantum_info import random_statevector, random_unitary
 from qibo.transpiler import unroller as unroller_module
 from qibo.transpiler._exceptions import (
     BlockingError,
@@ -17,6 +17,7 @@ from qibo.transpiler._exceptions import (
 )
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.asserts import (
+    _transpose_qubits,
     assert_circuit_equivalence,
     assert_decomposition,
     assert_transpiling,
@@ -1041,6 +1042,54 @@ def test_transpile_circuit(backend):
         final_layout=final_layout,
         native_gates=natives,
     )
+
+
+@pytest.mark.parametrize("routing_method", [None, "shortest_paths"])
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.default(),
+        NativeGates.CZ | NativeGates.U3,
+        NativeGates.CZ | NativeGates.iSWAP | NativeGates.GPI2,
+        NativeGates["ECR"] | NativeGates["RZ"] | NativeGates["SX"],
+    ],
+)
+def test_transpile_global_phase(backend, natives, routing_method):
+    """The transpiled circuit is equal to the original one, including the global phase,
+    which is carried by a single global phase gate at the end of the circuit."""
+    nqubits = 5
+    circuit = Circuit(nqubits)
+    circuit.add([gates.H(0), gates.SX(1), gates.T(2), gates.U3(3, 0.1, 0.2, 0.3)])
+    circuit.add([gates.CU1(0, 4, 0.4), gates.iSWAP(1, 3), gates.TOFFOLI(0, 2, 4)])
+    circuit.add([gates.ECR(2, 3), gates.CNOT(0, 3), gates.SXDG(4), gates.SWAP(1, 4)])
+
+    connectivity = nx.path_graph(nqubits)
+    transpiled_circuit, final_layout = transpile(
+        circuit,
+        connectivity,
+        natives,
+        seed=0,
+        routing_method=routing_method,
+        backend=backend,
+    )
+
+    global_phases = [
+        gate for gate in transpiled_circuit.queue if isinstance(gate, gates.GlobalPhase)
+    ]
+    assert len(global_phases) == 1
+    assert transpiled_circuit.queue[-1] is global_phases[0]
+    assert transpiled_circuit.global_phase != 0
+
+    state = random_statevector(2**nqubits, seed=1, backend=backend)
+    # the state is copied because some backends modify it in place
+    target_state = backend.execute_circuit(
+        circuit, initial_state=backend.cast(state, copy=True)
+    ).state()
+    final_state = backend.execute_circuit(
+        transpiled_circuit, initial_state=backend.cast(state, copy=True)
+    ).state()
+    final_state = _transpose_qubits(final_state, list(final_layout.values()))
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
 def test_transpile_list_of_circuits(backend):
