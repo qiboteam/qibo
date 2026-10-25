@@ -1039,9 +1039,10 @@ def test_folded_xxz_eigenstate_errors(
         )
 
 
-@pytest.mark.parametrize(
-    "nqubits,nmagnons,domains,modes,target_modes",
-    [
+# larger cases are only for the method that needs fewer qubits
+EIGENSTATE_CASES = [
+    (*case, method)
+    for case in [
         (4, 1, None, None, [2]),
         (5, 2, [], [1, 3], [1, 3]),
         (5, 2, None, None, [2, 4]),
@@ -1050,9 +1051,20 @@ def test_folded_xxz_eigenstate_errors(
         (6, 1, [[3, 4, 5]], [1], [1]),
         (7, 2, [[5, 6]], None, [2, 4]),
         (8, 1, [[3, 4], [7, 8]], None, [2]),
-    ],
+    ]
+    for method in ["sopena", "merged"]
+]
+EIGENSTATE_CASES.extend(
+    [
+        (10, 2, [[5, 6], [9, 10]], None, [2, 5], "merged"),
+        (10, 3, [[7, 8]], None, [2, 4, 6], "merged"),
+    ]
 )
-@pytest.mark.parametrize("method", ["sopena", "merged"])
+
+
+@pytest.mark.parametrize(
+    "nqubits,nmagnons,domains,modes,target_modes,method", EIGENSTATE_CASES
+)
 def test_folded_xxz_eigenstate(
     backend, nqubits, nmagnons, domains, modes, target_modes, method
 ):
