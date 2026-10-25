@@ -837,6 +837,45 @@ def _folded_xxz_move_before(
     return gate_list
 
 
+def _folded_xxz_multicontrolled(
+    controls: list[int], negated: list[int], target: int, workspace: int
+) -> list[Gate]:
+    """Gates of an :math:`X` gate with one to three controls, which can be negated.
+
+    A gate with three controls is decomposed into three Toffoli gates that use an auxiliary qubit.
+
+    Args:
+        controls (list[int]): qubits that activate the gate when they are in the state
+            :math:`\\ket{1}`.
+        negated (list[int]): qubits that activate the gate when they are in the state
+            :math:`\\ket{0}`.
+        target (int): target qubit.
+        workspace (int): auxiliary qubit in the state :math:`\\ket{0}`, which is only used when
+            there are three controls in total.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates that implement the controlled gate.
+    """
+    qubits = list(controls)
+    qubits.extend(negated)
+    gate_list = [gates.X(qubit) for qubit in negated]
+    if len(qubits) == 1:
+        gate_list.append(gates.CNOT(qubits[0], target))
+    elif len(qubits) == 2:
+        gate_list.append(gates.TOFFOLI(qubits[0], qubits[1], target))
+    else:
+        gate_list.extend(
+            [
+                gates.TOFFOLI(qubits[0], qubits[1], workspace),
+                gates.TOFFOLI(workspace, qubits[2], target),
+                gates.TOFFOLI(qubits[0], qubits[1], workspace),
+            ]
+        )
+    gate_list.extend(gates.X(qubit) for qubit in negated)
+
+    return gate_list
+
+
 def _folded_xxz_reset(
     parity: int,
     chain: list[int],
