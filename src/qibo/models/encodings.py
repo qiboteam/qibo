@@ -621,7 +621,13 @@ def folded_xxz_eigenstate(
     nsites = nqubits - nwalls  # sites of the chain that are not domain walls
     nsqueezed = nsites - nmagnons + 1  # sites of the free-fermion chain
 
-    if nmagnons < 1 or nsqueezed < 2 * nmagnons:
+    if nmagnons < 1:
+        raise_error(
+            ValueError,
+            f"``nmagnons`` must be a positive integer, but it is {nmagnons}.",
+        )
+
+    if nsqueezed < 2 * nmagnons:
         raise_error(
             ValueError,
             f"Cannot fit {nmagnons} magnon(s) and {nwalls} domain walls in a chain of "
@@ -636,6 +642,7 @@ def folded_xxz_eigenstate(
 
     if (
         len(modes) != nmagnons
+        or any(not isinstance(mode, (int, np.integer)) for mode in modes)
         or modes != sorted(set(modes))
         or modes[0] < 1
         or modes[-1] > nsqueezed

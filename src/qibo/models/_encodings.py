@@ -981,7 +981,7 @@ def _folded_xxz_seed(
     The seed state of :math:`2M` qubits has :math:`M` excitations. Its amplitudes are the product
     of a Cholesky factor of the :math:`M`-th compound matrix of a Gram matrix of the Bethe roots,
     and of a product state of :math:`M` pairs of qubits, see Ref. [2]. The unitary is obtained
-    by completing the seed state into an orthonormal basis with a QR decomposition.
+    by completing the seed state into an orthonormal basis with a Householder reflection.
 
     Args:
         roots (ArrayLike): the :math:`2M` Bethe roots, :math:`\\exp(\\pm i p_{a})`.
@@ -1059,12 +1059,18 @@ def _folded_xxz_seed(
         state[sum(2 ** (2 * nmagnons - 1 - qubit) for qubit in subset)] = amplitude
     state = state / backend.vector_norm(state)
 
+    # ``state`` is completed into an orthonormal basis with a Householder reflection,
+    # which maps the first basis vector onto ``state`` exactly. A QR decomposition of
+    # ``[state, e_1, ..., e_{d - 1}]`` cannot be used instead: ``state[0]`` always
+    # vanishes, because index 0 carries no excitation while every subset carries
+    # ``nmagnons`` of them, so that matrix is singular by construction and ``diag(r)``
+    # holds a zero whose phase cannot be normalized. For the same reason ``reflector``
+    # has norm exactly :math:`\sqrt{2}`, so the reflection below is well conditioned.
     matrix = backend.identity(2 ** (2 * nmagnons), dtype=backend.complex128)
-    matrix[:, 0] = state
-    q, r = backend.qr(matrix)
-    phases = backend.diag(r)
+    reflector = state - matrix[:, 0]
+    norm_squared = backend.sum(backend.abs(reflector) ** 2)
 
-    return q * (phases / backend.abs(phases))
+    return matrix - 2 * backend.outer(reflector, backend.conj(reflector)) / norm_squared
 
 
 def _gate_params(
