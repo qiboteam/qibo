@@ -298,7 +298,7 @@ and it is a superposition of two spin configurations.
 
     from qibo.models.encodings import folded_xxz_eigenstate
 
-    circuit = folded_xxz_eigenstate(nqubits=5, nmagnons=1, domains=[[3, 4]], modes=[2])
+    circuit = folded_xxz_eigenstate(nsites=5, nmagnons=1, domains=[[3, 4]], modes=[2])
     result = circuit()
     # the chain is encoded in the first five qubits, and the remaining ones are auxiliary
     probabilities = result.probabilities(qubits=range(5))
