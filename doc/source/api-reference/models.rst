@@ -311,6 +311,25 @@ and it is a superposition of two spin configurations.
 
     10110: 0.50 11001: 0.50
 
+The circuit can be implemented with two methods, selected with ``method``. The default
+``"sopena"`` follows the original construction. With ``"merged"``, the free fermions are prepared
+with Givens rotations, and the output is written in a single pass over the squeezed chain.
+For domain walls, ``"merged"`` needs fewer qubits and gates, and for no domain walls, it needs more.
+Both prepare the same state in the first qubits of the circuit.
+
+.. testcode::
+
+    circuit = folded_xxz_eigenstate(5, 1, [[3, 4]], [2], method="merged")
+    probabilities = circuit().probabilities(qubits=range(5))
+    print(*(f"{state}: {prob:.2f}" for state, prob in zip(
+        ("10110", "11001"), probabilities[[0b10110, 0b11001]]
+    )))
+
+.. testoutput::
+    :hide:
+
+    10110: 0.50 11001: 0.50
+
 .. autofunction:: qibo.models.encodings.folded_xxz_eigenstate
 
 

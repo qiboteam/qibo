@@ -21,12 +21,8 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _binary_encoder_mottonen,
     _ehrlich_algorithm,
     _fanout_parity_tree,
-    _folded_xxz_matchgate,
-    _folded_xxz_move_after,
-    _folded_xxz_move_before,
-    _folded_xxz_reset,
-    _folded_xxz_scan,
-    _folded_xxz_seed,
+    _folded_merged,
+    _folded_sopena,
     _generate_rbs_angles,
     _generate_rbs_pairs,
     _get_gate,
@@ -548,6 +544,7 @@ def folded_xxz_eigenstate(
     nmagnons: int,
     domains: list[list[int]] | None = None,
     modes: list[int] | None = None,
+    method: str = "sopena",
     backend: Backend | None = None,
 ) -> Circuit:
     """Create circuit that prepares an eigenstate of the open-boundary folded XXZ spin chain.
@@ -575,11 +572,18 @@ def folded_xxz_eigenstate(
     :math:`p_{a} = \\pi \\, m_{a} / (n_{0} + 1)`, with :math:`n_{0} = n - M + 1 - 2L` and
     :math:`m_{1} < \\cdots < m_{M}` integers in :math:`[1, n_{0}]`, and the energy is
     :math:`E = -\\sum_{a=1}^{M} \\cos(p_{a})`. The circuit has three stages following Ref. [1]:
-    an algebraic Bethe circuit (see Refs. [2, 3]) that prepares a Slater determinant of :math:`M`
-    free fermions in a squeezed chain of :math:`n_{0}` sites, which needs
-    :math:`n_{0} \\geq 2M` and starts from a dense unitary on :math:`2M` qubits;
-    a network of controlled-SWAP gates that enforces the hard-core repulsion between magnons;
-    and the insertion of the domain walls.
+    the preparation of a Slater determinant of :math:`M` free fermions in a squeezed chain of
+    :math:`n_{0}` sites, which needs :math:`n_{0} \\geq 2M`; a network of controlled-SWAP gates that
+    enforces the hard-core repulsion between magnons; and the insertion of the domain walls.
+    These stages can be implemented with two different methods. With ``"sopena"``, the free
+    fermions are prepared with the algebraic Bethe circuit of Refs. [2, 3], which starts from a
+    dense unitary on :math:`2M` qubits and limits :math:`M` to a few. Then, the magnons are
+    shifted in place, and inserted one by one in the chain with the domain walls. With
+    ``"merged"``, the free fermions are prepared with :math:`M (n_{0} - 1) - M (M - 1) / 2` Givens
+    rotations (see Refs. [4, 5]), and the last two stages are performed at once: a single pass
+    over the squeezed chain writes the output in a separate register, and a second pass clears
+    the input from the output. For domain walls, it needs fewer qubits and gates, and for no
+    domain walls, it needs more.
 
     The first ``nsites`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
     qubits, which are returned to :math:`\\ket{0}`, and thus the state of the chain can be read
@@ -596,6 +600,8 @@ def folded_xxz_eigenstate(
         modes (list[int], optional): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta
             of the magnons. If ``None``, uses :math:`M` evenly spaced integers between :math:`2`
             and :math:`n_{0}`, rounded to the nearest integer. Defaults to ``None``.
+        method (str, optional): implementation of the circuit, either ``"sopena"``, following
+            Ref. [1], or ``"merged"``. Defaults to ``"sopena"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -613,8 +619,23 @@ def folded_xxz_eigenstate(
 
         3. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
         Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+
+        4. Z. Jiang, K. J. Sung, K. Kechedzhi, V. N. Smelyanskiy, and S. Boixo, *Quantum
+        algorithms to simulate many-body physics of correlated fermions*, `Phys. Rev. Applied 9,
+        044036 (2018) <https://doi.org/10.1103/PhysRevApplied.9.044036>`_.
+
+        5. I. D. Kivlichan, J. McClean, N. Wiebe, C. Gidney, A. Aspuru-Guzik, G. K.-L. Chan, and
+        R. Babbush, *Quantum simulation of electronic structure with linear depth and
+        connectivity*, `Phys. Rev. Lett. 120, 110501 (2018)
+        <https://doi.org/10.1103/PhysRevLett.120.110501>`_.
     """
     backend = _check_backend(backend)
+
+    if method not in ("sopena", "merged"):
+        raise_error(
+            ValueError,
+            f"``method`` must be either ``sopena`` or ``merged``, but it is ``{method}``.",
+        )
 
     domains = [list(domain) for domain in domains or []]
     nwalls = 2 * len(domains)
@@ -670,219 +691,10 @@ def folded_xxz_eigenstate(
             )
         previous_end = domain[-1]
 
-    # Qubits: the chain, the sites of the magnonic state (only if there are domain walls), and
-    # auxiliary qubits, which are shared by the hard-core stage and the domain-wall stage.
-    chain = list(range(nsites))
-    magnonic = chain if nwalls == 0 else list(range(nsites, nsites + nfree))
-    nauxiliary = max(nwalls + 5 if nwalls else 0, nmagnons + 1 if nmagnons > 1 else 0)
-    auxiliary = list(range(magnonic[-1] + 1, magnonic[-1] + 1 + nauxiliary))
-    workspace = auxiliary[:2]
-    counter = auxiliary[2 : nwalls // 2 + 4]
-    parity = auxiliary[nwalls // 2 + 4 : nwalls + 5]
+    if method == "merged":
+        return _folded_merged(nsites, nmagnons, domains, modes, backend)
 
-    circuit = Circuit(magnonic[-1] + 1 + nauxiliary)
-
-    # Stage I: algebraic Bethe circuit. A dense unitary loads the seed state in the first 2M
-    # qubits, and then a brickwork of matchgates adds one site at a time
-    angles = backend.cast(
-        [sign * math.pi * mode / (nsqueezed + 1) for mode in modes for sign in (1, -1)],
-        dtype=backend.float64,
-    )
-    roots = backend.exp(1j * angles)
-    nfermions = 2 * nmagnons
-    circuit.add(
-        gates.Unitary(
-            _folded_xxz_seed(roots, nsqueezed, backend), *magnonic[:nfermions]
-        )
-    )
-    for n in range(nsqueezed - nfermions):
-        circuit.add(
-            gates.Unitary(
-                _folded_xxz_matchgate(roots, nfermions - j, nsqueezed - 1 - n, backend),
-                magnonic[n + nfermions - j],
-                magnonic[n + nfermions - j - 1],
-            )
-            for j in range(nfermions)
-        )
-    for n in range(nsqueezed - nfermions, nsqueezed - 1):
-        k = nsqueezed - 1 - n
-        difference = roots[k] - roots[:k]
-        phase = backend.prod(difference / backend.abs(difference))
-        circuit.add(
-            gates.Unitary(
-                backend.cast([[1, 0], [0, phase]], dtype=backend.complex128),
-                magnonic[nsqueezed - 1],
-            )
-        )
-        circuit.add(
-            gates.Unitary(
-                _folded_xxz_matchgate(roots, k + 1 - j, k, backend),
-                magnonic[nsqueezed - j],
-                magnonic[nsqueezed - 1 - j],
-            )
-            for j in range(1, k + 1)
-        )
-
-    # Stage II: controlled-SWAP network that shifts the magnons by the number of magnons to their
-    # left. It uses ``nmagnons + 1`` auxiliary qubits, which are returned to the all-zero state.
-    if nmagnons > 1:
-        register = magnonic + auxiliary[: nmagnons + 1]
-        circuit.add(gates.X(register[nfree]))
-        for step, qubit in enumerate(reversed(range(nsqueezed))):
-            shifted = nmagnons - 1 - min(step, nmagnons - 1)
-            circuit.add(
-                gates.SWAP(
-                    register[nfree + nmagnons - 1 - j],
-                    register[nfree + nmagnons - j],
-                ).controlled_by(register[qubit])
-                for j in range(shifted, nmagnons)
-            )
-            circuit.add(
-                gates.SWAP(
-                    register[qubit], register[qubit + nmagnons - 1 - j]
-                ).controlled_by(register[nfree + 1 + j])
-                for j in range(min(step + 1, nmagnons - 1))
-            )
-        circuit.add(gates.X(register[nfree + nmagnons]))
-
-    if nwalls == 0:
-        return circuit
-
-    # Stage III: the magnons are inserted one by one, from right to left, in the chain
-    # that contains the domain walls
-    circuit.add(gates.X(counter[1]))
-    circuit.add(gates.X(parity[0]))
-    circuit.add(gates.X(chain[site - 1]) for domain in domains for site in domain)
-    for n in reversed(range(nfree)):
-        if n >= 1:
-            circuit.add(
-                _folded_xxz_move_before(
-                    chain[:4], workspace, magnonic[n], counter, first=True
-                )
-            )
-            circuit.add(
-                _folded_xxz_move_before(
-                    chain[site : site + 5], workspace, magnonic[n], counter
-                )
-                for site in range(n - 1)
-            )
-            for index, site in enumerate(range(n - 1, n + nwalls - 4, 2)):
-                if index != 0:
-                    circuit.add(gates.X(counter[0]))
-                    circuit.add(
-                        gates.TOFFOLI(counter[0], counter[index + 1], counter[1])
-                    )
-                    circuit.add(gates.X(counter[0]))
-                circuit.add(gates.TOFFOLI(counter[0], counter[index + 2], counter[1]))
-                circuit.add(
-                    _folded_xxz_move_after(
-                        chain[site + shift : site + shift + 5],
-                        workspace,
-                        counter,
-                        index + 2,
-                    )
-                    for shift in range(2)
-                )
-            if nwalls > 2:
-                circuit.add(gates.TOFFOLI(counter[0], counter[-2], counter[1]))
-            circuit.add(gates.CNOT(qubit, counter[1]) for qubit in counter[-3:1:-1])
-            for first, second, flipped in (
-                (-2, -1, -2),
-                (-3, -2, -3),
-                (-1, 0, 0),
-                (-2, -1, -1),
-            ):
-                site = n + nwalls
-                circuit.add(gates.X(chain[site + flipped]))
-                circuit.add(
-                    gates.TOFFOLI(
-                        chain[site + first], chain[site + second], workspace[0]
-                    )
-                )
-                circuit.add(gates.X(chain[site + flipped]))
-
-        # insert the current magnon in the chain, and reset its qubit
-        circuit.add(gates.TOFFOLI(magnonic[n], counter[1], chain[n]))
-        for index, site in enumerate(range(n + 1, n + nwalls, 2)):
-            circuit.add(gates.TOFFOLI(counter[0], counter[index + 2], chain[site]))
-            circuit.add(gates.X(counter[0]))
-            circuit.add(gates.TOFFOLI(counter[0], counter[index + 2], chain[site + 1]))
-            circuit.add(gates.X(counter[0]))
-        if n == 0:
-            circuit.add(gates.CNOT(chain[n], workspace[0]))
-        else:
-            circuit.add(gates.X(chain[n - 1]))
-            circuit.add(gates.TOFFOLI(chain[n - 1], chain[n], workspace[0]))
-        circuit.add(gates.X(chain[n + 1]))
-        circuit.add(gates.TOFFOLI(chain[n + 1], workspace[0], magnonic[n]))
-        circuit.add(gates.X(chain[n + 1]))
-        if n == 0:
-            circuit.add(gates.CNOT(chain[n], workspace[0]))
-        else:
-            circuit.add(gates.TOFFOLI(chain[n - 1], chain[n], workspace[0]))
-            circuit.add(gates.X(chain[n - 1]))
-        for qubit in counter[2:]:
-            circuit.add(gates.CNOT(qubit, magnonic[n]))
-            circuit.add(gates.CNOT(qubit, counter[1]))
-
-        # reset the registers that count the domain walls
-        if n >= 1:
-            sweeps = []
-            # blocks of at most three qubits, which contain at most one ``01`` transition
-            for end, inverse in ((n, False), (n + nwalls - 2, True)):
-                nblocks, rest = divmod(end, 2)
-                blocks = [(0, rest, True)] if rest else []
-                blocks.extend(
-                    (
-                        (0, 2, True)
-                        if i == 0 and rest == 0
-                        else (rest - 1 + 2 * i, rest + 2 * (i + 1), False)
-                    )
-                    for i in range(nblocks)
-                )
-                if inverse:
-                    blocks.reverse()
-                sweeps.append(
-                    [
-                        gate
-                        for start, stop, boundary in blocks
-                        for gate in _folded_xxz_scan(
-                            parity, chain[start:stop], workspace[0], inverse, boundary
-                        )
-                    ]
-                )
-
-            circuit.add(sweeps[0])
-            for index, site in enumerate(range(n + 2, n + nwalls - 1, 2)):
-                circuit.add(
-                    _folded_xxz_reset(
-                        parity[index + 1],
-                        chain[site - 2 : site + 2],
-                        workspace,
-                        magnonic[n],
-                        [counter[0], counter[index + 2]],
-                    )
-                )
-                circuit.add(
-                    _folded_xxz_scan(parity, chain[site - 3 : site], workspace[0])
-                )
-            site, last = n + nwalls, n == nfree - 1
-            circuit.add(
-                _folded_xxz_reset(
-                    parity[-1],
-                    chain[site - 2 : site + (1 if last else 2)],
-                    workspace,
-                    magnonic[n],
-                    [counter[0], counter[-1]],
-                    last=last,
-                )
-            )
-            circuit.add(sweeps[1])
-
-    circuit.add(gates.X(counter[1]))
-    circuit.add(gates.X(parity[0]))
-
-    return circuit
+    return _folded_sopena(nsites, nmagnons, domains, modes, backend)
 
 
 def ghz_state(nqubits: int, **kwargs) -> Circuit:
