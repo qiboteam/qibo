@@ -624,6 +624,7 @@ def _folded_merged(
     domains: list[list[int]],
     modes: list[int],
     backend: Backend | None = None,
+    relative_phase: bool = True,
 ) -> Circuit:
     """Circuit of :func:`qibo.models.encodings.folded_xxz_eigenstate` with the ``"merged"`` method.
 
@@ -642,6 +643,10 @@ def _folded_merged(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
+        relative_phase (bool, optional): If ``True``, the Toffoli gates that never see the
+            states where they have a relative phase are implemented with three CNOTs instead of
+            six. If ``False``, all the gates besides the Stage I ones permute the states of the
+            computational basis. Defaults to ``True``.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that prepares the eigenstate.
@@ -729,21 +734,45 @@ def _folded_merged(
             else:
                 groups.append([m + left + shift, left, left])
         for x, first, last in groups:
-            controls = [magnonic[m - 1]]
+            # if the lowest number of magnons passed is the one that leaves just enough sites for
+            # the others, the site ``m`` holds a magnon, and its input qubit is not needed, but
+            # a larger number of magnons passed has to be excluded
+            forced = first == last == lefts[0] == nmagnons - 1 - nsqueezed + m
+            controls = [] if forced else [magnonic[m - 1]]
             if first > lefts[0]:
                 controls.append(tally[first])
-            negated = [tally[last + 1]] if last < lefts[-1] else []
+            negated = [tally[last + 1]] if forced or last < lefts[-1] else []
+            # when the number of magnons passed is below ``last`` and the other conditions are
+            # not met, the site has the state that it has at the end with the domain walls
+            # where they are then, and, with no condition on that number, the state of the
+            # reference configuration, so the sign of the relative phase is for the other state
+            absent = None
+            if relative_phase and len(controls) + len(negated) > 1:
+                if negated:
+                    value = (
+                        sum(wall < x + 2 * (nmagnons - 1 - last) for wall in walls) % 2
+                    )
+                    absent = (0, 1, 1 - value)
+                else:
+                    absent = (1, 0, 1 - int(any(x in domain for domain in domains)))
             circuit.add(
-                _folded_xxz_multicontrolled(controls, negated, chain[x - 1], workspace)
+                _folded_xxz_multicontrolled(
+                    controls, negated, chain[x - 1], workspace, relative_phase, absent
+                )
             )
         if m > 0:
             # a magnon in the site ``m`` has ``lefts[0]`` to ``lefts[-1]`` magnons before it, so
             # the tally qubits below ``lefts[0]`` are always in the state 1, and the ones above
             # ``lefts[-1] + 1`` in the state 0, and only the ones in between are shifted
-            circuit.add(
-                gates.SWAP(tally[v - 1], tally[v]).controlled_by(magnonic[m - 1])
-                for v in range(lefts[-1] + 1, lefts[0], -1)
-            )
+            for v in range(lefts[-1] + 1, lefts[0], -1):
+                # the tally is a thermometer, so two neighbors are never in the state (0, 1)
+                circuit.add(
+                    _folded_xxz_cswap(magnonic[m - 1], tally[v - 1], tally[v], (0, 1))
+                    if relative_phase
+                    else gates.SWAP(tally[v - 1], tally[v]).controlled_by(
+                        magnonic[m - 1]
+                    )
+                )
             circuit.add(gates.CNOT(magnonic[m - 1], tally[lefts[0]]))
         # the number of magnons passed is between these bounds, and a tally qubit that is
         # always in the state 1 makes the two gates of the snapshot cancel
@@ -761,18 +790,49 @@ def _folded_merged(
             parity_bit = (x - position + 1) % 2
             controls = [tally[right], chain[x - 1]] if parity_bit else [tally[right]]
             negated = [] if parity_bit else [chain[x - 1]]
-            circuit.add(_folded_xxz_multicontrolled(controls, negated, flag, workspace))
-        for right, position, m in hosts[x]:
-            # with a single host, the flag already implies the state of the counter
-            controls = [flag] if len(hosts[x]) == 1 else [flag, tally[right]]
+            # a site that is not a magnon needs ``right`` magnons to its right and the others to
+            # its left to have the counter in this state, which takes at least two sites for
+            # each one, so otherwise the counter is enough
+            if x + 2 * right > nqubits + 1 or x < 2 * (nmagnons - right):
+                controls, negated = [tally[right]], []
             circuit.add(
-                _folded_xxz_multicontrolled(controls, [], magnonic[m - 1], workspace)
+                _folded_xxz_multicontrolled(
+                    controls,
+                    negated,
+                    flag,
+                    workspace,
+                    relative_phase,
+                    (1, 0, 1) if relative_phase else None,
+                )
+            )
+        for right, position, m in hosts[x]:
+            # with a single host, the flag already implies the state of the counter, and if no
+            # site that is not a magnon can have it, the counter implies the flag
+            if x + 2 * right > nqubits + 1 or x < 2 * (nmagnons - right):
+                controls = [tally[right]]
+            elif len(hosts[x]) == 1:
+                controls = [flag]
+            else:
+                controls = [flag, tally[right]]
+            # the input of the host is never on when the counter is and the flag is not
+            circuit.add(
+                _folded_xxz_multicontrolled(
+                    controls,
+                    [],
+                    magnonic[m - 1],
+                    workspace,
+                    relative_phase,
+                    (0, 1, 1) if relative_phase else None,
+                )
             )
         # the counter can only be in the states of the hosts when the flag is on
-        circuit.add(
-            gates.SWAP(tally[v], tally[v + 1]).controlled_by(flag)
-            for v in sorted({right for right, _, _ in hosts[x]}, reverse=True)
-        )
+        for v in sorted({right for right, _, _ in hosts[x]}, reverse=True):
+            # the counter is in one-hot code, so two neighbors are never in the state (1, 1)
+            circuit.add(
+                _folded_xxz_cswap(flag, tally[v], tally[v + 1], (1, 1))
+                if relative_phase
+                else gates.SWAP(tally[v], tally[v + 1]).controlled_by(flag)
+            )
         for right, position, m in hosts[x]:
             parity_bit = (x - position + 1) % 2
             if x < nqubits or parity_bit:
@@ -782,7 +842,9 @@ def _folded_merged(
                 # Otherwise, the counter is enough, and, if not, the state of the site or of
                 # the next one tells the two cases apart, depending on whether a domain wall
                 # is displaced to one of the two positions where it would be
-                if x + 2 * (right + 1) <= nqubits + 1:
+                if x + 2 * (right + 1) <= nqubits + 1 and x >= 2 * (
+                    nmagnons - right - 1
+                ):
                     if any(
                         wall in (x + 2 * right, x + 2 * right + 1) for wall in walls
                     ):
@@ -790,11 +852,21 @@ def _folded_merged(
                     else:
                         (controls if parity_bit else negated).append(chain[x - 1])
                 circuit.add(
-                    _folded_xxz_multicontrolled(controls, negated, flag, workspace)
+                    _folded_xxz_multicontrolled(
+                        controls,
+                        negated,
+                        flag,
+                        workspace,
+                        relative_phase,
+                        (1, 0, 1) if relative_phase else None,
+                    )
                 )
     circuit.add(gates.X(tally[nmagnons]))
 
-    return circuit
+    # to avoid circular import
+    from qibo.transpiler import InverseCancellation
+
+    return InverseCancellation()(circuit)
 
 
 def _folded_sopena(
@@ -1053,6 +1125,43 @@ def _folded_sopena(
     return circuit
 
 
+def _folded_xxz_cswap(
+    control: int, first: int, second: int, absent: tuple[int, int]
+) -> list[Gate]:
+    """Controlled-SWAP gate up to a relative phase, with :math:`5` CNOTs instead of :math:`8`.
+
+    The gate is a CNOT, a Toffoli gate up to a relative phase, and a CNOT. The relative phase is
+    a sign for the state in which the control is :math:`\\ket{0}` and ``absent`` is the state of
+    ``first`` and ``second``, so it is only valid if that state of the two qubits is never present.
+
+    Args:
+        control (int): control qubit.
+        first (int): first qubit that is swapped.
+        second (int): second qubit that is swapped.
+        absent (tuple[int, int]): either :math:`(0, 1)` or :math:`(1, 1)`, which is the state of
+            ``first`` and ``second`` that is never present.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates that implement the controlled gate.
+
+    References:
+        1. D. Maslov, *Advantages of using relative-phase Toffoli gates with an application to
+        multiple control Toffoli optimization*, `Phys. Rev. A 93, 022311 (2016)
+        <https://doi.org/10.1103/PhysRevA.93.022311>`_.
+    """
+    # to avoid circular import
+    from qibo.transpiler.decompositions.multicontrolled_decompositions import _toffoli
+
+    # after the first CNOT, ``first`` is the parity of the two qubits, which with ``second`` in 1
+    # is (1, 1) if the absent state is (0, 1) and (0, 1) if it is (1, 1)
+    controls = (control, first) if absent == (0, 1) else (first, control)
+    gate_list = [gates.CNOT(second, first), gates.X(second)]
+    gate_list.extend(_toffoli(controls, second))
+    gate_list.extend([gates.X(second), gates.CNOT(second, first)])
+
+    return gate_list
+
+
 def _folded_xxz_matchgate(
     roots: ArrayLike, j: int, k: int, backend: Backend | None = None
 ) -> ArrayLike:
@@ -1273,7 +1382,12 @@ def _folded_xxz_move_before(
 
 
 def _folded_xxz_multicontrolled(
-    controls: list[int], negated: list[int], target: int, workspace: int
+    controls: list[int],
+    negated: list[int],
+    target: int,
+    workspace: int,
+    relative_phase: bool = False,
+    absent: tuple[int, int, int] | None = None,
 ) -> list[Gate]:
     """Gates of an :math:`X` gate with one to three controls, which can be negated.
 
@@ -1287,25 +1401,49 @@ def _folded_xxz_multicontrolled(
         target (int): target qubit.
         workspace (int): auxiliary qubit in the state :math:`\\ket{0}`, which is only used when
             there are three controls in total.
+        relative_phase (bool, optional): If ``True``, the Toffoli gates that compute and
+            uncompute the auxiliary qubit are implemented up to a relative phase with fewer
+            CNOTs. The phases cancel for any state. Defaults to ``False``.
+        absent (tuple[int, int, int], optional): If given, the Toffoli gate on the target is
+            implemented up to a relative phase with fewer CNOTs. It is the state of the last two
+            controls and the target that is never present, where the controls are either
+            :math:`(0, 1)` or :math:`(1, 0)`. For three controls, the last two controls are the
+            auxiliary qubit and the third control. Defaults to ``None``.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: gates that implement the controlled gate.
     """
+    # to avoid circular import
+    from qibo.transpiler.decompositions.multicontrolled_decompositions import _toffoli
+
     qubits = list(controls)
     qubits.extend(negated)
     gate_list = [gates.X(qubit) for qubit in negated]
     if len(qubits) == 1:
         gate_list.append(gates.CNOT(qubits[0], target))
-    elif len(qubits) == 2:
-        gate_list.append(gates.TOFFOLI(qubits[0], qubits[1], target))
     else:
-        gate_list.extend(
-            [
-                gates.TOFFOLI(qubits[0], qubits[1], workspace),
-                gates.TOFFOLI(workspace, qubits[2], target),
-                gates.TOFFOLI(qubits[0], qubits[1], workspace),
-            ]
-        )
+        last = qubits if len(qubits) == 2 else [workspace, qubits[2]]
+        if len(qubits) == 3:
+            compute = (
+                _toffoli((qubits[0], qubits[1]), workspace)
+                if relative_phase
+                else [gates.TOFFOLI(qubits[0], qubits[1], workspace)]
+            )
+            gate_list.extend(compute)
+        if absent is not None:
+            # the gate has a sign for the state ``absent`` if its controls are in the order
+            # (0, 1) and the target is in 0, and the other cases are conjugations of it
+            if absent[2]:
+                gate_list.append(gates.X(target))
+            gate_list.extend(
+                _toffoli(tuple(last if absent[:2] == (0, 1) else last[::-1]), target)
+            )
+            if absent[2]:
+                gate_list.append(gates.X(target))
+        else:
+            gate_list.append(gates.TOFFOLI(last[0], last[1], target))
+        if len(qubits) == 3:
+            gate_list.extend(compute)
     gate_list.extend(gates.X(qubit) for qubit in negated)
 
     return gate_list

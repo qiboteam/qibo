@@ -15,6 +15,8 @@ from qibo.models._encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
     _ehrlich_codewords_up_to_k,
+    _folded_merged,
+    _folded_xxz_cswap,
     _get_int_type,
     _walsh_gray_code,
 )
@@ -38,6 +40,7 @@ from qibo.models.encodings import (
     up_to_k_hamming_weight_encoder,
 )
 from qibo.quantum_info.random_ensembles import random_statevector
+from qibo.transpiler import InverseCancellation
 
 
 def _gaussian(x, a, b, c):
@@ -1058,6 +1061,8 @@ EIGENSTATE_CASES.extend(
     [
         (10, 2, [[5, 6], [9, 10]], None, [2, 5], "merged"),
         (10, 3, [[7, 8]], None, [2, 4, 6], "merged"),
+        (9, 2, [[6, 7]], None, [2, 6], "merged"),
+        (9, 2, [[5, 6, 7]], None, [2, 6], "merged"),
     ]
 )
 
@@ -1105,9 +1110,15 @@ def test_folded_xxz_eigenstate_many_domains(
 ):
     """The circuits are too large to be simulated, so the first stage is simulated alone, and the
     other stages, which only permute basis states, are applied to the bit strings of its state."""
-    circuit = folded_xxz_eigenstate(
-        nqubits, nmagnons, domains, method=method, backend=backend
-    )
+    if method == "merged":
+        # relative phases are not simulated, so the gates are the ones that permute states
+        circuit = _folded_merged(
+            nqubits, nmagnons, domains, target_modes, backend, relative_phase=False
+        )
+    else:
+        circuit = folded_xxz_eigenstate(
+            nqubits, nmagnons, domains, method=method, backend=backend
+        )
     nsites = nqubits - 2 * len(domains)
 
     last = max(
@@ -1163,3 +1174,30 @@ def test_folded_xxz_eigenstate_methods(backend, nqubits, nmagnons, domains):
 
     overlap = backend.sum(backend.conj(chains[0]) * chains[1])
     backend.assert_allclose(backend.abs(overlap), 1.0, atol=1e-8)
+
+
+@pytest.mark.parametrize("absent", [(0, 1), (1, 1)])
+def test_folded_xxz_cswap(backend, absent):
+    circuit = Circuit(3)
+    circuit.add(_folded_xxz_cswap(0, 1, 2, absent))
+    swap = Circuit(3)
+    swap.add(gates.SWAP(1, 2).controlled_by(0))
+
+    # the gate is the controlled-SWAP up to the sign of the states with ``absent``
+    matrix = circuit.unitary(backend)
+    target = swap.unitary(backend)
+    for index, bits in enumerate(product([0, 1], repeat=3)):
+        if bits[1:] != absent:
+            backend.assert_allclose(matrix[:, index], target[:, index], atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nqubits,nmagnons,domains", [(8, 3, None), (10, 2, [[5, 6], [9, 10]])]
+)
+def test_folded_xxz_eigenstate_cancelled(backend, nqubits, nmagnons, domains):
+    circuit = folded_xxz_eigenstate(
+        nqubits, nmagnons, domains, method="merged", backend=backend
+    )
+
+    # there are no gates left that cancel
+    assert len(InverseCancellation()(circuit).queue) == len(circuit.queue)
