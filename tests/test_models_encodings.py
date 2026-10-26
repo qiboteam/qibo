@@ -1053,6 +1053,9 @@ EIGENSTATE_CASES = [
         (5, 1, [[3, 4]], None, [2]),
         (6, 1, [[3, 4, 5]], [1], [1]),
         (7, 2, [[5, 6]], None, [2, 4]),
+        # the seed state has no amplitude on the first basis element, so completing it
+        # into a basis must not rely on that element; this size used to return ``NaN``
+        (8, 1, None, None, [2]),
         (8, 1, [[3, 4], [7, 8]], None, [2]),
     ]
     for method in ["sopena", "merged"]
