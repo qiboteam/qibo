@@ -540,7 +540,7 @@ def fanout_synthesis(
 
 
 def folded_xxz_eigenstate(
-    nqubits: int,
+    nsites: int,
     nmagnons: int,
     domains: list[list[int]] | None = None,
     modes: list[int] | None = None,
@@ -585,12 +585,12 @@ def folded_xxz_eigenstate(
     the input from the output. For domain walls, it needs fewer qubits and gates, and for no
     domain walls, it needs more.
 
-    The first ``nqubits`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
+    The first ``nsites`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
     qubits, which are returned to :math:`\\ket{0}`, and thus the state of the chain can be read
     out by discarding them.
 
     Args:
-        nqubits (int): number of sites :math:`n` of the chain.
+        nsites (int): number of sites :math:`n` of the chain.
         nmagnons (int): number of magnons :math:`M`.
         domains (list[list[int]], optional): blocks of spin-down sites of the reference
             configuration. Each block is a list of at least two consecutive sites, numbered
@@ -639,14 +639,14 @@ def folded_xxz_eigenstate(
 
     domains = [list(domain) for domain in domains or []]
     nwalls = 2 * len(domains)
-    nsites = nqubits - nwalls  # sites of the chain that are not domain walls
-    nsqueezed = nsites - nmagnons + 1  # sites of the free-fermion chain
+    nfree = nsites - nwalls  # sites of the chain that are not domain walls
+    nsqueezed = nfree - nmagnons + 1  # sites of the free-fermion chain
 
     if nmagnons < 1 or nsqueezed < 2 * nmagnons:
         raise_error(
             ValueError,
             f"Cannot fit {nmagnons} magnon(s) and {nwalls} domain walls in a chain of "
-            + f"{nqubits} sites, because the squeezed chain needs at least 2 * ``nmagnons`` "
+            + f"{nsites} sites, because the squeezed chain needs at least 2 * ``nmagnons`` "
             + f"sites, but it has {nsqueezed}.",
         )
 
@@ -673,7 +673,7 @@ def folded_xxz_eigenstate(
             len(domain) < 2
             or domain != list(range(domain[0], domain[0] + len(domain)))
             or domain[0] < previous_end + 3
-            or domain[-1] > nqubits
+            or domain[-1] > nsites
         ):
             raise_error(
                 ValueError,
