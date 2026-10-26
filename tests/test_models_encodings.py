@@ -10,6 +10,7 @@ from scipy.optimize import curve_fit
 from scipy.special import binom
 
 from qibo import Circuit, gates
+from qibo.hamiltonians import FoldedXXZ
 from qibo.models._encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
@@ -23,6 +24,7 @@ from qibo.models.encodings import (
     dicke_state,
     entangling_layer,
     fanout_synthesis,
+    folded_xxz_eigenstate,
     ghz_state,
     graph_state,
     hamming_weight_encoder,
@@ -1005,3 +1007,115 @@ def test_fanout_and_ladder_synthesis(backend, nqubits, method):
     target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
     target = target.invert()
     backend.assert_allclose(ladder.unitary(backend), target.unitary(backend))
+
+
+@pytest.mark.parametrize(
+    "nsites,nmagnons,domains,modes",
+    [
+        (6, 0, None, None),
+        (4, 3, None, None),
+        (7, 3, None, None),
+        (6, 2, None, [1, 2, 3]),
+        (6, 2, None, [0, 1]),
+        (6, 2, None, [2, 2]),
+        (6, 2, None, [1, 6]),
+        (7, 1, [[]], None),
+        (7, 1, [[3]], None),
+        (7, 1, [[3, 5]], None),
+        (7, 1, [[2, 3]], None),
+        (7, 1, [[6, 8]], None),
+        (12, 1, [[3, 4], [6, 7]], None),
+    ],
+)
+def test_folded_xxz_eigenstate_errors(backend, nsites, nmagnons, domains, modes):
+    with pytest.raises(ValueError):
+        folded_xxz_eigenstate(nsites, nmagnons, domains, modes, backend=backend)
+
+
+@pytest.mark.parametrize(
+    "nsites,nmagnons,domains,modes,target_modes",
+    [
+        (4, 1, None, None, [2]),
+        (5, 2, [], [1, 3], [1, 3]),
+        (5, 2, None, None, [2, 4]),
+        (5, 1, [[3, 4]], None, [2]),
+        (6, 1, [[3, 4, 5]], [1], [1]),
+        (7, 2, [[5, 6]], None, [2, 4]),
+        # the seed state has no amplitude on the first basis element, so completing it
+        # into a basis must not rely on that element; this size used to return ``NaN``
+        (8, 1, None, None, [2]),
+        (8, 1, [[3, 4], [7, 8]], None, [2]),
+    ],
+)
+def test_folded_xxz_eigenstate(backend, nsites, nmagnons, domains, modes, target_modes):
+    circuit = folded_xxz_eigenstate(nsites, nmagnons, domains, modes, backend=backend)
+
+    # the chain is in the first qubits, and the auxiliary qubits are in the zero state
+    state = backend.execute_circuit(circuit).state()
+    chain = state[:: 2 ** (circuit.nqubits - nsites)]
+    backend.assert_allclose(backend.vector_norm(chain), 1.0, atol=1e-8)
+
+    # the boundary qubits of the Hamiltonian are in the zero state
+    vacuum = backend.zero_state(1)
+    state = backend.kron(backend.kron(vacuum, chain), vacuum)
+    hamiltonian = FoldedXXZ(nsites + 2, backend=backend)
+
+    nsqueezed = nsites - nmagnons + 1 - 2 * len(domains or [])
+    momenta = (
+        math.pi * backend.cast(target_modes, dtype=backend.float64) / (nsqueezed + 1)
+    )
+    energy = -backend.sum(backend.cos(momenta))
+    backend.assert_allclose(hamiltonian.matrix @ state, energy * state, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nsites,nmagnons,domains,target_modes",
+    [
+        (12, 1, [[3, 4], [7, 8], [11, 12]], [2]),
+        (13, 1, [[4, 5], [8, 9], [12, 13]], [2]),
+        (16, 1, [[3, 4], [7, 8], [11, 12]], [2]),
+        (14, 2, [[5, 6], [9, 10], [13, 14]], [2, 7]),
+    ],
+)
+def test_folded_xxz_eigenstate_many_domains(
+    backend, nsites, nmagnons, domains, target_modes
+):
+    """The circuits are too large to be simulated, so the first stage is simulated alone, and the
+    other stages, which only permute basis states, are applied to the bit strings of its state."""
+    circuit = folded_xxz_eigenstate(nsites, nmagnons, domains, backend=backend)
+    nfree = nsites - 2 * len(domains)
+
+    first_stage = [gate for gate in circuit.queue if isinstance(gate, gates.Unitary)]
+    free_fermions = Circuit(nfree)
+    free_fermions.add(
+        gate.on_qubits({q: q - nsites for q in gate.qubits}) for gate in first_stage
+    )
+    amplitudes = backend.to_numpy(backend.execute_circuit(free_fermions).state())
+
+    chain = np.zeros(2**nsites, dtype=complex)
+    for index in np.flatnonzero(abs(amplitudes) > 1e-12):
+        bits = [0] * circuit.nqubits
+        bits[nsites : nsites + nfree] = [int(bit) for bit in f"{index:0{nfree}b}"]
+        for gate in circuit.queue[len(first_stage) :]:
+            if all(bits[qubit] for qubit in gate.control_qubits):
+                first, *others = gate.target_qubits
+                if others:
+                    bits[first], bits[others[0]] = bits[others[0]], bits[first]
+                else:
+                    bits[first] ^= 1
+        assert not any(bits[nsites:])
+        chain[int("".join(map(str, bits[:nsites])), 2)] += amplitudes[index]
+
+    chain = backend.cast(chain, dtype=backend.complex128)
+    backend.assert_allclose(backend.vector_norm(chain), 1.0, atol=1e-8)
+
+    vacuum = backend.zero_state(1)
+    state = backend.kron(backend.kron(vacuum, chain), vacuum)
+    hamiltonian = FoldedXXZ(nsites + 2, dense=False, backend=backend)
+
+    nsqueezed = nfree - nmagnons + 1
+    momenta = (
+        math.pi * backend.cast(target_modes, dtype=backend.float64) / (nsqueezed + 1)
+    )
+    energy = -backend.sum(backend.cos(momenta))
+    backend.assert_allclose(hamiltonian @ state, energy * state, atol=1e-8)
