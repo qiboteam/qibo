@@ -544,7 +544,7 @@ def fanout_synthesis(
 
 
 def folded_xxz_eigenstate(
-    nqubits: int,
+    nsites: int,
     nmagnons: int,
     domains: list[list[int]] | None = None,
     modes: list[int] | None = None,
@@ -581,12 +581,12 @@ def folded_xxz_eigenstate(
     a network of controlled-SWAP gates that enforces the hard-core repulsion between magnons;
     and the insertion of the domain walls.
 
-    The first ``nqubits`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
+    The first ``nsites`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
     qubits, which are returned to :math:`\\ket{0}`, and thus the state of the chain can be read
     out by discarding them.
 
     Args:
-        nqubits (int): number of sites :math:`n` of the chain.
+        nsites (int): number of sites :math:`n` of the chain.
         nmagnons (int): number of magnons :math:`M`.
         domains (list[list[int]], optional): blocks of spin-down sites of the reference
             configuration. Each block is a list of at least two consecutive sites, numbered
@@ -618,8 +618,8 @@ def folded_xxz_eigenstate(
 
     domains = [list(domain) for domain in domains or []]
     nwalls = 2 * len(domains)
-    nsites = nqubits - nwalls  # sites of the chain that are not domain walls
-    nsqueezed = nsites - nmagnons + 1  # sites of the free-fermion chain
+    nfree = nsites - nwalls  # sites of the chain that are not domain walls
+    nsqueezed = nfree - nmagnons + 1  # sites of the free-fermion chain
 
     if nmagnons < 1:
         raise_error(
@@ -631,7 +631,7 @@ def folded_xxz_eigenstate(
         raise_error(
             ValueError,
             f"Cannot fit {nmagnons} magnon(s) and {nwalls} domain walls in a chain of "
-            + f"{nqubits} sites, because the squeezed chain needs at least 2 * ``nmagnons`` "
+            + f"{nsites} sites, because the squeezed chain needs at least 2 * ``nmagnons`` "
             + f"sites, but it has {nsqueezed}.",
         )
 
@@ -659,7 +659,7 @@ def folded_xxz_eigenstate(
             len(domain) < 2
             or domain != list(range(domain[0], domain[0] + len(domain)))
             or domain[0] < previous_end + 3
-            or domain[-1] > nqubits
+            or domain[-1] > nsites
         ):
             raise_error(
                 ValueError,
@@ -672,8 +672,8 @@ def folded_xxz_eigenstate(
 
     # Qubits: the chain, the sites of the magnonic state (only if there are domain walls), and
     # auxiliary qubits, which are shared by the hard-core stage and the domain-wall stage.
-    chain = list(range(nqubits))
-    magnonic = chain if nwalls == 0 else list(range(nqubits, nqubits + nsites))
+    chain = list(range(nsites))
+    magnonic = chain if nwalls == 0 else list(range(nsites, nsites + nfree))
     nauxiliary = max(nwalls + 5 if nwalls else 0, nmagnons + 1 if nmagnons > 1 else 0)
     auxiliary = list(range(magnonic[-1] + 1, magnonic[-1] + 1 + nauxiliary))
     workspace = auxiliary[:2]
@@ -727,23 +727,23 @@ def folded_xxz_eigenstate(
     # left. It uses ``nmagnons + 1`` auxiliary qubits, which are returned to the all-zero state.
     if nmagnons > 1:
         register = magnonic + auxiliary[: nmagnons + 1]
-        circuit.add(gates.X(register[nsites]))
+        circuit.add(gates.X(register[nfree]))
         for step, qubit in enumerate(reversed(range(nsqueezed))):
             shifted = nmagnons - 1 - min(step, nmagnons - 1)
             circuit.add(
                 gates.SWAP(
-                    register[nsites + nmagnons - 1 - j],
-                    register[nsites + nmagnons - j],
+                    register[nfree + nmagnons - 1 - j],
+                    register[nfree + nmagnons - j],
                 ).controlled_by(register[qubit])
                 for j in range(shifted, nmagnons)
             )
             circuit.add(
                 gates.SWAP(
                     register[qubit], register[qubit + nmagnons - 1 - j]
-                ).controlled_by(register[nsites + 1 + j])
+                ).controlled_by(register[nfree + 1 + j])
                 for j in range(min(step + 1, nmagnons - 1))
             )
-        circuit.add(gates.X(register[nsites + nmagnons]))
+        circuit.add(gates.X(register[nfree + nmagnons]))
 
     if nwalls == 0:
         return circuit
@@ -753,7 +753,7 @@ def folded_xxz_eigenstate(
     circuit.add(gates.X(counter[1]))
     circuit.add(gates.X(parity[0]))
     circuit.add(gates.X(chain[site - 1]) for domain in domains for site in domain)
-    for n in reversed(range(nsites)):
+    for n in reversed(range(nfree)):
         if n >= 1:
             circuit.add(
                 _folded_xxz_move_before(
@@ -866,7 +866,7 @@ def folded_xxz_eigenstate(
                 circuit.add(
                     _folded_xxz_scan(parity, chain[site - 3 : site], workspace[0])
                 )
-            site, last = n + nwalls, n == nsites - 1
+            site, last = n + nwalls, n == nfree - 1
             circuit.add(
                 _folded_xxz_reset(
                     parity[-1],
