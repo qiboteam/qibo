@@ -1068,13 +1068,13 @@ EIGENSTATE_CASES.extend(
 
 
 @pytest.mark.parametrize(
-    "nqubits,nmagnons,domains,modes,target_modes,method", EIGENSTATE_CASES
+    "nsites,nmagnons,domains,modes,target_modes,method", EIGENSTATE_CASES
 )
 def test_folded_xxz_eigenstate(
-    backend, nqubits, nmagnons, domains, modes, target_modes, method
+    backend, nsites, nmagnons, domains, modes, target_modes, method
 ):
     circuit = folded_xxz_eigenstate(
-        nqubits, nmagnons, domains, modes, method=method, backend=backend
+        nsites, nmagnons, domains, modes, method=method, backend=backend
     )
 
     # the chain is in the first qubits, and the auxiliary qubits are in the zero state
@@ -1106,20 +1106,20 @@ def test_folded_xxz_eigenstate(
 )
 @pytest.mark.parametrize("method", ["sopena", "merged"])
 def test_folded_xxz_eigenstate_many_domains(
-    backend, nqubits, nmagnons, domains, target_modes, method
+    backend, nsites, nmagnons, domains, target_modes, method
 ):
     """The circuits are too large to be simulated, so the first stage is simulated alone, and the
     other stages, which only permute basis states, are applied to the bit strings of its state."""
     if method == "merged":
         # relative phases are not simulated, so the gates are the ones that permute states
         circuit = _folded_merged(
-            nqubits, nmagnons, domains, target_modes, backend, relative_phase=False
+            nsites, nmagnons, domains, target_modes, backend, relative_phase=False
         )
     else:
         circuit = folded_xxz_eigenstate(
-            nqubits, nmagnons, domains, method=method, backend=backend
+            nsites, nmagnons, domains, method=method, backend=backend
         )
-    nsites = nqubits - 2 * len(domains)
+    nfree = nsites - 2 * len(domains)
 
     last = max(
         i
@@ -1127,7 +1127,7 @@ def test_folded_xxz_eigenstate_many_domains(
         if isinstance(gate, (gates.Unitary, gates.RBS))
     )
     first_stage = circuit.queue[: last + 1]
-    free_fermions = Circuit(nsites)
+    free_fermions = Circuit(nfree)
     free_fermions.add(
         gate.on_qubits({q: q - nsites for q in gate.qubits}) for gate in first_stage
     )
@@ -1162,15 +1162,15 @@ def test_folded_xxz_eigenstate_many_domains(
     backend.assert_allclose(hamiltonian @ state, energy * state, atol=1e-8)
 
 
-@pytest.mark.parametrize("nqubits,nmagnons,domains", [(8, 3, None), (7, 2, [[5, 6]])])
-def test_folded_xxz_eigenstate_methods(backend, nqubits, nmagnons, domains):
+@pytest.mark.parametrize("nsites,nmagnons,domains", [(8, 3, None), (7, 2, [[5, 6]])])
+def test_folded_xxz_eigenstate_methods(backend, nsites, nmagnons, domains):
     chains = []
     for method in ("sopena", "merged"):
         circuit = folded_xxz_eigenstate(
-            nqubits, nmagnons, domains, method=method, backend=backend
+            nsites, nmagnons, domains, method=method, backend=backend
         )
         state = backend.execute_circuit(circuit).state()
-        chains.append(state[:: 2 ** (circuit.nqubits - nqubits)])
+        chains.append(state[:: 2 ** (circuit.nqubits - nsites)])
 
     overlap = backend.sum(backend.conj(chains[0]) * chains[1])
     backend.assert_allclose(backend.abs(overlap), 1.0, atol=1e-8)
@@ -1192,11 +1192,11 @@ def test_folded_xxz_cswap(backend, absent):
 
 
 @pytest.mark.parametrize(
-    "nqubits,nmagnons,domains", [(8, 3, None), (10, 2, [[5, 6], [9, 10]])]
+    "nsites,nmagnons,domains", [(8, 3, None), (10, 2, [[5, 6], [9, 10]])]
 )
-def test_folded_xxz_eigenstate_cancelled(backend, nqubits, nmagnons, domains):
+def test_folded_xxz_eigenstate_cancelled(backend, nsites, nmagnons, domains):
     circuit = folded_xxz_eigenstate(
-        nqubits, nmagnons, domains, method="merged", backend=backend
+        nsites, nmagnons, domains, method="merged", backend=backend
     )
 
     # there are no gates left that cancel

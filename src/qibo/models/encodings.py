@@ -685,9 +685,9 @@ def folded_xxz_eigenstate(
         previous_end = domain[-1]
 
     if method == "merged":
-        return _folded_merged(nqubits, nmagnons, domains, modes, backend)
+        return _folded_merged(nsites, nmagnons, domains, modes, backend)
 
-    return _folded_sopena(nqubits, nmagnons, domains, modes, backend)
+    return _folded_sopena(nsites, nmagnons, domains, modes, backend)
 
 
 def ghz_state(nqubits: int, **kwargs) -> Circuit:

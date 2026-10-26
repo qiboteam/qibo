@@ -619,7 +619,7 @@ def _fanout_parity_tree(
 
 
 def _folded_merged(
-    nqubits: int,
+    nsites: int,
     nmagnons: int,
     domains: list[list[int]],
     modes: list[int],
@@ -631,11 +631,11 @@ def _folded_merged(
     The free fermions are prepared with Givens rotations in a register of the squeezed chain.
     Then, the magnons are written in the chain in a single pass over the squeezed chain, and the
     input is cleared from the output in a second pass. The chain is made of the first
-    ``nqubits`` qubits, followed by the squeezed chain, a tally of magnons, a flag and a
+    ``nsites`` qubits, followed by the squeezed chain, a tally of magnons, a flag and a
     workspace qubit.
 
     Args:
-        nqubits (int): number of sites :math:`n` of the chain.
+        nsites (int): number of sites :math:`n` of the chain.
         nmagnons (int): number of magnons :math:`M`.
         domains (list[list[int]]): blocks of spin-down sites of the reference configuration.
         modes (list[int]): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta of the
@@ -663,13 +663,13 @@ def _folded_merged(
     backend = _check_backend(backend)
 
     nsqueezed = (
-        nqubits - 2 * len(domains) - nmagnons + 1
+        nsites - 2 * len(domains) - nmagnons + 1
     )  # sites of the free-fermion chain
 
     # Qubits: the chain, the squeezed chain, and auxiliary qubits, which are a tally of magnons,
     # a flag and a workspace qubit
-    chain = list(range(nqubits))
-    magnonic = list(range(nqubits, nqubits + nsqueezed))
+    chain = list(range(nsites))
+    magnonic = list(range(nsites, nsites + nsqueezed))
     auxiliary = list(range(magnonic[-1] + 1, magnonic[-1] + nmagnons + 4))
     circuit = Circuit(auxiliary[-1] + 1)
 
@@ -717,7 +717,7 @@ def _folded_merged(
                     [(left + 1, wall - 2 * right - 1), (left + 1, wall - 2 * right)]
                 )
 
-    hosts = [[] for _ in range(nqubits + 1)]
+    hosts = [[] for _ in range(nsites + 1)]
     for m in range(nsqueezed + 1):
         lefts = [
             left
@@ -785,7 +785,7 @@ def _folded_merged(
     circuit.add(gates.X(qubit) for qubit in tally[1:])
 
     # the input is cleared from the output, from right to left, with a one-hot counter
-    for x in reversed(range(1, nqubits + 1)):
+    for x in reversed(range(1, nsites + 1)):
         for right, position, m in hosts[x]:
             parity_bit = (x - position + 1) % 2
             controls = [tally[right], chain[x - 1]] if parity_bit else [tally[right]]
@@ -793,7 +793,7 @@ def _folded_merged(
             # a site that is not a magnon needs ``right`` magnons to its right and the others to
             # its left to have the counter in this state, which takes at least two sites for
             # each one, so otherwise the counter is enough
-            if x + 2 * right > nqubits + 1 or x < 2 * (nmagnons - right):
+            if x + 2 * right > nsites + 1 or x < 2 * (nmagnons - right):
                 controls, negated = [tally[right]], []
             circuit.add(
                 _folded_xxz_multicontrolled(
@@ -808,7 +808,7 @@ def _folded_merged(
         for right, position, m in hosts[x]:
             # with a single host, the flag already implies the state of the counter, and if no
             # site that is not a magnon can have it, the counter implies the flag
-            if x + 2 * right > nqubits + 1 or x < 2 * (nmagnons - right):
+            if x + 2 * right > nsites + 1 or x < 2 * (nmagnons - right):
                 controls = [tally[right]]
             elif len(hosts[x]) == 1:
                 controls = [flag]
@@ -835,14 +835,14 @@ def _folded_merged(
             )
         for right, position, m in hosts[x]:
             parity_bit = (x - position + 1) % 2
-            if x < nqubits or parity_bit:
+            if x < nsites or parity_bit:
                 controls, negated = [tally[right + 1]], []
                 # a site that is not a magnon needs ``right + 1`` magnons to its right to have
                 # the counter in this state, which takes at least ``2 * (right + 1)`` sites.
                 # Otherwise, the counter is enough, and, if not, the state of the site or of
                 # the next one tells the two cases apart, depending on whether a domain wall
                 # is displaced to one of the two positions where it would be
-                if x + 2 * (right + 1) <= nqubits + 1 and x >= 2 * (
+                if x + 2 * (right + 1) <= nsites + 1 and x >= 2 * (
                     nmagnons - right - 1
                 ):
                     if any(
@@ -870,7 +870,7 @@ def _folded_merged(
 
 
 def _folded_sopena(
-    nqubits: int,
+    nsites: int,
     nmagnons: int,
     domains: list[list[int]],
     modes: list[int],
@@ -880,12 +880,12 @@ def _folded_sopena(
 
     The free fermions are prepared with the algebraic Bethe circuit. Then, the magnons are
     shifted in place, and inserted one by one in the chain with the domain walls. The chain is
-    made of the first ``nqubits`` qubits, followed by the sites of the magnonic state (only if
+    made of the first ``nsites`` qubits, followed by the sites of the magnonic state (only if
     there are domain walls) and auxiliary qubits, which are shared by the hard-core stage and
     the domain-wall stage.
 
     Args:
-        nqubits (int): number of sites :math:`n` of the chain.
+        nsites (int): number of sites :math:`n` of the chain.
         nmagnons (int): number of magnons :math:`M`.
         domains (list[list[int]]): blocks of spin-down sites of the reference configuration.
         modes (list[int]): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta of the
@@ -908,13 +908,13 @@ def _folded_sopena(
     backend = _check_backend(backend)
 
     nwalls = 2 * len(domains)
-    nsites = nqubits - nwalls  # sites of the chain that are not domain walls
-    nsqueezed = nsites - nmagnons + 1  # sites of the free-fermion chain
+    nfree = nsites - nwalls  # sites of the chain that are not domain walls
+    nsqueezed = nfree - nmagnons + 1  # sites of the free-fermion chain
 
     # Qubits: the chain, the sites of the magnonic state (only if there are domain walls), and
     # auxiliary qubits, which are shared by the hard-core stage and the domain-wall stage
-    chain = list(range(nqubits))
-    magnonic = chain if nwalls == 0 else list(range(nqubits, nqubits + nsites))
+    chain = list(range(nsites))
+    magnonic = chain if nwalls == 0 else list(range(nsites, nsites + nfree))
     nauxiliary = max(nwalls + 5 if nwalls else 0, nmagnons + 1 if nmagnons > 1 else 0)
     auxiliary = list(range(magnonic[-1] + 1, magnonic[-1] + 1 + nauxiliary))
     workspace = auxiliary[:2]
@@ -967,23 +967,23 @@ def _folded_sopena(
     # left. It uses ``nmagnons + 1`` auxiliary qubits, which are returned to the all-zero state.
     if nmagnons > 1:
         register = magnonic + auxiliary[: nmagnons + 1]
-        circuit.add(gates.X(register[nsites]))
+        circuit.add(gates.X(register[nfree]))
         for step, qubit in enumerate(reversed(range(nsqueezed))):
             shifted = nmagnons - 1 - min(step, nmagnons - 1)
             circuit.add(
                 gates.SWAP(
-                    register[nsites + nmagnons - 1 - j],
-                    register[nsites + nmagnons - j],
+                    register[nfree + nmagnons - 1 - j],
+                    register[nfree + nmagnons - j],
                 ).controlled_by(register[qubit])
                 for j in range(shifted, nmagnons)
             )
             circuit.add(
                 gates.SWAP(
                     register[qubit], register[qubit + nmagnons - 1 - j]
-                ).controlled_by(register[nsites + 1 + j])
+                ).controlled_by(register[nfree + 1 + j])
                 for j in range(min(step + 1, nmagnons - 1))
             )
-        circuit.add(gates.X(register[nsites + nmagnons]))
+        circuit.add(gates.X(register[nfree + nmagnons]))
 
     if nwalls == 0:
         return circuit
@@ -993,7 +993,7 @@ def _folded_sopena(
     circuit.add(gates.X(counter[1]))
     circuit.add(gates.X(parity[0]))
     circuit.add(gates.X(chain[site - 1]) for domain in domains for site in domain)
-    for n in reversed(range(nsites)):
+    for n in reversed(range(nfree)):
         if n >= 1:
             circuit.add(
                 _folded_xxz_move_before(
@@ -1106,7 +1106,7 @@ def _folded_sopena(
                 circuit.add(
                     _folded_xxz_scan(parity, chain[site - 3 : site], workspace[0])
                 )
-            site, last = n + nwalls, n == nsites - 1
+            site, last = n + nwalls, n == nfree - 1
             circuit.add(
                 _folded_xxz_reset(
                     parity[-1],
