@@ -140,6 +140,7 @@ from qibo.quantum_info.superoperator_transformations import (
     vectorization,
 )
 from qibo.quantum_info.utils import (
+    bitstring_to_phase,
     decompose_permutation,
     haar_integral,
     hadamard_transform,
@@ -163,6 +164,7 @@ __all__ = [
     "a_fidelity",
     "anticommutator",
     "average_gate_fidelity",
+    "bitstring_to_phase",
     "bures_angle",
     "bures_distance",
     "chen_fidelity",
