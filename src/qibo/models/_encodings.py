@@ -716,6 +716,1073 @@ def _fanout_parity_tree(
     return circuit
 
 
+def _folded_merged(
+    nsites: int,
+    nmagnons: int,
+    domains: list[list[int]],
+    modes: list[int],
+    backend: Backend | None = None,
+    relative_phase: bool = True,
+) -> Circuit:
+    """Circuit of :func:`qibo.models.encodings.folded_xxz_eigenstate` with the ``"merged"`` method.
+
+    The free fermions are prepared with Givens rotations in a register of the squeezed chain.
+    Then, the magnons are written in the chain in a single pass over the squeezed chain, and the
+    input is cleared from the output in a second pass. The chain is made of the first
+    ``nsites`` qubits, followed by the squeezed chain, a tally of magnons, a flag and a
+    workspace qubit.
+
+    Args:
+        nsites (int): number of sites :math:`n` of the chain.
+        nmagnons (int): number of magnons :math:`M`.
+        domains (list[list[int]]): blocks of spin-down sites of the reference configuration.
+        modes (list[int]): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta of the
+            magnons.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+        relative_phase (bool, optional): If ``True``, the Toffoli gates that never see the
+            states where they have a relative phase are implemented with three CNOTs instead of
+            six. If ``False``, all the gates besides the Stage I ones permute the states of the
+            computational basis. Defaults to ``True``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that prepares the eigenstate.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. Z. Jiang, K. J. Sung, K. Kechedzhi, V. N. Smelyanskiy, and S. Boixo, *Quantum
+        algorithms to simulate many-body physics of correlated fermions*, `Phys. Rev. Applied 9,
+        044036 (2018) <https://doi.org/10.1103/PhysRevApplied.9.044036>`_.
+    """
+    backend = _check_backend(backend)
+
+    nsqueezed = (
+        nsites - 2 * len(domains) - nmagnons + 1
+    )  # sites of the free-fermion chain
+
+    # Qubits: the chain, the squeezed chain, and auxiliary qubits, which are a tally of magnons,
+    # a flag and a workspace qubit
+    chain = list(range(nsites))
+    magnonic = list(range(nsites, nsites + nsqueezed))
+    auxiliary = list(range(magnonic[-1] + 1, magnonic[-1] + nmagnons + 4))
+    circuit = Circuit(auxiliary[-1] + 1)
+
+    # Stage I: Slater determinant of M free fermions in the squeezed chain
+    # Givens rotations between neighboring qubits, which eliminate one entry of the matrix of
+    # sine orbitals at a time, starting from M excitations in the first M qubits
+    orbitals = backend.sin(
+        math.pi
+        * backend.outer(
+            backend.cast(modes, dtype=backend.float64),
+            backend.arange(1, nsqueezed + 1),
+        )
+        / (nsqueezed + 1)
+    )
+    rotations = []
+    for row in range(nmagnons):
+        for col in range(nsqueezed - 1, row, -1):
+            theta = backend.arctan2(orbitals[row, col], orbitals[row, col - 1])
+            cos, sin = backend.cos(theta), backend.sin(theta)
+            left = cos * orbitals[:, col - 1] + sin * orbitals[:, col]
+            orbitals[:, col] = cos * orbitals[:, col] - sin * orbitals[:, col - 1]
+            orbitals[:, col - 1] = left
+            rotations.append(gates.RBS(magnonic[col - 1], magnonic[col], theta))
+    circuit.add(gates.X(qubit) for qubit in magnonic[:nmagnons])
+    circuit.add(rotations[::-1])
+
+    # The magnons are written in the chain in a single pass over the squeezed chain, from
+    # left to right. A tally in unary code counts the magnons passed so far, and it
+    # determines where the next magnon is written, and which domain walls it has crossed
+    tally, flag, workspace = auxiliary[: nmagnons + 1], auxiliary[-2], auxiliary[-1]
+    walls = [wall for domain in domains for wall in (domain[0] - 1, domain[-1])]
+    thresholds = [wall - j for j, wall in enumerate(walls, 1)]
+    circuit.add(gates.X(chain[site - 1]) for domain in domains for site in domain)
+    circuit.add(gates.X(tally[0]))
+
+    # a wall is displaced by two sites for each magnon that crosses it, which depends on the
+    # number of magnons passed when the squeezed chain reaches a position
+    snapshots = [[] for _ in range(nsqueezed + 1)]
+    for j, wall in enumerate(walls):
+        for left in range(nmagnons):
+            position = thresholds[j] - 2 * nmagnons + 2 + left
+            if position < nsqueezed:
+                right = nmagnons - 1 - left
+                snapshots[max(position, 0)].extend(
+                    [(left + 1, wall - 2 * right - 1), (left + 1, wall - 2 * right)]
+                )
+
+    hosts = [[] for _ in range(nsites + 1)]
+    for m in range(nsqueezed + 1):
+        lefts = [
+            left
+            for left in range(nmagnons)
+            if left < m <= nsqueezed - (nmagnons - 1 - left)
+        ]
+        groups = []
+        for left in lefts:
+            right = nmagnons - 1 - left
+            shift = sum(t < m + left + 2 * right for t in thresholds)
+            hosts[m + left + shift].append((right, m + left, m))
+            if groups and groups[-1][0] == m + left + shift:
+                groups[-1][2] = left
+            else:
+                groups.append([m + left + shift, left, left])
+        for x, first, last in groups:
+            # if the lowest number of magnons passed is the one that leaves just enough sites for
+            # the others, the site ``m`` holds a magnon, and its input qubit is not needed, but
+            # a larger number of magnons passed has to be excluded
+            forced = first == last == lefts[0] == nmagnons - 1 - nsqueezed + m
+            controls = [] if forced else [magnonic[m - 1]]
+            if first > lefts[0]:
+                controls.append(tally[first])
+            negated = [tally[last + 1]] if forced or last < lefts[-1] else []
+            # when the number of magnons passed is below ``last`` and the other conditions are
+            # not met, the site has the state that it has at the end with the domain walls
+            # where they are then, and, with no condition on that number, the state of the
+            # reference configuration, so the sign of the relative phase is for the other state
+            absent = None
+            if relative_phase and len(controls) + len(negated) > 1:
+                if negated:
+                    value = (
+                        sum(wall < x + 2 * (nmagnons - 1 - last) for wall in walls) % 2
+                    )
+                    absent = (0, 1, 1 - value)
+                else:
+                    absent = (1, 0, 1 - int(any(x in domain for domain in domains)))
+            circuit.add(
+                _folded_xxz_multicontrolled(
+                    controls, negated, chain[x - 1], workspace, relative_phase, absent
+                )
+            )
+        if m > 0:
+            # a magnon in the site ``m`` has ``lefts[0]`` to ``lefts[-1]`` magnons before it, so
+            # the tally qubits below ``lefts[0]`` are always in the state 1, and the ones above
+            # ``lefts[-1] + 1`` in the state 0, and only the ones in between are shifted
+            for v in range(lefts[-1] + 1, lefts[0], -1):
+                # the tally is a thermometer, so two neighbors are never in the state (0, 1)
+                circuit.add(
+                    _folded_xxz_cswap(magnonic[m - 1], tally[v - 1], tally[v], (0, 1))
+                    if relative_phase
+                    else gates.SWAP(tally[v - 1], tally[v]).controlled_by(
+                        magnonic[m - 1]
+                    )
+                )
+            circuit.add(gates.CNOT(magnonic[m - 1], tally[lefts[0]]))
+        # the number of magnons passed is between these bounds, and a tally qubit that is
+        # always in the state 1 makes the two gates of the snapshot cancel
+        passed = (max(0, nmagnons - nsqueezed + m), min(m, nmagnons))
+        for count, site in snapshots[m]:
+            if count > passed[0]:
+                circuit.add(gates.X(chain[site - 1]))
+            if passed[0] < count <= passed[1]:
+                circuit.add(gates.CNOT(tally[count], chain[site - 1]))
+    circuit.add(gates.X(qubit) for qubit in tally[1:])
+
+    # the input is cleared from the output, from right to left, with a one-hot counter
+    for x in reversed(range(1, nsites + 1)):
+        for right, position, m in hosts[x]:
+            parity_bit = (x - position + 1) % 2
+            controls = [tally[right], chain[x - 1]] if parity_bit else [tally[right]]
+            negated = [] if parity_bit else [chain[x - 1]]
+            # a site that is not a magnon needs ``right`` magnons to its right and the others to
+            # its left to have the counter in this state, which takes at least two sites for
+            # each one, so otherwise the counter is enough
+            if x + 2 * right > nsites + 1 or x < 2 * (nmagnons - right):
+                controls, negated = [tally[right]], []
+            circuit.add(
+                _folded_xxz_multicontrolled(
+                    controls,
+                    negated,
+                    flag,
+                    workspace,
+                    relative_phase,
+                    (1, 0, 1) if relative_phase else None,
+                )
+            )
+        for right, position, m in hosts[x]:
+            # with a single host, the flag already implies the state of the counter, and if no
+            # site that is not a magnon can have it, the counter implies the flag
+            if x + 2 * right > nsites + 1 or x < 2 * (nmagnons - right):
+                controls = [tally[right]]
+            elif len(hosts[x]) == 1:
+                controls = [flag]
+            else:
+                controls = [flag, tally[right]]
+            # the input of the host is never on when the counter is and the flag is not
+            circuit.add(
+                _folded_xxz_multicontrolled(
+                    controls,
+                    [],
+                    magnonic[m - 1],
+                    workspace,
+                    relative_phase,
+                    (0, 1, 1) if relative_phase else None,
+                )
+            )
+        # the counter can only be in the states of the hosts when the flag is on
+        for v in sorted({right for right, _, _ in hosts[x]}, reverse=True):
+            # the counter is in one-hot code, so two neighbors are never in the state (1, 1)
+            circuit.add(
+                _folded_xxz_cswap(flag, tally[v], tally[v + 1], (1, 1))
+                if relative_phase
+                else gates.SWAP(tally[v], tally[v + 1]).controlled_by(flag)
+            )
+        for right, position, m in hosts[x]:
+            parity_bit = (x - position + 1) % 2
+            if x < nsites or parity_bit:
+                controls, negated = [tally[right + 1]], []
+                # a site that is not a magnon needs ``right + 1`` magnons to its right to have
+                # the counter in this state, which takes at least ``2 * (right + 1)`` sites.
+                # Otherwise, the counter is enough, and, if not, the state of the site or of
+                # the next one tells the two cases apart, depending on whether a domain wall
+                # is displaced to one of the two positions where it would be
+                if x + 2 * (right + 1) <= nsites + 1 and x >= 2 * (
+                    nmagnons - right - 1
+                ):
+                    if any(
+                        wall in (x + 2 * right, x + 2 * right + 1) for wall in walls
+                    ):
+                        (negated if parity_bit else controls).append(chain[x])
+                    else:
+                        (controls if parity_bit else negated).append(chain[x - 1])
+                circuit.add(
+                    _folded_xxz_multicontrolled(
+                        controls,
+                        negated,
+                        flag,
+                        workspace,
+                        relative_phase,
+                        (1, 0, 1) if relative_phase else None,
+                    )
+                )
+    circuit.add(gates.X(tally[nmagnons]))
+
+    # to avoid circular import
+    from qibo.transpiler import InverseCancellation
+
+    return InverseCancellation()(circuit)
+
+
+def _folded_sopena(
+    nsites: int,
+    nmagnons: int,
+    domains: list[list[int]],
+    modes: list[int],
+    backend: Backend | None = None,
+) -> Circuit:
+    """Circuit of :func:`qibo.models.encodings.folded_xxz_eigenstate` with the ``"sopena"`` method.
+
+    The free fermions are prepared with the algebraic Bethe circuit. Then, the magnons are
+    shifted in place, and inserted one by one in the chain with the domain walls. The chain is
+    made of the first ``nsites`` qubits, followed by the sites of the magnonic state (only if
+    there are domain walls) and auxiliary qubits, which are shared by the hard-core stage and
+    the domain-wall stage.
+
+    Args:
+        nsites (int): number of sites :math:`n` of the chain.
+        nmagnons (int): number of magnons :math:`M`.
+        domains (list[list[int]]): blocks of spin-down sites of the reference configuration.
+        modes (list[int]): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta of the
+            magnons.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that prepares the eigenstate.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
+        Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+    """
+    backend = _check_backend(backend)
+
+    nwalls = 2 * len(domains)
+    nfree = nsites - nwalls  # sites of the chain that are not domain walls
+    nsqueezed = nfree - nmagnons + 1  # sites of the free-fermion chain
+
+    # Qubits: the chain, the sites of the magnonic state (only if there are domain walls), and
+    # auxiliary qubits, which are shared by the hard-core stage and the domain-wall stage
+    chain = list(range(nsites))
+    magnonic = chain if nwalls == 0 else list(range(nsites, nsites + nfree))
+    nauxiliary = max(nwalls + 5 if nwalls else 0, nmagnons + 1 if nmagnons > 1 else 0)
+    auxiliary = list(range(magnonic[-1] + 1, magnonic[-1] + 1 + nauxiliary))
+    workspace = auxiliary[:2]
+    counter = auxiliary[2 : nwalls // 2 + 4]
+    parity = auxiliary[nwalls // 2 + 4 : nwalls + 5]
+    circuit = Circuit(magnonic[-1] + 1 + nauxiliary)
+
+    # Stage I: algebraic Bethe circuit. A dense unitary loads the seed state in the first 2M
+    # qubits, and then a brickwork of matchgates adds one site at a time
+    angles = backend.cast(
+        [sign * math.pi * mode / (nsqueezed + 1) for mode in modes for sign in (1, -1)],
+        dtype=backend.float64,
+    )
+    roots = backend.exp(1j * angles)
+    nfermions = 2 * nmagnons
+    circuit.add(
+        gates.Unitary(
+            _folded_xxz_seed(roots, nsqueezed, backend), *magnonic[:nfermions]
+        )
+    )
+    for n in range(nsqueezed - nfermions):
+        circuit.add(
+            gates.Unitary(
+                _folded_xxz_matchgate(roots, nfermions - j, nsqueezed - 1 - n, backend),
+                magnonic[n + nfermions - j],
+                magnonic[n + nfermions - j - 1],
+            )
+            for j in range(nfermions)
+        )
+    for n in range(nsqueezed - nfermions, nsqueezed - 1):
+        k = nsqueezed - 1 - n
+        difference = roots[k] - roots[:k]
+        phase = backend.prod(difference / backend.abs(difference))
+        circuit.add(
+            gates.Unitary(
+                backend.cast([[1, 0], [0, phase]], dtype=backend.complex128),
+                magnonic[nsqueezed - 1],
+            )
+        )
+        circuit.add(
+            gates.Unitary(
+                _folded_xxz_matchgate(roots, k + 1 - j, k, backend),
+                magnonic[nsqueezed - j],
+                magnonic[nsqueezed - 1 - j],
+            )
+            for j in range(1, k + 1)
+        )
+
+    # Stage II: controlled-SWAP network that shifts the magnons by the number of magnons to their
+    # left. It uses ``nmagnons + 1`` auxiliary qubits, which are returned to the all-zero state.
+    if nmagnons > 1:
+        register = magnonic + auxiliary[: nmagnons + 1]
+        circuit.add(gates.X(register[nfree]))
+        for step, qubit in enumerate(reversed(range(nsqueezed))):
+            shifted = nmagnons - 1 - min(step, nmagnons - 1)
+            circuit.add(
+                gates.SWAP(
+                    register[nfree + nmagnons - 1 - j],
+                    register[nfree + nmagnons - j],
+                ).controlled_by(register[qubit])
+                for j in range(shifted, nmagnons)
+            )
+            circuit.add(
+                gates.SWAP(
+                    register[qubit], register[qubit + nmagnons - 1 - j]
+                ).controlled_by(register[nfree + 1 + j])
+                for j in range(min(step + 1, nmagnons - 1))
+            )
+        circuit.add(gates.X(register[nfree + nmagnons]))
+
+    if nwalls == 0:
+        return circuit
+
+    # Stage III: the magnons are inserted one by one, from right to left, in the chain
+    # that contains the domain walls
+    circuit.add(gates.X(counter[1]))
+    circuit.add(gates.X(parity[0]))
+    circuit.add(gates.X(chain[site - 1]) for domain in domains for site in domain)
+    for n in reversed(range(nfree)):
+        if n >= 1:
+            circuit.add(
+                _folded_xxz_move_before(
+                    chain[:4], workspace, magnonic[n], counter, first=True
+                )
+            )
+            circuit.add(
+                _folded_xxz_move_before(
+                    chain[site : site + 5], workspace, magnonic[n], counter
+                )
+                for site in range(n - 1)
+            )
+            for index, site in enumerate(range(n - 1, n + nwalls - 4, 2)):
+                if index != 0:
+                    circuit.add(gates.X(counter[0]))
+                    circuit.add(
+                        gates.TOFFOLI(counter[0], counter[index + 1], counter[1])
+                    )
+                    circuit.add(gates.X(counter[0]))
+                circuit.add(gates.TOFFOLI(counter[0], counter[index + 2], counter[1]))
+                circuit.add(
+                    _folded_xxz_move_after(
+                        chain[site + shift : site + shift + 5],
+                        workspace,
+                        counter,
+                        index + 2,
+                    )
+                    for shift in range(2)
+                )
+            if nwalls > 2:
+                circuit.add(gates.TOFFOLI(counter[0], counter[-2], counter[1]))
+            circuit.add(gates.CNOT(qubit, counter[1]) for qubit in counter[-3:1:-1])
+            for first, second, flipped in (
+                (-2, -1, -2),
+                (-3, -2, -3),
+                (-1, 0, 0),
+                (-2, -1, -1),
+            ):
+                site = n + nwalls
+                circuit.add(gates.X(chain[site + flipped]))
+                circuit.add(
+                    gates.TOFFOLI(
+                        chain[site + first], chain[site + second], workspace[0]
+                    )
+                )
+                circuit.add(gates.X(chain[site + flipped]))
+
+        # insert the current magnon in the chain, and reset its qubit
+        circuit.add(gates.TOFFOLI(magnonic[n], counter[1], chain[n]))
+        for index, site in enumerate(range(n + 1, n + nwalls, 2)):
+            circuit.add(gates.TOFFOLI(counter[0], counter[index + 2], chain[site]))
+            circuit.add(gates.X(counter[0]))
+            circuit.add(gates.TOFFOLI(counter[0], counter[index + 2], chain[site + 1]))
+            circuit.add(gates.X(counter[0]))
+        if n == 0:
+            circuit.add(gates.CNOT(chain[n], workspace[0]))
+        else:
+            circuit.add(gates.X(chain[n - 1]))
+            circuit.add(gates.TOFFOLI(chain[n - 1], chain[n], workspace[0]))
+        circuit.add(gates.X(chain[n + 1]))
+        circuit.add(gates.TOFFOLI(chain[n + 1], workspace[0], magnonic[n]))
+        circuit.add(gates.X(chain[n + 1]))
+        if n == 0:
+            circuit.add(gates.CNOT(chain[n], workspace[0]))
+        else:
+            circuit.add(gates.TOFFOLI(chain[n - 1], chain[n], workspace[0]))
+            circuit.add(gates.X(chain[n - 1]))
+        for qubit in counter[2:]:
+            circuit.add(gates.CNOT(qubit, magnonic[n]))
+            circuit.add(gates.CNOT(qubit, counter[1]))
+
+        # reset the registers that count the domain walls
+        if n >= 1:
+            sweeps = []
+            # blocks of at most three qubits, which contain at most one ``01`` transition
+            for end, inverse in ((n, False), (n + nwalls - 2, True)):
+                nblocks, rest = divmod(end, 2)
+                blocks = [(0, rest, True)] if rest else []
+                blocks.extend(
+                    (
+                        (0, 2, True)
+                        if i == 0 and rest == 0
+                        else (rest - 1 + 2 * i, rest + 2 * (i + 1), False)
+                    )
+                    for i in range(nblocks)
+                )
+                if inverse:
+                    blocks.reverse()
+                sweeps.append(
+                    [
+                        gate
+                        for start, stop, boundary in blocks
+                        for gate in _folded_xxz_scan(
+                            parity, chain[start:stop], workspace[0], inverse, boundary
+                        )
+                    ]
+                )
+
+            circuit.add(sweeps[0])
+            for index, site in enumerate(range(n + 2, n + nwalls - 1, 2)):
+                circuit.add(
+                    _folded_xxz_reset(
+                        parity[index + 1],
+                        chain[site - 2 : site + 2],
+                        workspace,
+                        magnonic[n],
+                        [counter[0], counter[index + 2]],
+                    )
+                )
+                circuit.add(
+                    _folded_xxz_scan(parity, chain[site - 3 : site], workspace[0])
+                )
+            site, last = n + nwalls, n == nfree - 1
+            circuit.add(
+                _folded_xxz_reset(
+                    parity[-1],
+                    chain[site - 2 : site + (1 if last else 2)],
+                    workspace,
+                    magnonic[n],
+                    [counter[0], counter[-1]],
+                    last=last,
+                )
+            )
+            circuit.add(sweeps[1])
+
+    circuit.add(gates.X(counter[1]))
+    circuit.add(gates.X(parity[0]))
+
+    return circuit
+
+
+def _folded_xxz_cswap(
+    control: int, first: int, second: int, absent: tuple[int, int]
+) -> list[Gate]:
+    """Controlled-SWAP gate up to a relative phase, with :math:`5` CNOTs instead of :math:`8`.
+
+    The gate is a CNOT, a Toffoli gate up to a relative phase, and a CNOT. The relative phase is
+    a sign for the state in which the control is :math:`\\ket{0}` and ``absent`` is the state of
+    ``first`` and ``second``, so it is only valid if that state of the two qubits is never present.
+
+    Args:
+        control (int): control qubit.
+        first (int): first qubit that is swapped.
+        second (int): second qubit that is swapped.
+        absent (tuple[int, int]): either :math:`(0, 1)` or :math:`(1, 1)`, which is the state of
+            ``first`` and ``second`` that is never present.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates that implement the controlled gate.
+
+    References:
+        1. D. Maslov, *Advantages of using relative-phase Toffoli gates with an application to
+        multiple control Toffoli optimization*, `Phys. Rev. A 93, 022311 (2016)
+        <https://doi.org/10.1103/PhysRevA.93.022311>`_.
+    """
+    # to avoid circular import
+    from qibo.transpiler.decompositions.multicontrolled_decompositions import _toffoli
+
+    # after the first CNOT, ``first`` is the parity of the two qubits, which with ``second`` in 1
+    # is (1, 1) if the absent state is (0, 1) and (0, 1) if it is (1, 1)
+    controls = (control, first) if absent == (0, 1) else (first, control)
+    gate_list = [gates.CNOT(second, first), gates.X(second)]
+    gate_list.extend(_toffoli(controls, second))
+    gate_list.extend([gates.X(second), gates.CNOT(second, first)])
+
+    return gate_list
+
+
+def _folded_xxz_matchgate(
+    roots: ArrayLike, j: int, k: int, backend: Backend | None = None
+) -> ArrayLike:
+    """Two-qubit matchgate :math:`M_{j,k}` of the free-fermion stage of Ref. [1].
+
+    The entries are ratios of determinants of Gram matrices of the Bethe roots, see Ref. [2].
+
+    Args:
+        roots (ArrayLike): the :math:`2M` Bethe roots, :math:`\\exp(\\pm i p_{a})`.
+        j (int): index :math:`j \\in \\{1, \\ldots, 2M\\}` of the matchgate in its block.
+        k (int): index :math:`k \\geq 1` of the block.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ArrayLike: :math:`4 \\times 4` unitary matrix.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
+        Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+    """
+    backend = _check_backend(backend)
+
+    # Gram matrices with k + 1 and k terms, i.e. C_{k}(x, y) = sum_{i <= k} conj(x)^i y^i
+    products = backend.outer(backend.conj(roots), roots)
+    gram_previous = sum(products**i for i in range(k))
+    gram = gram_previous + products**k
+
+    # leading principal minors of the two matrices, with the empty minor equal to one
+    minors = [
+        [1.0] + [backend.det(matrix[:size, :size]) for size in range(1, j + 1)]
+        for matrix in (gram, gram_previous)
+    ]
+    ones = backend.ones((1, j), dtype=backend.complex128)
+    determinant = backend.det(backend.concatenate((gram[: j - 1, :j], ones), axis=0))
+
+    a = (
+        (-1) ** (j - 1)
+        * determinant
+        / backend.prod(backend.conj(roots[: j - 1]))
+        / backend.sqrt(minors[1][j - 1] * minors[0][j])
+    )
+    b = roots[j - 1] * backend.sqrt(
+        minors[0][j - 1] * minors[1][j] / (minors[1][j - 1] * minors[0][j])
+    )
+    norm = backend.sqrt(backend.abs(a) ** 2 + backend.abs(b) ** 2)
+    a, b = a / norm, b / norm
+
+    return backend.cast(
+        [
+            [1, 0, 0, 0],
+            [0, a, -backend.conj(b), 0],
+            [0, b, backend.conj(a), 0],
+            [0, 0, 0, 1],
+        ],
+        dtype=backend.complex128,
+    )
+
+
+def _folded_xxz_move_after(
+    chain: list[int], workspace: list[int], counter: list[int], start: int
+) -> list[Gate]:
+    """Gates that shift the domain walls located after the current magnon.
+
+    Module of Figs. 5 and 7 of Ref. [1]. The walls are shifted, and the counter of walls is
+    updated, only if the second qubit of ``counter`` is active.
+
+    Args:
+        chain (list[int]): five consecutive qubits of the chain.
+        workspace (list[int]): the two workspace qubits.
+        counter (list[int]): qubits of the register that counts the domain walls.
+        start (int): position in ``counter`` of the first of the ``counter[start:]`` qubits that
+            are updated, in addition to the first two qubits.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = list(chain)
+    q.extend(workspace)
+    q.extend(counter[:2])
+    q.extend(counter[start:])
+    gate_list = [
+        gates.X(q[2]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.X(q[2]),
+        gates.X(q[8]),
+        gates.TOFFOLI(q[5], q[8], q[6]),
+        gates.CNOT(q[6], q[1]),
+        gates.CNOT(q[6], q[2]),
+        gates.CNOT(q[6], q[7]),
+    ]
+    gate_list.extend(
+        gates.SWAP(q[8 + i], q[9 + i]).controlled_by(q[6])
+        for i in reversed(range(1, len(q) - 9))
+    )
+    gate_list.extend(
+        [
+            gates.TOFFOLI(q[5], q[8], q[6]),
+            gates.X(q[0]),
+            gates.TOFFOLI(q[0], q[1], q[5]),
+            gates.X(q[0]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[3], q[4], q[5]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[5], q[8], q[6]),
+            gates.CNOT(q[6], q[2]),
+            gates.CNOT(q[6], q[3]),
+            gates.CNOT(q[6], q[7]),
+            gates.TOFFOLI(q[5], q[8], q[6]),
+            gates.X(q[8]),
+            gates.X(q[2]),
+            gates.TOFFOLI(q[1], q[2], q[5]),
+            gates.X(q[2]),
+        ]
+    )
+
+    return gate_list
+
+
+def _folded_xxz_move_before(
+    chain: list[int],
+    workspace: list[int],
+    magnon: int,
+    counter: list[int],
+    first: bool = False,
+) -> list[Gate]:
+    """Gates that shift the domain walls located before the current magnon.
+
+    Module of Figs. 5 and 6 of Ref. [1]. The walls are shifted, and the counter of walls is
+    updated, only if the qubit ``magnon`` is active.
+
+    Args:
+        chain (list[int]): four (if ``first is True``) or five consecutive qubits of the chain.
+        workspace (list[int]): the two workspace qubits.
+        magnon (int): qubit of the current magnon.
+        counter (list[int]): qubits of the register that counts the domain walls. The module
+            acts on its first three qubits if ``first is True``, and on all of them otherwise.
+        first (bool, optional): if ``True``, returns the module for the first four qubits of
+            the chain. Defaults to ``False``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = list(chain)
+    q.extend(workspace)
+    q.append(magnon)
+    q.extend(counter[:3] if first else counter)
+    if first:
+        return [
+            gates.CNOT(q[1], q[4]),
+            gates.X(q[1]),
+            gates.TOFFOLI(q[1], q[2], q[4]),
+            gates.X(q[1]),
+            gates.TOFFOLI(q[4], q[6], q[5]),
+            gates.CNOT(q[5], q[0]),
+            gates.CNOT(q[5], q[1]),
+            gates.CNOT(q[5], q[7]),
+            gates.SWAP(q[8], q[9]).controlled_by(q[5]),
+            gates.TOFFOLI(q[4], q[6], q[5]),
+            gates.CNOT(q[0], q[4]),
+            gates.X(q[2]),
+            gates.TOFFOLI(q[1], q[2], q[4]),
+            gates.X(q[2]),
+            gates.X(q[3]),
+            gates.TOFFOLI(q[2], q[3], q[4]),
+            gates.X(q[3]),
+        ]
+
+    gate_list = [
+        gates.X(q[2]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.X(q[2]),
+        gates.TOFFOLI(q[5], q[7], q[6]),
+        gates.CNOT(q[6], q[1]),
+        gates.CNOT(q[6], q[2]),
+        gates.CNOT(q[6], q[8]),
+    ]
+    gate_list.extend(
+        gates.SWAP(q[8 + i], q[9 + i]).controlled_by(q[6])
+        for i in reversed(range(1, len(q) - 9))
+    )
+    gate_list.extend(
+        [
+            gates.TOFFOLI(q[5], q[7], q[6]),
+            gates.X(q[0]),
+            gates.TOFFOLI(q[0], q[1], q[5]),
+            gates.X(q[0]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[3], q[4], q[5]),
+            gates.X(q[4]),
+            gates.TOFFOLI(q[5], q[7], q[6]),
+            gates.CNOT(q[6], q[2]),
+            gates.CNOT(q[6], q[3]),
+            gates.CNOT(q[6], q[8]),
+            gates.TOFFOLI(q[5], q[7], q[6]),
+            gates.X(q[2]),
+            gates.TOFFOLI(q[1], q[2], q[5]),
+            gates.X(q[2]),
+        ]
+    )
+
+    return gate_list
+
+
+def _folded_xxz_multicontrolled(
+    controls: list[int],
+    negated: list[int],
+    target: int,
+    workspace: int,
+    relative_phase: bool = False,
+    absent: tuple[int, int, int] | None = None,
+) -> list[Gate]:
+    """Gates of an :math:`X` gate with one to three controls, which can be negated.
+
+    A gate with three controls is decomposed into three Toffoli gates that use an auxiliary qubit.
+
+    Args:
+        controls (list[int]): qubits that activate the gate when they are in the state
+            :math:`\\ket{1}`.
+        negated (list[int]): qubits that activate the gate when they are in the state
+            :math:`\\ket{0}`.
+        target (int): target qubit.
+        workspace (int): auxiliary qubit in the state :math:`\\ket{0}`, which is only used when
+            there are three controls in total.
+        relative_phase (bool, optional): If ``True``, the Toffoli gates that compute and
+            uncompute the auxiliary qubit are implemented up to a relative phase with fewer
+            CNOTs. The phases cancel for any state. Defaults to ``False``.
+        absent (tuple[int, int, int], optional): If given, the Toffoli gate on the target is
+            implemented up to a relative phase with fewer CNOTs. It is the state of the last two
+            controls and the target that is never present, where the controls are either
+            :math:`(0, 1)` or :math:`(1, 0)`. For three controls, the last two controls are the
+            auxiliary qubit and the third control. Defaults to ``None``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates that implement the controlled gate.
+    """
+    # to avoid circular import
+    from qibo.transpiler.decompositions.multicontrolled_decompositions import _toffoli
+
+    qubits = list(controls)
+    qubits.extend(negated)
+    gate_list = [gates.X(qubit) for qubit in negated]
+    if len(qubits) == 1:
+        gate_list.append(gates.CNOT(qubits[0], target))
+    else:
+        last = qubits if len(qubits) == 2 else [workspace, qubits[2]]
+        if len(qubits) == 3:
+            compute = (
+                _toffoli((qubits[0], qubits[1]), workspace)
+                if relative_phase
+                else [gates.TOFFOLI(qubits[0], qubits[1], workspace)]
+            )
+            gate_list.extend(compute)
+        if absent is not None:
+            # the gate has a sign for the state ``absent`` if its controls are in the order
+            # (0, 1) and the target is in 0, and the other cases are conjugations of it
+            if absent[2]:
+                gate_list.append(gates.X(target))
+            gate_list.extend(
+                _toffoli(tuple(last if absent[:2] == (0, 1) else last[::-1]), target)
+            )
+            if absent[2]:
+                gate_list.append(gates.X(target))
+        else:
+            gate_list.append(gates.TOFFOLI(last[0], last[1], target))
+        if len(qubits) == 3:
+            gate_list.extend(compute)
+    gate_list.extend(gates.X(qubit) for qubit in negated)
+
+    return gate_list
+
+
+def _folded_xxz_reset(
+    parity: int,
+    chain: list[int],
+    workspace: list[int],
+    magnon: int,
+    counter: list[int],
+    last: bool = False,
+) -> list[Gate]:
+    """Gates that uncompute the registers that count the domain walls.
+
+    Module ``RESET`` of Fig. 9 of Ref. [1].
+
+    Args:
+        parity (int): qubit of the register that guarantees that the chain is decoupled from
+            the auxiliary qubits.
+        chain (list[int]): four (or three, if ``last is True``) consecutive qubits of the chain.
+        workspace (list[int]): the two workspace qubits.
+        magnon (int): qubit of the current magnon.
+        counter (list[int]): two qubits of the register that counts the domain walls.
+        last (bool, optional): if ``True``, returns the module for the last three qubits of the
+            chain. Defaults to ``False``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = [parity]
+    q.extend(chain)
+    q.extend(workspace)
+    q.append(magnon)
+    q.extend(counter)
+    if last:
+        return [
+            gates.X(q[2]),
+            gates.TOFFOLI(q[2], q[3], q[4]),
+            gates.TOFFOLI(q[1], q[4], q[6]),
+            gates.TOFFOLI(q[0], q[6], q[7]),
+            gates.X(q[1]),
+            gates.CNOT(q[1], q[5]),
+            gates.TOFFOLI(q[4], q[5], q[6]),
+            gates.TOFFOLI(q[0], q[6], q[8]),
+            gates.TOFFOLI(q[4], q[5], q[6]),
+            gates.CNOT(q[1], q[5]),
+            gates.X(q[1]),
+            gates.TOFFOLI(q[1], q[4], q[6]),
+            gates.TOFFOLI(q[2], q[3], q[4]),
+            gates.X(q[2]),
+        ]
+
+    return [
+        gates.X(q[2]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.TOFFOLI(q[1], q[5], q[7]),
+        gates.TOFFOLI(q[0], q[7], q[8]),
+        gates.X(q[4]),
+        gates.X(q[1]),
+        gates.TOFFOLI(q[1], q[4], q[6]),
+        gates.TOFFOLI(q[5], q[6], q[7]),
+        gates.TOFFOLI(q[0], q[7], q[9]),
+        gates.TOFFOLI(q[5], q[6], q[7]),
+        gates.TOFFOLI(q[1], q[4], q[6]),
+        gates.X(q[1]),
+        gates.TOFFOLI(q[1], q[5], q[7]),
+        gates.X(q[4]),
+        gates.TOFFOLI(q[2], q[3], q[5]),
+        gates.X(q[2]),
+    ]
+
+
+def _folded_xxz_scan(
+    parity: list[int],
+    chain: list[int],
+    workspace: int,
+    inverse: bool = False,
+    boundary: bool = False,
+) -> list[Gate]:
+    """Gates that search and count the domain walls in a block of consecutive chain qubits.
+
+    Module ``SCAN`` of Fig. 9 of Ref. [1].
+
+    Args:
+        parity (list[int]): qubits of the register that guarantees that the chain is decoupled
+            from the auxiliary qubits.
+        chain (list[int]): consecutive qubits of the chain that are scanned.
+        workspace (int): workspace qubit.
+        inverse (bool, optional): if ``True``, returns the inverse module. Defaults to ``False``.
+        boundary (bool, optional): if ``True``, ``chain`` starts at the first site of the
+            chain, which is adjacent to the left boundary qubit. Defaults to ``False``.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the module.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+    """
+    q = list(parity)
+    q.extend(chain)
+    q.append(workspace)
+    ncounter, work = len(parity), len(q) - 1
+    gate_list = []
+    for i in reversed(range(ncounter + 1, work)):
+        gate_list.extend(
+            [
+                gates.X(q[i - 1]),
+                gates.TOFFOLI(q[i - 1], q[i], q[work]),
+                gates.X(q[i - 1]),
+            ]
+        )
+    if boundary:
+        gate_list.append(gates.CNOT(q[ncounter], q[work]))
+    if inverse:
+        gate_list.extend(
+            gates.SWAP(q[i], q[i + 1]).controlled_by(q[work])
+            for i in range(ncounter - 1)
+        )
+    else:
+        gate_list.extend(
+            gates.SWAP(q[i - 1], q[i]).controlled_by(q[work])
+            for i in reversed(range(1, ncounter))
+        )
+    if boundary:
+        gate_list.append(gates.CNOT(q[ncounter], q[work]))
+    for i in range(ncounter, work - 1):
+        gate_list.extend(
+            [gates.X(q[i]), gates.TOFFOLI(q[i], q[i + 1], q[work]), gates.X(q[i])]
+        )
+
+    return gate_list
+
+
+def _folded_xxz_seed(
+    roots: ArrayLike, nsites: int, backend: Backend | None = None
+) -> ArrayLike:
+    """Dense unitary that loads the seed state of the free-fermion stage of Ref. [1].
+
+    The seed state of :math:`2M` qubits has :math:`M` excitations. Its amplitudes are the product
+    of a Cholesky factor of the :math:`M`-th compound matrix of a Gram matrix of the Bethe roots,
+    and of a product state of :math:`M` pairs of qubits, see Ref. [2]. The unitary is obtained
+    by completing the seed state into an orthonormal basis with a Householder reflection.
+
+    Args:
+        roots (ArrayLike): the :math:`2M` Bethe roots, :math:`\\exp(\\pm i p_{a})`.
+        nsites (int): number of sites of the free-fermion chain.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ArrayLike: unitary matrix of dimension :math:`2^{2M}` whose first column is the seed state.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
+        Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+    """
+    backend = _check_backend(backend)
+
+    nmagnons = len(roots) // 2
+    products = backend.outer(backend.conj(roots), roots)
+    gram = sum(products**i for i in range(nsites))
+    # subsets of the roots with M elements, sorted by the integer with those bits set
+    subsets = sorted(
+        itertools.combinations(range(2 * nmagnons), nmagnons), key=lambda s: s[::-1]
+    )
+    dim = len(subsets)
+    compound = backend.cast(
+        [
+            [backend.det(gram[list(rows)][:, list(cols)]) for cols in subsets]
+            for rows in subsets
+        ],
+        dtype=backend.complex128,
+    )
+
+    lower = backend.zeros((dim, dim), dtype=backend.complex128)
+    for row in range(dim):
+        for col in range(row + 1):
+            value = compound[row, col] - backend.sum(
+                lower[row, :col] * backend.conj(lower[col, :col])
+            )
+            lower[row, col] = (
+                backend.sqrt(backend.real(value))
+                if row == col
+                else value / lower[col, col]
+            )
+
+    # product state of the pairs of qubits (2a, 2a + 1), with one excitation on each pair
+    pairs = range(nmagnons)
+    product_state = backend.cast(
+        [
+            (
+                backend.prod(
+                    backend.cast(
+                        [
+                            roots[2 * a] if 2 * a in subset else -roots[2 * a + 1]
+                            for a in pairs
+                        ],
+                        dtype=backend.complex128,
+                    )
+                )
+                if all((2 * a in subset) != (2 * a + 1 in subset) for a in pairs)
+                else 0.0
+            )
+            for subset in subsets
+        ],
+        dtype=backend.complex128,
+    )
+    amplitudes = backend.matmul(backend.conj(lower).T, product_state)
+
+    state = backend.zeros(2 ** (2 * nmagnons), dtype=backend.complex128)
+    for subset, amplitude in zip(subsets, amplitudes):
+        state[sum(2 ** (2 * nmagnons - 1 - qubit) for qubit in subset)] = amplitude
+    state = state / backend.vector_norm(state)
+
+    # ``state`` is completed into an orthonormal basis with a Householder reflection,
+    # which maps the first basis vector onto ``state`` exactly. A QR decomposition of
+    # ``[state, e_1, ..., e_{d - 1}]`` cannot be used instead: ``state[0]`` always
+    # vanishes, because index 0 carries no excitation while every subset carries
+    # ``nmagnons`` of them, so that matrix is singular by construction and ``diag(r)``
+    # holds a zero whose phase cannot be normalized. For the same reason ``reflector``
+    # has norm exactly :math:`\sqrt{2}`, so the reflection below is well conditioned.
+    matrix = backend.identity(2 ** (2 * nmagnons), dtype=backend.complex128)
+    reflector = state - matrix[:, 0]
+    norm_squared = backend.sum(backend.abs(reflector) ** 2)
+
+    return matrix - 2 * backend.outer(reflector, backend.conj(reflector)) / norm_squared
+
+
 def _gate_params(
     bsi: list[int], bsip1: list[int], keep_antictrls: bool = False
 ) -> tuple[list[int], ...]:

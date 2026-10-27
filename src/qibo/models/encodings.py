@@ -22,6 +22,8 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _dicke_tree_cuts,
     _ehrlich_algorithm,
     _fanout_parity_tree,
+    _folded_merged,
+    _folded_sopena,
     _generate_rbs_angles,
     _generate_rbs_pairs,
     _get_gate,
@@ -486,6 +488,164 @@ def fanout_synthesis(
     fanout.add(queue[::-1])
 
     return fanout
+
+
+def folded_xxz_eigenstate(
+    nsites: int,
+    nmagnons: int,
+    domains: list[list[int]] | None = None,
+    modes: list[int] | None = None,
+    method: str = "sopena",
+    backend: Backend | None = None,
+) -> Circuit:
+    """Create circuit that prepares an eigenstate of the open-boundary folded XXZ spin chain.
+
+    Let :math:`n` be the number of sites of the chain. The folded XXZ Hamiltonian is
+
+    .. math::
+        H = -\\frac{1}{8} \\sum_{j=0}^{n-2} \\left(1 + Z_{j} Z_{j+3}\\right)
+            \\left(X_{j+1} X_{j+2} + Y_{j+1} Y_{j+2}\\right) \\, ,
+
+    where the boundary sites :math:`0` and :math:`n + 1` are frozen to :math:`\\ket{0}`.
+    These two sites are not part of the register, which holds sites :math:`1, \\ldots, n`,
+    with site :math:`1` being the first qubit. Spin-down sites are the :math:`\\ket{1}` states.
+    Its dynamics is kinetically constrained, and the Hilbert space splits into independent
+    fragments. An eigenstate :math:`\\ket{\\psi}` of a fragment contains
+
+    * :math:`M` magnons, which are isolated spin-down sites in a spin-up domain (particles) or
+      isolated spin-up sites in a spin-down domain (holes), and
+    * :math:`2 L` static domain walls, which delimit :math:`L` blocks of spin-down sites,
+      and are displaced by two sites each time a magnon crosses them.
+
+    The fragment is fixed by the number of magnons and by the blocks ``domains`` of the reference
+    configuration, in which the magnons are packed to the left at the lowest allowed positions,
+    i.e. at sites :math:`1, 3, \\ldots, 2M - 1`. The magnons have momenta
+    :math:`p_{a} = \\pi \\, m_{a} / (n_{0} + 1)`, with :math:`n_{0} = n - M + 1 - 2L` and
+    :math:`m_{1} < \\cdots < m_{M}` integers in :math:`[1, n_{0}]`, and the energy is
+    :math:`E = -\\sum_{a=1}^{M} \\cos(p_{a})`. The circuit has three stages following Ref. [1]:
+    the preparation of a Slater determinant of :math:`M` free fermions in a squeezed chain of
+    :math:`n_{0}` sites, which needs :math:`n_{0} \\geq 2M`; a network of controlled-SWAP gates that
+    enforces the hard-core repulsion between magnons; and the insertion of the domain walls.
+    These stages can be implemented with two different methods. With ``"sopena"``, the free
+    fermions are prepared with the algebraic Bethe circuit of Refs. [2, 3], which starts from a
+    dense unitary on :math:`2M` qubits and limits :math:`M` to a few. Then, the magnons are
+    shifted in place, and inserted one by one in the chain with the domain walls. With
+    ``"merged"``, the free fermions are prepared with :math:`M (n_{0} - 1) - M (M - 1) / 2` Givens
+    rotations (see Refs. [4, 5]), and the last two stages are performed at once: a single pass
+    over the squeezed chain writes the output in a separate register, and a second pass clears
+    the input from the output. For domain walls, it needs fewer qubits and gates, and for no
+    domain walls, it needs more.
+
+    The first ``nsites`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
+    qubits, which are returned to :math:`\\ket{0}`, and thus the state of the chain can be read
+    out by discarding them.
+
+    Args:
+        nsites (int): number of sites :math:`n` of the chain.
+        nmagnons (int): number of magnons :math:`M`.
+        domains (list[list[int]], optional): blocks of spin-down sites of the reference
+            configuration. Each block is a list of at least two consecutive sites, numbered
+            from :math:`1`. The first block must start at site :math:`2M + 1` or later, and
+            each following block must start at least three sites after the end of the previous
+            one. If ``None``, there are no domain walls. Defaults to ``None``.
+        modes (list[int], optional): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta
+            of the magnons. If ``None``, uses :math:`M` evenly spaced integers between :math:`2`
+            and :math:`n_{0}`, rounded to the nearest integer. Defaults to ``None``.
+        method (str, optional): implementation of the circuit, either ``"sopena"``, following
+            Ref. [1], or ``"merged"``. Defaults to ``"sopena"``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that prepares the eigenstate.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. A. Sopena, M. H. Gordon, D. García-Martín, G. Sierra, and E. López, *Algebraic Bethe
+        Circuits*, `Quantum 6, 796 (2022) <https://doi.org/10.22331/q-2022-09-08-796>`_.
+
+        3. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
+        Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+
+        4. Z. Jiang, K. J. Sung, K. Kechedzhi, V. N. Smelyanskiy, and S. Boixo, *Quantum
+        algorithms to simulate many-body physics of correlated fermions*, `Phys. Rev. Applied 9,
+        044036 (2018) <https://doi.org/10.1103/PhysRevApplied.9.044036>`_.
+
+        5. I. D. Kivlichan, J. McClean, N. Wiebe, C. Gidney, A. Aspuru-Guzik, G. K.-L. Chan, and
+        R. Babbush, *Quantum simulation of electronic structure with linear depth and
+        connectivity*, `Phys. Rev. Lett. 120, 110501 (2018)
+        <https://doi.org/10.1103/PhysRevLett.120.110501>`_.
+    """
+    backend = _check_backend(backend)
+
+    if method not in ("sopena", "merged"):
+        raise_error(
+            ValueError,
+            f"``method`` must be either ``sopena`` or ``merged``, but it is ``{method}``.",
+        )
+
+    domains = [list(domain) for domain in domains or []]
+    nwalls = 2 * len(domains)
+    nfree = nsites - nwalls  # sites of the chain that are not domain walls
+    nsqueezed = nfree - nmagnons + 1  # sites of the free-fermion chain
+
+    if nmagnons < 1:
+        raise_error(
+            ValueError,
+            f"``nmagnons`` must be a positive integer, but it is {nmagnons}.",
+        )
+
+    if nsqueezed < 2 * nmagnons:
+        raise_error(
+            ValueError,
+            f"Cannot fit {nmagnons} magnon(s) and {nwalls} domain walls in a chain of "
+            + f"{nsites} sites, because the squeezed chain needs at least 2 * ``nmagnons`` "
+            + f"sites, but it has {nsqueezed}.",
+        )
+
+    if modes is None:
+        step = (nsqueezed - 2) / (nmagnons - 1) if nmagnons > 1 else 0
+        modes = [round(2 + a * step) for a in range(nmagnons)]
+    modes = list(modes)
+
+    if (
+        len(modes) != nmagnons
+        or any(not isinstance(mode, (int, np.integer)) for mode in modes)
+        or modes != sorted(set(modes))
+        or modes[0] < 1
+        or modes[-1] > nsqueezed
+    ):
+        raise_error(
+            ValueError,
+            f"``modes`` must be {nmagnons} distinct increasing integers in [1, {nsqueezed}], "
+            + f"but it is {modes}.",
+        )
+
+    previous_end = 2 * nmagnons - 2
+    for domain in domains:
+        if (
+            len(domain) < 2
+            or domain != list(range(domain[0], domain[0] + len(domain)))
+            or domain[0] < previous_end + 3
+            or domain[-1] > nsites
+        ):
+            raise_error(
+                ValueError,
+                f"Invalid domain {domain}. Domains must consist of at least two consecutive "
+                + "sites inside the chain, the first one must start at site "
+                + f"{2 * nmagnons + 1} or later, and each following one at least three "
+                + "sites after the end of the previous one.",
+            )
+        previous_end = domain[-1]
+
+    if method == "merged":
+        return _folded_merged(nsites, nmagnons, domains, modes, backend)
+
+    return _folded_sopena(nsites, nmagnons, domains, modes, backend)
 
 
 def ghz_state(nqubits: int, **kwargs) -> Circuit:
