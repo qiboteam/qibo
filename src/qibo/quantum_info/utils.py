@@ -32,6 +32,69 @@ def _pauli_basis_normalization(nqubits: int):
     return float(np.sqrt(2**nqubits))
 
 
+def bitstring_to_phase(bitstring: str | list | tuple) -> float:
+    """Converts a bitstring into the phase it encodes as a binary fraction.
+
+    The bitstring :math:`b_{1} b_{2} \\cdots b_{t}`, with :math:`b_{1}` being the most
+    significant bit, is mapped to
+
+    .. math::
+        \\varphi = 0.b_{1} b_{2} \\cdots b_{t} = \\sum_{j=1}^{t} \\, b_{j} \\, 2^{-j} \\, ,
+
+    which belongs to the interval :math:`[0, \\, 1)` (for :math:`t > 53`, the result can be
+    rounded to :math:`1`, as it is a ``float``). This is the outcome of measuring the
+    :math:`t` counting qubits at the end of quantum phase estimation, where the eigenvalue of
+    the unitary is :math:`e^{2 \\pi i \varphi}`. The corresponding angle is
+    :math:`2 \\pi \varphi`. In the keys of :meth:`qibo.result.MeasurementOutcomes.frequencies`
+    with ``binary=True``, the first bit is the outcome of the first measured qubit, which
+    must then be the most significant one.
+
+    Args:
+        bitstring (str or list or tuple): sequence of bits, *e.g.* ``"0101"`` or ``[0, 1, 0, 1]``,
+            with the most significant bit first. It cannot be an ``int``, since the leading
+            zeros of a bitstring are part of the phase and are lost in the integer
+            representation.
+
+    Returns:
+        float: phase encoded in ``bitstring``.
+
+    Example:
+
+        .. testcode::
+
+            from qibo.quantum_info import bitstring_to_phase
+
+            # 0.0101 in binary is 1/4 + 1/16
+            print(bitstring_to_phase("0101"))
+
+        .. testoutput::
+
+            0.3125
+
+    References:
+        1. R. Cleve, A. Ekert, C. Macchiavello, and M. Mosca, *Quantum algorithms revisited*,
+        `Proc. R. Soc. Lond. A 454, 339 (1998) <https://arxiv.org/abs/quant-ph/9708016>`_.
+
+        2. M. A. Nielsen and I. L. Chuang, *Quantum Computation and Quantum Information*,
+        Cambridge University Press (2010), Sec. 5.2.
+    """
+    if isinstance(bitstring, int):
+        raise_error(
+            TypeError,
+            "bitstring must be a str, list or tuple of bits, since leading zeros are "
+            + f"lost in the int representation, but it is type {type(bitstring)}.",
+        )
+
+    bits = [str(bit) for bit in bitstring]
+    if len(bits) == 0 or any(bit not in ("0", "1") for bit in bits):
+        raise_error(
+            ValueError,
+            f"bitstring must be a non-empty sequence of 0's and 1's, but it is {bitstring}.",
+        )
+
+    return int("".join(bits), 2) / 2 ** len(bits)
+
+
 def hamming_weight(
     bitstring: int | str | list | tuple, return_indexes: bool = False
 ) -> int | list[int]:
