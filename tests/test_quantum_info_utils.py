@@ -60,13 +60,21 @@ def test_bitstring_to_phase_leading_zeros_and_large_bitstrings():
     assert bitstring_to_phase("1" * 53) == 1 - 2**-53
 
 
-@pytest.mark.parametrize("bitstring", [5, True, 0])
+@pytest.mark.parametrize("bitstring", [5, True, 0, np.int64(5), np.uint8(3)])
 def test_bitstring_to_phase_int_error(bitstring):
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="leading zeros are lost"):
         bitstring_to_phase(bitstring)
 
-    with pytest.raises(TypeError):
-        bitstring_to_phase(0.5)
+
+@pytest.mark.parametrize("bitstring", [0.5, None, 1j, np.float64(0.5), np.array(1)])
+def test_bitstring_to_phase_non_iterable_error(bitstring):
+    # the message is the one of the function, not the one of the iteration of the object
+    with pytest.raises(
+        TypeError, match="must be a str, list or tuple of bits"
+    ) as error:
+        bitstring_to_phase(bitstring)
+    assert "leading zeros" not in str(error.value)
+    assert "not iterable" not in str(error.value)
 
 
 @pytest.mark.parametrize(

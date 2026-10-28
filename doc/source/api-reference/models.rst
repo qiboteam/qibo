@@ -350,6 +350,36 @@ CNOT ladder synthesis in log depth
 .. autofunction:: qibo.models.encodings.ladder_synthesis
 
 
+Leaf-separable Encoder
+^^^^^^^^^^^^^^^^^^^^^^
+
+Prepares states of fixed Hamming weight whose qubits are split in contiguous groups (leaves),
+such that, for each distribution of the weight among the leaves, the state is a product over
+leaves. The leaves are correlated only through the weight distribution.
+The circuit combines the weight distribution blocks of :func:`qibo.models.encodings.dicke_state`
+with Hamming weight encoders acting on the leaves, and needs no auxiliary qubits.
+
+For instance, the Dicke state :math:`\ket{D_{2}^{6}}` is leaf-separable, and the following
+example prepares it on :math:`6` qubits split in leaves of :math:`2` qubits.
+
+.. testsetup::
+
+    import numpy as np
+
+    from qibo.models.encodings import leaf_separable_encoder
+
+.. testcode::
+
+    nqubits, weight, leaf_size = 6, 2, 2
+
+    # amplitudes of the 15 basis states of Hamming weight 2, in ascending order
+    data = np.ones(15)
+
+    circuit = leaf_separable_encoder(nqubits, weight, leaf_size, data)
+
+.. autofunction:: qibo.models.encodings.leaf_separable_encoder
+
+
 Permutation synthesis
 ^^^^^^^^^^^^^^^^^^^^^
 
