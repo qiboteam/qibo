@@ -1,3 +1,5 @@
+import math
+from collections import Counter
 from functools import reduce
 from re import finditer
 
@@ -7,11 +9,13 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.backends import NumpyBackend
 from qibo.config import PRECISION_TOL
+from qibo.models import QPE
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.quantum_info.utils import (
     bitstring_to_phase,
     decompose_permutation,
+    estimate_phase,
     haar_integral,
     hadamard_transform,
     hamming_distance,
@@ -79,6 +83,94 @@ def test_bitstring_to_phase_non_iterable_error(bitstring):
 def test_bitstring_to_phase_value_error(bitstring):
     with pytest.raises(ValueError):
         bitstring_to_phase(bitstring)
+
+
+@pytest.mark.parametrize(
+    "frequencies, phase",
+    [
+        (Counter({"0101": 90, "0100": 6, "0110": 4}), 5 / 16),
+        ({"00": 0.1, "01": 0.2, "10": 0.6, "11": 0.1}, 0.5),
+        ({"1": 1}, 0.5),
+        # the first of the most probable outcomes is used
+        ({"01": 5, "10": 5}, 0.25),
+        ({"10": 5, "01": 5}, 0.5),
+    ],
+)
+def test_estimate_phase_mapping(frequencies, phase):
+    assert estimate_phase(frequencies) == phase
+
+
+@pytest.mark.parametrize(
+    "probabilities, phase",
+    [
+        ([0.05, 0.1, 0.6, 0.25], 0.5),
+        ([0.7, 0.1, 0.1, 0.1], 0.0),
+        ([0.0, 0.1, 0.1, 0.8, 0.0, 0.0, 0.0, 0.0], 3 / 8),
+        ([0.5, 0.5], 0.0),
+    ],
+)
+def test_estimate_phase_array(backend, probabilities, phase):
+    assert estimate_phase(backend.cast(probabilities)) == phase
+
+
+@pytest.mark.parametrize("nqubits_counting", [3, 4])
+@pytest.mark.parametrize("numerator", [1, 5])
+def test_estimate_phase_result(backend, nqubits_counting, numerator):
+    phase = numerator / 2**nqubits_counting
+    unitary = Circuit(1)
+    unitary.add(gates.U1(0, theta=2 * math.pi * phase))
+    qpe = QPE(unitary, nqubits_counting)
+
+    circuit = Circuit(qpe.nqubits)
+    circuit.add(gates.X(nqubits_counting))
+    circuit.add(qpe)
+    result = backend.execute_circuit(circuit, nshots=100)
+
+    assert estimate_phase(result) == phase
+    assert estimate_phase(result.frequencies()) == phase
+
+
+@pytest.mark.parametrize("phase", [0.3, 0.7, 0.9])
+def test_estimate_phase_not_representable(backend, phase):
+    nqubits_counting = 5
+    unitary = Circuit(1)
+    unitary.add(gates.U1(0, theta=2 * math.pi * phase))
+    qpe = QPE(unitary, nqubits_counting, measure=False)
+
+    circuit = Circuit(qpe.nqubits)
+    circuit.add(gates.X(nqubits_counting))
+    circuit.add(qpe)
+    result = backend.execute_circuit(circuit)
+    probabilities = result.probabilities(qubits=list(range(nqubits_counting)))
+
+    # the most probable outcome is the closest value to the phase that is representable
+    estimate = estimate_phase(probabilities)
+    assert estimate == round(phase * 2**nqubits_counting) / 2**nqubits_counting
+    assert abs(estimate - phase) <= 2 ** (-nqubits_counting - 1)
+
+
+def test_estimate_phase_errors(backend):
+    with pytest.raises(ValueError):
+        estimate_phase({})
+    with pytest.raises(ValueError):
+        estimate_phase(Counter())
+    # bitstrings with different lengths
+    with pytest.raises(ValueError):
+        estimate_phase({"01": 3, "0": 1})
+    # keys that are not bitstrings
+    with pytest.raises(ValueError):
+        estimate_phase({"02": 3})
+    with pytest.raises(TypeError):
+        estimate_phase({5: 3})
+
+    for invalid in ("0101", 0.5, [0.1, 0.9], None):
+        with pytest.raises(TypeError):
+            estimate_phase(invalid)
+
+    # arrays that are not one-dimensional or do not have 2^t elements, with t > 0
+    for probabilities in ([[0.5, 0.5]], [0.2, 0.3, 0.5], [1.0], 0.5):
+        with pytest.raises(ValueError):
+            estimate_phase(backend.cast(probabilities))
 
 
 @pytest.mark.parametrize("bitstring", range(2**5))

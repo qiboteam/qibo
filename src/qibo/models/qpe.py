@@ -36,7 +36,9 @@ def QPE(
     with :math:`b_{1}` being the outcome of the first qubit, such that :math:`\\varphi` is
     approximated by :math:`0.b_{1} \\cdots b_{t}` in binary, which is exact if :math:`\\varphi`
     is an integer multiple of :math:`2^{-t}`. The conversion from the bitstring into the phase
-    can be done with :func:`qibo.quantum_info.bitstring_to_phase`.
+    can be done with :func:`qibo.quantum_info.bitstring_to_phase`, and the phase of the most
+    probable outcome, *i.e.* the estimate of :math:`\\varphi`, with
+    :func:`qibo.quantum_info.estimate_phase`.
 
     .. note::
         The power :math:`U^{2^{k}}` is implemented by applying the controlled :math:`U` a number
@@ -68,7 +70,7 @@ def QPE(
 
             from qibo import Circuit, gates
             from qibo.models import QPE
-            from qibo.quantum_info import bitstring_to_phase
+            from qibo.quantum_info import estimate_phase
 
             # unitary with eigenstate |1> and eigenvalue exp(2 pi i phase)
             phase = 5 / 16
@@ -84,8 +86,8 @@ def QPE(
             circuit.add(gates.X(nqubits_counting))
             circuit.add(qpe)
 
-            frequencies = circuit(nshots=100).frequencies()
-            print(bitstring_to_phase(frequencies.most_common(1)[0][0]))
+            result = circuit(nshots=100)
+            print(estimate_phase(result))
 
         .. testoutput::
 
