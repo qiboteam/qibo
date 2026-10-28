@@ -160,8 +160,11 @@ def test_estimate_phase_errors(backend):
     # keys that are not bitstrings
     with pytest.raises(ValueError):
         estimate_phase({"02": 3})
-    with pytest.raises(TypeError):
-        estimate_phase({5: 3})
+    # keys that are not bitstrings raise the error of the conversion into a phase, instead of
+    # an error about the length of the keys
+    for keys in ({5: 3}, {5: 3, 2: 1}, {None: 1}):
+        with pytest.raises(TypeError, match="must be a str, list or tuple of bits"):
+            estimate_phase(keys)
 
     for invalid in ("0101", 0.5, [0.1, 0.9], None):
         with pytest.raises(TypeError):

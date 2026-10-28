@@ -1,4 +1,5 @@
 import math
+from numbers import Integral
 
 from numpy.typing import ArrayLike
 
@@ -136,11 +137,17 @@ def QPE(
         unitary = Circuit(len(qubits))
         unitary.add(gate)
 
-    if not isinstance(nqubits_counting, int) or nqubits_counting < 1:
+    if (
+        isinstance(nqubits_counting, bool)
+        or not isinstance(nqubits_counting, Integral)
+        or nqubits_counting < 1
+    ):
         raise_error(
             ValueError,
             f"nqubits_counting must be a positive integer, but it is {nqubits_counting}.",
         )
+
+    nqubits_counting = int(nqubits_counting)
 
     counting_qubits = list(range(nqubits_counting))
     target_qubits = list(range(nqubits_counting, nqubits_counting + unitary.nqubits))

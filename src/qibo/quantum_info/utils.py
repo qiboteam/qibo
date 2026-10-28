@@ -178,6 +178,9 @@ def estimate_phase(
         if len(outcomes) == 0:
             raise_error(ValueError, "outcomes cannot be empty.")
 
+        # the most probable key is validated before the lengths are compared, so that keys that
+        # are not bitstrings, such as the integers of ``frequencies(binary=False)``, raise an
+        # informative error instead of failing when their length is computed
         bitstring = max(outcomes, key=outcomes.get)
         phase = bitstring_to_phase(bitstring)
         if any(len(key) != len(bitstring) for key in outcomes):

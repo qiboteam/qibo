@@ -2,6 +2,7 @@
 
 import math
 
+import numpy as np
 import pytest
 
 from qibo import Circuit, gates
@@ -232,11 +233,24 @@ def test_qpe_gate_qubits(backend):
         assert gate.qubits != target_gate.qubits
 
 
+@pytest.mark.parametrize("nqubits_counting", [np.int64(3), np.uint8(3), np.int32(3)])
+def test_qpe_numpy_integer_counting_qubits(backend, nqubits_counting):
+    unitary = Circuit(1)
+    unitary.add(gates.U1(0, theta=0.3))
+
+    qpe = QPE(unitary, nqubits_counting, measure=False)
+    target = QPE(unitary, 3, measure=False)
+    assert isinstance(qpe.nqubits, int)
+    assert qpe.nqubits == target.nqubits == 4
+    assert qpe.ngates == target.ngates
+    backend.assert_circuitclose(qpe, target)
+
+
 def test_qpe_errors(backend):
     unitary = Circuit(1)
     unitary.add(gates.U1(0, theta=0.3))
 
-    for nqubits_counting in (0, -1, 2.5, "3"):
+    for nqubits_counting in (0, -1, 2.5, "3", True, False, np.int64(0), np.int8(-1)):
         with pytest.raises(ValueError):
             QPE(unitary, nqubits_counting)
 
