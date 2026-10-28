@@ -100,6 +100,14 @@ def test_hash_grover(h_value, collisions, b):
     run_script(args)
 
 
+@pytest.mark.parametrize("nqubits_counting", [4, 6])
+@pytest.mark.parametrize("tau", [0.5, 1.0])
+def test_qpe(nqubits_counting, tau, nshots=100):
+    args = locals()
+    os.chdir(os.path.join(base_dir, "qpe"))
+    run_script(args)
+
+
 @pytest.mark.parametrize(("nqubits", "subsize"), [(3, 1), (4, 2)])
 @pytest.mark.parametrize("nlayers", [1, 2])
 @pytest.mark.parametrize("nshots", [1000])
