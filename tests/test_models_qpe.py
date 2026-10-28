@@ -6,7 +6,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.models import QFT, QPE
-from qibo.quantum_info import bitstring_to_phase
+from qibo.quantum_info import bitstring_to_phase, random_unitary
 
 
 def _estimated_phase(backend, circuit, nshots=100, **kwargs):
@@ -161,17 +161,109 @@ def test_qpe_phase_not_representable(backend, phase):
     assert abs(estimate - phase) <= 2 ** (-nqubits_counting - 1)
 
 
-def test_qpe_errors():
+@pytest.mark.parametrize("nqubits", [1, 2])
+@pytest.mark.parametrize("kind", ["circuit", "gate", "matrix"])
+def test_qpe_unitary_types(backend, kind, nqubits):
+    """Estimates the eigenphases of a random unitary given as a circuit, gate or matrix."""
+    nqubits_counting = 3
+    numerators = [1, 3, 5, 6][: 2**nqubits]
+    eigenvectors = random_unitary(2**nqubits, backend=backend)
+    eigenvalues = backend.exp(
+        2j
+        * math.pi
+        * backend.cast(numerators, dtype=backend.dtype)
+        / 2**nqubits_counting
+    )
+    matrix = backend.matmul(
+        backend.matmul(eigenvectors, backend.diag(eigenvalues)),
+        backend.conj(eigenvectors).T,
+    )
+    target_qubits = range(nqubits_counting, nqubits_counting + nqubits)
+
+    for index, numerator in enumerate(numerators):
+        if kind == "matrix":
+            unitary = matrix
+        else:
+            unitary = gates.Unitary(matrix, *range(nqubits))
+        if kind == "circuit":
+            unitary_circuit = Circuit(nqubits)
+            unitary_circuit.add(unitary)
+            unitary = unitary_circuit
+        qpe = QPE(unitary, nqubits_counting)
+        assert qpe.nqubits == nqubits_counting + nqubits
+
+        # eigenstate |index> of the unitary, built from the eigenvectors
+        circuit = Circuit(qpe.nqubits)
+        circuit.add(
+            gates.X(qubit)
+            for qubit, bit in zip(target_qubits, f"{index:0{nqubits}b}")
+            if bit == "1"
+        )
+        circuit.add(gates.Unitary(eigenvectors, *target_qubits))
+        circuit.add(qpe)
+
+        assert _estimated_phase(backend, circuit) == numerator / 2**nqubits_counting
+
+
+def test_qpe_gate_qubits(backend):
+    """The qubits of a gate are relabeled in increasing order, as in a smaller circuit."""
+    nqubits_counting = 3
+    matrix = random_unitary(4, backend=backend)
+    single_qubit_matrix = random_unitary(2, backend=backend)
+    cases = [
+        (gates.Unitary(matrix, 5, 2), gates.Unitary(matrix, 1, 0)),
+        (
+            gates.Unitary(single_qubit_matrix, 4).controlled_by(1),
+            gates.Unitary(single_qubit_matrix, 1).controlled_by(0),
+        ),
+        (gates.RX(3, theta=0.4), gates.RX(0, theta=0.4)),
+        (gates.X(2).controlled_by(0, 5), gates.X(1).controlled_by(0, 2)),
+    ]
+    for gate, target_gate in cases:
+        qpe = QPE(gate, nqubits_counting, measure=False)
+        assert qpe.nqubits == nqubits_counting + len(gate.qubits)
+
+        unitary = Circuit(len(gate.qubits))
+        unitary.add(target_gate)
+        backend.assert_circuitclose(
+            qpe, QPE(unitary, nqubits_counting, measure=False), atol=1e-8
+        )
+        # the original gate is not modified
+        assert gate.qubits != target_gate.qubits
+
+
+def test_qpe_errors(backend):
     unitary = Circuit(1)
     unitary.add(gates.U1(0, theta=0.3))
 
-    with pytest.raises(TypeError):
-        QPE(gates.U1(0, theta=0.3), 3)
     for nqubits_counting in (0, -1, 2.5, "3"):
         with pytest.raises(ValueError):
             QPE(unitary, nqubits_counting)
 
+    for invalid_unitary in ("U", 0.5, [[1, 0], [0, 1]]):
+        with pytest.raises(TypeError):
+            QPE(invalid_unitary, 3)
+
+    # matrices that are not square, that do not have dimension 2^n or have n = 0
+    for matrix in (
+        [1, 0],
+        [[1]],
+        [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        [[1, 0, 0, 0], [0, 1, 0, 0]],
+        [[[1, 0], [0, 1]]],
+    ):
+        with pytest.raises(ValueError):
+            QPE(backend.cast(matrix), 3)
+    # matrix that is not unitary
+    with pytest.raises(ValueError):
+        QPE(backend.cast([[1, 1], [0, 1]]), 3)
+    # gate that does not act on any qubit
+    with pytest.raises(ValueError):
+        QPE(gates.GlobalPhase(0.3), 3)
+
     # unitaries with gates that cannot be controlled
+    with pytest.raises(NotImplementedError):
+        QPE(gates.M(0), 3)
     unitary.add(gates.M(0))
     with pytest.raises(NotImplementedError):
         QPE(unitary, 3)

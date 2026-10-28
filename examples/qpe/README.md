@@ -36,16 +36,19 @@ For more details, check
 
 The circuit is accessible as `from qibo.models import QPE`. Its arguments are
 
-- unitary (`qibo.models.circuit.Circuit`): circuit that implements `U`. It cannot contain
-  measurements or any other gate that cannot be controlled (see
-  `qibo.models.circuit.Circuit.controlled_by`).
+- unitary (`qibo.models.circuit.Circuit`, `qibo.gates.Gate` or ndarray): the unitary `U`, given
+  as a circuit, as a gate, such as `gates.Unitary`, or as a matrix of dimension `2^n x 2^n`,
+  which is converted into a `gates.Unitary` acting on `n` qubits. The qubits of a gate are
+  relabeled, in increasing order, as the qubits of a circuit with the same number of qubits as
+  the gate. Circuits and gates cannot contain measurements or any other gate that cannot be
+  controlled (see `qibo.models.circuit.Circuit.controlled_by`).
 - nqubits_counting (int): number of counting qubits `t`.
 - measure (bool): if `True`, the counting qubits are measured at the end of the circuit.
   Defaults to `True`.
 
-The returned circuit has `t + n` qubits, where `n` is the number of qubits of `unitary`. The first
-`t` qubits are the counting qubits, with the qubit `0` being the most significant one, and the
-last `n` qubits are the target qubits, in the same order as the qubits of `unitary`.
+The returned circuit has `t + n` qubits, where `n` is the number of qubits that `U` acts on. The
+first `t` qubits are the counting qubits, with the qubit `0` being the most significant one, and
+the last `n` qubits are the target qubits, in the same order as the qubits of `U`.
 
 The circuit does not prepare the eigenstate `|ψ>`. This has to be done by adding the circuit
 that prepares it to a larger circuit before the QPE circuit, as shown in the examples below.
@@ -168,7 +171,8 @@ python main.py --nqubits-counting 8 --nshots 1000 --tau 1.0
 ```
 
 We consider the transverse-field Ising Hamiltonian of two qubits,
-`hamiltonians.TFIM(2, h=0.5)`, and we implement `U` with a `gates.Unitary`.
+`hamiltonians.TFIM(2, h=0.5)`, and we give the matrix of `U` directly to `QPE`, which converts
+it into a `gates.Unitary`.
 
 ```python
 from qibo import Circuit, gates, hamiltonians
@@ -181,9 +185,7 @@ hamiltonian = hamiltonians.TFIM(2, h=0.5)
 energies = hamiltonian.eigenvalues()
 eigenvectors = hamiltonian.eigenvectors()
 
-unitary = Circuit(2)
-unitary.add(gates.Unitary(hamiltonian.exp(tau), 0, 1))
-qpe = QPE(unitary, nqubits_counting)
+qpe = QPE(hamiltonian.exp(tau), nqubits_counting)
 ```
 
 The eigenvectors of the Hamiltonian are the columns of a unitary matrix, which maps the state
