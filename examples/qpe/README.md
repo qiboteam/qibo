@@ -59,7 +59,8 @@ probable outcome, which `from qibo.quantum_info import estimate_phase` obtains d
 the result of the execution, from its frequencies, or from the probabilities of the counting
 qubits.
 
-We provide three examples of how to use QPE.
+We provide three examples of how to use QPE. A fourth example shows the iterative version of
+the algorithm, which is described at the end.
 
 ### Example 1: a phase that is exactly representable with the counting qubits
 
@@ -250,3 +251,78 @@ Hamiltonian, `-√2` and `√2`. The one with the phase above `1 / 2` is shifted
 above. Since the phases are not exactly representable with 8 counting qubits, the remaining
 shots are spread over the bitstrings next to the peaks. The number of shots in each peak, and
 their order, change between runs because of the sampling.
+
+## Iterative QPE
+
+The canonical QPE needs `t` counting qubits. The iterative version, also known as semiclassical
+QPE, needs only one, which is measured and reused `t` times. This reduces the number of qubits
+from `t + n` to `1 + n`, with `n` being the number of qubits that `U` acts on, at the cost of
+mid-circuit measurements and of operations that depend on their outcomes. It applies the same
+`2^t - 1` copies of `U` as QPE, and it does not need the inverse Quantum Fourier Transform.
+
+The bits of `φ` are obtained one at a time, starting from the least significant one. In the
+step `k = 1, ..., t`, the counting qubit goes through
+
+1. a Hadamard gate;
+2. `U` applied `2^{t - k}` times to the target qubits, controlled by the counting qubit;
+3. a phase gate that removes the contribution of the bits that were already measured, whose angle
+   is `-2π Σ_{j < k} m_j / 2^{k - j + 1}`, with `m_j` being the outcome of the step `j`;
+4. a Hadamard gate and a measurement, whose outcome `m_k` is the bit `b_{t - k + 1}` of
+   `φ = 0.b_1 b_2 ... b_t`;
+5. a bit flip, conditioned on `m_k`, that resets the counting qubit to `|0>`.
+
+The circuit is accessible as `from qibo.models import IQPE`. It takes the same `unitary` as QPE,
+and the number of bits `nbits` instead of the number of counting qubits. The first qubit of the
+circuit is the counting qubit and the last `n` qubits are the target qubits.
+
+It returns the circuit and the list of the `MeasurementResult` objects with the outcomes of the
+measurements of the counting qubit. They are ordered from the most to the least significant
+bit, which is the opposite of the order of the measurements, so they can be joined with
+`MeasurementResult.join`, and the estimate of `φ` is obtained with `estimate_phase`.
+
+### Example 4: iterative QPE of a single-qubit gate
+
+We estimate again the phase `φ = 5 / 16` of the gate of the first example, now using 2 qubits
+instead of 5.
+
+```python
+import math
+
+from qibo import Circuit, gates
+from qibo.measurements import MeasurementResult
+from qibo.models import IQPE
+from qibo.quantum_info import estimate_phase
+
+phase = 5 / 16
+unitary = Circuit(1)
+unitary.add(gates.U1(0, theta=2 * math.pi * phase))
+
+nbits = 4
+iqpe, results = IQPE(unitary, nbits)
+print(iqpe.nqubits)
+
+# prepare the eigenstate |1> in the target qubit, which is the last qubit
+circuit = Circuit(iqpe.nqubits)
+circuit.add(gates.X(1))
+circuit.add(iqpe)
+circuit(nshots=100)
+
+# the outcomes of the measurements of the counting qubit are not part of the result of the
+# circuit, but they can be joined into a single result
+joint_result = MeasurementResult.join(*results)
+print(joint_result.frequencies())
+print(estimate_phase(joint_result))
+```
+
+```
+2
+Counter({'0101': 100})
+0.3125
+```
+
+As in the first example, all the shots return the bitstring `0101`. The measurements with
+collapse prevent the state of the circuit from being simulated once and sampled afterwards, as
+the canonical QPE is. Each shot has to be simulated separately, so the simulation of the
+iterative QPE is slower, even though the circuit has fewer qubits. For a phase that is not
+exactly representable, the distribution of the outcomes is the same as the one of the canonical
+QPE.
