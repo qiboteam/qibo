@@ -1,16 +1,24 @@
+import math
+
+from numpy.typing import ArrayLike
+
 from qibo import gates
 from qibo.config import raise_error
+from qibo.gates.abstract import Gate
 from qibo.models.circuit import Circuit
 from qibo.models.qft import QFT
 
 
 def QPE(
-    unitary: Circuit, nqubits_counting: int, measure: bool = True, **kwargs
+    unitary: Circuit | Gate | ArrayLike,
+    nqubits_counting: int,
+    measure: bool = True,
+    **kwargs,
 ) -> Circuit:
     """Creates a circuit that implements the canonical Quantum Phase Estimation.
 
-    Given a unitary :math:`U` and one of its eigenstates :math:`|\\psi\rangle`, such that
-    :math:`U|\\psi\rangle = e^{2 \\pi i \varphi}|\\psi\rangle`, the circuit estimates
+    Given a unitary :math:`U` and one of its eigenstates :math:`|\\psi\\rangle`, such that
+    :math:`U|\\psi\\rangle = e^{2 \\pi i \\varphi}|\\psi\\rangle`, the circuit estimates
     :math:`\\varphi \\in [0, \\, 1)` with :math:`t` bits of precision, where :math:`t`
     is the number of counting qubits. It acts on :math:`t + n` qubits, with :math:`n`
     being the number of qubits of :math:`U`, and it is composed of the following steps:
@@ -22,11 +30,11 @@ def QPE(
     3. the inverse :class:`qibo.models.qft.QFT` on the counting qubits;
     4. the measurement of the counting qubits, if ``measure=True``.
 
-    The target qubits have to be prepared in :math:`|\\psi\rangle` before the circuit is applied,
+    The target qubits have to be prepared in :math:`|\\psi\\rangle` before the circuit is applied,
     *e.g.* by adding the circuit that prepares it to a larger circuit before the one returned by
     this function. At the end, the counting qubits hold a bitstring :math:`b_{1} \\cdots b_{t}`,
-    with :math:`b_{1}` being the outcome of the first qubit, such that :math:`\varphi` is
-    approximated by :math:`0.b_{1} \\cdots b_{t}` in binary, which is exact if :math:`\varphi`
+    with :math:`b_{1}` being the outcome of the first qubit, such that :math:`\\varphi` is
+    approximated by :math:`0.b_{1} \\cdots b_{t}` in binary, which is exact if :math:`\\varphi`
     is an integer multiple of :math:`2^{-t}`. The conversion from the bitstring into the phase
     can be done with :func:`qibo.quantum_info.bitstring_to_phase`.
 
@@ -35,8 +43,13 @@ def QPE(
         :math:`2^{k}` of times. Hence, :math:`U` is applied :math:`2^{t} - 1` times in total.
 
     Args:
-        unitary (:class:`qibo.models.circuit.Circuit`): circuit that implements :math:`U`. All of
-            its gates must be supported by :meth:`qibo.models.circuit.Circuit.controlled_by`.
+        unitary (:class:`qibo.models.circuit.Circuit` or :class:`qibo.gates.Gate` or ndarray):
+            unitary :math:`U`, given as a circuit, as a gate, *e.g.* :class:`qibo.gates.Unitary`,
+            or as a matrix. A matrix must be unitary and of dimension :math:`2^{n} \\times 2^{n}`
+            with :math:`n > 0`, and it is converted into a :class:`qibo.gates.Unitary` acting
+            on :math:`n` qubits. The qubits of a gate are relabeled, in increasing order, as the
+            qubits of a circuit with the same number of qubits as the gate. All of the gates
+            must be supported by :meth:`qibo.models.circuit.Circuit.controlled_by`.
         nqubits_counting (int): number of counting qubits :math:`t`. The phase is estimated with
             a resolution of :math:`2^{-t}`.
         measure (bool, optional): If ``True``, adds a measurement of the counting qubits at
@@ -85,11 +98,41 @@ def QPE(
         2. M. A. Nielsen and I. L. Chuang, *Quantum Computation and Quantum Information*,
         Cambridge University Press (2010), Sec. 5.2.
     """
-    if not isinstance(unitary, Circuit):
-        raise_error(
-            TypeError,
-            f"unitary must be type Circuit, but it is type {type(unitary)}.",
-        )
+    if not isinstance(unitary, (Circuit, Gate)):
+        shape = getattr(unitary, "shape", None)
+        if shape is None:
+            raise_error(
+                TypeError,
+                "unitary must be a Circuit, a Gate or a matrix, "
+                + f"but it is type {type(unitary)}.",
+            )
+
+        if (
+            len(shape) != 2
+            or shape[0] != shape[1]
+            or shape[0] < 2
+            or shape[0] & (shape[0] - 1)
+        ):
+            raise_error(
+                ValueError,
+                "unitary must be a square matrix of dimension 2^n, with n > 0, "
+                + f"but it has shape {tuple(shape)}.",
+            )
+
+        unitary = gates.Unitary(unitary, *range(int(math.log2(shape[0]))))
+        if not unitary.unitary:
+            raise_error(ValueError, "unitary must be a unitary matrix.")
+
+    if isinstance(unitary, Gate):
+        qubits = sorted(unitary.qubits)
+        if len(qubits) == 0:
+            raise_error(
+                ValueError, "unitary must be a gate that acts on at least one qubit."
+            )
+
+        gate = unitary.on_qubits({qubit: index for index, qubit in enumerate(qubits)})
+        unitary = Circuit(len(qubits))
+        unitary.add(gate)
 
     if not isinstance(nqubits_counting, int) or nqubits_counting < 1:
         raise_error(

@@ -15,9 +15,7 @@ def main(nqubits_counting, nshots, tau):
 
     # The eigenvalue of U = exp(-i tau H) for the energy E is exp(2 pi i phase), with
     # phase = -tau E / (2 pi) modulo 1
-    unitary = Circuit(2)
-    unitary.add(gates.Unitary(hamiltonian.exp(tau), 0, 1))
-    qpe = QPE(unitary, nqubits_counting)
+    qpe = QPE(hamiltonian.exp(tau), nqubits_counting)
     target_qubits = (nqubits_counting, nqubits_counting + 1)
 
     # Phase estimation starting from the ground state. The eigenvectors are the columns of
