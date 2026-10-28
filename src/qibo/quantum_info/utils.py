@@ -3,6 +3,7 @@
 from functools import cache, reduce
 from itertools import permutations
 from math import factorial
+from numbers import Integral
 from re import finditer
 
 import numpy as np
@@ -50,10 +51,11 @@ def bitstring_to_phase(bitstring: str | list | tuple | ArrayLike) -> float:
     must then be the most significant one.
 
     Args:
-        bitstring (str or list or tuple): sequence of bits, *e.g.* ``"0101"`` or ``[0, 1, 0, 1]``,
-            with the most significant bit first. It cannot be an ``int``, since the leading
-            zeros of a bitstring are part of the phase and are lost in the integer
-            representation.
+        bitstring (str or list or tuple or ndarray): sequence of bits, *e.g.* ``"0101"`` or
+            ``[0, 1, 0, 1]``, with the most significant bit first. It cannot be an integer,
+            since the leading zeros of a bitstring are part of the phase and are lost in the
+            integer representation. A ``TypeError`` is raised for integers and for any other
+            object that is not a sequence.
 
     Returns:
         float: phase encoded in ``bitstring``.
@@ -78,14 +80,21 @@ def bitstring_to_phase(bitstring: str | list | tuple | ArrayLike) -> float:
         2. M. A. Nielsen and I. L. Chuang, *Quantum Computation and Quantum Information*,
         Cambridge University Press (2010), Sec. 5.2.
     """
-    if isinstance(bitstring, int):
+    if isinstance(bitstring, Integral):
         raise_error(
             TypeError,
             "bitstring must be a str, list or tuple of bits, since leading zeros are "
             + f"lost in the int representation, but it is type {type(bitstring)}.",
         )
 
-    bits = [str(bit) for bit in bitstring]
+    try:
+        bits = [str(bit) for bit in bitstring]
+    except TypeError:
+        raise_error(
+            TypeError,
+            f"bitstring must be a str, list or tuple of bits, but it is type {type(bitstring)}.",
+        )
+
     if len(bits) == 0 or any(bit not in ("0", "1") for bit in bits):
         raise_error(
             ValueError,
