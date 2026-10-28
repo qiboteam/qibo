@@ -46,8 +46,8 @@ class _ParametrizedGates(list):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.set = set()
-        self.nparams = 0
+        self.set = set(self)
+        self.nparams = sum(gate.nparams for gate in self)
 
     def append(self, gate):
         super().append(gate)
@@ -446,6 +446,9 @@ class Circuit:
         if deep:
             new_circuit = self.__class__(**self.init_kwargs)
             for gate in self.queue:
+                if isinstance(gate, gates.ParametrizedFusedGate):
+                    new_circuit.add(copy.deepcopy(gate))
+                    continue
                 if isinstance(gate, gates.FusedGate):  # pragma: no cover
                     # impractical case
                     raise_error(
@@ -728,6 +731,8 @@ class Circuit:
 
                 return gate.result
 
+            if isinstance(gate, gates.ParametrizedFusedGate):
+                gate._freeze()
             self.queue.append(gate)
             for measurement in list(self.measurements):
                 if set(measurement.qubits) & set(gate.qubits):
@@ -1088,7 +1093,9 @@ class Circuit:
                     NotImplementedError,
                     "`unitary` method not implemented for circuits that contain noise channels.",
                 )
-            elif not isinstance(gate, (gates.SpecialGate, gates.M)):
+            elif isinstance(gate, gates.ParametrizedFusedGate) or not isinstance(
+                gate, (gates.SpecialGate, gates.M)
+            ):
                 fgate.append(gate)
         return fgate.matrix(backend)
 
@@ -1725,6 +1732,9 @@ def _resolve_qubits(
 def _get_parameters_flatlist(parametrized_gates: list[Gate]):
     params = []
     for gate in parametrized_gates:
+        if isinstance(gate, gates.ParametrizedFusedGate):
+            params.extend(gate._flat_parameters())
+            continue
         gparams = gate.parameters
         if len(gparams) == 1:
             gparams = gparams[0]
