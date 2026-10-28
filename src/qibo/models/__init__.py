@@ -26,6 +26,7 @@ from qibo.models.evolution import AdiabaticEvolution, StateEvolution
 from qibo.models.grover import Grover
 from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
 from qibo.models.qft import QFT
+from qibo.models.qpe import QPE
 from qibo.models.qsp import qsp_circuit, qsp_phases
 from qibo.models.qsvt import qsvt_circuit, qsvt_phases
 from qibo.models.variational import AAVQE, FALQON, QAOA, VQE
@@ -37,6 +38,7 @@ __all__ = [
     "ICS",
     "QAOA",
     "QFT",
+    "QPE",
     "VQE",
     "ZNE",
     "AdiabaticEvolution",
