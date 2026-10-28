@@ -1014,12 +1014,23 @@ def test_fanout_and_ladder_synthesis(backend, nqubits, method):
     backend.assert_allclose(ladder.unitary(backend), target.unitary(backend))
 
 
-def _leaf_separable_data(nqubits, weight, leaf_size, seed, correlated=False):
-    """Random leaf-separable amplitudes with positive reference amplitudes.
+def _leaf_separable_data(
+    nqubits,
+    weight,
+    leaf_size,
+    seed,
+    correlated=False,
+    complex_leaves=False,
+    distribution_phases=None,
+):
+    """Random leaf-separable amplitudes.
 
     If ``correlated`` is ``False``, the weights of the leaves are independent, conditioned on
     their sum, and the weight distribution is exactly given by a tree of weight distribution
     blocks. Otherwise, it is an arbitrary distribution.
+    If ``complex_leaves`` is ``True``, the leaf states are complex.
+    ``distribution_phases`` can be ``"sign"`` or ``"phase"``, to multiply the amplitudes of
+    each weight distribution by a random sign or phase, respectively.
     """
     rng = np.random.default_rng(seed)
     sizes = [leaf_size] * (nqubits // leaf_size)
@@ -1033,19 +1044,21 @@ def _leaf_separable_data(nqubits, weight, leaf_size, seed, correlated=False):
         ]
     )
 
-    # leaf amplitudes, with positive first entry in each sector of fixed Hamming weight
     leaf_amplitudes = []
     for size in sizes:
         values = rng.normal(size=2**size)
-        weights = np.array([int(string).bit_count() for string in range(2**size)])
-        for sector in range(size + 1):
-            values[weights == sector] *= np.sign(
-                values[np.flatnonzero(weights == sector)[0]]
-            )
+        if complex_leaves:
+            values = values + 1j * rng.normal(size=2**size)
         leaf_amplitudes.append(values)
 
+    shape = (weight + 1,) * len(sizes)
     independent = rng.random((len(sizes), weight + 1)) + 0.1
-    arbitrary = rng.random((weight + 1,) * len(sizes)) + 0.1
+    arbitrary = rng.random(shape) + 0.1
+    phases = {
+        None: np.ones(shape),
+        "sign": np.sign(rng.normal(size=shape)),
+        "phase": np.exp(1j * rng.uniform(0, 2 * np.pi, size=shape)),
+    }[distribution_phases]
 
     data = []
     for state in states:
@@ -1059,12 +1072,17 @@ def _leaf_separable_data(nqubits, weight, leaf_size, seed, correlated=False):
                 amplitude *= np.sqrt(independent[leaf][distribution[-1]])
         if correlated:
             amplitude *= np.sqrt(arbitrary[tuple(distribution)])
-        data.append(amplitude)
+        data.append(amplitude * phases[tuple(distribution)])
     data = np.array(data)
 
     return data / np.linalg.norm(data), states
 
 
+@pytest.mark.parametrize("nqubits, mqubits", [(4, 2), (5, 3)])
+@pytest.mark.parametrize(
+    "phases",
+    [None, [[0.0, 0.0, 0.0], [0.3, -1.2, 0.0], [0.7, 2.0, -0.4]]],
+)
 @pytest.mark.parametrize(
     "probabilities",
     [
@@ -1072,11 +1090,18 @@ def _leaf_separable_data(nqubits, weight, leaf_size, seed, correlated=False):
         [[1.0], [0.0, 1.0], [1.0, 0.0, 0.0]],
     ],
 )
-def test_wbd_gate_probabilities(backend, probabilities):
-    nqubits, mqubits, weight = 4, 2, 2
+def test_wbd_gate_probabilities(backend, probabilities, phases, nqubits, mqubits):
+    weight = 2
     circuit = Circuit(nqubits)
     _add_wbd_gate(
-        circuit, [2, 3], [0, 1], nqubits, mqubits, weight, probabilities=probabilities
+        circuit,
+        list(range(mqubits, nqubits)),
+        list(range(mqubits)),
+        nqubits,
+        mqubits,
+        weight,
+        probabilities=probabilities,
+        phases=phases,
     )
 
     for l in range(weight + 1):
@@ -1086,6 +1111,8 @@ def test_wbd_gate_probabilities(backend, probabilities):
         for i in range(min(l, mqubits) + 1):
             index = 2 ** (nqubits - mqubits) * (2**i - 1) + 2 ** (l - i) - 1
             target[index] = np.sqrt(probabilities[l][i])
+            if phases is not None:
+                target[index] *= np.exp(1j * phases[l][i])
 
         initial = backend.cast(initial, dtype=initial.dtype)
         target = backend.cast(target, dtype=target.dtype)
@@ -1106,6 +1133,8 @@ def test_wbd_gate_probabilities(backend, probabilities):
         (8, 2, 3),
         (8, 3, 3),
         (9, 3, 3),
+        (10, 2, 2),
+        (11, 2, 2),
     ],
 )
 def test_leaf_separable_encoder(backend, nqubits, weight, leaf_size):
@@ -1187,15 +1216,82 @@ def test_leaf_separable_encoder_approximation(backend):
     assert 0.9 < fid < 1 - 1e-6
 
 
+@pytest.mark.parametrize("complex_leaves", [False, True])
+@pytest.mark.parametrize("distribution_phases", ["sign", "phase"])
+@pytest.mark.parametrize(
+    "nqubits, weight, leaf_size",
+    [(4, 2, 2), (5, 2, 3), (6, 2, 2), (6, 3, 3), (8, 3, 3), (9, 3, 3)],
+)
+def test_leaf_separable_encoder_phases(
+    backend, nqubits, weight, leaf_size, distribution_phases, complex_leaves
+):
+    # two or three leaves: any phase of the weight distributions can be encoded
+    data, states = _leaf_separable_data(
+        nqubits,
+        weight,
+        leaf_size,
+        seed=11,
+        complex_leaves=complex_leaves,
+        distribution_phases=distribution_phases,
+    )
+    target = np.zeros(2**nqubits, dtype=complex)
+    target[states] = data
+    target = backend.cast(target, dtype=target.dtype)
+
+    circuit = leaf_separable_encoder(
+        nqubits, weight, leaf_size, backend.cast(data), backend=backend
+    )
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nqubits, weight, leaf_size", [(8, 2, 2), (10, 2, 2), (11, 2, 2), (12, 3, 3)]
+)
+def test_leaf_separable_encoder_complex_leaves(backend, nqubits, weight, leaf_size):
+    # phases that depend on the weight of each leaf are encoded for any number of leaves
+    data, states = _leaf_separable_data(
+        nqubits, weight, leaf_size, seed=5, complex_leaves=True
+    )
+    target = np.zeros(2**nqubits, dtype=complex)
+    target[states] = data
+    target = backend.cast(target, dtype=target.dtype)
+
+    circuit = leaf_separable_encoder(nqubits, weight, leaf_size, data, backend=backend)
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-8)
+
+
+@pytest.mark.parametrize("distribution_phases", ["sign", "phase"])
+def test_leaf_separable_encoder_phases_approximation(backend, distribution_phases):
+    nqubits, weight, leaf_size = 10, 2, 2
+    data, states = _leaf_separable_data(
+        nqubits,
+        weight,
+        leaf_size,
+        seed=2,
+        distribution_phases=distribution_phases,
+    )
+    target = np.zeros(2**nqubits, dtype=complex)
+    target[states] = data
+    target = backend.cast(target, dtype=target.dtype)
+
+    circuit = leaf_separable_encoder(nqubits, weight, leaf_size, data, backend=backend)
+    state = backend.execute_circuit(circuit).state()
+    fid = fidelity(state, target, backend=backend)
+
+    # phases that are not a sum of phases of each node are only approximated
+    assert 0.5 < fid < 1 - 1e-6
+
+
 def test_leaf_separable_encoder_errors(backend):
     data = backend.random_sample(math.comb(6, 2), seed=10)
 
     for weight, leaf_size in [(0, 2), (3, 2), (2, 6)]:
         with pytest.raises(ValueError):
             leaf_separable_encoder(6, weight, leaf_size, data, backend=backend)
-
-    with pytest.raises(NotImplementedError):
-        leaf_separable_encoder(6, 2, 2, data + 1j * data, backend=backend)
 
     with pytest.raises(ValueError):
         leaf_separable_encoder(6, 2, 2, data[:-1], backend=backend)
