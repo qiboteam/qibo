@@ -32,7 +32,7 @@ def _pauli_basis_normalization(nqubits: int):
     return float(np.sqrt(2**nqubits))
 
 
-def bitstring_to_phase(bitstring: str | list | tuple) -> float:
+def bitstring_to_phase(bitstring: str | list | tuple | ArrayLike) -> float:
     """Converts a bitstring into the phase it encodes as a binary fraction.
 
     The bitstring :math:`b_{1} b_{2} \\cdots b_{t}`, with :math:`b_{1}` being the most
