@@ -2,7 +2,7 @@
 
 import math
 from inspect import signature
-from itertools import combinations
+from itertools import accumulate, combinations
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -990,80 +990,93 @@ def leaf_separable_encoder(
             + f"but got weight={weight}, leaf_size={leaf_size}, and nqubits={nqubits}.",
         )
 
-    data = np.asarray(backend.to_numpy(data))
-    if np.iscomplexobj(data):
+    data = backend.cast(data, dtype=backend.complex128)
+
+    if backend.any(backend.imag(data) != 0.0):
         raise_error(NotImplementedError, "Complex-valued ``data`` is not supported.")
+
+    data = backend.real(data)
+
     if data.shape != (math.comb(nqubits, weight),):
         raise_error(
             ValueError,
             f"``data`` must have shape ({math.comb(nqubits, weight)},), but got {data.shape}.",
         )
-    data = data / np.linalg.norm(data)
+    data = data / backend.vector_norm(data, dtype=backend.float64)
 
     # leaves, and the weight of every basis state (in ascending order) in each of them
-    sizes = [leaf_size] * (nqubits // leaf_size) + [nqubits % leaf_size] * bool(
-        nqubits % leaf_size
+    sizes = [leaf_size] * (nqubits // leaf_size)
+    if nqubits % leaf_size:
+        sizes.append(nqubits % leaf_size)
+    starts = list(accumulate([0] + sizes[:-1]))
+    states = backend.sort(
+        backend.cast(
+            [
+                sum(1 << (nqubits - 1 - qubit) for qubit in combination)
+                for combination in combinations(range(nqubits), weight)
+            ],
+            dtype=backend.int64,
+        )
     )
-    starts = np.cumsum([0] + sizes[:-1])
-    states = np.sort(
-        [
-            sum(1 << (nqubits - 1 - qubit) for qubit in combination)
-            for combination in combinations(range(nqubits), weight)
-        ]
-    )
-    bits = (states[:, None] >> np.arange(nqubits - 1, -1, -1)) & 1
-    leaf_weights = np.stack(
-        [
-            bits[:, start : start + size].sum(axis=1)
-            for start, size in zip(starts, sizes)
-        ],
-        axis=1,
+    bits = backend.right_shift(states[:, None], backend.arange(nqubits - 1, -1, -1)) & 1
+    leaf_weights = backend.swapaxes(
+        backend.vstack(
+            [
+                backend.sum(bits[:, start : start + size], axis=1)
+                for start, size in zip(starts, sizes)
+            ]
+        ),
+        0,
+        1,
     )
 
     # leaf states: for each leaf and weight, amplitudes relative to a reference basis state
     leaf_data = {}
     for leaf, (start, size) in enumerate(zip(starts, sizes)):
-        others = np.delete(np.arange(len(sizes)), leaf)
+        # bits of a basis state that do not belong to the leaf
+        outside = ((1 << nqubits) - 1) ^ (((1 << size) - 1) << (nqubits - start - size))
         for leaf_weight in range(1, min(size, weight) + 1):
-            candidates = np.flatnonzero(
-                (leaf_weights[:, leaf] == leaf_weight) & ~np.isclose(data, 0.0)
+            candidates = backend.flatnonzero(
+                (leaf_weights[:, leaf] == leaf_weight) & (backend.abs(data) > 1e-8)
             )
             if len(candidates) == 0:
                 continue
-            reference = states[candidates[0]]
+            reference = int(states[candidates[0]])
             # basis states that differ from the reference only in the leaf
-            keep = np.ones(len(states), dtype=bool)
-            for other, other_start, other_size in zip(
-                others, starts[others], np.asarray(sizes)[others]
-            ):
-                shift = nqubits - other_start - other_size
-                mask = (1 << other_size) - 1
-                keep &= ((states >> shift) & mask) == ((reference >> shift) & mask)
+            keep = (states & outside) == (reference & outside)
             amplitudes = data[keep] / data[candidates[0]]
-            leaf_data[(leaf, leaf_weight)] = amplitudes / np.linalg.norm(amplitudes)
+            leaf_data[(leaf, leaf_weight)] = amplitudes / backend.vector_norm(
+                amplitudes, dtype=backend.float64
+            )
 
     # check leaf-separability by reconstructing the amplitudes
     probabilities = data**2
-    _, inverse = np.unique(leaf_weights, axis=0, return_inverse=True)
-    inverse = inverse.ravel()
-    c_squared = np.bincount(inverse, weights=probabilities)
-    reconstructed = np.sqrt(c_squared[inverse])
+    unique_weights, inverse = backend.unique(leaf_weights, axis=0, return_inverse=True)
+    inverse = backend.ravel(inverse)
+    reconstructed = backend.zeros(len(states), dtype=backend.float64)
+    for group in range(len(unique_weights)):
+        rows = inverse == group
+        reconstructed[rows] = backend.sqrt(backend.sum(probabilities[rows]))
     for leaf, (start, size) in enumerate(zip(starts, sizes)):
-        shift = nqubits - start - size
-        strings = (states >> shift) & ((1 << size) - 1)
+        strings = backend.right_shift(states, nqubits - start - size) & (
+            (1 << size) - 1
+        )
         for leaf_weight in range(1, min(size, weight) + 1):
-            rows = leaf_weights[:, leaf] == leaf_weight
             if (leaf, leaf_weight) not in leaf_data:
                 continue
-            ordered = np.sort(
-                [
-                    sum(1 << (size - 1 - qubit) for qubit in combination)
-                    for combination in combinations(range(size), leaf_weight)
-                ]
+            rows = leaf_weights[:, leaf] == leaf_weight
+            ordered = backend.sort(
+                backend.cast(
+                    [
+                        sum(1 << (size - 1 - qubit) for qubit in combination)
+                        for combination in combinations(range(size), leaf_weight)
+                    ],
+                    dtype=backend.int64,
+                )
             )
-            ranks = np.searchsorted(ordered, strings[rows])
+            ranks = backend.searchsorted(ordered, strings[rows])
             reconstructed[rows] *= leaf_data[(leaf, leaf_weight)][ranks]
-    if not np.allclose(reconstructed, data, atol=1e-8):
+    if not backend.allclose(reconstructed, data, atol=1e-8):
         raise_error(
             ValueError,
             "``data`` is not leaf-separable for the given ``weight`` and ``leaf_size``.",
@@ -1076,22 +1089,19 @@ def leaf_separable_encoder(
 
     # weight distribution blocks with the conditional distributions given by ``data``
     for node_qubits, child_qubits, node_tier, child_tier, node_sets, child_sets in cuts:
-        node_weights = leaf_weights[:, node_sets].sum(axis=1)
-        child_weights = leaf_weights[:, child_sets].sum(axis=1)
-        conditional = np.zeros((weight + 1, weight + 1))
+        node_weights = backend.sum(leaf_weights[:, node_sets], axis=1)
+        child_weights = backend.sum(leaf_weights[:, child_sets], axis=1)
+        conditional = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
         conditional[:, 0] = 1.0
         for total in range(1, weight + 1):
             selected = node_weights == total
-            normalization = probabilities[selected].sum()
+            normalization = backend.sum(probabilities[selected])
             if normalization > 0.0:
-                conditional[total] = (
-                    np.bincount(
-                        child_weights[selected],
-                        weights=probabilities[selected],
-                        minlength=weight + 1,
+                for child in range(weight + 1):
+                    conditional[total, child] = (
+                        backend.sum(probabilities[selected & (child_weights == child)])
+                        / normalization
                     )
-                    / normalization
-                )
         _add_wbd_gate(
             circuit,
             node_qubits,
@@ -1103,6 +1113,7 @@ def leaf_separable_encoder(
         )
 
     # leaf encoders, fully controlled in the leaf to act only on the sector of a given weight
+    # reverse to restore ascending leaf-index order for the ``leaf_data`` lookup
     for leaf, leaf_set in enumerate(disjoint_sets[::-1]):
         leaf_qubits = leaf_set["qubits"]
         for leaf_weight in range(1, min(len(leaf_qubits), weight) + 1):
@@ -1119,6 +1130,7 @@ def leaf_separable_encoder(
                 backend=backend,
             )
             for gate in encoder.on_qubits(*leaf_qubits):
+                assert isinstance(gate, gates.RBS)
                 zeros = [qubit for qubit in leaf_qubits if qubit not in gate.qubits]
                 circuit.add(gates.X(qubit) for qubit in zeros)
                 circuit.add(

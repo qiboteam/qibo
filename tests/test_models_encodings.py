@@ -1022,9 +1022,9 @@ def _leaf_separable_data(nqubits, weight, leaf_size, seed, correlated=False):
     blocks. Otherwise, it is an arbitrary distribution.
     """
     rng = np.random.default_rng(seed)
-    sizes = [leaf_size] * (nqubits // leaf_size) + [nqubits % leaf_size] * bool(
-        nqubits % leaf_size
-    )
+    sizes = [leaf_size] * (nqubits // leaf_size)
+    if nqubits % leaf_size:
+        sizes.append(nqubits % leaf_size)
     starts = np.cumsum([0] + sizes[:-1])
     states = np.sort(
         [
