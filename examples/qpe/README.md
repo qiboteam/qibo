@@ -54,7 +54,10 @@ The circuit does not prepare the eigenstate `|ψ>`. This has to be done by addin
 that prepares it to a larger circuit before the QPE circuit, as shown in the examples below.
 
 The measured bitstrings can be converted into phases with
-`from qibo.quantum_info import bitstring_to_phase`.
+`from qibo.quantum_info import bitstring_to_phase`. The estimate of `φ` is the phase of the most
+probable outcome, which `from qibo.quantum_info import estimate_phase` obtains directly from
+the result of the execution, from its frequencies, or from the probabilities of the counting
+qubits.
 
 We provide three examples of how to use QPE.
 
@@ -74,7 +77,7 @@ import math
 
 from qibo import Circuit, gates
 from qibo.models import QPE
-from qibo.quantum_info import bitstring_to_phase
+from qibo.quantum_info import estimate_phase
 
 phase = 5 / 16
 unitary = Circuit(1)
@@ -88,9 +91,9 @@ circuit = Circuit(qpe.nqubits)
 circuit.add(gates.X(nqubits_counting))
 circuit.add(qpe)
 
-frequencies = circuit(nshots=100).frequencies()
-print(frequencies)
-print(bitstring_to_phase(frequencies.most_common(1)[0][0]))
+result = circuit(nshots=100)
+print(result.frequencies())
+print(estimate_phase(result))
 ```
 
 ```
@@ -115,6 +118,7 @@ import math
 
 from qibo import Circuit, gates
 from qibo.models import QPE
+from qibo.quantum_info import estimate_phase
 
 phase = 1 / 3
 unitary = Circuit(1)
@@ -128,11 +132,10 @@ for nqubits_counting in range(3, 9):
     circuit.add(qpe)
 
     probabilities = circuit().probabilities(qubits=list(range(nqubits_counting)))
-    best = int(probabilities.argmax())
-    estimate = best / 2**nqubits_counting
+    estimate = estimate_phase(probabilities)
     print(
         f"{nqubits_counting}  {estimate:.6f}  {abs(estimate - phase):.2e}  "
-        f"{float(probabilities[best]):.3f}"
+        f"{float(probabilities.max()):.3f}"
     )
 ```
 
@@ -195,7 +198,7 @@ use it to prepare the eigenstates in the target qubits.
 ```python
 import math
 
-from qibo.quantum_info import bitstring_to_phase
+from qibo.quantum_info import bitstring_to_phase, estimate_phase
 
 target_qubits = (nqubits_counting, nqubits_counting + 1)
 
@@ -205,7 +208,7 @@ circuit.add(gates.Unitary(eigenvectors, *target_qubits))
 circuit.add(qpe)
 
 frequencies = circuit(nshots=1000).frequencies()
-phase = bitstring_to_phase(frequencies.most_common(1)[0][0])
+phase = estimate_phase(frequencies)
 print(
     f"Estimated energy: {-2 * math.pi * phase / tau:.4f}, exact energy: {energies[0]:.4f}"
 )

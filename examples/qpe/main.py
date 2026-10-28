@@ -3,7 +3,7 @@ import math
 
 from qibo import Circuit, gates, hamiltonians
 from qibo.models import QPE
-from qibo.quantum_info import bitstring_to_phase
+from qibo.quantum_info import bitstring_to_phase, estimate_phase
 
 
 def main(nqubits_counting, nshots, tau):
@@ -24,7 +24,7 @@ def main(nqubits_counting, nshots, tau):
     circuit.add(gates.Unitary(eigenvectors, *target_qubits))
     circuit.add(qpe)
     frequencies = circuit(nshots=nshots).frequencies()
-    phase = bitstring_to_phase(frequencies.most_common(1)[0][0])
+    phase = estimate_phase(frequencies)
     energy = -2 * math.pi * phase / tau
     resolution = 2 * math.pi / (tau * 2**nqubits_counting)
     print("Ground state")
