@@ -1,5 +1,6 @@
 """Tests for qibo.models.encodings"""
 
+import logging
 import math
 from functools import reduce
 from itertools import combinations, product
@@ -1284,6 +1285,26 @@ def test_leaf_separable_encoder_phases_approximation(backend, distribution_phase
 
     # phases that are not a sum of phases of each node are only approximated
     assert 0.5 < fid < 1 - 1e-6
+
+
+def test_leaf_separable_encoder_phases_convergence_warning(backend, caplog):
+    nqubits, weight, leaf_size = 10, 2, 2
+    # the alternating maximization of the phases reaches its maximum number of sweeps
+    data, _ = _leaf_separable_data(
+        nqubits, weight, leaf_size, seed=2, distribution_phases="phase"
+    )
+    with caplog.at_level(logging.WARNING):
+        leaf_separable_encoder(nqubits, weight, leaf_size, data, backend=backend)
+    assert "did not converge" in caplog.text
+
+    # and it converges for other data
+    caplog.clear()
+    data, _ = _leaf_separable_data(
+        8, weight, leaf_size, seed=0, distribution_phases="phase"
+    )
+    with caplog.at_level(logging.WARNING):
+        leaf_separable_encoder(8, weight, leaf_size, data, backend=backend)
+    assert "did not converge" not in caplog.text
 
 
 def test_leaf_separable_encoder_errors(backend):

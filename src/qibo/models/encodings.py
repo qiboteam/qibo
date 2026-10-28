@@ -10,7 +10,7 @@ from scipy.special import binom
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
@@ -955,7 +955,8 @@ def leaf_separable_encoder(
         of the leaf states, are always reproduced. Otherwise, correlations between the weights
         of different leaves that are not captured by the tree are lost, and the output state is
         an approximation of ``data``. In that case, the phase of each node is chosen by
-        alternating maximization of the overlap with ``data``, as Ref. [1] does not specify it.
+        alternating maximization of the overlap with ``data``, as Ref. [1] does not specify it,
+        and a warning is logged if it does not converge.
 
     Args:
         nqubits (int): number of qubits :math:`n`.
@@ -1108,6 +1109,9 @@ def leaf_separable_encoder(
     # phases of the weight distribution blocks. Each block only knows the weight of its node
     # and the weight moved to its right child. We maximize the overlap with ``data``
     # by alternating maximization over the phases of the blocks.
+    # Phases and overlaps below ``tolerance`` are treated as zero, and the maximization stops
+    # when the phases of all blocks change by less than ``tolerance`` or after ``max_sweeps``.
+    tolerance, max_sweeps = 1e-12, 50
     group_node_weights = [
         backend.sum(unique_weights[:, first:last], axis=1) for first, _, last in nodes
     ]
@@ -1117,42 +1121,48 @@ def leaf_separable_encoder(
     node_phases = [
         backend.zeros((weight + 1, weight + 1), dtype=backend.float64) for _ in nodes
     ]
-    has_phases = bool(backend.any(backend.abs(group_phases) > 1e-12))
-    for _ in range(50 if has_phases else 0):
-        change = 0.0
-        for index in range(len(nodes)):
-            residual = group_phases + 0.0
-            for other in range(len(nodes)):
-                if other != index:
-                    residual -= node_phases[other][
-                        group_node_weights[other], group_right_weights[other]
-                    ]
-            updated = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
-            for total in range(1, weight + 1):
-                for right in range(total + 1):
-                    selected = (group_node_weights[index] == total) & (
-                        group_right_weights[index] == right
-                    )
-                    overlap = backend.sum(
-                        group_probabilities[selected]
-                        * backend.exp(1j * residual[selected])
-                    )
-                    if backend.abs(overlap) > 1e-12:
-                        updated[total, right] = backend.angle(overlap)
-            change = max(
-                change,
-                float(
-                    backend.max(
-                        backend.abs(
-                            backend.exp(1j * updated)
-                            - backend.exp(1j * node_phases[index])
+    has_phases = bool(backend.any(backend.abs(group_phases) > tolerance))
+    if has_phases:
+        for _ in range(max_sweeps):
+            change = 0.0
+            for index in range(len(nodes)):
+                residual = group_phases + 0.0
+                for other in range(len(nodes)):
+                    if other != index:
+                        residual -= node_phases[other][
+                            group_node_weights[other], group_right_weights[other]
+                        ]
+                updated = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
+                for total in range(1, weight + 1):
+                    for right in range(total + 1):
+                        selected = (group_node_weights[index] == total) & (
+                            group_right_weights[index] == right
                         )
-                    )
-                ),
+                        overlap = backend.sum(
+                            group_probabilities[selected]
+                            * backend.exp(1j * residual[selected])
+                        )
+                        if backend.abs(overlap) > tolerance:
+                            updated[total, right] = backend.angle(overlap)
+                change = max(
+                    change,
+                    float(
+                        backend.max(
+                            backend.abs(
+                                backend.exp(1j * updated)
+                                - backend.exp(1j * node_phases[index])
+                            )
+                        )
+                    ),
+                )
+                node_phases[index] = updated
+            if change < tolerance:
+                break
+        else:
+            log.warning(
+                "The phases of the weight distribution blocks did not converge after "
+                + f"{max_sweeps} sweeps, and might not be optimal."
             )
-            node_phases[index] = updated
-        if change < 1e-12:
-            break
 
     # the weight of the first leaf is held in its last qubits, in unary encoding
     circuit = Circuit(nqubits, **kwargs)
@@ -1196,7 +1206,7 @@ def leaf_separable_encoder(
                 continue
             amplitudes = leaf_data[(leaf, leaf_weight)]
             complex_data = bool(
-                backend.any(backend.abs(backend.imag(amplitudes)) > 1e-12)
+                backend.any(backend.abs(backend.imag(amplitudes)) > tolerance)
             )
             encoder = hamming_weight_encoder(
                 size,
