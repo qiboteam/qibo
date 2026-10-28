@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
     uses: qiboteam/workflows/.github/workflows/test.yml@uv
     with:
       os: ${{ matrix.os }}
