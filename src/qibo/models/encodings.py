@@ -2,7 +2,7 @@
 
 import math
 from inspect import signature
-from itertools import combinations
+from itertools import accumulate, combinations
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -19,6 +19,7 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _binary_encoder_hopf,
     _binary_encoder_hyperspherical,
     _binary_encoder_mottonen,
+    _dicke_tree_cuts,
     _ehrlich_algorithm,
     _fanout_parity_tree,
     _folded_merged,
@@ -266,64 +267,14 @@ def dicke_state(
 
         return circuit
 
-    # We prepare disjoint sets of qubits
-    disjoint_sets = [
-        {
-            "qubits": list(range(weight * it, weight * (it + 1))),
-            "tier": weight,
-            "children": [],
-        }
-        for it in range(nqubits // weight)
-    ]
-    nmodk = nqubits % weight
-    if nmodk != 0:
-        disjoint_sets.append(
-            {
-                "qubits": list(range(nqubits - nmodk, nqubits)),
-                "tier": nmodk,
-                "children": [],
-            }
-        )
-    # reverse to have in ascending order of tier
-    disjoint_sets = list(reversed(disjoint_sets))
+    disjoint_sets, root_qubits, cuts = _dicke_tree_cuts(nqubits, weight, weight)
 
-    trees = disjoint_sets.copy()
-    # combine lowest tier trees into one tree
-    while len(trees) > 1:
-        first_smallest = trees.pop(0)
-        second_smallest = trees.pop(0)
-        second_smallest["tier"] += first_smallest["tier"]
-        second_smallest["children"].append(first_smallest)
-        new = second_smallest
-        # put new combined tree in list mantaining ordering
-        trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
-
-    root = trees[0]
     # We initialize |0>^(n-k)|1>^k  bitstring at root qubits
-    circuit.add(gates.X(q) for q in root["qubits"][-weight:])
+    circuit.add(gates.X(q) for q in root_qubits[-weight:])
 
-    # undo the union-by-tier algorithm:
-    # split each root's (x) highest tier child y, and add WBD acting on both
-    while len(trees) < len(disjoint_sets):
-        cut_nodes = []
-        for node in trees:
-            if len(node["children"]) > 0:
-                # find highest tier child
-                y = max(node["children"], key=lambda x: x["tier"])
-                # add WBD acting on both sets of qubits
-                _add_wbd_gate(
-                    circuit,
-                    node["qubits"],
-                    y["qubits"],
-                    node["tier"],
-                    y["tier"],
-                    weight,
-                )
-                # cut tree splitting x and y
-                node["tier"] -= y["tier"]
-                node["children"].remove(y)
-                cut_nodes.append(y)
-        trees += cut_nodes
+    # add WBD acting on the sets of qubits of each cut
+    for node_qubits, child_qubits, node_tier, child_tier, _, _ in cuts:
+        _add_wbd_gate(circuit, node_qubits, child_qubits, node_tier, child_tier, weight)
 
     for node in disjoint_sets:
         _add_dicke_unitary_gate(
@@ -950,6 +901,244 @@ def ladder_synthesis(
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(queue)
+
+    return circuit
+
+
+def leaf_separable_encoder(
+    nqubits: int,
+    weight: int,
+    leaf_size: int,
+    data: ArrayLike,
+    backend: Backend | None = None,
+    **kwargs,
+) -> Circuit:
+    """Create a circuit that encodes a leaf-separable ``data`` in the Hamming-weight-:math:`k`
+    basis of ``nqubits``.
+
+    The :math:`n` qubits are split in :math:`G = \\lceil n / s \\rceil` contiguous sets of
+    :math:`s` qubits, called leaves (the last leaf holds the remaining :math:`n \\bmod s`
+    qubits), with :math:`k \\leq s`. Given a leaf :math:`u`, let :math:`i_{u}` be the
+    Hamming weight of a bitstring restricted to it, and :math:`I = (i_{1}, \\dots, i_{G})`
+    the weight distribution of the bitstring. An :math:`n`-qubit state with Hamming weight
+    :math:`k` is leaf-separable if, for every :math:`I`, its component with weight
+    distribution :math:`I` is a product state over the leaves, *i.e.*,
+
+    .. math::
+        \\ket{\\psi} = \\sum_{I} \\, c(I) \\, \\bigotimes_{u=1}^{G} \\ket{\\psi_{i_{u}}} \\, ,
+
+    where :math:`c(I) \\geq 0` and :math:`\\ket{\\psi_{i_{u}}}` is a state of leaf :math:`u`
+    with Hamming weight :math:`i_{u}`. The state itself is not a product state, since
+    the leaves are correlated through :math:`c(I)`.
+
+    The circuit has two parts and uses no auxiliary qubits. First, it distributes the total
+    weight :math:`k` among the leaves with a tree of generalized weight distribution blocks,
+    which are the blocks of :func:`qibo.models.encodings.dicke_state` with the uniform
+    distribution of weights replaced by the one of ``data``. Then, on each leaf, it
+    applies a Hamming weight encoder for each weight :math:`i_{u}`
+    (see :func:`qibo.models.encodings.hamming_weight_encoder`), with all its gates controlled
+    on the whole leaf, so that it acts only on the sector of leaf weight :math:`i_{u}`.
+    The circuit has depth :math:`O(s \\, \\log\\frac{n}{s} + s \\, 2^{s})`.
+
+    .. note::
+        The tree of weight distribution blocks prepares :math:`c(I)` as a product of conditional
+        weight distributions, one for each block, computed from the marginals of ``data``.
+        The output state is equal to ``data`` if :math:`c(I)` has that form, which is
+        always the case if there are only two leaves, *i.e.*, :math:`s \\geq n / 2`.
+        Otherwise, correlations between the weights of different leaves that are not
+        captured by the tree are lost, and the output state is an approximation of ``data``.
+
+    Args:
+        nqubits (int): number of qubits :math:`n`.
+        weight (int): Hamming weight :math:`k` of the state.
+        leaf_size (int): number of qubits :math:`s` in each leaf. It must satisfy
+            :math:`k \\leq s < n`.
+        data (ArrayLike): :math:`1`-dimensional array of :math:`\\binom{n}{k}` real
+            amplitudes, ordered by the integer value of the corresponding computational basis
+            states, *i.e.*, as in :func:`qibo.models.encodings.hamming_weight_encoder`.
+            It is normalized internally. The state defined by ``data`` must be leaf-separable,
+            and for each :math:`I` the first nonzero amplitude must be positive
+            (the complex phase of :math:`c(I)` is not supported).
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that prepares the leaf-separable state
+        defined by ``data``.
+
+    References:
+        1. S. Vittal, A. Wilkie, N. Rastegari, M. Atallah, and R. Herrman,
+        *Efficient circuits for leaf-separable state preparation*,
+        `arXiv:2511.11227 [quant-ph] (2025) <https://arxiv.org/abs/2511.11227>`_.
+
+        2. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+        3. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State
+        Preparation*, `IEEE International Conference on Quantum Computing & Engineering (QCE),
+        87--96 (2022) <https://doi.org/10.1109/QCE53715.2022.00027>`_.
+    """
+    backend = _check_backend(backend)
+
+    if not 0 < weight <= leaf_size < nqubits:
+        raise_error(
+            ValueError,
+            "``weight`` and ``leaf_size`` must satisfy ``0 < weight <= leaf_size < nqubits``, "
+            + f"but got weight={weight}, leaf_size={leaf_size}, and nqubits={nqubits}.",
+        )
+
+    data = backend.cast(data, dtype=backend.complex128)
+
+    if backend.any(backend.imag(data) != 0.0):
+        raise_error(NotImplementedError, "Complex-valued ``data`` is not supported.")
+
+    data = backend.real(data)
+
+    if data.shape != (math.comb(nqubits, weight),):
+        raise_error(
+            ValueError,
+            f"``data`` must have shape ({math.comb(nqubits, weight)},), but got {data.shape}.",
+        )
+    data = data / backend.vector_norm(data, dtype=backend.float64)
+
+    # leaves, and the weight of every basis state (in ascending order) in each of them
+    sizes = [leaf_size] * (nqubits // leaf_size)
+    if nqubits % leaf_size:
+        sizes.append(nqubits % leaf_size)
+    starts = list(accumulate([0] + sizes[:-1]))
+    states = backend.sort(
+        backend.cast(
+            [
+                sum(1 << (nqubits - 1 - qubit) for qubit in combination)
+                for combination in combinations(range(nqubits), weight)
+            ],
+            dtype=backend.int64,
+        )
+    )
+    bits = backend.right_shift(states[:, None], backend.arange(nqubits - 1, -1, -1)) & 1
+    leaf_weights = backend.swapaxes(
+        backend.vstack(
+            [
+                backend.sum(bits[:, start : start + size], axis=1)
+                for start, size in zip(starts, sizes)
+            ]
+        ),
+        0,
+        1,
+    )
+
+    # leaf states: for each leaf and weight, amplitudes relative to a reference basis state
+    leaf_data = {}
+    for leaf, (start, size) in enumerate(zip(starts, sizes)):
+        # bits of a basis state that do not belong to the leaf
+        outside = ((1 << nqubits) - 1) ^ (((1 << size) - 1) << (nqubits - start - size))
+        for leaf_weight in range(1, min(size, weight) + 1):
+            candidates = backend.flatnonzero(
+                (leaf_weights[:, leaf] == leaf_weight) & (backend.abs(data) > 1e-8)
+            )
+            if len(candidates) == 0:
+                continue
+            reference = int(states[candidates[0]])
+            # basis states that differ from the reference only in the leaf
+            keep = (states & outside) == (reference & outside)
+            amplitudes = data[keep] / data[candidates[0]]
+            leaf_data[(leaf, leaf_weight)] = amplitudes / backend.vector_norm(
+                amplitudes, dtype=backend.float64
+            )
+
+    # check leaf-separability by reconstructing the amplitudes
+    probabilities = data**2
+    unique_weights, inverse = backend.unique(leaf_weights, axis=0, return_inverse=True)
+    inverse = backend.ravel(inverse)
+    reconstructed = backend.zeros(len(states), dtype=backend.float64)
+    for group in range(len(unique_weights)):
+        rows = inverse == group
+        reconstructed[rows] = backend.sqrt(backend.sum(probabilities[rows]))
+    for leaf, (start, size) in enumerate(zip(starts, sizes)):
+        strings = backend.right_shift(states, nqubits - start - size) & (
+            (1 << size) - 1
+        )
+        for leaf_weight in range(1, min(size, weight) + 1):
+            if (leaf, leaf_weight) not in leaf_data:
+                continue
+            rows = leaf_weights[:, leaf] == leaf_weight
+            ordered = backend.sort(
+                backend.cast(
+                    [
+                        sum(1 << (size - 1 - qubit) for qubit in combination)
+                        for combination in combinations(range(size), leaf_weight)
+                    ],
+                    dtype=backend.int64,
+                )
+            )
+            ranks = backend.searchsorted(ordered, strings[rows])
+            reconstructed[rows] *= leaf_data[(leaf, leaf_weight)][ranks]
+    if not backend.allclose(reconstructed, data, atol=1e-8):
+        raise_error(
+            ValueError,
+            "``data`` is not leaf-separable for the given ``weight`` and ``leaf_size``.",
+        )
+
+    disjoint_sets, root_qubits, cuts = _dicke_tree_cuts(nqubits, weight, leaf_size)
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.X(qubit) for qubit in root_qubits[-weight:])
+
+    # weight distribution blocks with the conditional distributions given by ``data``
+    for node_qubits, child_qubits, node_tier, child_tier, node_sets, child_sets in cuts:
+        node_weights = backend.sum(leaf_weights[:, node_sets], axis=1)
+        child_weights = backend.sum(leaf_weights[:, child_sets], axis=1)
+        conditional = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
+        conditional[:, 0] = 1.0
+        for total in range(1, weight + 1):
+            selected = node_weights == total
+            normalization = backend.sum(probabilities[selected])
+            if normalization > 0.0:
+                for child in range(weight + 1):
+                    conditional[total, child] = (
+                        backend.sum(probabilities[selected & (child_weights == child)])
+                        / normalization
+                    )
+        _add_wbd_gate(
+            circuit,
+            node_qubits,
+            child_qubits,
+            node_tier,
+            child_tier,
+            weight,
+            conditional,
+        )
+
+    # leaf encoders, fully controlled in the leaf to act only on the sector of a given weight
+    # reverse to restore ascending leaf-index order for the ``leaf_data`` lookup
+    for leaf, leaf_set in enumerate(disjoint_sets[::-1]):
+        leaf_qubits = leaf_set["qubits"]
+        for leaf_weight in range(1, min(len(leaf_qubits), weight) + 1):
+            if (leaf, leaf_weight) not in leaf_data or len(
+                leaf_data[(leaf, leaf_weight)]
+            ) == 1:
+                continue
+            encoder = hamming_weight_encoder(
+                len(leaf_qubits),
+                leaf_weight,
+                backend.cast(leaf_data[(leaf, leaf_weight)], dtype=backend.float64),
+                full_hwp=True,
+                optimize_controls=False,
+                backend=backend,
+            )
+            for gate in encoder.on_qubits(*leaf_qubits):
+                assert isinstance(gate, gates.RBS)
+                zeros = [qubit for qubit in leaf_qubits if qubit not in gate.qubits]
+                circuit.add(gates.X(qubit) for qubit in zeros)
+                circuit.add(
+                    gates.RBS(*gate.target_qubits, *gate.parameters).controlled_by(
+                        *gate.control_qubits, *zeros
+                    )
+                )
+                circuit.add(gates.X(qubit) for qubit in zeros)
 
     return circuit
 

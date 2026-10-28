@@ -31,6 +31,7 @@ from qibo.models.encodings import (
     graph_state,
     hamming_weight_encoder,
     ladder_synthesis,
+    leaf_separable_encoder,
     permutation_synthesis,
     phase_encoder,
     sparse_encoder,
@@ -39,6 +40,7 @@ from qibo.models.encodings import (
     unary_encoder_random_gaussian,
     up_to_k_hamming_weight_encoder,
 )
+from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_statevector
 from qibo.transpiler import InverseCancellation
 
@@ -1012,6 +1014,197 @@ def test_fanout_and_ladder_synthesis(backend, nqubits, method):
     backend.assert_allclose(ladder.unitary(backend), target.unitary(backend))
 
 
+def _leaf_separable_data(nqubits, weight, leaf_size, seed, correlated=False):
+    """Random leaf-separable amplitudes with positive reference amplitudes.
+
+    If ``correlated`` is ``False``, the weights of the leaves are independent, conditioned on
+    their sum, and the weight distribution is exactly given by a tree of weight distribution
+    blocks. Otherwise, it is an arbitrary distribution.
+    """
+    rng = np.random.default_rng(seed)
+    sizes = [leaf_size] * (nqubits // leaf_size)
+    if nqubits % leaf_size:
+        sizes.append(nqubits % leaf_size)
+    starts = np.cumsum([0] + sizes[:-1])
+    states = np.sort(
+        [
+            sum(1 << (nqubits - 1 - qubit) for qubit in combination)
+            for combination in combinations(range(nqubits), weight)
+        ]
+    )
+
+    # leaf amplitudes, with positive first entry in each sector of fixed Hamming weight
+    leaf_amplitudes = []
+    for size in sizes:
+        values = rng.normal(size=2**size)
+        weights = np.array([int(string).bit_count() for string in range(2**size)])
+        for sector in range(size + 1):
+            values[weights == sector] *= np.sign(
+                values[np.flatnonzero(weights == sector)[0]]
+            )
+        leaf_amplitudes.append(values)
+
+    independent = rng.random((len(sizes), weight + 1)) + 0.1
+    arbitrary = rng.random((weight + 1,) * len(sizes)) + 0.1
+
+    data = []
+    for state in states:
+        amplitude = 1.0
+        distribution = []
+        for leaf, (start, size) in enumerate(zip(starts, sizes)):
+            string = (state >> (nqubits - start - size)) & (2**size - 1)
+            distribution.append(int(string).bit_count())
+            amplitude *= leaf_amplitudes[leaf][string]
+            if not correlated:
+                amplitude *= np.sqrt(independent[leaf][distribution[-1]])
+        if correlated:
+            amplitude *= np.sqrt(arbitrary[tuple(distribution)])
+        data.append(amplitude)
+    data = np.array(data)
+
+    return data / np.linalg.norm(data), states
+
+
+@pytest.mark.parametrize(
+    "probabilities",
+    [
+        [[1.0], [0.3, 0.7], [0.2, 0.5, 0.3]],
+        [[1.0], [0.0, 1.0], [1.0, 0.0, 0.0]],
+    ],
+)
+def test_wbd_gate_probabilities(backend, probabilities):
+    nqubits, mqubits, weight = 4, 2, 2
+    circuit = Circuit(nqubits)
+    _add_wbd_gate(
+        circuit, [2, 3], [0, 1], nqubits, mqubits, weight, probabilities=probabilities
+    )
+
+    for l in range(weight + 1):
+        initial = np.zeros(2**nqubits, dtype=complex)
+        target = np.zeros(2**nqubits, dtype=complex)
+        initial[2**l - 1] = 1
+        for i in range(min(l, mqubits) + 1):
+            index = 2 ** (nqubits - mqubits) * (2**i - 1) + 2 ** (l - i) - 1
+            target[index] = np.sqrt(probabilities[l][i])
+
+        initial = backend.cast(initial, dtype=initial.dtype)
+        target = backend.cast(target, dtype=target.dtype)
+        state = backend.execute_circuit(circuit, initial_state=initial).state()
+
+        backend.assert_allclose(state, target, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nqubits, weight, leaf_size",
+    [
+        (4, 2, 2),
+        (5, 2, 3),
+        (6, 2, 2),
+        (6, 3, 3),
+        (7, 2, 2),
+        (7, 3, 3),
+        (8, 2, 3),
+        (8, 3, 3),
+        (9, 3, 3),
+    ],
+)
+def test_leaf_separable_encoder(backend, nqubits, weight, leaf_size):
+    data, states = _leaf_separable_data(nqubits, weight, leaf_size, seed=7)
+    target = np.zeros(2**nqubits, dtype=complex)
+    target[states] = data
+    target = backend.cast(target, dtype=target.dtype)
+    data = backend.cast(data, dtype=backend.float64)
+
+    circuit = leaf_separable_encoder(
+        nqubits,
+        weight,
+        leaf_size,
+        data,
+        backend=backend,
+    )
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nqubits, weight, leaf_size", [(6, 2, 2), (7, 3, 3), (8, 2, 3)]
+)
+def test_leaf_separable_encoder_dicke(backend, nqubits, weight, leaf_size):
+    circuit = leaf_separable_encoder(
+        nqubits, weight, leaf_size, np.ones(math.comb(nqubits, weight)), backend=backend
+    )
+    target = dicke_state(nqubits, weight, all_to_all=True)
+
+    backend.assert_allclose(
+        backend.execute_circuit(circuit).state(),
+        backend.execute_circuit(target).state(),
+        atol=1e-8,
+    )
+
+
+@pytest.mark.parametrize("distribution", [(2, 0), (1, 1), (0, 2)])
+def test_leaf_separable_encoder_single_distribution(backend, distribution):
+    nqubits, weight, leaf_size = 6, 2, 3
+    values = backend.random_sample((2, 2**leaf_size), seed=5) + 0.1
+    states = backend.sort(
+        [
+            sum(1 << (nqubits - 1 - qubit) for qubit in combination)
+            for combination in combinations(range(nqubits), weight)
+        ]
+    )
+
+    data = np.zeros(len(states))
+    for index, state in enumerate(states):
+        strings = (state >> leaf_size, state & (2**leaf_size - 1))
+        if tuple(int(string).bit_count() for string in strings) == distribution:
+            data[index] = values[0][strings[0]] * values[1][strings[1]]
+    data /= np.linalg.norm(data)
+    target = np.zeros(2**nqubits, dtype=complex)
+    target[states] = data
+    target = backend.cast(target, dtype=backend.float64)
+    data = backend.cast(data, dtype=data.dtype)
+
+    circuit = leaf_separable_encoder(nqubits, weight, leaf_size, data, backend=backend)
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-8)
+
+
+def test_leaf_separable_encoder_approximation(backend):
+    nqubits, weight, leaf_size = 8, 2, 2
+    data, states = _leaf_separable_data(
+        nqubits, weight, leaf_size, seed=3, correlated=True
+    )
+    target = np.zeros(2**nqubits)
+    target[states] = data
+
+    circuit = leaf_separable_encoder(nqubits, weight, leaf_size, data, backend=backend)
+    state = backend.execute_circuit(circuit).state()
+    fid = fidelity(state, target, backend=backend)
+
+    # weight distributions that are not a product of conditional distributions are lost
+    assert 0.9 < fid < 1 - 1e-6
+
+
+def test_leaf_separable_encoder_errors(backend):
+    data = backend.random_sample(math.comb(6, 2), seed=10)
+
+    for weight, leaf_size in [(0, 2), (3, 2), (2, 6)]:
+        with pytest.raises(ValueError):
+            leaf_separable_encoder(6, weight, leaf_size, data, backend=backend)
+
+    with pytest.raises(NotImplementedError):
+        leaf_separable_encoder(6, 2, 2, data + 1j * data, backend=backend)
+
+    with pytest.raises(ValueError):
+        leaf_separable_encoder(6, 2, 2, data[:-1], backend=backend)
+
+    # generic amplitudes are not leaf-separable
+    with pytest.raises(ValueError):
+        leaf_separable_encoder(6, 2, 2, data, backend=backend)
+
+
 @pytest.mark.parametrize(
     "nqubits,nmagnons,domains,modes,method",
     [
@@ -1112,7 +1305,8 @@ def test_folded_xxz_eigenstate_many_domains(
     backend, nsites, nmagnons, domains, target_modes, method
 ):
     """The circuits are too large to be simulated, so the first stage is simulated alone, and the
-    other stages, which only permute basis states, are applied to the bit strings of its state."""
+    other stages, which only permute basis states, are applied to the bit strings of its state.
+    """
     if method == "merged":
         # relative phases are not simulated, so the gates are the ones that permute states
         circuit = _folded_merged(
