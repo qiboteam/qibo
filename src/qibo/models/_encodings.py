@@ -69,12 +69,16 @@ def _add_wbd_gate(
     nqubits: int,
     mqubits: int,
     weight: int,
+    probabilities: ArrayLike | None = None,
 ) -> None:
     """In-place addition of a Weight Distribution Block (WBD) to ``circuit``.
     Implements the :math:`WBD^{n,m}_k` unitary from Definition 2 of the paper [2].
     Only acts on first_register and second_register, last k qubits
     Our circuit is mirrored, as paper [2] uses a top-bottom circuit <-> right-left
-    bitstring convention
+    bitstring convention.
+    If ``probabilities`` is given, it must be an array such that ``probabilities[l][i]``
+    is the probability of moving weight ``i`` to ``second_register``, given that the weight
+    in ``first_register`` is ``l``, replacing the uniform (Dicke) distribution.
     """
 
     if mqubits > nqubits / 2:
@@ -94,13 +98,19 @@ def _add_wbd_gate(
     # We follow Figure 4, but adjust definition of xi and si (suffix sum) to match
     theta_gate = lambda qubit, theta: gates.RY(qubit, 2 * math.acos(theta))
     for l in range(weight, 0, -1):
-        x = [
-            math.comb(mqubits, elem) * math.comb(nqubits - mqubits, l - elem)
-            for elem in range(l)
-        ]
-        s = math.comb(nqubits, l)
+        if probabilities is None:
+            x = [
+                math.comb(mqubits, elem) * math.comb(nqubits - mqubits, l - elem)
+                for elem in range(l)
+            ]
+            s = math.comb(nqubits, l)
+        else:
+            x = [float(probabilities[l][elem]) for elem in range(l)]
+            s = float(sum(probabilities[l][: l + 1]))
+        # if the remaining probability vanishes, the branch is never reached
+        ratio = lambda num, den: min(1.0, num / den) if den > 1e-15 else 1.0
         circuit.add(
-            theta_gate(second_register[-1], math.sqrt(x[0] / s)).controlled_by(
+            theta_gate(second_register[-1], math.sqrt(ratio(x[0], s))).controlled_by(
                 first_register[-l]
             )
         )
@@ -108,7 +118,7 @@ def _add_wbd_gate(
         for qubit in range(1, min(l, mqubits)):
             circuit.add(
                 theta_gate(
-                    second_register[-qubit - 1], math.sqrt(x[qubit] / s)
+                    second_register[-qubit - 1], math.sqrt(ratio(x[qubit], s))
                 ).controlled_by(first_register[-l], second_register[-qubit])
             )
             s -= x[qubit]
@@ -409,6 +419,94 @@ def _binary_encoder_hyperspherical(
         )
 
     return circuit
+
+
+def _dicke_tree_cuts(
+    nqubits: int, weight: int, set_size: int
+) -> tuple[list[dict], list[int], list[tuple]]:
+    """Build the union-by-tier tree of Ref. [1] over disjoint qubit sets.
+
+    The ``nqubits`` qubits are split in contiguous sets of ``set_size`` qubits, with a
+    last set holding the remainder. The sets are then merged in a tree, by repeatedly
+    joining the two trees with the smallest number of qubits.
+
+    Returns:
+        tuple: The list of disjoint sets, the qubits of the root set, and the ordered list of
+        cuts. Each cut is a tuple ``(node_qubits, child_qubits, node_tier, child_tier,
+        node_sets, child_sets)``, where tiers are numbers of qubits in the respective trees
+        before the cut, and ``*_sets`` are the indices of the disjoint sets in them.
+        The cuts are in the order in which weight distribution blocks have to be applied.
+
+    References:
+        1. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State
+        Preparation*, `IEEE International Conference on Quantum Computing & Engineering (QCE),
+        87--96 (2022) <https://doi.org/10.1109/QCE53715.2022.00027>`_.
+    """
+    # We prepare disjoint sets of qubits
+    disjoint_sets = [
+        {
+            "qubits": list(range(set_size * it, set_size * (it + 1))),
+            "tier": set_size,
+            "children": [],
+            "sets": {it},
+        }
+        for it in range(nqubits // set_size)
+    ]
+    nmodk = nqubits % set_size
+    if nmodk != 0:
+        disjoint_sets.append(
+            {
+                "qubits": list(range(nqubits - nmodk, nqubits)),
+                "tier": nmodk,
+                "children": [],
+                "sets": {nqubits // set_size},
+            }
+        )
+    # reverse to have in ascending order of tier
+    disjoint_sets = list(reversed(disjoint_sets))
+
+    trees = disjoint_sets.copy()
+    # combine lowest tier trees into one tree
+    while len(trees) > 1:
+        first_smallest = trees.pop(0)
+        second_smallest = trees.pop(0)
+        second_smallest["tier"] += first_smallest["tier"]
+        second_smallest["sets"] = second_smallest["sets"] | first_smallest["sets"]
+        second_smallest["children"].append(first_smallest)
+        new = second_smallest
+        # put new combined tree in list mantaining ordering
+        trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
+
+    root = trees[0]
+    root_qubits = root["qubits"]
+
+    # undo the union-by-tier algorithm:
+    # split each root's (x) highest tier child y
+    cuts = []
+    while len(trees) < len(disjoint_sets):
+        cut_nodes = []
+        for node in trees:
+            if len(node["children"]) > 0:
+                # find highest tier child
+                y = max(node["children"], key=lambda x: x["tier"])
+                cuts.append(
+                    (
+                        node["qubits"],
+                        y["qubits"],
+                        node["tier"],
+                        y["tier"],
+                        sorted(node["sets"]),
+                        sorted(y["sets"]),
+                    )
+                )
+                # cut tree splitting x and y
+                node["tier"] -= y["tier"]
+                node["sets"] = node["sets"] - y["sets"]
+                node["children"].remove(y)
+                cut_nodes.append(y)
+        trees += cut_nodes
+
+    return disjoint_sets, root_qubits, cuts
 
 
 def _ehrlich_algorithm(
