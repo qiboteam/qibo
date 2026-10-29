@@ -283,6 +283,56 @@ Fanout gate synthesis in log depth
 .. autofunction:: qibo.models.encodings.fanout_synthesis
 
 
+Folded XXZ eigenstates
+^^^^^^^^^^^^^^^^^^^^^^
+
+Prepares the eigenstates of the spin-:math:`1/2` folded XXZ chain with open boundary conditions,
+a kinetically constrained integrable model whose Hilbert space is fragmented into exponentially
+many dynamically disconnected sectors. Its eigenstates contain magnons, which are delocalized,
+and static domain walls, which are displaced when a magnon crosses them. The number of gates
+grows polynomially with the number of sites and with the number of magnons.
+For instance, the following eigenstate of five sites has a single magnon and two domain walls,
+and it is a superposition of two spin configurations.
+
+.. testcode::
+
+    from qibo.models.encodings import folded_xxz_eigenstate
+
+    circuit = folded_xxz_eigenstate(nsites=5, nmagnons=1, domains=[[3, 4]], modes=[2])
+    result = circuit()
+    # the chain is encoded in the first five qubits, and the remaining ones are auxiliary
+    probabilities = result.probabilities(qubits=range(5))
+    print(*(f"{state}: {prob:.2f}" for state, prob in zip(
+        ("10110", "11001"), probabilities[[0b10110, 0b11001]]
+    )))
+
+.. testoutput::
+    :hide:
+
+    10110: 0.50 11001: 0.50
+
+The circuit can be implemented with two methods, selected with ``method``. The default
+``"sopena"`` follows the original construction. With ``"merged"``, the free fermions are prepared
+with Givens rotations, and the output is written in a single pass over the squeezed chain.
+For domain walls, ``"merged"`` needs fewer qubits and gates, and for no domain walls, it needs more.
+Both prepare the same state in the first qubits of the circuit.
+
+.. testcode::
+
+    circuit = folded_xxz_eigenstate(5, 1, [[3, 4]], [2], method="merged")
+    probabilities = circuit().probabilities(qubits=range(5))
+    print(*(f"{state}: {prob:.2f}" for state, prob in zip(
+        ("10110", "11001"), probabilities[[0b10110, 0b11001]]
+    )))
+
+.. testoutput::
+    :hide:
+
+    10110: 0.50 11001: 0.50
+
+.. autofunction:: qibo.models.encodings.folded_xxz_eigenstate
+
+
 Fixed Hamming-weight Encoder
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -293,6 +343,36 @@ CNOT ladder synthesis in log depth
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: qibo.models.encodings.ladder_synthesis
+
+
+Leaf-separable Encoder
+^^^^^^^^^^^^^^^^^^^^^^
+
+Prepares states of fixed Hamming weight whose qubits are split in contiguous groups (leaves),
+such that, for each distribution of the weight among the leaves, the state is a product over
+leaves. The leaves are correlated only through the weight distribution.
+The circuit combines the weight distribution blocks of :func:`qibo.models.encodings.dicke_state`
+with Hamming weight encoders acting on the leaves, and needs no auxiliary qubits.
+
+For instance, the Dicke state :math:`\ket{D_{2}^{6}}` is leaf-separable, and the following
+example prepares it on :math:`6` qubits split in leaves of :math:`2` qubits.
+
+.. testsetup::
+
+    import numpy as np
+
+    from qibo.models.encodings import leaf_separable_encoder
+
+.. testcode::
+
+    nqubits, weight, leaf_size = 6, 2, 2
+
+    # amplitudes of the 15 basis states of Hamming weight 2, in ascending order
+    data = np.ones(15)
+
+    circuit = leaf_separable_encoder(nqubits, weight, leaf_size, data)
+
+.. autofunction:: qibo.models.encodings.leaf_separable_encoder
 
 
 Permutation synthesis
