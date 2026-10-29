@@ -1,4 +1,5 @@
 import math
+from copy import copy
 from enum import EnumMeta, Flag, auto
 from functools import reduce
 from operator import or_
@@ -405,6 +406,9 @@ def translate_gate(
         return [gate]
 
     if isinstance(gate, gates.M):
+        # the rotations to the measurement basis are already gates of the circuit, and
+        # the input gate is not modified, since it may belong to other circuits
+        gate = copy(gate)
         gate.basis_gates = len(gate.basis_gates) * [gates.Z]
         gate.basis = []
         return [gate]
