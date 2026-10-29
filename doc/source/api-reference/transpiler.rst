@@ -279,6 +279,14 @@ Transpile layout
 Placer
 ------
 
+Dense
+^^^^^
+
+.. autoclass:: qibo.transpiler.placer.Dense
+    :members:
+    :member-order: bysource
+
+
 Random
 ^^^^^^
 
@@ -318,6 +326,14 @@ Circuit map
 ^^^^^^^^^^^
 
 .. autoclass:: qibo.transpiler.router.CircuitMap
+    :members:
+    :member-order: bysource
+
+
+No routing
+^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.router.NoRouting
     :members:
     :member-order: bysource
 
