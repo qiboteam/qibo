@@ -20,7 +20,7 @@ jobs:
     needs: [version]
     uses: qiboteam/workflows/.github/workflows/latest-stable.yml@uv
     with:
-      python-version: "3.11"
+      python-version: "3.12"
       trigger-label: "${{needs.version.outputs.version}}"
       project: qibo
       uv-extras: --no-dev --group docs --all-extras
