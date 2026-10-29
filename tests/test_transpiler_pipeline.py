@@ -956,7 +956,7 @@ def test_generate_preset_passes_initial_layout_with_placer_error(layout_method):
         )
 
 
-@pytest.mark.parametrize("layout_method", ["dense", "Random", 3])
+@pytest.mark.parametrize("layout_method", ["grid", "Random", 3])
 def test_generate_preset_passes_unknown_layout_method(layout_method):
     with pytest.raises(ValueError, match="layout method"):
         generate_preset_passes(nx.path_graph(5), layout_method=layout_method)
@@ -1134,3 +1134,48 @@ def test_transpile_forwards_backend(backend, monkeypatch):
     transpile(circuit, backend=backend)
     transpile([circuit, circuit], backend=backend)
     assert received == [backend] * 3
+
+
+def test_passes_router_without_connectivity_error(backend):
+    with pytest.raises(ValueError):
+        Passes([Sabre()])(Circuit(2), backend=backend)
+
+
+def test_generate_preset_passes_callback_and_transpile_list(backend):
+    counts = []
+    circuits = []
+    for qubits in [(0, 1), (1, 2)]:
+        circuit = Circuit(3)
+        circuit.add(gates.CNOT(*qubits))
+        circuits.append(circuit)
+    results = transpile(
+        circuits,
+        nx.path_graph(3),
+        seed=1,
+        callback=lambda **kwargs: counts.append(kwargs["count"]),
+        backend=backend,
+    )
+    assert len(results) == 2
+    # unroller, preprocessing, unroller; the router is skipped
+    assert counts == [0, 1, 3, 0, 1, 3]
+
+
+def test_generate_preset_passes_dense_layout(backend, grid_connectivity):
+    connectivity = grid_connectivity()
+    natives = NativeGates.default()
+    circuit = generate_random_circuit(5, 10)
+    transpiled_circuit, layout = transpile(
+        circuit,
+        connectivity,
+        natives,
+        seed=1,
+        layout_method="dense",
+        backend=backend,
+    )
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=layout,
+        native_gates=natives,
+    )
