@@ -24,21 +24,29 @@ from qibo.transpiler.optimizer import (
 )
 from qibo.transpiler.pipeline import Passes, generate_preset_passes, transpile
 from qibo.transpiler.placer import (
+    Dense,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
     Subgraph,
 )
-from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
+from qibo.transpiler.router import (
+    NoRouting,
+    Sabre,
+    ShortestPaths,
+    StarConnectivityRouter,
+)
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 __all__ = [
     "BarrierBeforeFinalMeasurements",
     "ConsolidateBlocks",
+    "Dense",
     "FilterGates",
     "FixedPoint",
     "InverseCancellation",
     "NativeGates",
+    "NoRouting",
     "Optimize1qGatesDecomposition",
     "ParametrizedGateFusion",
     "Passes",
