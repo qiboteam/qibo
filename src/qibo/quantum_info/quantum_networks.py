@@ -1021,9 +1021,15 @@ def link_product(
         subscripts, *tensors, optimize=False, einsum_call=True
     )
 
-    inds, idx_rm, einsum_str, _, _ = contracrtion_list[0]
+    # the layout of the contraction tuple is private to numpy and changed in 2.5
+    # (from ``(inds, idx_rm, einsum_str, remaining, blas)`` to
+    # ``(inds, einsum_str, remaining)``), so only rely on ``inds`` and the string
+    contraction = contracrtion_list[0]
+    inds = contraction[0]
+    einsum_str = next(item for item in contraction if isinstance(item, str))
     input_str, results_index = einsum_str.split("->")
     inputs = input_str.split(",")
+    idx_rm = set(input_str.replace(",", "")) - set(results_index)
 
     # Warning if the same index connects two input or two output systems
     if not surpress_warning:
