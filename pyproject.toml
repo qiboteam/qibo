@@ -6,12 +6,12 @@ authors = [{ name = "The Qibo team" }]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.15"
 keywords = []
 classifiers = [
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
@@ -30,9 +30,9 @@ Documentation = "https://qibo.science/qibo/stable/"
 
 [project.optional-dependencies]
 qinfo = ["stim>=1.15.0,<2.0.0"]
-qulacs = ["qulacs>=0.6.4,<0.7.0; python_version < '3.13'"]
-cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux'"]
-qir = ["qbraid[qir]>=0.10.0,<0.11.0"]
+qulacs = ["qulacs>=0.6.12,<0.7.0; python_version < '3.14'"]
+cudaq = ["qbraid[cudaq]>=0.13.0,<0.14.0; sys_platform == 'linux'"]
+qir = ["qbraid[qir]>=0.13.0,<0.14.0"]
 qiskit = ["qiskit>=2.2.3,<3.0.0"]
 gridsynth = ["pygridsynth>=2.0.0,<3.0.0"]
 cma = ["cma>=4.0.0,<5.0.0"]
@@ -88,7 +88,7 @@ docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]
