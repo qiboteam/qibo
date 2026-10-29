@@ -21,6 +21,7 @@ from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import Random, StarConnectivityPlacer, Subgraph
 from qibo.transpiler.router import (
     CircuitMap,
+    NoRouting,
     Sabre,
     ShortestPaths,
     StarConnectivityRouter,
@@ -1016,3 +1017,29 @@ def test_check_connected_components():
     # the layout of the circuit map decides which qubits are connected
     with pytest.raises(ConnectivityError):
         _check_connected_components(circuit_map, nx.Graph([(0, 3), (1, 2), (2, 4)]))
+
+
+def test_no_routing():
+    names = ["A", "B", "C", "D"]
+    connectivity = nx.relabel_nodes(nx.path_graph(4), dict(enumerate(names)))
+    circuit = Circuit(4, wire_names=names)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(2, 1))
+    circuit.add(gates.M(0, 3))
+    routed_circuit, final_layout = NoRouting(connectivity)(circuit)
+    assert routed_circuit is circuit
+    assert final_layout == dict(zip(names, range(4)))
+    assert [gate.qubits for gate in routed_circuit.queue] == [
+        gate.qubits for gate in circuit.queue
+    ]
+
+
+def test_no_routing_errors():
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 2))
+    with pytest.raises(ConnectivityError):
+        NoRouting(nx.path_graph(3))(circuit)
+
+    with pytest.raises(PlacementError):
+        NoRouting(nx.path_graph(4))(Circuit(3))

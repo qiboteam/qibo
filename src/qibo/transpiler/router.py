@@ -12,7 +12,7 @@ from qibo.config import raise_error
 from qibo.gates.gates import is_nonzero_phase
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
-from qibo.transpiler.asserts import assert_placement
+from qibo.transpiler.asserts import assert_connectivity, assert_placement
 from qibo.transpiler.blocks import Block, CircuitBlocks
 
 
@@ -191,6 +191,57 @@ class CircuitMap:
             tuple: Physical qubit numbers associated to the logical qubit pair.
         """
         return self._l2p[logical_qubits[0]], self._l2p[logical_qubits[1]]
+
+
+class NoRouting(Router):
+    """Leaves the circuit unchanged, and raises an error if it cannot run on the hardware.
+
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            Defaults to ``None``.
+
+    Example:
+        The two-qubit gates of the circuit act on connected qubits, so the circuit is
+        not changed and no qubit is moved.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import NoRouting
+
+            circuit = Circuit(3)
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(1, 2))
+
+            routed_circuit, final_layout = NoRouting(nx.path_graph(3))(circuit)
+            print(final_layout)
+
+        .. testoutput::
+
+            {0: 0, 1: 1, 2: 2}
+    """
+
+    def __init__(self, connectivity: nx.Graph | None = None):
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit) -> tuple[Circuit, dict]:
+        """Check that the circuit respects the connectivity.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
+
+        Returns:
+            (:class:`qibo.models.circuit.Circuit`, dict): The same circuit and the final
+            {logical: physical} qubit mapping, which is the identity.
+
+        Raises:
+            ConnectivityError: If a gate acts on qubits that are not connected.
+        """
+        assert_placement(circuit, self.connectivity)
+        assert_connectivity(self.connectivity, circuit)
+        return circuit, {name: index for index, name in enumerate(circuit.wire_names)}
 
 
 class Sabre(Router):

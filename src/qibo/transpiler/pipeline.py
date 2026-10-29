@@ -1,3 +1,5 @@
+import time
+from collections.abc import Callable
 from inspect import signature
 
 import networkx as nx
@@ -13,6 +15,7 @@ from qibo.transpiler._exceptions import (
 )
 from qibo.transpiler.abstract import Optimizer, Placer, Router
 from qibo.transpiler.asserts import (
+    _find_unconnected_gate,
     assert_connectivity,
     assert_decomposition,
     assert_placement,
@@ -20,12 +23,18 @@ from qibo.transpiler.asserts import (
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import GateDirection, Preprocessing
 from qibo.transpiler.placer import (
+    Dense,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
     Subgraph,
 )
-from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
+from qibo.transpiler.router import (
+    NoRouting,
+    Sabre,
+    ShortestPaths,
+    StarConnectivityRouter,
+)
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 
@@ -46,6 +55,38 @@ class Passes:
             Defaults to :meth:`qibo.transpiler.unroller.NativeGates.default`.
         on_qubits (list, optional): List of qubits to be used in the transpiler.
             If ``None``, all qubits in the connectivity will be used. Defaults to ``None``.
+        callback (Callable, optional): Function called after each pass that runs, with the
+            keyword arguments ``transpiler_pass``, the pass that has run, ``circuit``, the
+            circuit after the pass, ``time``, the seconds that the pass has taken, and
+            ``count``, the position of the pass in ``passes``. A router is skipped, and the
+            callback is not called for it, if the circuit already respects the
+            connectivity, since no qubit has to be moved. Defaults to ``None``.
+
+    Example:
+        The callback prints the passes of the pipeline as they run. The circuit already
+        respects the connectivity, so the router is skipped and it is not printed.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Passes, Preprocessing, Sabre
+
+            circuit = Circuit(2)
+            circuit.add(gates.CNOT(0, 1))
+
+            def callback(transpiler_pass, circuit, time, count):
+                print(count, type(transpiler_pass).__name__, circuit.nqubits)
+
+            pipeline = Passes(
+                [Preprocessing(), Sabre()], connectivity=nx.path_graph(3), callback=callback
+            )
+            transpiled_circuit, final_layout = pipeline(circuit)
+
+        .. testoutput::
+
+            0 Preprocessing 3
     """
 
     def __init__(
@@ -54,6 +95,7 @@ class Passes:
         connectivity: nx.Graph | None = None,
         native_gates: NativeGates | None = None,
         on_qubits: list | None = None,
+        callback: Callable | None = None,
     ):
         if on_qubits is not None:
             if connectivity is None:
@@ -67,6 +109,7 @@ class Passes:
         self.connectivity = connectivity
         self.native_gates = native_gates
         self.passes = [] if passes is None else passes
+        self.callback = callback
 
     def __call__(
         self, circuit: Circuit, backend: Backend | None = None
@@ -93,7 +136,9 @@ class Passes:
 
         final_layout = None
         nqubits_input = circuit.nqubits
-        for transpiler_pass in self.passes:
+        for count, transpiler_pass in enumerate(self.passes):
+            start = time.perf_counter()
+            skipped = False
             if isinstance(transpiler_pass, Optimizer):
                 transpiler_pass.connectivity = self.connectivity
                 if "backend" in signature(transpiler_pass.__call__).parameters:
@@ -105,8 +150,19 @@ class Passes:
                 final_layout = transpiler_pass(circuit, backend=backend)
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
+                assert_placement(circuit, self.connectivity)
                 initial_layout = circuit.wire_names
-                circuit, final_layout = transpiler_pass(circuit)
+                # no qubit has to be moved if the circuit respects the connectivity
+                skipped = (
+                    _find_unconnected_gate(transpiler_pass.connectivity, circuit)
+                    is None
+                )
+                if skipped:
+                    final_layout = {
+                        name: index for index, name in enumerate(initial_layout)
+                    }
+                else:
+                    circuit, final_layout = transpiler_pass(circuit)
                 final_layout = TranspileLayout(
                     final_layout, initial_layout, nqubits_input
                 )
@@ -118,6 +174,14 @@ class Passes:
                 raise_error(
                     TranspilerPipelineError,
                     f"Unrecognised transpiler pass: {transpiler_pass}",
+                )
+
+            if self.callback is not None and not skipped:
+                self.callback(
+                    transpiler_pass=transpiler_pass,
+                    circuit=circuit,
+                    time=time.perf_counter() - start,
+                    count=count,
                 )
 
         if final_layout is None:
@@ -160,6 +224,8 @@ def generate_preset_passes(
     qubits_initially_zero: bool = False,
     layout_method: str | Placer | None = None,
     routing_method: str | Router | None = None,
+    layout_trials: int = 1,
+    callback: Callable | None = None,
     backend: Backend | None = None,
 ) -> Passes:
     """Generate a ready-to-use transpiler pipeline that does not optimize the circuit.
@@ -217,7 +283,8 @@ def generate_preset_passes(
         layout_method (str or :class:`qibo.transpiler.abstract.Placer`, optional): Placer
             that finds the initial layout. It can be ``"trivial"``, which keeps the
             ``wire_names`` of the circuit if they are nodes of the connectivity and uses
-            the first nodes otherwise, ``"random"``
+            the first nodes otherwise, ``"dense"``
+            (:class:`qibo.transpiler.placer.Dense`), ``"random"``
             (:class:`qibo.transpiler.placer.Random`), ``"subgraph"``
             (:class:`qibo.transpiler.placer.Subgraph`), ``"reverse_traversal"``
             (:class:`qibo.transpiler.placer.ReverseTraversal` with
@@ -228,8 +295,17 @@ def generate_preset_passes(
             that makes the circuit executable. It can be ``"sabre"``
             (:class:`qibo.transpiler.router.Sabre` with five trials), ``"shortest_paths"``
             (:class:`qibo.transpiler.router.ShortestPaths`), ``"star"``
-            (:class:`qibo.transpiler.router.StarConnectivityRouter`) or a router. It
-            requires ``connectivity``. Defaults to ``None``, which is ``"sabre"``.
+            (:class:`qibo.transpiler.router.StarConnectivityRouter`), ``"none"``
+            (:class:`qibo.transpiler.router.NoRouting`, which raises an error if the
+            circuit needs routing) or a router. A router is skipped if the circuit
+            already respects the connectivity. It requires ``connectivity``. Defaults
+            to ``None``, which is ``"sabre"``.
+        layout_trials (int, optional): Number of layout attempts of the
+            ``"reverse_traversal"`` placer, see
+            :class:`qibo.transpiler.placer.ReverseTraversal`. It is not used by the other
+            placers. Defaults to :math:`1`.
+        callback (Callable, optional): Function called after each pass that runs, see
+            :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -269,17 +345,20 @@ def generate_preset_passes(
             passes=[Unroller(native_gates, **unroller_kwargs)],
             native_gates=native_gates,
             on_qubits=on_qubits,
+            callback=callback,
         )
 
     placers = {
+        "dense": Dense,
         "random": lambda: Random(seed=seed),
         "reverse_traversal": lambda: ReverseTraversal(
-            routing_algorithm=Sabre(seed=seed)
+            routing_algorithm=Sabre(seed=seed), trials=layout_trials, seed=seed
         ),
         "star": StarConnectivityPlacer,
         "subgraph": Subgraph,
     }
     routers = {
+        "none": NoRouting,
         "sabre": lambda: Sabre(seed=seed, trials=5),
         "shortest_paths": lambda: ShortestPaths(seed=seed),
         "star": StarConnectivityRouter,
@@ -333,6 +412,7 @@ def generate_preset_passes(
         connectivity=connectivity,
         native_gates=native_gates,
         on_qubits=on_qubits,
+        callback=callback,
     )
 
 
@@ -376,6 +456,8 @@ def transpile(
     qubits_initially_zero: bool = False,
     layout_method: str | Placer | None = None,
     routing_method: str | Router | None = None,
+    layout_trials: int = 1,
+    callback: Callable | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
     """Transpile one or more circuits in a single call, without optimizing them.
@@ -460,6 +542,10 @@ def transpile(
             that finds the initial layout. Defaults to ``None``.
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuits executable. Defaults to ``None``.
+        layout_trials (int, optional): Number of layout attempts of the
+            ``"reverse_traversal"`` placer. Defaults to :math:`1`.
+        callback (Callable, optional): Function called after each pass that runs, for each
+            circuit, see :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, and passed to the other passes that take
             one. If ``None``, they use the global backend. Defaults to ``None``.
@@ -481,6 +567,8 @@ def transpile(
         qubits_initially_zero=qubits_initially_zero,
         layout_method=layout_method,
         routing_method=routing_method,
+        layout_trials=layout_trials,
+        callback=callback,
         backend=backend,
     )
     if isinstance(circuits, Circuit):
