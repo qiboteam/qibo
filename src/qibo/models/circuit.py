@@ -408,7 +408,16 @@ class Circuit:
 
         qubit_map = dict(enumerate(qubits))
         circuit = Circuit(max(qubits) + 1, density_matrix=self.density_matrix)
-        circuit.add(gate.on_qubits(qubit_map) for gate in self.queue)
+        new_gates = [gate.on_qubits(qubit_map) for gate in self.queue]
+        # default register names are assigned only when added to the final circuit
+        unnamed = [
+            gate
+            for gate in new_gates
+            if isinstance(gate, gates.M) and gate.register_name is None
+        ]
+        circuit.add(new_gates)
+        for gate in unnamed:
+            gate.register_name = None
         return circuit
 
     def light_cone(self, *qubits):
