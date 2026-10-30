@@ -1876,11 +1876,16 @@ class Validation(Optimizer):
     - the circuit has no noise channel. The transpiler works with unitary gates, so the
       only channel that it accepts is :class:`qibo.gates.channels.ResetChannel`.
     - the circuit has no more qubits than the hardware, if there is a connectivity.
+    - the initial layout, if there is one, places every qubit of the circuit on a distinct
+      node of the connectivity, see :class:`qibo.transpiler.optimizer.Preprocessing`.
 
     Args:
         connectivity (:class:`networkx.Graph`, optional): Hardware connectivity. If
-            ``None``, the number of qubits is not checked. It is set by
-            :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+            ``None``, neither the number of qubits nor the initial layout are checked. It
+            is set by :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+        initial_layout (list, optional): Physical qubits on which the logical qubits of the
+            circuit are placed, in the format of
+            :class:`qibo.transpiler.optimizer.Preprocessing`. Defaults to ``None``.
 
     Example:
         The pass raises an error for the noise channel before the circuit is transpiled.
@@ -1904,8 +1909,13 @@ class Validation(Optimizer):
             DecompositionError
     """
 
-    def __init__(self, connectivity: nx.Graph | None = None):
+    def __init__(
+        self,
+        connectivity: nx.Graph | None = None,
+        initial_layout: list[int | str] | None = None,
+    ):
         self.connectivity = connectivity
+        self.initial_layout = initial_layout
 
     def __call__(self, circuit: Circuit) -> Circuit:
         """Check that the circuit can be transpiled.
@@ -1920,6 +1930,8 @@ class Validation(Optimizer):
             DecompositionError: If the circuit has a noise channel other than
                 :class:`qibo.gates.channels.ResetChannel`.
             ValueError: If the circuit has more qubits than the connectivity has nodes.
+            PlacementError: If ``initial_layout`` does not have a distinct node of the
+                connectivity for every qubit of the circuit.
         """
         for gate in circuit.queue:
             if isinstance(gate, gates.Channel) and not isinstance(
@@ -1931,16 +1943,20 @@ class Validation(Optimizer):
                     + "unitary gate. Only the reset channel is supported.",
                 )
 
-        if (
-            self.connectivity is not None
-            and circuit.nqubits > self.connectivity.number_of_nodes()
-        ):
-            raise_error(
-                ValueError,
-                f"The number of qubits in the circuit ({circuit.nqubits}) "
-                + "can't be greater than the number of physical qubits "
-                + f"({self.connectivity.number_of_nodes()}).",
-            )
+        if self.connectivity is not None:
+            if circuit.nqubits > self.connectivity.number_of_nodes():
+                raise_error(
+                    ValueError,
+                    f"The number of qubits in the circuit ({circuit.nqubits}) "
+                    + "can't be greater than the number of physical qubits "
+                    + f"({self.connectivity.number_of_nodes()}).",
+                )
+
+            if self.initial_layout is not None:
+                # the layout is checked, and the circuit is not changed, on an empty copy
+                Preprocessing(self.connectivity, self.initial_layout)(
+                    Circuit(**circuit.init_kwargs)
+                )
 
         return circuit
 
