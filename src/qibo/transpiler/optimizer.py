@@ -10,7 +10,11 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
-from qibo.transpiler._exceptions import ConnectivityError, PlacementError
+from qibo.transpiler._exceptions import (
+    ConnectivityError,
+    DecompositionError,
+    PlacementError,
+)
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
@@ -1860,6 +1864,86 @@ class TGateRules(Optimizer):
                 new.add(gate)
 
         return new
+
+
+class Validation(Optimizer):
+    """Checks that the circuit can be transpiled, before any other pass runs.
+
+    Without it, a circuit that cannot be transpiled fails deep in the pipeline.
+    This pass raises a clear error at the start instead.
+    It does not change the circuit. It checks that:
+
+    - the circuit has no noise channel. The transpiler works with unitary gates, so the
+      only channel that it accepts is :class:`qibo.gates.channels.ResetChannel`.
+    - the circuit has no more qubits than the hardware, if there is a connectivity.
+
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity. If
+            ``None``, the number of qubits is not checked. It is set by
+            :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+
+    Example:
+        The pass raises an error for the noise channel before the circuit is transpiled.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Validation
+            from qibo.transpiler._exceptions import DecompositionError
+
+            circuit = Circuit(1)
+            circuit.add(gates.H(0))
+            circuit.add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+
+            try:
+                Validation()(circuit)
+            except DecompositionError:
+                print("The circuit has a noise channel.")
+
+        .. testoutput::
+
+            The circuit has a noise channel.
+    """
+
+    def __init__(self, connectivity: nx.Graph | None = None):
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Check that the circuit can be transpiled.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: The same circuit, unchanged.
+
+        Raises:
+            DecompositionError: If the circuit has a noise channel other than
+                :class:`qibo.gates.channels.ResetChannel`.
+            ValueError: If the circuit has more qubits than the connectivity has nodes.
+        """
+        for gate in circuit.queue:
+            if isinstance(gate, gates.Channel) and not isinstance(
+                gate, gates.ResetChannel
+            ):
+                raise_error(
+                    DecompositionError,
+                    f"The channel {gate.name} cannot be transpiled, because it is not a "
+                    + "unitary gate. Only the reset channel is supported.",
+                )
+
+        if (
+            self.connectivity is not None
+            and circuit.nqubits > self.connectivity.number_of_nodes()
+        ):
+            raise_error(
+                ValueError,
+                f"The number of qubits in the circuit ({circuit.nqubits}) "
+                + "can't be greater than the number of physical qubits "
+                + f"({self.connectivity.number_of_nodes()}).",
+            )
+
+        return circuit
 
 
 def _numeric_gates(circuit: Circuit) -> list[Gate | None]:

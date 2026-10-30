@@ -21,7 +21,7 @@ from qibo.transpiler.asserts import (
     assert_placement,
 )
 from qibo.transpiler.layout import TranspileLayout
-from qibo.transpiler.optimizer import GateDirection, Preprocessing
+from qibo.transpiler.optimizer import GateDirection, Preprocessing, Validation
 from qibo.transpiler.placer import (
     Dense,
     Random,
@@ -233,25 +233,28 @@ def generate_preset_passes(
     The pipeline only makes the circuit executable on the hardware, with the following
     passes:
 
-    1. :class:`qibo.transpiler.unroller.Unroller` decomposes the gates acting on three or
+    1. :class:`qibo.transpiler.optimizer.Validation` raises an error at the start if the
+       circuit cannot be transpiled, *e.g.* if it has a noise channel or more qubits than
+       the hardware.
+    2. :class:`qibo.transpiler.unroller.Unroller` decomposes the gates acting on three or
        more qubits, which the router does not support. The qubits of the circuit that
        a multi-controlled gate does not act on are used as auxiliary qubits, see
        ``qubits_initially_zero``.
-    2. :class:`qibo.transpiler.optimizer.Preprocessing` places the qubits on
+    3. :class:`qibo.transpiler.optimizer.Preprocessing` places the qubits on
        ``initial_layout``, or on the first nodes of the connectivity if there is none,
        and pads the circuit with the unused qubits of the hardware.
-    3. The placer selected by ``layout_method``, if it is not the trivial one.
-    4. The router selected by ``routing_method``, which adds the SWAP gates that make all
+    4. The placer selected by ``layout_method``, if it is not the trivial one.
+    5. The router selected by ``routing_method``, which adds the SWAP gates that make all
        the gates executable. By default, it is :class:`qibo.transpiler.router.Sabre`
        with the best of five trials.
-    5. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates.
+    6. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates.
 
     If ``connectivity`` is directed, the pipeline ends with a
     :class:`qibo.transpiler.optimizer.GateDirection` pass and an unroller, so that the
     two-qubit gates act in the direction of the edges.
 
     Without ``connectivity`` there is nothing to place and route, so the pipeline only
-    decomposes the circuit to the native gates.
+    validates the circuit and decomposes it to the native gates.
 
     Args:
         connectivity (:class:`networkx.Graph`, optional): Hardware connectivity. It can be
@@ -342,7 +345,7 @@ def generate_preset_passes(
 
     if connectivity is None:
         return Passes(
-            passes=[Unroller(native_gates, **unroller_kwargs)],
+            passes=[Validation(), Unroller(native_gates, **unroller_kwargs)],
             native_gates=native_gates,
             on_qubits=on_qubits,
             callback=callback,
@@ -396,6 +399,7 @@ def generate_preset_passes(
         )
 
     passes = [
+        Validation(),
         Unroller(native_gates, min_qubits=3, **unroller_kwargs),
         Preprocessing(initial_layout=initial_layout),
         *([] if placer is None else [placer]),

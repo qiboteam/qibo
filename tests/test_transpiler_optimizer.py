@@ -7,7 +7,11 @@ import sympy
 
 from qibo import Circuit, gates
 from qibo.gates.special import Barrier
-from qibo.transpiler._exceptions import ConnectivityError, PlacementError
+from qibo.transpiler._exceptions import (
+    ConnectivityError,
+    DecompositionError,
+    PlacementError,
+)
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
 from qibo.transpiler.optimizer import (
@@ -27,8 +31,9 @@ from qibo.transpiler.optimizer import (
     RemoveResetInZeroState,
     ResetAfterMeasureSimplification,
     TGateRules,
+    Validation,
 )
-from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.pipeline import Passes, generate_preset_passes
 from qibo.transpiler.router import Sabre
 
 
@@ -1887,3 +1892,55 @@ def test_barrier_before_final_measurements_in_pipeline(backend):
     assert "barrier" not in names
     assert names[-1] == "measure"
     assert names.count("measure") == 1
+
+
+@pytest.mark.parametrize("with_connectivity", [False, True])
+def test_validation_keeps_valid_circuit(with_connectivity, star_connectivity):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.ResetChannel(1, [0.0, 1.0]))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(0, 1))
+    connectivity = star_connectivity() if with_connectivity else None
+    assert Validation(connectivity)(circuit) is circuit
+    assert [gate.name for gate in circuit.queue] == [
+        "h",
+        "ResetChannel",
+        "cx",
+        "measure",
+    ]
+
+
+def test_validation_noise_channel_error():
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+    with pytest.raises(DecompositionError, match="PauliNoiseChannel"):
+        Validation()(circuit)
+
+
+def test_validation_too_many_qubits_error(star_connectivity):
+    validation = Validation(connectivity=star_connectivity())
+    assert validation(Circuit(5)).nqubits == 5
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
+        validation(Circuit(6))
+    # without connectivity there is no limit
+    assert Validation()(Circuit(6)).nqubits == 6
+
+
+@pytest.mark.parametrize("with_connectivity", [False, True])
+def test_validation_stops_the_pipeline_before_the_other_passes(with_connectivity):
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+    counts = []
+    pipeline = generate_preset_passes(
+        nx.path_graph(3) if with_connectivity else None,
+        callback=lambda **kwargs: counts.append(kwargs["count"]),
+    )
+    with pytest.raises(DecompositionError, match="PauliNoiseChannel"):
+        pipeline(circuit)
+    # no pass has run, so the unrollers and the router have not spent time on it
+    assert counts == []

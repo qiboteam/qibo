@@ -22,7 +22,7 @@ from qibo.transpiler.asserts import (
     assert_decomposition,
     assert_transpiling,
 )
-from qibo.transpiler.optimizer import GateDirection, Preprocessing
+from qibo.transpiler.optimizer import GateDirection, Preprocessing, Validation
 from qibo.transpiler.pipeline import (
     Passes,
     generate_preset_passes,
@@ -117,6 +117,7 @@ def test_generate_preset_passes_directed_structure():
     assert pipeline.connectivity is connectivity
     *passes, direction, translator = pipeline.passes
     assert [type(transpiler_pass) for transpiler_pass in passes] == [
+        Validation,
         Unroller,
         Preprocessing,
         Sabre,
@@ -436,7 +437,8 @@ def test_generate_preset_passes_structure():
     pipeline = generate_preset_passes(connectivity, natives, seed=3)
     assert pipeline.connectivity is connectivity
     assert pipeline.native_gates == natives
-    unroller, preprocessing, router, translator = pipeline.passes
+    validation, unroller, preprocessing, router, translator = pipeline.passes
+    assert isinstance(validation, Validation)
     assert isinstance(unroller, Unroller) and unroller.min_qubits == 3
     assert isinstance(preprocessing, Preprocessing)
     assert isinstance(router, Sabre) and router.trials == 5
@@ -573,7 +575,8 @@ def test_generate_preset_passes_without_connectivity(backend, ngates):
     circuit = generate_random_circuit(nqubits=3, ngates=ngates)
     circuit.add(gates.TOFFOLI(0, 1, 2))
     pipeline = generate_preset_passes(native_gates=natives, backend=backend)
-    assert len(pipeline.passes) == 1
+    assert len(pipeline.passes) == 2
+    assert isinstance(pipeline.passes[0], Validation)
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert final_layout == {0: 0, 1: 1, 2: 2}
     assert final_layout.initial_layout == [0, 1, 2]
@@ -685,17 +688,17 @@ def _count_two_qubit_gates(circuit):
 def test_generate_preset_passes_auxiliary_qubit_options():
     default = generate_preset_passes(nx.path_graph(5)).passes
     # the qubits that multi-controlled gates do not act on are dirty auxiliary qubits
-    assert default[0].use_dirty_ancillas
-    assert not default[0].qubits_initially_zero and not default[0].minimize_toffolis
+    assert default[1].use_dirty_ancillas
+    assert not default[1].qubits_initially_zero and not default[1].minimize_toffolis
     assert not default[-1].use_dirty_ancillas
 
     zero = generate_preset_passes(nx.path_graph(5), qubits_initially_zero=True).passes
-    assert zero[0].use_dirty_ancillas
-    assert zero[0].qubits_initially_zero and zero[0].minimize_toffolis
+    assert zero[1].use_dirty_ancillas
+    assert zero[1].qubits_initially_zero and zero[1].minimize_toffolis
     assert not zero[-1].qubits_initially_zero
 
     # without connectivity the only unroller decomposes the multi-controlled gates
-    (unroller,) = generate_preset_passes(qubits_initially_zero=True).passes
+    _, unroller = generate_preset_passes(qubits_initially_zero=True).passes
     assert unroller.use_dirty_ancillas and unroller.qubits_initially_zero
 
 
@@ -799,12 +802,12 @@ def test_generate_preset_passes_layout_method(
         connectivity, seed=5, layout_method=layout_method, backend=backend
     )
     if placer_class is None:
-        assert len(pipeline.passes) == 4
-    else:
         assert len(pipeline.passes) == 5
-        assert isinstance(pipeline.passes[1], Preprocessing)
-        assert isinstance(pipeline.passes[2], placer_class)
-        assert isinstance(pipeline.passes[3], Sabre)
+    else:
+        assert len(pipeline.passes) == 6
+        assert isinstance(pipeline.passes[2], Preprocessing)
+        assert isinstance(pipeline.passes[3], placer_class)
+        assert isinstance(pipeline.passes[4], Sabre)
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -821,7 +824,7 @@ def test_generate_preset_passes_layout_method_instance(backend, grid_connectivit
     pipeline = generate_preset_passes(
         connectivity, layout_method=placer, backend=backend
     )
-    assert pipeline.passes[2] is placer
+    assert pipeline.passes[3] is placer
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -835,12 +838,12 @@ def test_generate_preset_passes_methods_are_seeded(grid_connectivity):
     connectivity = grid_connectivity()
     kwargs = {"seed": 7, "layout_method": "reverse_traversal"}
     pipeline = generate_preset_passes(connectivity, **kwargs)
-    placer = pipeline.passes[2]
+    placer = pipeline.passes[3]
     assert placer.routing_algorithm._rng.getstate() == random.Random(7).getstate()
 
     placer = generate_preset_passes(
         connectivity, seed=7, layout_method="random"
-    ).passes[2]
+    ).passes[3]
     assert placer.seed == 7
     router = generate_preset_passes(
         connectivity, seed=7, routing_method="shortest_paths"
@@ -870,7 +873,7 @@ def test_generate_preset_passes_routing_method_sabre(
     pipeline = generate_preset_passes(
         connectivity, seed=1, routing_method=routing_method, backend=backend
     )
-    router = pipeline.passes[2]
+    router = pipeline.passes[3]
     assert isinstance(router, Sabre) and router.trials == 5
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
@@ -888,7 +891,7 @@ def test_generate_preset_passes_routing_method_instance(backend, grid_connectivi
     pipeline = generate_preset_passes(
         connectivity, routing_method=router, backend=backend
     )
-    assert pipeline.passes[2] is router
+    assert pipeline.passes[3] is router
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -908,7 +911,7 @@ def test_generate_preset_passes_routing_method_shortest_paths(backend):
     pipeline = generate_preset_passes(
         connectivity, seed=1, routing_method="shortest_paths", backend=backend
     )
-    assert isinstance(pipeline.passes[2], ShortestPaths)
+    assert isinstance(pipeline.passes[3], ShortestPaths)
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -928,8 +931,8 @@ def test_generate_preset_passes_star_methods(backend, star_connectivity):
         routing_method="star",
         backend=backend,
     )
-    assert isinstance(pipeline.passes[2], StarConnectivityPlacer)
-    assert isinstance(pipeline.passes[3], StarConnectivityRouter)
+    assert isinstance(pipeline.passes[3], StarConnectivityPlacer)
+    assert isinstance(pipeline.passes[4], StarConnectivityRouter)
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -1156,8 +1159,8 @@ def test_generate_preset_passes_callback_and_transpile_list(backend):
         backend=backend,
     )
     assert len(results) == 2
-    # unroller, preprocessing, unroller; the router is skipped
-    assert counts == [0, 1, 3, 0, 1, 3]
+    # validation, unroller, preprocessing, unroller; the router is skipped
+    assert counts == [0, 1, 2, 4, 0, 1, 2, 4]
 
 
 def test_generate_preset_passes_dense_layout(backend, grid_connectivity):
