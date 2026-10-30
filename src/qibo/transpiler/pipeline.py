@@ -1,6 +1,9 @@
+import multiprocessing
 import time
 from collections.abc import Callable
+from concurrent.futures import ProcessPoolExecutor
 from inspect import signature
+from itertools import repeat
 
 import networkx as nx
 
@@ -463,15 +466,26 @@ def transpile(
     routing_method: str | Router | None = None,
     layout_trials: int = 1,
     callback: Callable | None = None,
+    num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
     """Transpile one or more circuits in a single call, without optimizing them.
 
     It builds the pipeline of :func:`qibo.transpiler.pipeline.generate_preset_passes` once
     and applies it to the circuits, which makes them executable on the hardware.
-    All the arguments except ``circuits`` are the ones of
+    All the arguments except ``circuits`` and ``num_processes`` are the ones of
     :func:`qibo.transpiler.pipeline.generate_preset_passes`, and they are shared by all the
     circuits.
+
+    The circuits of a list can be transpiled in parallel with ``num_processes``. Each of
+    them is then transpiled by a worker process with its own copy of the pipeline, so the
+    result for a circuit does not depend on the other circuits nor on ``num_processes``,
+    and, with a ``seed``, it is the one of transpiling the circuit alone. This can differ
+    from the sequential result, where the random state of the placer and the router
+    continues from one circuit to the next. The worker processes are started with the
+    ``spawn`` method, so the script that calls :func:`qibo.transpiler.pipeline.transpile`
+    must protect the call with ``if __name__ == "__main__":``. They do not share the global
+    backend either, so ``backend`` should be given if it is not the default one.
 
     Example:
         A rotation, a Toffoli gate and a CNOT gate between qubits that are not neighbors are
@@ -551,7 +565,13 @@ def transpile(
         layout_trials (int, optional): Number of layout attempts of the
             ``"reverse_traversal"`` placer. Defaults to :math:`1`.
         callback (Callable, optional): Function called after each pass that runs, for each
-            circuit, see :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+            circuit, see :class:`qibo.transpiler.pipeline.Passes`. It cannot be used with
+            more than one process. Defaults to ``None``.
+        num_processes (int, optional): Number of worker processes that transpile the
+            circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
+            transpiled one after the other in the current process. It has no effect on a
+            single circuit, and no more processes than circuits are started.
+            Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, and passed to the other passes that take
             one. If ``None``, they use the global backend. Defaults to ``None``.
@@ -563,7 +583,21 @@ def transpile(
         :class:`qibo.transpiler.pipeline.Passes`. If ``circuits`` is a list or tuple, the
         list of these pairs, in the same order.
 
+    Raises:
+        ValueError: If ``num_processes`` is not positive, or if ``callback`` is given with
+            more than one process.
     """
+    if num_processes is not None and num_processes < 1:
+        raise_error(
+            ValueError,
+            f"``num_processes`` must be positive, but it is {num_processes}.",
+        )
+    if callback is not None and num_processes is not None and num_processes > 1:
+        raise_error(
+            ValueError,
+            "``callback`` cannot be used with more than one process, because it would "
+            + "be called in the worker processes.",
+        )
     passes = generate_preset_passes(
         connectivity=connectivity,
         native_gates=native_gates,
@@ -578,6 +612,15 @@ def transpile(
         backend=backend,
     )
     if isinstance(circuits, Circuit):
-        return passes(circuits, backend=backend)
+        results = passes(circuits, backend=backend)
+    elif num_processes is None or num_processes == 1 or len(circuits) < 2:
+        results = [passes(circuit, backend=backend) for circuit in circuits]
+    else:
+        # each task gets its own copy of the pipeline, so that the results are independent
+        with ProcessPoolExecutor(
+            max_workers=min(num_processes, len(circuits)),
+            mp_context=multiprocessing.get_context("spawn"),
+        ) as executor:
+            results = list(executor.map(passes, circuits, repeat(backend)))
 
-    return [passes(circuit, backend=backend) for circuit in circuits]
+    return results
