@@ -675,7 +675,7 @@ def test_sabre_heuristic_terms():
     assert lookahead == route(heuristic="decay", delta=0.0)
     assert decay == route()
     # and the terms do change the routing
-    assert len({basic, lookahead, decay}) == 3
+    assert basic != lookahead != decay != basic
 
 
 @pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
