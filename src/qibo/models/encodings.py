@@ -496,6 +496,7 @@ def folded_xxz_eigenstate(
     domains: list[list[int]] | None = None,
     modes: list[int] | None = None,
     method: str = "sopena",
+    return_toffolis: bool = False,
     backend: Backend | None = None,
 ) -> Circuit:
     """Create circuit that prepares an eigenstate of the open-boundary folded XXZ spin chain.
@@ -553,6 +554,10 @@ def folded_xxz_eigenstate(
             and :math:`n_{0}`, rounded to the nearest integer. Defaults to ``None``.
         method (str, optional): implementation of the circuit, either ``"sopena"``, following
             Ref. [1], or ``"merged"``. Defaults to ``"sopena"``.
+        return_toffolis (bool, optional): only used if ``method="merged"``. If ``True``,
+            the Toffoli gates are returned as :class:`qibo.gates.TOFFOLI` gates, which are not
+            decomposed into CNOTs and single-qubit rotations. Otherwise, they are implemented
+            up to a relative phase with CNOTs and single-qubit rotations. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -643,7 +648,14 @@ def folded_xxz_eigenstate(
         previous_end = domain[-1]
 
     if method == "merged":
-        return _folded_merged(nsites, nmagnons, domains, modes, backend)
+        return _folded_merged(
+            nsites,
+            nmagnons,
+            domains,
+            modes,
+            return_toffolis=return_toffolis,
+            backend=backend,
+        )
 
     return _folded_sopena(nsites, nmagnons, domains, modes, backend)
 
