@@ -10,7 +10,7 @@ from scipy.special import binom
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
@@ -267,13 +267,13 @@ def dicke_state(
 
         return circuit
 
-    disjoint_sets, root_qubits, cuts = _dicke_tree_cuts(nqubits, weight, weight)
+    disjoint_sets, root_qubits, cuts = _dicke_tree_cuts(nqubits, weight)
 
     # We initialize |0>^(n-k)|1>^k  bitstring at root qubits
     circuit.add(gates.X(q) for q in root_qubits[-weight:])
 
     # add WBD acting on the sets of qubits of each cut
-    for node_qubits, child_qubits, node_tier, child_tier, _, _ in cuts:
+    for node_qubits, child_qubits, node_tier, child_tier in cuts:
         _add_wbd_gate(circuit, node_qubits, child_qubits, node_tier, child_tier, weight)
 
     for node in disjoint_sets:
@@ -939,38 +939,46 @@ def leaf_separable_encoder(
     .. math::
         \\ket{\\psi} = \\sum_{I} \\, c(I) \\, \\bigotimes_{u=1}^{G} \\ket{\\psi_{i_{u}}} \\, ,
 
-    where :math:`c(I) \\geq 0` and :math:`\\ket{\\psi_{i_{u}}}` is a state of leaf :math:`u`
-    with Hamming weight :math:`i_{u}`. The state itself is not a product state, since
-    the leaves are correlated through :math:`c(I)`.
+    where :math:`c(I) \\in \\mathbb{C}` and :math:`\\ket{\\psi_{i_{u}}}` is a state of leaf
+    :math:`u` with Hamming weight :math:`i_{u}`. The state itself is not a product state,
+    since the leaves are correlated through :math:`c(I)`.
 
-    The circuit has two parts and uses no auxiliary qubits. First, it distributes the total
-    weight :math:`k` among the leaves with a tree of generalized weight distribution blocks,
-    which are the blocks of :func:`qibo.models.encodings.dicke_state` with the uniform
-    distribution of weights replaced by the one of ``data``. Then, on each leaf, it
+    The circuit follows Ref. [1] and uses no auxiliary qubits. First, the leaves are placed
+    at the leaves of a balanced binary tree, built by recursively splitting the ordered list of
+    leaves in two halves, and the total weight :math:`k` is distributed among them with a
+    generalized weight distribution block (gWDB) at each internal node, from the root down.
+    A gWDB is the weight distribution block of :func:`qibo.models.encodings.dicke_state` [3],
+    with the uniform distribution of weights replaced by the one of ``data``, followed by
+    controlled phase gates that account for the phase of :math:`c(I)`. Then, on each leaf, it
     applies a Hamming weight encoder for each weight :math:`i_{u}`
     (see :func:`qibo.models.encodings.hamming_weight_encoder`), with all its gates controlled
     on the whole leaf, so that it acts only on the sector of leaf weight :math:`i_{u}`.
     The circuit has depth :math:`O(s \\, \\log\\frac{n}{s} + s \\, 2^{s})`.
 
     .. note::
-        The tree of weight distribution blocks prepares :math:`c(I)` as a product of conditional
-        weight distributions, one for each block, computed from the marginals of ``data``.
-        The output state is equal to ``data`` if :math:`c(I)` has that form, which is
-        always the case if there are only two leaves, *i.e.*, :math:`s \\geq n / 2`.
-        Otherwise, correlations between the weights of different leaves that are not
-        captured by the tree are lost, and the output state is an approximation of ``data``.
+        A gWDB only knows the weight of its own node. Hence, the tree prepares :math:`|c(I)|`
+        as a product of conditional weight distributions, one for each node, computed from
+        the marginals of ``data``, and the phase of :math:`c(I)` as a sum of phases that
+        depend only on the weights of each node. The output state is equal to ``data`` if
+        :math:`c(I)` has that form, which is always the case if there are only two leaves,
+        *i.e.*, :math:`s \\geq n / 2`, as stated in Ref. [1], and also if there are
+        three leaves, since :math:`I` is then fixed by the weights of the two nodes.
+        Phases that are sums of functions of the weight of each leaf, *e.g.*, global phases
+        of the leaf states, are always reproduced. Otherwise, correlations between the weights
+        of different leaves that are not captured by the tree are lost, and the output state is
+        an approximation of ``data``. In that case, the phase of each node is chosen by
+        alternating maximization of the overlap with ``data``, as Ref. [1] does not specify it,
+        and a warning is logged if it does not converge.
 
     Args:
         nqubits (int): number of qubits :math:`n`.
         weight (int): Hamming weight :math:`k` of the state.
         leaf_size (int): number of qubits :math:`s` in each leaf. It must satisfy
             :math:`k \\leq s < n`.
-        data (ArrayLike): :math:`1`-dimensional array of :math:`\\binom{n}{k}` real
+        data (ArrayLike): :math:`1`-dimensional array of :math:`\\binom{n}{k}` real or complex
             amplitudes, ordered by the integer value of the corresponding computational basis
             states, *i.e.*, as in :func:`qibo.models.encodings.hamming_weight_encoder`.
-            It is normalized internally. The state defined by ``data`` must be leaf-separable,
-            and for each :math:`I` the first nonzero amplitude must be positive
-            (the complex phase of :math:`c(I)` is not supported).
+            It is normalized internally. The state defined by ``data`` must be leaf-separable.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -1004,17 +1012,12 @@ def leaf_separable_encoder(
 
     data = backend.cast(data, dtype=backend.complex128)
 
-    if backend.any(backend.imag(data) != 0.0):
-        raise_error(NotImplementedError, "Complex-valued ``data`` is not supported.")
-
-    data = backend.real(data)
-
     if data.shape != (math.comb(nqubits, weight),):
         raise_error(
             ValueError,
             f"``data`` must have shape ({math.comb(nqubits, weight)},), but got {data.shape}.",
         )
-    data = data / backend.vector_norm(data, dtype=backend.float64)
+    data = data / backend.sqrt(backend.sum(backend.abs(data) ** 2))
 
     # leaves, and the weight of every basis state (in ascending order) in each of them
     sizes = [leaf_size] * (nqubits // leaf_size)
@@ -1043,13 +1046,14 @@ def leaf_separable_encoder(
     )
 
     # leaf states: for each leaf and weight, amplitudes relative to a reference basis state
+    nonzero = backend.abs(data) > 1e-8
     leaf_data = {}
     for leaf, (start, size) in enumerate(zip(starts, sizes)):
         # bits of a basis state that do not belong to the leaf
         outside = ((1 << nqubits) - 1) ^ (((1 << size) - 1) << (nqubits - start - size))
         for leaf_weight in range(1, min(size, weight) + 1):
             candidates = backend.flatnonzero(
-                (leaf_weights[:, leaf] == leaf_weight) & (backend.abs(data) > 1e-8)
+                (leaf_weights[:, leaf] == leaf_weight) & nonzero
             )
             if len(candidates) == 0:
                 continue
@@ -1057,18 +1061,27 @@ def leaf_separable_encoder(
             # basis states that differ from the reference only in the leaf
             keep = (states & outside) == (reference & outside)
             amplitudes = data[keep] / data[candidates[0]]
-            leaf_data[(leaf, leaf_weight)] = amplitudes / backend.vector_norm(
-                amplitudes, dtype=backend.float64
+            leaf_data[(leaf, leaf_weight)] = amplitudes / backend.sqrt(
+                backend.sum(backend.abs(amplitudes) ** 2)
             )
 
-    # check leaf-separability by reconstructing the amplitudes
-    probabilities = data**2
+    # weight distributions, their probabilities, and the phase of their reference amplitudes
+    probabilities = backend.abs(data) ** 2
     unique_weights, inverse = backend.unique(leaf_weights, axis=0, return_inverse=True)
     inverse = backend.ravel(inverse)
-    reconstructed = backend.zeros(len(states), dtype=backend.float64)
+    group_probabilities = backend.zeros(len(unique_weights), dtype=backend.float64)
+    group_phases = backend.zeros(len(unique_weights), dtype=backend.float64)
     for group in range(len(unique_weights)):
         rows = inverse == group
-        reconstructed[rows] = backend.sqrt(backend.sum(probabilities[rows]))
+        group_probabilities[group] = backend.sum(probabilities[rows])
+        reference = backend.flatnonzero(rows & nonzero)
+        if len(reference) > 0:
+            group_phases[group] = backend.angle(data[reference[0]])
+
+    # check leaf-separability by reconstructing the amplitudes
+    reconstructed = backend.sqrt(group_probabilities[inverse]) * backend.exp(
+        1j * group_phases[inverse]
+    )
     for leaf, (start, size) in enumerate(zip(starts, sizes)):
         strings = backend.right_shift(states, nqubits - start - size) & (
             (1 << size) - 1
@@ -1094,61 +1107,155 @@ def leaf_separable_encoder(
             "``data`` is not leaf-separable for the given ``weight`` and ``leaf_size``.",
         )
 
-    disjoint_sets, root_qubits, cuts = _dicke_tree_cuts(nqubits, weight, leaf_size)
+    # internal nodes of the balanced binary tree, from the root down: leaves [first, last)
+    # are split in the leaves [first, middle) and [middle, last)
+    nodes = []
+    pending = [(0, len(sizes))]
+    while pending:
+        first, last = pending.pop()
+        if last - first > 1:
+            middle = first + (last - first) // 2
+            nodes.append((first, middle, last))
+            pending += [(middle, last), (first, middle)]
 
+    # phases of the weight distribution blocks. Each block only knows the weight of its node
+    # and the weight moved to its right child. We maximize the overlap with ``data``
+    # by alternating maximization over the phases of the blocks.
+    # Phases and overlaps below ``tolerance`` are treated as zero, and the maximization stops
+    # when the phases of all blocks change by less than ``tolerance`` or after ``max_sweeps``.
+    tolerance, max_sweeps = 1e-12, 50
+    group_node_weights = [
+        backend.sum(unique_weights[:, first:last], axis=1) for first, _, last in nodes
+    ]
+    group_right_weights = [
+        backend.sum(unique_weights[:, middle:last], axis=1) for _, middle, last in nodes
+    ]
+    node_phases = [
+        backend.zeros((weight + 1, weight + 1), dtype=backend.float64) for _ in nodes
+    ]
+    has_phases = bool(backend.any(backend.abs(group_phases) > tolerance))
+    if has_phases:
+        for _ in range(max_sweeps):
+            change = 0.0
+            for index in range(len(nodes)):
+                residual = group_phases + 0.0
+                for other in range(len(nodes)):
+                    if other != index:
+                        residual -= node_phases[other][
+                            group_node_weights[other], group_right_weights[other]
+                        ]
+                updated = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
+                for total in range(1, weight + 1):
+                    for right in range(total + 1):
+                        selected = (group_node_weights[index] == total) & (
+                            group_right_weights[index] == right
+                        )
+                        overlap = backend.sum(
+                            group_probabilities[selected]
+                            * backend.exp(1j * residual[selected])
+                        )
+                        if backend.abs(overlap) > tolerance:
+                            updated[total, right] = backend.angle(overlap)
+                change = max(
+                    change,
+                    float(
+                        backend.max(
+                            backend.abs(
+                                backend.exp(1j * updated)
+                                - backend.exp(1j * node_phases[index])
+                            )
+                        )
+                    ),
+                )
+                node_phases[index] = updated
+            if change < tolerance:
+                break
+        else:
+            log.warning(
+                "The phases of the weight distribution blocks did not converge after "
+                + f"{max_sweeps} sweeps, and might not be optimal."
+            )
+
+    # the weight of the first leaf is held in its last qubits, in unary encoding
     circuit = Circuit(nqubits, **kwargs)
-    circuit.add(gates.X(qubit) for qubit in root_qubits[-weight:])
+    circuit.add(gates.X(qubit) for qubit in range(sizes[0] - weight, sizes[0]))
 
-    # weight distribution blocks with the conditional distributions given by ``data``
-    for node_qubits, child_qubits, node_tier, child_tier, node_sets, child_sets in cuts:
-        node_weights = backend.sum(leaf_weights[:, node_sets], axis=1)
-        child_weights = backend.sum(leaf_weights[:, child_sets], axis=1)
+    # weight distribution blocks with the conditional distributions given by ``data``:
+    # the weight of a node is held in its first leaf, and a part of it is moved to the first
+    # leaf of its right child
+    for index, (first, middle, last) in enumerate(nodes):
+        node_weights = backend.sum(leaf_weights[:, first:last], axis=1)
+        right_weights = backend.sum(leaf_weights[:, middle:last], axis=1)
         conditional = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
         conditional[:, 0] = 1.0
         for total in range(1, weight + 1):
             selected = node_weights == total
             normalization = backend.sum(probabilities[selected])
             if normalization > 0.0:
-                for child in range(weight + 1):
-                    conditional[total, child] = (
-                        backend.sum(probabilities[selected & (child_weights == child)])
+                for right in range(weight + 1):
+                    conditional[total, right] = (
+                        backend.sum(probabilities[selected & (right_weights == right)])
                         / normalization
                     )
         _add_wbd_gate(
             circuit,
-            node_qubits,
-            child_qubits,
-            node_tier,
-            child_tier,
+            list(range(starts[first], starts[first] + sizes[first])),
+            list(range(starts[middle], starts[middle] + sizes[middle])),
+            sum(sizes[first:last]),
+            sum(sizes[middle:last]),
             weight,
             conditional,
+            node_phases[index] if has_phases else None,
         )
 
     # leaf encoders, fully controlled in the leaf to act only on the sector of a given weight
-    # reverse to restore ascending leaf-index order for the ``leaf_data`` lookup
-    for leaf, leaf_set in enumerate(disjoint_sets[::-1]):
-        leaf_qubits = leaf_set["qubits"]
-        for leaf_weight in range(1, min(len(leaf_qubits), weight) + 1):
+    for leaf, (start, size) in enumerate(zip(starts, sizes)):
+        leaf_qubits = list(range(start, start + size))
+        for leaf_weight in range(1, min(size, weight) + 1):
             if (leaf, leaf_weight) not in leaf_data or len(
                 leaf_data[(leaf, leaf_weight)]
             ) == 1:
                 continue
+            amplitudes = leaf_data[(leaf, leaf_weight)]
+            complex_data = bool(
+                backend.any(backend.abs(backend.imag(amplitudes)) > tolerance)
+            )
             encoder = hamming_weight_encoder(
-                len(leaf_qubits),
+                size,
                 leaf_weight,
-                backend.cast(leaf_data[(leaf, leaf_weight)], dtype=backend.float64),
+                backend.cast(
+                    amplitudes if complex_data else backend.real(amplitudes),
+                    dtype=backend.complex128 if complex_data else backend.float64,
+                ),
                 full_hwp=True,
                 optimize_controls=False,
                 backend=backend,
             )
-            for gate in encoder.on_qubits(*leaf_qubits):
-                assert isinstance(gate, gates.RBS)
-                zeros = [qubit for qubit in leaf_qubits if qubit not in gate.qubits]
+            encoder_gates = list(encoder.on_qubits(*leaf_qubits))
+            for index, gate in enumerate(encoder_gates):
+                if gate.name == "rbs":
+                    # the RZ gates that follow act on the same pair of bitstrings
+                    zeros = [qubit for qubit in leaf_qubits if qubit not in gate.qubits]
+                if complex_data and index == len(encoder_gates) - 1:
+                    # final phase correction: only the bitstring with the target at zero
+                    # is in the sector of the leaf weight
+                    others = [
+                        qubit for qubit in leaf_qubits if qubit not in gate.qubits
+                    ]
+                    target = gate.target_qubits[0]
+                    circuit.add(gates.X(qubit) for qubit in others + [target])
+                    circuit.add(
+                        gates.U1(target, -gate.parameters[0] / 2).controlled_by(
+                            *gate.control_qubits, *others
+                        )
+                    )
+                    circuit.add(gates.X(qubit) for qubit in others + [target])
+                    continue
                 circuit.add(gates.X(qubit) for qubit in zeros)
                 circuit.add(
-                    gates.RBS(*gate.target_qubits, *gate.parameters).controlled_by(
-                        *gate.control_qubits, *zeros
-                    )
+                    (gates.RBS if gate.name == "rbs" else gates.RZ)(
+                        *gate.target_qubits, *gate.parameters
+                    ).controlled_by(*gate.control_qubits, *zeros)
                 )
                 circuit.add(gates.X(qubit) for qubit in zeros)
 
