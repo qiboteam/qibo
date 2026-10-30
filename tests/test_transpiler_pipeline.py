@@ -12,6 +12,7 @@ from qibo.transpiler import unroller as unroller_module
 from qibo.transpiler._exceptions import (
     BlockingError,
     ConnectivityError,
+    DecompositionError,
     PlacementError,
     TranspilerPipelineError,
 )
@@ -1199,6 +1200,79 @@ def test_generate_preset_passes_callback_and_transpile_list(backend):
     assert len(results) == 2
     # validation, unroller, preprocessing, unroller; the router is skipped
     assert counts == [0, 1, 2, 4, 0, 1, 2, 4]
+
+
+def test_transpile_in_parallel(backend):
+    connectivity = nx.path_graph(5)
+    circuits = [generate_random_circuit(5, 30, seed=seed) for seed in (1, 2, 3)]
+    kwargs = {"connectivity": connectivity, "seed": 7, "backend": backend}
+    results = transpile(circuits, num_processes=2, **kwargs)
+    assert len(results) == 3
+    for circuit, (transpiled_circuit, final_layout) in zip(circuits, results):
+        assert_transpiling(
+            original_circuit=circuit,
+            transpiled_circuit=transpiled_circuit,
+            connectivity=connectivity,
+            final_layout=final_layout,
+        )
+        # each circuit is transpiled as if it was alone, whatever the other circuits are
+        alone, alone_layout = transpile(circuit, **kwargs)
+        assert [(gate.name, gate.qubits) for gate in transpiled_circuit.queue] == [
+            (gate.name, gate.qubits) for gate in alone.queue
+        ]
+        assert final_layout == alone_layout
+
+
+def test_transpile_in_parallel_error():
+    circuits = [Circuit(2), Circuit(2)]
+    circuits[1].add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+    with pytest.raises(DecompositionError, match="PauliNoiseChannel"):
+        transpile(circuits, nx.path_graph(2), num_processes=2)
+
+
+@pytest.mark.parametrize(
+    "ncircuits, num_processes", [(0, 4), (1, 4), (3, None), (3, 1)]
+)
+def test_transpile_without_extra_processes(backend, ncircuits, num_processes):
+    """Without several processes, or with less than two circuits, nothing is parallel."""
+    connectivity = nx.path_graph(4)
+    circuits = [generate_random_circuit(4, 10, seed=seed) for seed in range(ncircuits)]
+    kwargs = {"connectivity": connectivity, "seed": 3, "backend": backend}
+    results = transpile(circuits, num_processes=num_processes, **kwargs)
+    expected = transpile(circuits, **kwargs)
+    assert len(results) == ncircuits
+    assert [
+        [(gate.name, gate.qubits) for gate in circuit.queue] for circuit, _ in results
+    ] == [
+        [(gate.name, gate.qubits) for gate in circuit.queue] for circuit, _ in expected
+    ]
+    assert [layout for _, layout in results] == [layout for _, layout in expected]
+
+
+def test_transpile_single_circuit_with_processes(backend):
+    circuit = generate_random_circuit(4, 10)
+    result = transpile(circuit, nx.path_graph(4), num_processes=4, backend=backend)
+    assert isinstance(result, tuple)
+    assert isinstance(result[0], Circuit)
+
+
+@pytest.mark.parametrize("num_processes", [0, -2])
+def test_transpile_num_processes_invalid(num_processes):
+    with pytest.raises(ValueError, match="must be positive"):
+        transpile([Circuit(2)], num_processes=num_processes)
+
+
+def test_transpile_callback_with_processes_error():
+    with pytest.raises(ValueError, match="cannot be used with more than one process"):
+        transpile([Circuit(2)], num_processes=2, callback=lambda **kwargs: None)
+    # one process runs the callback in the current process
+    counts = []
+    transpile(
+        [Circuit(2)],
+        num_processes=1,
+        callback=lambda **kwargs: counts.append(kwargs["count"]),
+    )
+    assert counts == [0, 1]
 
 
 def test_generate_preset_passes_dense_layout(backend, grid_connectivity):
