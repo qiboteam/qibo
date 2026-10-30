@@ -24,6 +24,7 @@ physics problems.
 - [Maximal violation of Bell inequalities variationally](bell-variational/README.md)
 - [Feedback-based ALgorithm for Quantum OptimizatioN - FALQON](falqon/README.md)
 - [A general Grover model](grover/README.md)
+- [Quantum Phase Estimation](qpe/README.md)
 - [Quantum anomaly detection](anomaly_detection/README.md)
 - [Quantum k-medians clustering](qclustering/README.md)
 - [Determining probability density functions with adiabatic quantum computing](adiabatic_qml/adiabatic-qml.ipynb)

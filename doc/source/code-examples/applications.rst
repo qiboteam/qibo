@@ -69,6 +69,7 @@ Quantum Physics
     tutorials/bell-variational/README.md
     tutorials/falqon/README.md
     tutorials/grover/README.md
+    tutorials/qpe/README.md
 
 Quantum Machine Learning
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -130,6 +131,15 @@ Grover's Algorithm
     tutorials/hash-grover/README.md
     tutorials/grover/README.md
     tutorials/qfiae/qfiae_demo.ipynb
+
+
+Quantum Phase Estimation
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qpe/README.md
 
 
 Shor's Factorization Algorithms

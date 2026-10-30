@@ -142,6 +142,7 @@ from qibo.quantum_info.superoperator_transformations import (
 from qibo.quantum_info.utils import (
     bitstring_to_phase,
     decompose_permutation,
+    estimate_phase,
     haar_integral,
     hadamard_transform,
     hamming_distance,
@@ -196,6 +197,7 @@ __all__ = [
     "entanglement_fidelity",
     "entanglement_of_formation",
     "entangling_capability",
+    "estimate_phase",
     "expressibility",
     "fidelity",
     "frame_potential",
