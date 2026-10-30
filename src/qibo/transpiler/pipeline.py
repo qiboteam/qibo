@@ -218,7 +218,7 @@ class Passes:
 def generate_preset_passes(
     connectivity: nx.Graph | None = None,
     native_gates: NativeGates | None = None,
-    initial_layout: list[int | str] | None = None,
+    initial_layout: list[int | str] | dict[int, int | str] | None = None,
     seed: int | None = None,
     on_qubits: list[int | str] | None = None,
     qubits_initially_zero: bool = False,
@@ -263,8 +263,9 @@ def generate_preset_passes(
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates
             supported by the hardware. Defaults to
             :meth:`qibo.transpiler.unroller.NativeGates.default`.
-        initial_layout (list, optional): Physical qubits on which the logical qubits of the
-            circuit are placed, see :class:`qibo.transpiler.optimizer.Preprocessing`.
+        initial_layout (list or dict, optional): Physical qubits on which the logical qubits
+            of the circuit are placed, as a list or as a dictionary that may leave qubits
+            out, see :class:`qibo.transpiler.optimizer.Preprocessing`.
             It requires ``connectivity``, and it cannot be used with a non-trivial
             ``layout_method``. Defaults to ``None``.
         seed (int, optional): Seed of the random choices of the placer and the router, which
@@ -454,7 +455,7 @@ def transpile(
     circuits: Circuit | list[Circuit] | tuple[Circuit],
     connectivity: nx.Graph | None = None,
     native_gates: NativeGates | None = None,
-    initial_layout: list[int | str] | None = None,
+    initial_layout: list[int | str] | dict[int, int | str] | None = None,
     seed: int | None = None,
     on_qubits: list[int | str] | None = None,
     qubits_initially_zero: bool = False,
@@ -534,8 +535,9 @@ def transpile(
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates
             supported by the hardware. Defaults to
             :meth:`qibo.transpiler.unroller.NativeGates.default`.
-        initial_layout (list, optional): Physical qubits on which the logical qubits of the
-            circuits are placed. Defaults to ``None``.
+        initial_layout (list or dict, optional): Physical qubits on which the logical qubits
+            of the circuits are placed, see
+            :class:`qibo.transpiler.optimizer.Preprocessing`. Defaults to ``None``.
         seed (int, optional): Seed of the random choices of the placer and the router.
             Defaults to ``None``.
         on_qubits (list, optional): List of qubits to be used in the transpiler.
