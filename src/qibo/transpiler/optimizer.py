@@ -1932,7 +1932,6 @@ class Validation(Optimizer):
 
             from qibo import Circuit, gates
             from qibo.transpiler import Validation
-            from qibo.transpiler._exceptions import DecompositionError
 
             circuit = Circuit(1)
             circuit.add(gates.H(0))
@@ -1940,12 +1939,12 @@ class Validation(Optimizer):
 
             try:
                 Validation()(circuit)
-            except DecompositionError:
-                print("The circuit has a noise channel.")
+            except Exception as error:
+                print(type(error).__name__)
 
         .. testoutput::
 
-            The circuit has a noise channel.
+            DecompositionError
     """
 
     def __init__(self, connectivity: nx.Graph | None = None):
