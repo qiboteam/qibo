@@ -1,4 +1,5 @@
 import random
+from concurrent.futures.process import BrokenProcessPool
 
 import networkx as nx
 import numpy as np
@@ -8,6 +9,7 @@ from qiskit.transpiler import PassManager, passes
 from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_statevector, random_unitary
+from qibo.transpiler import pipeline as pipeline_module
 from qibo.transpiler import unroller as unroller_module
 from qibo.transpiler._exceptions import (
     BlockingError,
@@ -1256,10 +1258,31 @@ def test_transpile_single_circuit_with_processes(backend):
     assert isinstance(result[0], Circuit)
 
 
-@pytest.mark.parametrize("num_processes", [0, -2])
+@pytest.mark.parametrize("num_processes", [0, -2, 2.0, "2"])
 def test_transpile_num_processes_invalid(num_processes):
-    with pytest.raises(ValueError, match="must be positive"):
+    with pytest.raises(ValueError, match="must be a positive integer"):
         transpile([Circuit(2)], num_processes=num_processes)
+
+
+def test_transpile_in_parallel_broken_pool_hint(monkeypatch):
+    """A worker that ends abruptly, as when the ``__main__`` guard is missing, is explained."""
+
+    class BrokenExecutor:
+        def __init__(self, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def map(self, *args):
+            raise BrokenProcessPool("A process in the process pool was terminated.")
+
+    monkeypatch.setattr(pipeline_module, "ProcessPoolExecutor", BrokenExecutor)
+    with pytest.raises(BrokenProcessPool, match="__main__"):
+        transpile([Circuit(2), Circuit(2)], nx.path_graph(2), num_processes=2)
 
 
 def test_transpile_callback_with_processes_error():

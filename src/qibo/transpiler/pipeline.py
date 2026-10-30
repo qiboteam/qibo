@@ -2,6 +2,7 @@ import multiprocessing
 import time
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from inspect import signature
 from itertools import repeat
 
@@ -584,13 +585,18 @@ def transpile(
         list of these pairs, in the same order.
 
     Raises:
-        ValueError: If ``num_processes`` is not positive, or if ``callback`` is given with
-            more than one process.
+        ValueError: If ``num_processes`` is not a positive integer, or if ``callback`` is
+            given with more than one process.
+        BrokenProcessPool: If a worker process ends abruptly. A common cause is a script
+            that calls this function with several processes without the
+            ``if __name__ == "__main__":`` guard.
     """
-    if num_processes is not None and num_processes < 1:
+    if num_processes is not None and (
+        not isinstance(num_processes, int) or num_processes < 1
+    ):
         raise_error(
             ValueError,
-            f"``num_processes`` must be positive, but it is {num_processes}.",
+            f"``num_processes`` must be a positive integer, but it is {num_processes!r}.",
         )
     if callback is not None and num_processes is not None and num_processes > 1:
         raise_error(
@@ -617,10 +623,19 @@ def transpile(
         results = [passes(circuit, backend=backend) for circuit in circuits]
     else:
         # each task gets its own copy of the pipeline, so that the results are independent
-        with ProcessPoolExecutor(
-            max_workers=min(num_processes, len(circuits)),
-            mp_context=multiprocessing.get_context("spawn"),
-        ) as executor:
-            results = list(executor.map(passes, circuits, repeat(backend)))
+        try:
+            with ProcessPoolExecutor(
+                max_workers=min(num_processes, len(circuits)),
+                mp_context=multiprocessing.get_context("spawn"),
+            ) as executor:
+                results = list(executor.map(passes, circuits, repeat(backend)))
+        except BrokenProcessPool:
+            raise_error(
+                BrokenProcessPool,
+                "A worker process ended abruptly. The workers start by importing the "
+                + "script that calls ``transpile``, which fails if the call is not "
+                + 'protected by ``if __name__ == "__main__":``. Running out of memory is '
+                + "another possible cause.",
+            )
 
     return results
