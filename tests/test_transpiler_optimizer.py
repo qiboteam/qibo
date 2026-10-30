@@ -1999,3 +1999,45 @@ def test_validation_stops_the_pipeline_before_the_other_passes(with_connectivity
         pipeline(circuit)
     # no pass has run, so the unrollers and the router have not spent time on it
     assert counts == []
+
+
+@pytest.mark.parametrize("initial_layout", [[0, 1], [0, 0, 1], [0, 1, 9]])
+def test_validation_initial_layout_error(star_connectivity, initial_layout):
+    validation = Validation(star_connectivity(), initial_layout=initial_layout)
+    with pytest.raises(PlacementError, match="distinct node"):
+        validation(Circuit(3))
+
+
+def test_validation_initial_layout_keeps_circuit(star_connectivity):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 1))
+    validation = Validation(star_connectivity(), initial_layout=[4, 2, 0])
+    assert validation(circuit) is circuit
+    # neither the number of qubits nor the wire names of the circuit change
+    assert circuit.nqubits == 3
+    assert circuit.wire_names == [0, 1, 2]
+    # without connectivity there is nothing to check the layout against
+    assert Validation(initial_layout=[0, 0, 9])(circuit) is circuit
+
+
+def test_validation_initial_layout_too_many_qubits(star_connectivity):
+    validation = Validation(star_connectivity(), initial_layout=[0, 1, 2])
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
+        validation(Circuit(6))
+
+
+def test_validation_stops_the_pipeline_for_initial_layout():
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    counts = []
+    pipeline = generate_preset_passes(
+        nx.path_graph(5),
+        initial_layout=[0, 0, 1],
+        callback=lambda **kwargs: counts.append(kwargs["count"]),
+    )
+    with pytest.raises(PlacementError, match="distinct node"):
+        pipeline(circuit)
+    # the unroller has not decomposed the Toffoli gate
+    assert counts == []

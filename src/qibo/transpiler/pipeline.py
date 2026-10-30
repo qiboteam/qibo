@@ -234,8 +234,8 @@ def generate_preset_passes(
     passes:
 
     1. :class:`qibo.transpiler.optimizer.Validation` raises an error at the start if the
-       circuit cannot be transpiled, *e.g.* if it has a noise channel or more qubits than
-       the hardware.
+       circuit cannot be transpiled, *e.g.* if it has a noise channel, more qubits than
+       the hardware, or an invalid ``initial_layout``.
     2. :class:`qibo.transpiler.unroller.Unroller` decomposes the gates acting on three or
        more qubits, which the router does not support. The qubits of the circuit that
        a multi-controlled gate does not act on are used as auxiliary qubits, see
@@ -400,7 +400,7 @@ def generate_preset_passes(
         )
 
     passes = [
-        Validation(),
+        Validation(initial_layout=initial_layout),
         Unroller(native_gates, min_qubits=3, **unroller_kwargs),
         Preprocessing(initial_layout=initial_layout),
         *([] if placer is None else [placer]),
