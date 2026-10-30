@@ -70,6 +70,7 @@ def _add_wbd_gate(
     mqubits: int,
     weight: int,
     probabilities: ArrayLike | None = None,
+    phases: ArrayLike | None = None,
 ) -> None:
     """In-place addition of a Weight Distribution Block (WBD) to ``circuit``.
     Implements the :math:`WBD^{n,m}_k` unitary from Definition 2 of the paper [2].
@@ -79,9 +80,15 @@ def _add_wbd_gate(
     If ``probabilities`` is given, it must be an array such that ``probabilities[l][i]``
     is the probability of moving weight ``i`` to ``second_register``, given that the weight
     in ``first_register`` is ``l``, replacing the uniform (Dicke) distribution.
+    If ``phases`` is given, it must be an array such that ``phases[l][i]`` is the phase
+    added to the branch in which weight ``i`` is moved to ``second_register``, given that
+    the weight in ``first_register`` is ``l``. The phases are added with controlled phase
+    gates after the controlled rotations, as in the generalized WDB of Vittal et al. (2025),
+    arXiv:2511.11227.
     """
 
-    if mqubits > nqubits / 2:
+    # only the uniform distribution depends on the number of qubits of both registers
+    if probabilities is None and mqubits > nqubits / 2:
         raise_error(ValueError, "``m`` must not be greater than ``n - m``.")
 
     # only acts on last k qubits
@@ -109,11 +116,23 @@ def _add_wbd_gate(
             s = float(sum(probabilities[l][: l + 1]))
         # if the remaining probability vanishes, the branch is never reached
         ratio = lambda num, den: min(1.0, num / den) if den > 1e-15 else 1.0
+        if phases is not None:
+            # phases are added incrementally, such that branch ``i`` accumulates ``phases[l][i]``
+            increments = [float(phases[l][0])] + [
+                float(phases[l][i] - phases[l][i - 1]) for i in range(1, l + 1)
+            ]
+            circuit.add(gates.U1(first_register[-l], increments[0]))
         circuit.add(
             theta_gate(second_register[-1], math.sqrt(ratio(x[0], s))).controlled_by(
                 first_register[-l]
             )
         )
+        if phases is not None:
+            circuit.add(
+                gates.U1(second_register[-1], increments[1]).controlled_by(
+                    first_register[-l]
+                )
+            )
         s -= x[0]
         for qubit in range(1, min(l, mqubits)):
             circuit.add(
@@ -121,6 +140,12 @@ def _add_wbd_gate(
                     second_register[-qubit - 1], math.sqrt(ratio(x[qubit], s))
                 ).controlled_by(first_register[-l], second_register[-qubit])
             )
+            if phases is not None:
+                circuit.add(
+                    gates.U1(
+                        second_register[-qubit - 1], increments[qubit + 1]
+                    ).controlled_by(first_register[-l], second_register[-qubit])
+                )
             s -= x[qubit]
 
     # (3) Go back to unary encoding, undoing one hot encoding
@@ -422,19 +447,18 @@ def _binary_encoder_hyperspherical(
 
 
 def _dicke_tree_cuts(
-    nqubits: int, weight: int, set_size: int
+    nqubits: int, weight: int
 ) -> tuple[list[dict], list[int], list[tuple]]:
-    """Build the union-by-tier tree of Ref. [1] over disjoint qubit sets.
+    """Build the union-by-tier tree of Ref. [1] over disjoint sets of ``weight`` qubits.
 
-    The ``nqubits`` qubits are split in contiguous sets of ``set_size`` qubits, with a
+    The ``nqubits`` qubits are split in contiguous sets of ``weight`` qubits, with a
     last set holding the remainder. The sets are then merged in a tree, by repeatedly
     joining the two trees with the smallest number of qubits.
 
     Returns:
         tuple: The list of disjoint sets, the qubits of the root set, and the ordered list of
-        cuts. Each cut is a tuple ``(node_qubits, child_qubits, node_tier, child_tier,
-        node_sets, child_sets)``, where tiers are numbers of qubits in the respective trees
-        before the cut, and ``*_sets`` are the indices of the disjoint sets in them.
+        cuts. Each cut is a tuple ``(node_qubits, child_qubits, node_tier, child_tier)``,
+        where tiers are numbers of qubits in the respective trees before the cut.
         The cuts are in the order in which weight distribution blocks have to be applied.
 
     References:
@@ -445,21 +469,19 @@ def _dicke_tree_cuts(
     # We prepare disjoint sets of qubits
     disjoint_sets = [
         {
-            "qubits": list(range(set_size * it, set_size * (it + 1))),
-            "tier": set_size,
+            "qubits": list(range(weight * it, weight * (it + 1))),
+            "tier": weight,
             "children": [],
-            "sets": {it},
         }
-        for it in range(nqubits // set_size)
+        for it in range(nqubits // weight)
     ]
-    nmodk = nqubits % set_size
+    nmodk = nqubits % weight
     if nmodk != 0:
         disjoint_sets.append(
             {
                 "qubits": list(range(nqubits - nmodk, nqubits)),
                 "tier": nmodk,
                 "children": [],
-                "sets": {nqubits // set_size},
             }
         )
     # reverse to have in ascending order of tier
@@ -471,7 +493,6 @@ def _dicke_tree_cuts(
         first_smallest = trees.pop(0)
         second_smallest = trees.pop(0)
         second_smallest["tier"] += first_smallest["tier"]
-        second_smallest["sets"] = second_smallest["sets"] | first_smallest["sets"]
         second_smallest["children"].append(first_smallest)
         new = second_smallest
         # put new combined tree in list mantaining ordering
@@ -489,19 +510,9 @@ def _dicke_tree_cuts(
             if len(node["children"]) > 0:
                 # find highest tier child
                 y = max(node["children"], key=lambda x: x["tier"])
-                cuts.append(
-                    (
-                        node["qubits"],
-                        y["qubits"],
-                        node["tier"],
-                        y["tier"],
-                        sorted(node["sets"]),
-                        sorted(y["sets"]),
-                    )
-                )
+                cuts.append((node["qubits"], y["qubits"], node["tier"], y["tier"]))
                 # cut tree splitting x and y
                 node["tier"] -= y["tier"]
-                node["sets"] = node["sets"] - y["sets"]
                 node["children"].remove(y)
                 cut_nodes.append(y)
         trees += cut_nodes

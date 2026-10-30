@@ -361,8 +361,10 @@ Leaf-separable Encoder
 Prepares states of fixed Hamming weight whose qubits are split in contiguous groups (leaves),
 such that, for each distribution of the weight among the leaves, the state is a product over
 leaves. The leaves are correlated only through the weight distribution.
-The circuit combines the weight distribution blocks of :func:`qibo.models.encodings.dicke_state`
-with Hamming weight encoders acting on the leaves, and needs no auxiliary qubits.
+The circuit follows the algorithm of Vittal *et al.* (arXiv:2511.11227): a balanced binary tree of
+generalized weight distribution blocks, as in :func:`qibo.models.encodings.dicke_state`, followed
+by Hamming weight encoders acting on the leaves. It supports real and complex amplitudes
+and needs no auxiliary qubits.
 
 For instance, the Dicke state :math:`\ket{D_{2}^{6}}` is leaf-separable, and the following
 example prepares it on :math:`6` qubits split in leaves of :math:`2` qubits.
