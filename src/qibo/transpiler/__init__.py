@@ -21,6 +21,7 @@ from qibo.transpiler.optimizer import (
     RemoveResetInZeroState,
     ResetAfterMeasureSimplification,
     TGateRules,
+    Validation,
 )
 from qibo.transpiler.pipeline import Passes, generate_preset_passes, transpile
 from qibo.transpiler.placer import (
@@ -67,6 +68,7 @@ __all__ = [
     "TGateRules",
     "TranspileLayout",
     "Unroller",
+    "Validation",
     "generate_preset_passes",
     "multi_controlled_decomposition",
     "quantum_shannon_decomposition",

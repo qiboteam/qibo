@@ -10,7 +10,11 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
-from qibo.transpiler._exceptions import ConnectivityError, PlacementError
+from qibo.transpiler._exceptions import (
+    ConnectivityError,
+    DecompositionError,
+    PlacementError,
+)
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
@@ -1860,6 +1864,101 @@ class TGateRules(Optimizer):
                 new.add(gate)
 
         return new
+
+
+class Validation(Optimizer):
+    """Checks that the circuit can be transpiled, before any other pass runs.
+
+    Without it, a circuit that cannot be transpiled fails deep in the pipeline.
+    This pass raises a clear error at the start instead.
+    It does not change the circuit. It checks that:
+
+    - the circuit has no noise channel. The transpiler works with unitary gates, so the
+      only channel that it accepts is :class:`qibo.gates.channels.ResetChannel`.
+    - the circuit has no more qubits than the hardware, if there is a connectivity.
+    - the initial layout, if there is one, places every qubit of the circuit on a distinct
+      node of the connectivity, see :class:`qibo.transpiler.optimizer.Preprocessing`.
+
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity. If
+            ``None``, neither the number of qubits nor the initial layout are checked. It
+            is set by :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+        initial_layout (list, optional): Physical qubits on which the logical qubits of the
+            circuit are placed, in the format of
+            :class:`qibo.transpiler.optimizer.Preprocessing`. Defaults to ``None``.
+
+    Example:
+        The pass raises an error for the noise channel before the circuit is transpiled.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Validation
+
+            circuit = Circuit(1)
+            circuit.add(gates.H(0))
+            circuit.add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+
+            try:
+                Validation()(circuit)
+            except Exception as error:
+                print(type(error).__name__)
+
+        .. testoutput::
+
+            DecompositionError
+    """
+
+    def __init__(
+        self,
+        connectivity: nx.Graph | None = None,
+        initial_layout: list[int | str] | None = None,
+    ):
+        self.connectivity = connectivity
+        self.initial_layout = initial_layout
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Check that the circuit can be transpiled.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: The same circuit, unchanged.
+
+        Raises:
+            DecompositionError: If the circuit has a noise channel other than
+                :class:`qibo.gates.channels.ResetChannel`.
+            ValueError: If the circuit has more qubits than the connectivity has nodes.
+            PlacementError: If ``initial_layout`` does not have a distinct node of the
+                connectivity for every qubit of the circuit.
+        """
+        for gate in circuit.queue:
+            if isinstance(gate, gates.Channel) and not isinstance(
+                gate, gates.ResetChannel
+            ):
+                raise_error(
+                    DecompositionError,
+                    f"The channel {gate.name} cannot be transpiled, because it is not a "
+                    + "unitary gate. Only the reset channel is supported.",
+                )
+
+        if self.connectivity is not None:
+            if circuit.nqubits > self.connectivity.number_of_nodes():
+                raise_error(
+                    ValueError,
+                    f"The number of qubits in the circuit ({circuit.nqubits}) "
+                    + "can't be greater than the number of physical qubits "
+                    + f"({self.connectivity.number_of_nodes()}).",
+                )
+
+            if self.initial_layout is not None:
+                # the layout is checked, and the circuit is not changed, on an empty copy
+                Preprocessing(self.connectivity, self.initial_layout)(
+                    Circuit(**circuit.init_kwargs)
+                )
+
+        return circuit
 
 
 def _numeric_gates(circuit: Circuit) -> list[Gate | None]:
