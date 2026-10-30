@@ -1232,19 +1232,43 @@ class Preprocessing(Optimizer):
 
     Args:
         connectivity (:class:`networkx.Graph`): Hardware connectivity as a graph.
-        initial_layout (list, optional): Physical qubits on which the logical qubits of the
-            circuit are placed, that is, the :math:`i`-th logical qubit is placed on the
-            physical qubit ``initial_layout[i]``. It must have one distinct node of the
-            connectivity for every logical qubit, and it replaces the ``wire_names``
-            of the circuit, which are set in place. If ``None``, the ``wire_names``
-            of the circuit are used if they are all in the connectivity, and the first
-            nodes of the connectivity otherwise. Defaults to ``None``.
+        initial_layout (list or dict, optional): Physical qubits on which the logical qubits
+            of the circuit are placed. It is either a list, where the :math:`i`-th logical
+            qubit is placed on the physical qubit ``initial_layout[i]``, or a dictionary
+            ``{i: node}`` with the same meaning, which may leave logical qubits out. These
+            are placed on the nodes of the connectivity that are not in the dictionary, in
+            the order of the connectivity. In both cases every logical qubit must be placed
+            on a distinct node of the connectivity, and the layout replaces the
+            ``wire_names`` of the circuit, which are set in place. If ``None``, the
+            ``wire_names`` of the circuit are used if they are all in the connectivity, and
+            the first nodes of the connectivity otherwise. Defaults to ``None``.
+
+    Example:
+        The first and the third qubits of the circuit are placed on the nodes ``3`` and
+        ``1``, and the second one on the first free node, which is ``0``.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Preprocessing
+
+            circuit = Circuit(3)
+            circuit.add(gates.CNOT(0, 1))
+
+            preprocessing = Preprocessing(nx.path_graph(5), initial_layout={0: 3, 2: 1})
+            print(preprocessing(circuit).wire_names)
+
+        .. testoutput::
+
+            [3, 0, 1, 2, 4]
     """
 
     def __init__(
         self,
         connectivity: nx.Graph | None = None,
-        initial_layout: list[int | str] | None = None,
+        initial_layout: list[int | str] | dict[int, int | str] | None = None,
     ):
         self.connectivity = connectivity
         self.initial_layout = initial_layout
@@ -1261,11 +1285,30 @@ class Preprocessing(Optimizer):
 
         Raises:
             PlacementError: If ``initial_layout`` does not have a distinct node of the
-                connectivity for every qubit of the circuit.
+                connectivity for every qubit of the circuit, or if it is a dictionary
+                with keys that are not qubits of the circuit.
             ValueError: If the circuit has more qubits than the connectivity has nodes.
         """
         if self.initial_layout is not None:
-            layout = list(self.initial_layout)
+            layout = self.initial_layout
+            if isinstance(layout, dict):
+                if not set(layout) <= set(range(circuit.nqubits)):
+                    raise_error(
+                        PlacementError,
+                        f"The keys of the initial layout {layout} must be qubits of the "
+                        + f"circuit, from 0 to {circuit.nqubits - 1}.",
+                    )
+                # when there are not enough free nodes, ``None`` is not a node
+                free = iter(
+                    node
+                    for node in self.connectivity.nodes
+                    if node not in layout.values()
+                )
+                layout = [
+                    layout[qubit] if qubit in layout else next(free, None)
+                    for qubit in range(circuit.nqubits)
+                ]
+            layout = list(layout)
             if (
                 len(layout) != circuit.nqubits
                 or len(set(layout)) != len(layout)
