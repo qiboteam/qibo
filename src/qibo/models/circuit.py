@@ -14,12 +14,30 @@ from qibo import __version__, gates
 from qibo.backends import Backend, _check_backend, _Global
 from qibo.config import log, raise_error
 from qibo.gates import ParametrizedGate
-from qibo.gates.abstract import Gate
+from qibo.gates.abstract import GATES_CONTROLLED_BY_DEFAULT, Gate
 from qibo.gates.gates import is_nonzero_phase
 from qibo.models._openqasm import QASMParser
 from qibo.result import CircuitResult, QuantumState
 
 NoiseMapType = tuple[int, int, int] | dict[int, tuple[int, int, int]]
+
+# uncontrolled gates from which the gates controlled by default are built
+_BASE_GATES = {
+    "cx": gates.X,
+    "ccx": gates.X,
+    "cy": gates.Y,
+    "cz": gates.Z,
+    "ccz": gates.Z,
+    "ch": gates.H,
+    "csx": gates.SX,
+    "csxdg": gates.SXDG,
+    "crx": gates.RX,
+    "cry": gates.RY,
+    "crz": gates.RZ,
+    "cu1": gates.U1,
+    "cu2": gates.U2,
+    "cu3": gates.U3,
+}
 
 
 def _org_table(headers, rows):
@@ -310,6 +328,11 @@ class Circuit:
 
         return newcircuit
 
+    def __iter__(self):
+        """Iterates over the gates of the circuit, which allows adding a circuit to another one
+        with :meth:`qibo.models.circuit.Circuit.add`."""
+        return iter(self.queue)
+
     @property
     def wire_names(self) -> list[int] | list[str]:
         if self._wire_names is None:
@@ -343,13 +366,17 @@ class Circuit:
         )
 
     def on_qubits(self, *qubits):
-        """Generator of gates contained in the circuit acting on specified
-        qubits.
+        """Creates a new ``Circuit`` with the gates of the circuit acting on specified qubits.
 
-        Useful for adding a circuit as a subroutine in a larger circuit.
+        Useful for adding a circuit as a subroutine in a larger circuit. The returned circuit
+        has as many qubits as needed to contain the gates, *i.e.* the largest of ``qubits``
+        plus one, and it can be iterated over to retrieve its gates.
 
         Args:
             qubits (int): Qubit ids that the gates should act.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: circuit with the gates acting on ``qubits``.
 
         Example:
 
@@ -380,8 +407,18 @@ class Circuit:
             )
 
         qubit_map = dict(enumerate(qubits))
-        for gate in self.queue:
-            yield gate.on_qubits(qubit_map)
+        circuit = Circuit(max(qubits) + 1, density_matrix=self.density_matrix)
+        new_gates = [gate.on_qubits(qubit_map) for gate in self.queue]
+        # default register names are assigned only when added to the final circuit
+        unnamed = [
+            gate
+            for gate in new_gates
+            if isinstance(gate, gates.M) and gate.register_name is None
+        ]
+        circuit.add(new_gates)
+        for gate in unnamed:
+            gate.register_name = None
+        return circuit
 
     def light_cone(self, *qubits):
         """Reduces circuit to the qubits relevant for an observable.
@@ -421,6 +458,85 @@ class Circuit:
         circuit = self.__class__(**kwargs)
         circuit.add(gate.on_qubits(qubit_map) for gate in reversed(list_of_gates))
         return circuit, qubit_map
+
+    def controlled_by(self, *qubits: int):
+        """Creates a new ``Circuit`` in which every gate is controlled by the given ``qubits``.
+
+        The original circuit is not modified. The control qubits cannot be targets (or controls)
+        of any of the gates of the circuit, but they do not need to belong to it. In particular,
+        a small circuit can be controlled by qubits of a larger circuit it will be added to,
+        *e.g.* ``large_circuit.add(small_circuit.controlled_by(5))``. If some of ``qubits`` is
+        not smaller than the number of qubits of the original circuit, the new circuit has as
+        many qubits as needed to contain it, and ``wire_names`` are not kept. Gates that act as
+        the identity, *i.e.* :class:`qibo.gates.I`, :class:`qibo.gates.Align` and
+        :class:`qibo.gates.Barrier`, are kept uncontrolled. The remaining gates are controlled
+        according to the rules of :meth:`qibo.gates.Gate.controlled_by`.
+
+        .. note::
+            Gates that are already controlled, *e.g.* :class:`qibo.gates.CNOT`, are rebuilt
+            from their uncontrolled counterpart, *e.g.* :class:`qibo.gates.X`, so that
+            ``qubits`` are added to their original controls. This is not possible for
+            :class:`qibo.gates.DEUTSCH` and :class:`qibo.gates.FanOut`, for which a
+            ``NotImplementedError`` is raised. Measurements and noise channels cannot be
+            controlled either.
+
+        Args:
+            *qubits (int): ids of the qubits that control the circuit.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: circuit controlled by ``qubits``.
+
+        Example:
+
+            .. testcode::
+
+                from qibo import Circuit, gates
+
+                # subroutine acting on qubits 0 and 1
+                small_circuit = Circuit(2)
+                small_circuit.add(gates.H(0))
+                small_circuit.add(gates.CNOT(0, 1))
+
+                # add the subroutine to a larger circuit, controlled by its qubit 2
+                large_circuit = Circuit(4)
+                large_circuit.add(gates.H(2))
+                large_circuit.add(small_circuit.controlled_by(2))
+
+                # the same, with the subroutine acting on qubits 1 and 3
+                large_circuit.add(small_circuit.on_qubits(1, 3).controlled_by(0))
+        """
+        if any(q < 0 for q in qubits):
+            raise_error(
+                ValueError,
+                f"Cannot control a circuit on qubits {qubits}, ids must be non-negative.",
+            )
+
+        init_kwargs = dict(self.init_kwargs)
+        init_kwargs["nqubits"] = max([self.nqubits, *(q + 1 for q in qubits)])
+        if init_kwargs["nqubits"] != self.nqubits:
+            init_kwargs["wire_names"] = None
+
+        new_circuit = self.__class__(**init_kwargs)
+        for gate in self.copy(deep=True).queue:
+            if isinstance(gate, (gates.Align, gates.Barrier, gates.I)):
+                new_gate = gate
+            elif gate.name in GATES_CONTROLLED_BY_DEFAULT:
+                if gate.name not in _BASE_GATES:
+                    raise_error(
+                        NotImplementedError,
+                        f"Cannot add controls to gate {gate.__class__.__name__}.",
+                    )
+                new_gate = _BASE_GATES[gate.name](
+                    *gate.target_qubits, **gate.init_kwargs
+                ).controlled_by(*qubits, *gate.control_qubits)
+            elif gate.is_controlled_by:
+                gate.control_qubits = qubits + gate.control_qubits
+                new_gate = gate
+            else:
+                new_gate = gate.controlled_by(*qubits)
+            new_circuit.add(new_gate)
+
+        return new_circuit
 
     def _shallow_copy(self):
         """Helper method for :meth:`qibo.models.circuit.Circuit.copy` and
@@ -689,11 +805,11 @@ class Circuit:
                     "Cannot add gates to a circuit after it is executed.",
                 )
 
-            for q in gate.target_qubits:
+            for q in gate.qubits:
                 if q >= self.nqubits:
                     raise_error(
                         ValueError,
-                        f"Attempting to add gate with target qubits {gate.target_qubits} "
+                        f"Attempting to add gate with qubits {gate.qubits} "
                         + f"on a circuit of {self.nqubits} qubits.",
                     )
 
