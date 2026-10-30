@@ -236,6 +236,23 @@ def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_sm
         backend.assert_circuitclose(large_circuit, target_circuit)
 
 
+def test_circuit_on_qubits_measurement_registers():
+    small_circuit = Circuit(2)
+    small_circuit.add(gates.H(0))
+    small_circuit.add(gates.M(0))
+    small_circuit.add(gates.M(1, register_name="named"))
+
+    large_circuit = Circuit(5)
+    large_circuit.add(gates.M(0))
+    large_circuit.add(small_circuit.on_qubits(2, 4))
+
+    assert large_circuit.measurement_tuples == {
+        "register0": (0,),
+        "register1": (2,),
+        "named": (4,),
+    }
+
+
 def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
     small_circuit = Circuit(3)
     small_circuit.add(gates.RX(0, theta=0.1).controlled_by(1, 2))
