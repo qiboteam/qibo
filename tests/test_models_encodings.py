@@ -1310,7 +1310,12 @@ def test_folded_xxz_eigenstate_many_domains(
     if method == "merged":
         # relative phases are not simulated, so the gates are the ones that permute states
         circuit = _folded_merged(
-            nsites, nmagnons, domains, target_modes, backend, relative_phase=False
+            nsites,
+            nmagnons,
+            domains,
+            target_modes,
+            relative_phase=False,
+            backend=backend,
         )
     else:
         circuit = folded_xxz_eigenstate(
@@ -1386,6 +1391,48 @@ def test_folded_xxz_cswap(backend, absent):
     for index, bits in enumerate(product([0, 1], repeat=3)):
         if bits[1:] != absent:
             backend.assert_allclose(matrix[:, index], target[:, index], atol=1e-8)
+
+
+@pytest.mark.parametrize("absent", [(0, 1), (1, 1)])
+def test_folded_xxz_cswap_toffolis(backend, absent):
+    gate_list = _folded_xxz_cswap(0, 1, 2, absent, return_toffolis=True)
+    assert sum(isinstance(gate, gates.TOFFOLI) for gate in gate_list) == 1
+
+    circuit = Circuit(3)
+    circuit.add(gate_list)
+    swap = Circuit(3)
+    swap.add(gates.SWAP(1, 2).controlled_by(0))
+
+    # without relative phases, the gate is exactly the controlled-SWAP
+    backend.assert_allclose(circuit.unitary(backend), swap.unitary(backend), atol=1e-8)
+
+
+@pytest.mark.parametrize("nsites,nmagnons,domains", [(5, 2, None), (7, 2, [[5, 6]])])
+def test_folded_xxz_eigenstate_return_toffolis(backend, nsites, nmagnons, domains):
+    chains = []
+    queues = []
+    for return_toffolis in (False, True):
+        circuit = folded_xxz_eigenstate(
+            nsites,
+            nmagnons,
+            domains,
+            method="merged",
+            return_toffolis=return_toffolis,
+            backend=backend,
+        )
+        queues.append(circuit.queue)
+        state = backend.execute_circuit(circuit).state()
+        chains.append(state[:: 2 ** (circuit.nqubits - nsites)])
+
+    # by default, the Toffoli gates are decomposed, and they are not otherwise
+    assert not any(isinstance(gate, gates.TOFFOLI) for gate in queues[0])
+    assert any(isinstance(gate, gates.TOFFOLI) for gate in queues[1])
+    assert not any(isinstance(gate, gates.RY) for gate in queues[1])
+
+    # the Toffoli gates are returned without the relative phases, which cancel in the
+    # decomposed circuit, and the state of the chain is the same
+    overlap = backend.sum(backend.conj(chains[0]) * chains[1])
+    backend.assert_allclose(backend.abs(overlap), 1.0, atol=1e-8)
 
 
 @pytest.mark.parametrize(

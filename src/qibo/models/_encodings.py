@@ -721,8 +721,9 @@ def _folded_merged(
     nmagnons: int,
     domains: list[list[int]],
     modes: list[int],
-    backend: Backend | None = None,
     relative_phase: bool = True,
+    return_toffolis: bool = False,
+    backend: Backend | None = None,
 ) -> Circuit:
     """Circuit of :func:`qibo.models.encodings.folded_xxz_eigenstate` with the ``"merged"`` method.
 
@@ -738,13 +739,17 @@ def _folded_merged(
         domains (list[list[int]]): blocks of spin-down sites of the reference configuration.
         modes (list[int]): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta of the
             magnons.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
         relative_phase (bool, optional): If ``True``, the Toffoli gates that never see the
             states where they have a relative phase are implemented with three CNOTs instead of
             six. If ``False``, all the gates besides the Stage I ones permute the states of the
             computational basis. Defaults to ``True``.
+        return_toffolis (bool, optional): If ``True``, the Toffoli gates are returned as
+            :class:`qibo.gates.TOFFOLI` gates, which are not decomposed into CNOTs and
+            single-qubit rotations, and the controlled-SWAP gates are returned as a
+            Toffoli gate between two CNOTs. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that prepares the eigenstate.
@@ -759,6 +764,7 @@ def _folded_merged(
         044036 (2018) <https://doi.org/10.1103/PhysRevApplied.9.044036>`_.
     """
     backend = _check_backend(backend)
+    relative_phase = relative_phase and not return_toffolis
 
     nsqueezed = (
         nsites - 2 * len(domains) - nmagnons + 1
@@ -865,8 +871,14 @@ def _folded_merged(
             for v in range(lefts[-1] + 1, lefts[0], -1):
                 # the tally is a thermometer, so two neighbors are never in the state (0, 1)
                 circuit.add(
-                    _folded_xxz_cswap(magnonic[m - 1], tally[v - 1], tally[v], (0, 1))
-                    if relative_phase
+                    _folded_xxz_cswap(
+                        magnonic[m - 1],
+                        tally[v - 1],
+                        tally[v],
+                        (0, 1),
+                        return_toffolis,
+                    )
+                    if relative_phase or return_toffolis
                     else gates.SWAP(tally[v - 1], tally[v]).controlled_by(
                         magnonic[m - 1]
                     )
@@ -927,8 +939,8 @@ def _folded_merged(
         for v in sorted({right for right, _, _ in hosts[x]}, reverse=True):
             # the counter is in one-hot code, so two neighbors are never in the state (1, 1)
             circuit.add(
-                _folded_xxz_cswap(flag, tally[v], tally[v + 1], (1, 1))
-                if relative_phase
+                _folded_xxz_cswap(flag, tally[v], tally[v + 1], (1, 1), return_toffolis)
+                if relative_phase or return_toffolis
                 else gates.SWAP(tally[v], tally[v + 1]).controlled_by(flag)
             )
         for right, position, m in hosts[x]:
@@ -1224,13 +1236,18 @@ def _folded_sopena(
 
 
 def _folded_xxz_cswap(
-    control: int, first: int, second: int, absent: tuple[int, int]
+    control: int,
+    first: int,
+    second: int,
+    absent: tuple[int, int],
+    return_toffolis: bool = False,
 ) -> list[Gate]:
     """Controlled-SWAP gate up to a relative phase, with :math:`5` CNOTs instead of :math:`8`.
 
     The gate is a CNOT, a Toffoli gate up to a relative phase, and a CNOT. The relative phase is
     a sign for the state in which the control is :math:`\\ket{0}` and ``absent`` is the state of
     ``first`` and ``second``, so it is only valid if that state of the two qubits is never present.
+    If ``return_toffolis`` is ``True``, the gate is exact, and the Toffoli gate is not decomposed.
 
     Args:
         control (int): control qubit.
@@ -1238,6 +1255,9 @@ def _folded_xxz_cswap(
         second (int): second qubit that is swapped.
         absent (tuple[int, int]): either :math:`(0, 1)` or :math:`(1, 1)`, which is the state of
             ``first`` and ``second`` that is never present.
+        return_toffolis (bool, optional): If ``True``, the Toffoli gate is a
+            :class:`qibo.gates.TOFFOLI` gate, and the controlled-SWAP gate is exact.
+            Defaults to ``False``.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: gates that implement the controlled gate.
@@ -1247,6 +1267,13 @@ def _folded_xxz_cswap(
         multiple control Toffoli optimization*, `Phys. Rev. A 93, 022311 (2016)
         <https://doi.org/10.1103/PhysRevA.93.022311>`_.
     """
+    if return_toffolis:
+        return [
+            gates.CNOT(second, first),
+            gates.TOFFOLI(control, first, second),
+            gates.CNOT(second, first),
+        ]
+
     # to avoid circular import
     from qibo.transpiler.decompositions.multicontrolled_decompositions import _toffoli
 
