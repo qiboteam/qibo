@@ -10,6 +10,7 @@ from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.quantum_info.utils import (
+    bitstring_to_phase,
     decompose_permutation,
     haar_integral,
     hadamard_transform,
@@ -21,6 +22,63 @@ from qibo.quantum_info.utils import (
     pqc_integral,
     total_variation_distance,
 )
+
+
+@pytest.mark.parametrize("nbits", [1, 3, 5])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        str,
+        list,
+        tuple,
+        lambda b: np.array(list(b)),
+        lambda b: list(map(int, b)),
+        lambda b: tuple(map(int, b)),
+        lambda b: np.array(list(map(int, b))),
+    ],
+)
+def test_bitstring_to_phase(nbits, kind):
+    for value in range(2**nbits):
+        bitstring = f"{value:0{nbits}b}"
+        # binary fraction 0.b_1 b_2 ... b_t, with b_1 being the most significant bit
+        target = sum(int(bit) * 2 ** (-j) for j, bit in enumerate(bitstring, start=1))
+        phase = bitstring_to_phase(kind(bitstring))
+        assert isinstance(phase, float)
+        assert 0 <= phase < 1
+        assert phase == target == value / 2**nbits
+
+
+def test_bitstring_to_phase_leading_zeros_and_large_bitstrings():
+    assert bitstring_to_phase("1") == 0.5
+    assert bitstring_to_phase("01") == 0.25
+    assert bitstring_to_phase("001") == 0.125
+    assert bitstring_to_phase("0" * 64) == 0.0
+    assert bitstring_to_phase("1" * 53) == 1 - 2**-53
+
+
+@pytest.mark.parametrize("bitstring", [5, True, 0, np.int64(5), np.uint8(3)])
+def test_bitstring_to_phase_int_error(bitstring):
+    with pytest.raises(TypeError, match="leading zeros are lost"):
+        bitstring_to_phase(bitstring)
+
+
+@pytest.mark.parametrize("bitstring", [0.5, None, 1j, np.float64(0.5), np.array(1)])
+def test_bitstring_to_phase_non_iterable_error(bitstring):
+    # the message is the one of the function, not the one of the iteration of the object
+    with pytest.raises(
+        TypeError, match="must be a str, list or tuple of bits"
+    ) as error:
+        bitstring_to_phase(bitstring)
+    assert "leading zeros" not in str(error.value)
+    assert "not iterable" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "bitstring", ["", [], (), "012", "01a", [0, 2], ["01", "1"], [0.0, 1.0], [None]]
+)
+def test_bitstring_to_phase_value_error(bitstring):
+    with pytest.raises(ValueError):
+        bitstring_to_phase(bitstring)
 
 
 @pytest.mark.parametrize("bitstring", range(2**5))
