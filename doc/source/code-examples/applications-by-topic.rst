@@ -61,6 +61,7 @@ Quantum Physics
     tutorials/bell-variational/README.md
     tutorials/falqon/README.md
     tutorials/grover/README.md
+    tutorials/qpe/README.md
 
 Quantum Machine Learning
 ^^^^^^^^^^^^^^^^^^^^^^^^
