@@ -106,6 +106,61 @@ def test_preprocessing_initial_layout(star_connectivity):
     assert new_circuit.queue[0].qubits == (0, 1)
 
 
+@pytest.mark.parametrize(
+    "initial_layout, wire_names",
+    [
+        # a complete dictionary is the same as a list
+        ({0: 4, 1: 2, 2: 0}, [4, 2, 0, 1, 3]),
+        ({2: 0, 0: 4, 1: 2}, [4, 2, 0, 1, 3]),
+        # the missing qubits take the free nodes, in the order of the connectivity
+        ({1: 3}, [0, 3, 1, 2, 4]),
+        ({0: 1, 2: 0}, [1, 2, 0, 3, 4]),
+        ({2: 0}, [1, 2, 0, 3, 4]),
+        ({}, [0, 1, 2, 3, 4]),
+    ],
+)
+def test_preprocessing_initial_layout_dict(
+    star_connectivity, initial_layout, wire_names
+):
+    circ = Circuit(3)
+    circ.add(gates.CNOT(0, 1))
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout=initial_layout
+    )
+    new_circuit = preprocesser(circuit=circ)
+    assert new_circuit.wire_names == wire_names
+    assert new_circuit.nqubits == 5
+    assert new_circuit.queue[0].qubits == (0, 1)
+
+
+@pytest.mark.parametrize(
+    "initial_layout, match",
+    [
+        ({3: 0}, "keys"),
+        ({-1: 0}, "keys"),
+        ({0: 1, 1: 1}, "distinct node"),
+        ({0: 9}, "distinct node"),
+    ],
+)
+def test_preprocessing_initial_layout_dict_error(
+    star_connectivity, initial_layout, match
+):
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout=initial_layout
+    )
+    with pytest.raises(PlacementError, match=match):
+        preprocesser(circuit=Circuit(3))
+
+
+def test_preprocessing_initial_layout_dict_not_enough_free_nodes(star_connectivity):
+    """Placing a qubit leaves too few nodes for the qubits that are not in the layout."""
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout={0: 4}
+    )
+    with pytest.raises(PlacementError, match="distinct node"):
+        preprocesser(circuit=Circuit(6))
+
+
 def test_preprocessing_initial_layout_all_qubits(star_connectivity):
     circ = Circuit(5)
     circ.add(gates.CNOT(0, 1))

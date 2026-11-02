@@ -544,7 +544,45 @@ def test_generate_preset_passes_initial_layout(backend, initial_layout, needs_sw
     assert needs_swaps or ncz == 2
 
 
-@pytest.mark.parametrize("initial_layout", [[0, 1], [0, 0, 1], [0, 1, 9]])
+@pytest.mark.parametrize(
+    "initial_layout, layout_list",
+    [
+        ({0: 1, 1: 2, 2: 3}, [1, 2, 3]),
+        ({0: 3, 2: 4}, [3, 0, 4]),
+        ({1: 4}, [0, 4, 1]),
+    ],
+)
+def test_generate_preset_passes_initial_layout_dict(
+    backend, initial_layout, layout_list
+):
+    connectivity = nx.path_graph(5)
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.M(0, 1, 2))
+    transpiled_circuit, final_layout = transpile(
+        circuit, connectivity, initial_layout=initial_layout, seed=0, backend=backend
+    )
+    expected_circuit, expected_layout = transpile(
+        circuit, connectivity, initial_layout=layout_list, seed=0, backend=backend
+    )
+    assert transpiled_circuit.wire_names[:3] == layout_list
+    assert [(gate.name, gate.qubits) for gate in transpiled_circuit.queue] == [
+        (gate.name, gate.qubits) for gate in expected_circuit.queue
+    ]
+    assert final_layout == expected_layout
+    assert circuit.wire_names == [0, 1, 2]
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
+@pytest.mark.parametrize(
+    "initial_layout", [[0, 1], [0, 0, 1], [0, 1, 9], {3: 0}, {0: 1, 1: 1}, {1: 9}]
+)
 def test_generate_preset_passes_initial_layout_error(initial_layout):
     pipeline = generate_preset_passes(nx.path_graph(5), initial_layout=initial_layout)
     with pytest.raises(PlacementError):
