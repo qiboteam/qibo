@@ -131,6 +131,86 @@ class MeasurementResult:
     def has_samples(self):
         return self._samples is not None
 
+    @classmethod
+    def join(cls, *results, backend=None):
+        """Joins the outcomes of several measurements into a single result.
+
+        The outcomes of all the measurements are put together shot by shot, in the order in
+        which ``results`` are given: the bits of the first result are the leftmost ones, *i.e.*
+        the most significant ones, and the bits of the last result are the rightmost ones. This
+        is useful to retrieve all the outcomes of circuits with several ``collapse=True``
+        measurements, *e.g.* when the same qubit is measured more than once, since these
+        measurements are not merged into the result returned by the execution of the circuit.
+
+        Example:
+
+            .. testcode::
+
+                from qibo import Circuit, gates
+                from qibo.measurements import MeasurementResult
+
+                # measure the same qubit three times
+                circuit = Circuit(1, density_matrix=True)
+                results = []
+                for _ in range(3):
+                    circuit.add(gates.H(0))
+                    results.append(circuit.add(gates.M(0, collapse=True)))
+                circuit(nshots=100)
+
+                # the outcome of each shot is a bitstring with the three outcomes
+                joint_result = MeasurementResult.join(*results)
+                print(joint_result.samples(binary=True).shape)
+                print(sum(joint_result.frequencies().values()))
+
+            .. testoutput::
+
+                (100, 3)
+                100
+
+        Args:
+            *results (:class:`qibo.measurements.MeasurementResult`): results to be joined, as
+                returned by :meth:`qibo.models.circuit.Circuit.add` when a measurement gate is
+                added. The circuit must have been executed, and all the results must have the
+                same number of shots.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend used to
+                manipulate the samples. If ``None``, it uses the current backend.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.measurements.MeasurementResult`: result whose ``target_qubits`` are the
+            ones of ``results``, in the same order and repeated if a qubit is measured more than
+            once, and whose samples have one bit for each measured qubit.
+        """
+        if len(results) == 0:
+            raise_error(ValueError, "At least one result is needed to join results.")
+
+        if not all(result.has_samples() for result in results):
+            raise_error(
+                RuntimeError,
+                "Cannot join results without samples, the circuit must be executed first.",
+            )
+
+        if len({result.nshots for result in results}) != 1:
+            raise_error(
+                ValueError, "All the results must have the same number of shots."
+            )
+
+        backend = _check_backend(backend)
+        samples = backend.concatenate(
+            [
+                backend.cast(result.samples(binary=True), dtype=backend.int64)
+                for result in results
+            ],
+            axis=1,
+        )
+
+        joint_result = cls(
+            tuple(qubit for result in results for qubit in result.target_qubits)
+        )
+        joint_result.register_samples(samples)
+
+        return joint_result
+
     def register_samples(self, samples):
         """Register samples array to the ``MeasurementResult`` object."""
         self._samples = samples

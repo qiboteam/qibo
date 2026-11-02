@@ -2,7 +2,20 @@ Utility Functions
 =================
 
 Functions that can be used to calculate metrics and distance measures
-on classical probability arrays.
+on classical probability arrays, and to convert classical bitstrings and measurement
+outcomes into phases.
+
+Bitstring to phase
+------------------
+
+.. autofunction:: qibo.quantum_info.bitstring_to_phase
+
+
+Estimate phase
+--------------
+
+.. autofunction:: qibo.quantum_info.estimate_phase
+
 
 Hamming weight
 --------------

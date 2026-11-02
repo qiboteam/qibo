@@ -34,6 +34,15 @@ Grover's Algorithm
     tutorials/qfiae/qfiae_demo.ipynb
 
 
+Quantum Phase Estimation
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qpe/README.md
+
+
 Quantum Signal Processing and Quantum Singular Value Transformation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

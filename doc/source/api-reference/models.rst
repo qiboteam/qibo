@@ -76,6 +76,16 @@ Quantum Fourier Transform (QFT)
     :members:
     :member-order: bysource
 
+Quantum Phase Estimation (QPE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.qpe.QPE
+
+Iterative Quantum Phase Estimation (IQPE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.qpe.IQPE
+
 Variational Quantum Eigensolver (VQE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
