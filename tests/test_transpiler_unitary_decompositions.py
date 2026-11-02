@@ -22,6 +22,7 @@ from qibo.transpiler.decompositions.unitary_decompositions import (
     single_qubit_decomposition,
     to_bell_diagonal,
     two_qubit_decomposition,
+    weyl_decomposition,
 )
 
 
@@ -500,3 +501,97 @@ def test_quantum_shannon_decomposition_error(backend, qubits, dims):
         quantum_shannon_decomposition(
             qubits, random_unitary(dims, backend=backend), backend=backend
         )
+
+
+def _weyl_unitary(coordinates, backend):
+    """Unitary with the given Weyl coordinates and random local unitaries."""
+    left = backend.kron(
+        random_unitary(2, backend=backend), random_unitary(2, backend=backend)
+    )
+    right = backend.kron(
+        random_unitary(2, backend=backend), random_unitary(2, backend=backend)
+    )
+    return left @ bell_unitary(*coordinates, backend) @ right
+
+
+@pytest.mark.parametrize(
+    "coordinates, cz_count",
+    [
+        ((0, 0, 0), 0),
+        ((math.pi / 2, 0, math.pi), 0),
+        ((math.pi / 4, 0, 0), 1),
+        ((-math.pi / 4, 0, 0), 1),
+        ((0, 3 * math.pi / 4, 0), 1),
+        ((0, 0, math.pi / 4), 1),
+        ((math.pi / 4, math.pi / 4, 0), 2),
+        ((0.3, 0.2, 0), 2),
+        ((0.3, 0, 0.2), 2),
+        ((0, 0.3, 0.2), 2),
+        ((0.3, 0.2, math.pi / 2), 2),
+        ((0.3, 0.2, 0.1), 3),
+        ((math.pi / 4, math.pi / 4, math.pi / 4), 3),
+    ],
+)
+def test_weyl_decomposition(backend, coordinates, cz_count):
+    unitary = _weyl_unitary(coordinates, backend)
+    count, weyl, (u4, v4, ud, u1, v1) = weyl_decomposition(unitary, backend=backend)
+    assert count == cz_count
+    unitary_recon = (
+        backend.kron(u4, v4) @ bell_unitary(*weyl, backend) @ backend.kron(u1, v1)
+    )
+    backend.assert_allclose(unitary_recon, unitary, atol=1e-8, rtol=1e-8)
+    backend.assert_allclose(ud, bell_unitary(*weyl, backend), atol=1e-8, rtol=1e-8)
+
+    # the decomposition into gates has the same number of CZ gates, and it is exact
+    decomposition = two_qubit_decomposition(0, 1, unitary, backend=backend)
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == cz_count
+    circuit = Circuit(2)
+    circuit.add(decomposition)
+    backend.assert_allclose(circuit.unitary(backend), unitary, atol=1e-8, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "coordinates, threshold, cz_count",
+    [
+        ((1e-8, 0, 0), 1e-6, 0),
+        ((1e-4, 0, 0), 1e-6, 2),
+        ((1e-4, 0, 0), 1e-3, 0),
+        ((math.pi / 4, 0, 1e-8), 1e-6, 1),
+        ((math.pi / 4, 0, 1e-4), 1e-6, 2),
+        ((math.pi / 4, 0, 1e-4), 1e-3, 1),
+        ((math.pi / 4, math.pi / 4, 1e-8), 1e-6, 2),
+        ((math.pi / 4, math.pi / 4, 1e-4), 1e-6, 3),
+        ((math.pi / 4, math.pi / 4, 1e-4), 1e-3, 2),
+    ],
+)
+def test_weyl_decomposition_threshold(backend, coordinates, threshold, cz_count):
+    unitary = _weyl_unitary(coordinates, backend)
+    count, _, _ = weyl_decomposition(unitary, threshold=threshold, backend=backend)
+    assert count == cz_count
+    decomposition = two_qubit_decomposition(
+        0, 1, unitary, threshold=threshold, backend=backend
+    )
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == cz_count
+    circuit = Circuit(2)
+    circuit.add(decomposition)
+    # neglecting a coordinate causes an error of the order of the threshold
+    backend.assert_allclose(
+        circuit.unitary(backend), unitary, atol=10 * threshold, rtol=10 * threshold
+    )
+
+
+@pytest.mark.parametrize(
+    "gate, cz_count",
+    [(gates.CZ(0, 1), 1), (gates.CNOT(0, 1), 1), (gates.SWAP(0, 1), 3)],
+)
+def test_two_qubit_decomposition_real_matrix(backend, gate, cz_count):
+    """The local gates are complex in general, even if the unitary is real."""
+    matrix = np.real(backend.to_numpy(gate.matrix(backend)))
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    assert not np.iscomplexobj(backend.to_numpy(matrix))
+
+    decomposition = two_qubit_decomposition(0, 1, matrix, backend=backend)
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == cz_count
+    circuit = Circuit(2)
+    circuit.add(decomposition)
+    backend.assert_allclose(circuit.unitary(backend), matrix, atol=1e-8, rtol=1e-8)
