@@ -1,3 +1,5 @@
+import math
+from collections import Counter
 from functools import reduce
 from re import finditer
 
@@ -7,10 +9,13 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.backends import NumpyBackend
 from qibo.config import PRECISION_TOL
+from qibo.models import QPE
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.quantum_info.utils import (
+    bitstring_to_phase,
     decompose_permutation,
+    estimate_phase,
     haar_integral,
     hadamard_transform,
     hamming_distance,
@@ -21,6 +26,154 @@ from qibo.quantum_info.utils import (
     pqc_integral,
     total_variation_distance,
 )
+
+
+@pytest.mark.parametrize("nbits", [1, 3, 5])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        str,
+        list,
+        tuple,
+        lambda b: np.array(list(b)),
+        lambda b: list(map(int, b)),
+        lambda b: tuple(map(int, b)),
+        lambda b: np.array(list(map(int, b))),
+    ],
+)
+def test_bitstring_to_phase(nbits, kind):
+    for value in range(2**nbits):
+        bitstring = f"{value:0{nbits}b}"
+        # binary fraction 0.b_1 b_2 ... b_t, with b_1 being the most significant bit
+        target = sum(int(bit) * 2 ** (-j) for j, bit in enumerate(bitstring, start=1))
+        phase = bitstring_to_phase(kind(bitstring))
+        assert isinstance(phase, float)
+        assert 0 <= phase < 1
+        assert phase == target == value / 2**nbits
+
+
+def test_bitstring_to_phase_leading_zeros_and_large_bitstrings():
+    assert bitstring_to_phase("1") == 0.5
+    assert bitstring_to_phase("01") == 0.25
+    assert bitstring_to_phase("001") == 0.125
+    assert bitstring_to_phase("0" * 64) == 0.0
+    assert bitstring_to_phase("1" * 53) == 1 - 2**-53
+
+
+@pytest.mark.parametrize("bitstring", [5, True, 0, np.int64(5), np.uint8(3)])
+def test_bitstring_to_phase_int_error(bitstring):
+    with pytest.raises(TypeError, match="leading zeros are lost"):
+        bitstring_to_phase(bitstring)
+
+
+@pytest.mark.parametrize("bitstring", [0.5, None, 1j, np.float64(0.5), np.array(1)])
+def test_bitstring_to_phase_non_iterable_error(bitstring):
+    # the message is the one of the function, not the one of the iteration of the object
+    with pytest.raises(
+        TypeError, match="must be a str, list or tuple of bits"
+    ) as error:
+        bitstring_to_phase(bitstring)
+    assert "leading zeros" not in str(error.value)
+    assert "not iterable" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "bitstring", ["", [], (), "012", "01a", [0, 2], ["01", "1"], [0.0, 1.0], [None]]
+)
+def test_bitstring_to_phase_value_error(bitstring):
+    with pytest.raises(ValueError):
+        bitstring_to_phase(bitstring)
+
+
+@pytest.mark.parametrize(
+    "frequencies, phase",
+    [
+        (Counter({"0101": 90, "0100": 6, "0110": 4}), 5 / 16),
+        ({"00": 0.1, "01": 0.2, "10": 0.6, "11": 0.1}, 0.5),
+        ({"1": 1}, 0.5),
+        # the first of the most probable outcomes is used
+        ({"01": 5, "10": 5}, 0.25),
+        ({"10": 5, "01": 5}, 0.5),
+    ],
+)
+def test_estimate_phase_mapping(frequencies, phase):
+    assert estimate_phase(frequencies) == phase
+
+
+@pytest.mark.parametrize(
+    "probabilities, phase",
+    [
+        ([0.05, 0.1, 0.6, 0.25], 0.5),
+        ([0.7, 0.1, 0.1, 0.1], 0.0),
+        ([0.0, 0.1, 0.1, 0.8, 0.0, 0.0, 0.0, 0.0], 3 / 8),
+        ([0.5, 0.5], 0.0),
+    ],
+)
+def test_estimate_phase_array(backend, probabilities, phase):
+    assert estimate_phase(backend.cast(probabilities)) == phase
+
+
+@pytest.mark.parametrize("nqubits_counting", [3, 4])
+@pytest.mark.parametrize("numerator", [1, 5])
+def test_estimate_phase_result(backend, nqubits_counting, numerator):
+    phase = numerator / 2**nqubits_counting
+    unitary = Circuit(1)
+    unitary.add(gates.U1(0, theta=2 * math.pi * phase))
+    qpe = QPE(unitary, nqubits_counting)
+
+    circuit = Circuit(qpe.nqubits)
+    circuit.add(gates.X(nqubits_counting))
+    circuit.add(qpe)
+    result = backend.execute_circuit(circuit, nshots=100)
+
+    assert estimate_phase(result) == phase
+    assert estimate_phase(result.frequencies()) == phase
+
+
+@pytest.mark.parametrize("phase", [0.3, 0.7, 0.9])
+def test_estimate_phase_not_representable(backend, phase):
+    nqubits_counting = 5
+    unitary = Circuit(1)
+    unitary.add(gates.U1(0, theta=2 * math.pi * phase))
+    qpe = QPE(unitary, nqubits_counting, measure=False)
+
+    circuit = Circuit(qpe.nqubits)
+    circuit.add(gates.X(nqubits_counting))
+    circuit.add(qpe)
+    result = backend.execute_circuit(circuit)
+    probabilities = result.probabilities(qubits=list(range(nqubits_counting)))
+
+    # the most probable outcome is the closest value to the phase that is representable
+    estimate = estimate_phase(probabilities)
+    assert estimate == round(phase * 2**nqubits_counting) / 2**nqubits_counting
+    assert abs(estimate - phase) <= 2 ** (-nqubits_counting - 1)
+
+
+def test_estimate_phase_errors(backend):
+    with pytest.raises(ValueError):
+        estimate_phase({})
+    with pytest.raises(ValueError):
+        estimate_phase(Counter())
+    # bitstrings with different lengths
+    with pytest.raises(ValueError):
+        estimate_phase({"01": 3, "0": 1})
+    # keys that are not bitstrings
+    with pytest.raises(ValueError):
+        estimate_phase({"02": 3})
+    # keys that are not bitstrings raise the error of the conversion into a phase, instead of
+    # an error about the length of the keys
+    for keys in ({5: 3}, {5: 3, 2: 1}, {None: 1}):
+        with pytest.raises(TypeError, match="must be a str, list or tuple of bits"):
+            estimate_phase(keys)
+
+    for invalid in ("0101", 0.5, [0.1, 0.9], None):
+        with pytest.raises(TypeError):
+            estimate_phase(invalid)
+
+    # arrays that are not one-dimensional or do not have 2^t elements, with t > 0
+    for probabilities in ([[0.5, 0.5]], [0.2, 0.3, 0.5], [1.0], 0.5):
+        with pytest.raises(ValueError):
+            estimate_phase(backend.cast(probabilities))
 
 
 @pytest.mark.parametrize("bitstring", range(2**5))

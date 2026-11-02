@@ -8,6 +8,7 @@ import pytest
 
 from qibo import Circuit, gates, matrices
 from qibo.noise import NoiseModel, PauliError
+from qibo.quantum_info import random_unitary
 
 
 def test_circuit_unitary(backend):
@@ -235,6 +236,23 @@ def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_sm
         backend.assert_circuitclose(large_circuit, target_circuit)
 
 
+def test_circuit_on_qubits_measurement_registers():
+    small_circuit = Circuit(2)
+    small_circuit.add(gates.H(0))
+    small_circuit.add(gates.M(0))
+    small_circuit.add(gates.M(1, register_name="named"))
+
+    large_circuit = Circuit(5)
+    large_circuit.add(gates.M(0))
+    large_circuit.add(small_circuit.on_qubits(2, 4))
+
+    assert large_circuit.measurement_tuples == {
+        "register0": (0,),
+        "register1": (2,),
+        "named": (4,),
+    }
+
+
 def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
     small_circuit = Circuit(3)
     small_circuit.add(gates.RX(0, theta=0.1).controlled_by(1, 2))
@@ -255,6 +273,239 @@ def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
 
     assert large_circuit.depth == target_circuit.depth
     backend.assert_circuitclose(large_circuit, target_circuit)
+
+
+@pytest.mark.parametrize("controls", [(0,), (0, 1), (3, 1)])
+@pytest.mark.parametrize(
+    "build_gate",
+    [
+        lambda q, u: gates.H(q[0]),
+        lambda q, u: gates.SWAP(q[0], q[1]),
+        lambda q, u: gates.RX(q[0], theta=0.3),
+        lambda q, u: gates.U3(q[0], theta=0.3, phi=0.2, lam=0.1),
+        lambda q, u: gates.Unitary(u, q[0]),
+        lambda q, u: gates.GlobalPhase(0.5),
+        lambda q, u: gates.CNOT(q[0], q[1]),
+        lambda q, u: gates.CY(q[0], q[1]),
+        lambda q, u: gates.CZ(q[0], q[1]),
+        lambda q, u: gates.CH(q[0], q[1]),
+        lambda q, u: gates.CSX(q[0], q[1]),
+        lambda q, u: gates.CSXDG(q[0], q[1]),
+        lambda q, u: gates.CRX(q[0], q[1], theta=0.3),
+        lambda q, u: gates.CRY(q[0], q[1], theta=0.3),
+        lambda q, u: gates.CRZ(q[0], q[1], theta=0.3),
+        lambda q, u: gates.CU1(q[0], q[1], theta=0.3),
+        lambda q, u: gates.CU2(q[0], q[1], phi=0.3, lam=0.2),
+        lambda q, u: gates.CU3(q[0], q[1], theta=0.3, phi=0.2, lam=0.1),
+        lambda q, u: gates.TOFFOLI(q[0], q[1], q[2]),
+        lambda q, u: gates.CCZ(q[0], q[1], q[2]),
+        lambda q, u: gates.RX(q[2], theta=0.5).controlled_by(q[0], q[1]),
+        lambda q, u: gates.X(q[3]).controlled_by(q[0], q[1], q[2]),
+        lambda q, u: gates.Unitary(u, q[2]).controlled_by(q[0], q[1]),
+    ],
+)
+def test_circuit_controlled_by(backend, build_gate, controls):
+    nqubits = 6
+    free = [q for q in range(nqubits) if q not in controls]
+
+    circuit = Circuit(nqubits)
+    circuit.add(build_gate(free, random_unitary(2, backend=backend)))
+    controlled_circuit = circuit.controlled_by(*controls)
+    assert controlled_circuit.nqubits == circuit.nqubits
+    assert controlled_circuit.ngates == circuit.ngates
+
+    # the original unitary acts trivially on the control qubits, hence it commutes with the
+    # projector on the subspace where all controls are in the state 1
+    target = circuit.unitary(backend)
+    projector = backend.identity(1)
+    for qubit in range(nqubits):
+        factor = (
+            backend.cast([[0, 0], [0, 1]]) if qubit in controls else backend.identity(2)
+        )
+        projector = backend.kron(projector, factor)
+    expected = (
+        backend.identity(2**nqubits) - projector + backend.matmul(target, projector)
+    )
+    backend.assert_allclose(controlled_circuit.unitary(backend), expected, atol=1e-10)
+
+
+def test_circuit_controlled_by_gates():
+    circuit = Circuit(4)
+    circuit.add(gates.I(1))
+    circuit.add(gates.Barrier(1, 2))
+    circuit.add(gates.Align(2))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.RX(2, theta=0.2).controlled_by(1, 3))
+    circuit.add(gates.RY(1, theta=0.1))
+    controlled_circuit = circuit.controlled_by(0)
+
+    # identity gates are not controlled
+    for index in range(3):
+        assert controlled_circuit.queue[index].control_qubits == ()
+    # gates controlled by default are rebuilt from their uncontrolled counterpart
+    assert isinstance(controlled_circuit.queue[3], gates.TOFFOLI)
+    assert controlled_circuit.queue[3].control_qubits == (0, 1)
+    assert controlled_circuit.queue[4].control_qubits == (0, 1, 3)
+    assert controlled_circuit.queue[5].control_qubits == (0,)
+
+    # the original circuit is left untouched
+    assert isinstance(circuit.queue[3], gates.CNOT)
+    assert circuit.queue[4].control_qubits == (1, 3)
+    assert circuit.queue[5].control_qubits == ()
+
+
+def test_circuit_controlled_by_parameters(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.CRX(1, 2, theta=0.1))
+    circuit.add(gates.RY(1, theta=0.2))
+    circuit.set_parameters([0.7, 0.4])
+    controlled_circuit = circuit.controlled_by(0)
+
+    target = Circuit(3)
+    target.add(gates.RX(2, theta=0.7).controlled_by(0, 1))
+    target.add(gates.RY(1, theta=0.4).controlled_by(0))
+    backend.assert_circuitclose(controlled_circuit, target)
+
+
+def test_circuit_controlled_by_on_qubits(backend):
+    # subroutine with qubit 0 left idle to be used as control
+    subroutine = Circuit(3)
+    subroutine.add(gates.RX(1, theta=0.3))
+    subroutine.add(gates.CNOT(1, 2))
+    controlled_subroutine = subroutine.controlled_by(0).on_qubits(3, 0, 1)
+
+    circuit = Circuit(4)
+    circuit.add(gates.H(i) for i in range(4))
+    circuit.add(controlled_subroutine)
+
+    target = Circuit(4)
+    target.add(gates.H(i) for i in range(4))
+    target.add(gates.RX(0, theta=0.3).controlled_by(3))
+    target.add(gates.TOFFOLI(3, 0, 1))
+    backend.assert_circuitclose(circuit, target)
+
+
+def test_circuit_controlled_by_without_controls(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    controlled_circuit = circuit.controlled_by()
+    assert controlled_circuit is not circuit
+    backend.assert_circuitclose(controlled_circuit, circuit)
+
+
+def test_circuit_controlled_by_density_matrix(backend):
+    circuit = Circuit(3, density_matrix=True)
+    circuit.add(gates.H(1))
+    circuit.add(gates.CNOT(1, 2))
+    controlled_circuit = circuit.controlled_by(0)
+    assert controlled_circuit.density_matrix
+
+    # control qubit in the state 1 leaves the action of the circuit unchanged
+    target = Circuit(3, density_matrix=True)
+    target.add(gates.X(0))
+    target.add(circuit.on_qubits(0, 1, 2))
+    final = Circuit(3, density_matrix=True)
+    final.add(gates.X(0))
+    final.add(controlled_circuit.on_qubits(0, 1, 2))
+    backend.assert_circuitclose(final, target)
+
+
+def test_circuit_controlled_by_errors():
+    circuit = Circuit(3)
+    circuit.add(gates.H(1))
+    with pytest.raises(ValueError):
+        circuit.controlled_by(-1)
+    # control qubit overlaps with a target qubit
+    with pytest.raises(ValueError):
+        circuit.controlled_by(1)
+
+    for gate in (gates.DEUTSCH(1, 2, 3, theta=0.1), gates.FanOut(1, 2, 3)):
+        circuit = Circuit(4)
+        circuit.add(gate)
+        with pytest.raises(NotImplementedError):
+            circuit.controlled_by(0)
+
+    circuit = Circuit(3)
+    circuit.add(gates.M(1))
+    with pytest.raises(NotImplementedError):
+        circuit.controlled_by(0)
+
+
+def test_circuit_controlled_by_outside_circuit(backend):
+    small_circuit = Circuit(2)
+    small_circuit.add(gates.RX(0, theta=0.3))
+    small_circuit.add(gates.CNOT(0, 1))
+
+    # control qubit that does not belong to the small circuit
+    controlled_circuit = small_circuit.controlled_by(3)
+    assert controlled_circuit.nqubits == 4
+    assert small_circuit.nqubits == 2
+
+    circuit = Circuit(5)
+    circuit.add(gates.H(i) for i in range(5))
+    circuit.add(controlled_circuit)
+
+    target = Circuit(5)
+    target.add(gates.H(i) for i in range(5))
+    target.add(gates.RX(0, theta=0.3).controlled_by(3))
+    target.add(gates.TOFFOLI(3, 0, 1))
+    backend.assert_circuitclose(circuit, target)
+
+    # the controlled circuit can be added directly
+    circuit = Circuit(5)
+    circuit.add(gates.H(i) for i in range(5))
+    circuit.add(small_circuit.controlled_by(3))
+    backend.assert_circuitclose(circuit, target)
+
+    # control qubit that does not belong to the circuit it is added to
+    with pytest.raises(ValueError):
+        Circuit(3).add(small_circuit.controlled_by(5))
+
+
+def test_circuit_controlled_by_wire_names():
+    circuit = Circuit(wire_names=["a", "b", "c"])
+    circuit.add(gates.H(1))
+    assert circuit.controlled_by(0).wire_names == ["a", "b", "c"]
+    assert circuit.controlled_by(3).wire_names == [0, 1, 2, 3]
+
+
+def test_circuit_on_qubits_controlled_by_execution_in_larger_circuit(backend):
+    small_circuit = Circuit(2)
+    small_circuit.add(gates.RX(0, theta=0.3))
+    small_circuit.add(gates.CNOT(0, 1))
+
+    circuit = Circuit(5)
+    circuit.add(gates.H(i) for i in range(5))
+    # control qubit idle in the subroutine
+    circuit.add(small_circuit.on_qubits(4, 1).controlled_by(0))
+    # control qubit outside of the subroutine
+    circuit.add(small_circuit.on_qubits(0, 1).controlled_by(3))
+
+    target = Circuit(5)
+    target.add(gates.H(i) for i in range(5))
+    target.add(gates.RX(4, theta=0.3).controlled_by(0))
+    target.add(gates.TOFFOLI(0, 4, 1))
+    target.add(gates.RX(0, theta=0.3).controlled_by(3))
+    target.add(gates.TOFFOLI(3, 0, 1))
+    backend.assert_circuitclose(circuit, target)
+
+
+def test_circuit_on_qubits_circuit():
+    small_circuit = Circuit(2, density_matrix=True)
+    small_circuit.add(gates.H(0))
+    small_circuit.add(gates.CNOT(0, 1))
+
+    circuit = small_circuit.on_qubits(3, 1)
+    assert isinstance(circuit, Circuit)
+    assert circuit.nqubits == 4
+    assert circuit.density_matrix
+    assert [gate.qubits for gate in circuit] == [(3,), (3, 1)]
+    assert [gate.qubits for gate in small_circuit] == [(0,), (0, 1)]
+
+    large_circuit = Circuit(5, density_matrix=True)
+    large_circuit.add(circuit)
+    assert [gate.qubits for gate in large_circuit] == [(3,), (3, 1)]
 
 
 @pytest.mark.parametrize("controlled", [False, True])
