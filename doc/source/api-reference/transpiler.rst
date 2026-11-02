@@ -239,6 +239,14 @@ T-gate rules
     :member-order: bysource
 
 
+Validation
+^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.Validation
+    :members:
+    :member-order: bysource
+
+
 Pipeline
 --------
 
