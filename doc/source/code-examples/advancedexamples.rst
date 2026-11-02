@@ -511,6 +511,38 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
     result = circuit()
 
 
+Joining the outcomes of several collapse measurements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The outcomes of ``collapse=True`` measurements are not merged into the result returned
+by the execution of the circuit. This is particularly inconvenient when the same qubit
+is measured more than once, for instance, in algorithms that reuse a single qubit. The
+:meth:`qibo.measurements.MeasurementResult.join` method puts the outcomes of several
+measurements together, shot by shot, in the order in which the results are given. The first
+result provides the most significant bits of each outcome:
+
+.. testcode::
+
+    from qibo import Circuit, gates
+    from qibo.measurements import MeasurementResult
+
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    first = circuit.add(gates.M(0, collapse=True))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    second = circuit.add(gates.M(0, 1, collapse=True))
+    circuit(nshots=100)
+
+    # bitstrings with three bits, where the first one is the outcome of ``first``
+    joint_result = MeasurementResult.join(first, second)
+    frequencies = joint_result.frequencies()
+
+The joined result is a :class:`qibo.measurements.MeasurementResult`, so its samples and
+frequencies can be used as usual, and it can be given to functions that process measurement
+outcomes, such as :func:`qibo.quantum_info.estimate_phase`.
+
+
 How to invert a circuit?
 ------------------------
 
