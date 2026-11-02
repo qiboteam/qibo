@@ -123,6 +123,41 @@ Grover's Algorithm
     :member-order: bysource
 
 
+Quantum Amplitude Amplification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Quantum Amplitude Amplification (QAA) generalizes Grover's algorithm to an arbitrary circuit
+:math:`\mathcal{A}` that prepares the state :math:`|\Psi\rangle = \mathcal{A}|0\rangle`
+from the all-zero state :math:`|0\rangle`. Given a Boolean function :math:`\chi`, which marks the
+"good" computational basis states, let :math:`a` be the probability of measuring a good state in
+:math:`|\Psi\rangle`. Repeating the circuit and measuring it takes :math:`O(1 / a)` runs on
+average to find a good state, whereas amplification needs only :math:`O(1 / \sqrt{a})` applications
+of :math:`\mathcal{A}` and its inverse :math:`\mathcal{A}^{-1}`. This is done by applying the
+operator
+
+.. math::
+    \mathbf{Q} = -\mathcal{A} \, \mathbf{S}_{0} \, \mathcal{A}^{-1} \, \mathbf{S}_{\chi},
+
+where :math:`\mathbf{S}_{\chi}` changes the sign of the amplitude of the good states and
+:math:`\mathbf{S}_{0}` changes the sign of the amplitude of the state :math:`|0\rangle`. After
+:math:`m` applications, the probability of measuring a good state is
+:math:`\sin^{2}((2m + 1)\theta_{a})`, where :math:`a = \sin^{2}(\theta_{a})`. Depending on
+what is known about :math:`a`, the following can be used:
+
+* :func:`qibo.models.qaa.amplification_operator` builds the circuit of :math:`\mathbf{Q}`;
+* :func:`qibo.models.qaa.QAA` builds the circuit :math:`\mathbf{Q}^{m}\mathcal{A}`, either with a
+  chosen number :math:`m` of iterations, or with the number that is computed from a known
+  :math:`a`, which can also find a good state with certainty;
+* :func:`qibo.models.qaa.QSearch` finds a good state when :math:`a` is unknown, by running circuits
+  with an exponentially increasing number of iterations.
+
+.. autofunction:: qibo.models.qaa.amplification_operator
+
+.. autofunction:: qibo.models.qaa.QAA
+
+.. autofunction:: qibo.models.qaa.QSearch
+
+
 Double-Bracket Iterations
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
