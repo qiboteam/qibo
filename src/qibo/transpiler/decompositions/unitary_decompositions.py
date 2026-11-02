@@ -11,7 +11,6 @@ from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.quantum_info.linalg_operations import (
     cosine_sin_decomposition,
-    schmidt_decomposition,
     schur_decomposition,
 )
 from qibo.transpiler._exceptions import DecompositionError
@@ -154,7 +153,15 @@ def calculate_single_qubit_unitaries(
 ) -> tuple[ArrayLike, ArrayLike]:
     """Calculates local unitaries that map a maximally entangled basis to the magic basis.
 
-    See Lemma 1 of Appendix A in Ref. [1].
+    See Lemma 1 of Appendix A in Ref. [1]. In the magic basis, the local unitaries are the
+    real orthogonal matrices with unit determinant. The local unitary that maps the
+    :math:`k`-th state of ``psi``, which is real in the magic basis, to the magic basis
+    state :math:`\\pi(k)`, with :math:`\\pi = (0, 1, 3, 2)`, is then given by the transpose
+    of that real matrix with its rows permuted, up to the sign of one row that fixes the
+    determinant. It is factorized into :math:`U_{A} \\otimes U_{B}` with the singular value
+    decomposition of its realignment. The states are mapped up to a phase, and the unitaries
+    are defined up to a phase :math:`e^{i \\phi}` for :math:`U_{A}` and :math:`e^{-i \\phi}`
+    for :math:`U_{B}`.
 
     Args:
         psi (ArrayLike): Maximally entangled two-qubit states that define a basis.
@@ -172,34 +179,31 @@ def calculate_single_qubit_unitaries(
 
     """
     backend = _check_backend(backend)
+    magic = backend.cast(magic_basis)
 
-    psi_magic = backend.matmul(backend.conj(backend.cast(magic_basis)).T, psi)
+    psi_magic = backend.dagger(magic) @ psi
     if (
         backend.real(backend.matrix_norm(backend.imag(psi_magic))) > 1e-6
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
-    psi_bar = backend.cast(psi.T, copy=True)
 
-    # find e and f by inverting (A3), (A4)
-    ef = (psi_bar[0] + 1j * psi_bar[1]) / np.sqrt(2)
-    e_f_ = (psi_bar[0] - 1j * psi_bar[1]) / np.sqrt(2)
-    e, _, f = schmidt_decomposition(ef, [0], backend=backend)
-    e, f = e[:, 0], f[0]
-    e_, _, f_ = schmidt_decomposition(e_f_, [0], backend=backend)
-    e_, f_ = e_[:, 0], f_[0]
-    # find exp(1j * delta) using (A5a)
-    ef_ = backend.kron(e, f_)
-    phase = 1j * np.sqrt(2) * backend.sum(backend.conj(ef_) * psi_bar[2])
-    v0 = backend.cast(np.asarray([1, 0]))
-    v1 = backend.cast(np.asarray([0, 1]))
-    # construct unitaries UA, UB using (A6a), (A6b)
-    ua = backend.outer(v0, backend.conj(e)) + phase * backend.outer(
-        v1, backend.conj(e_)
+    orthogonal = backend.real(psi_magic).T[[0, 1, 3, 2]]
+    if backend.det(orthogonal) < 0:
+        orthogonal = (
+            backend.cast([[-1], [1], [1], [1]], dtype=orthogonal.dtype) * orthogonal
+        )
+    product = (
+        magic @ backend.cast(orthogonal, dtype=magic.dtype) @ backend.dagger(magic)
     )
-    ub = backend.outer(v0, backend.conj(f)) + backend.conj(phase) * backend.outer(
-        v1, backend.conj(f_)
+
+    left, singular, right = backend.singular_value_decomposition(
+        backend.reshape(
+            backend.transpose(backend.reshape(product, (2, 2, 2, 2)), (0, 2, 1, 3)),
+            (4, 4),
+        )
     )
-    return ua, ub
+    factor = math.sqrt(singular[0])
+    return factor * left[:, 0].reshape(2, 2), factor * right[0].reshape(2, 2)
 
 
 def calculate_diagonal(
@@ -239,90 +243,57 @@ def calculate_diagonal(
     # We permute to ensure we will have hx >= hy >= hz in the end
     hx, hy, hz = calculate_h_vector(lambdas, backend)
 
-    # 1. force coefficients to be in pi/4 >= ... >= 0 interval, using pi/2 periodicity and pi/4 symmetry
-    fit = lambda alpha: min(alpha % (np.pi / 2), np.pi / 2 - (alpha % (np.pi / 2)))
-
-    # 2. permute to ensure ordering:
-    alphas_ordered = sorted(
-        [[hx, 0], [hy, 1], [hz, 2]], key=lambda x: fit(x[0]), reverse=True
+    # 1. force coefficients to be in pi/4 >= ... >= 0 interval, using pi/2 periodicity and
+    # pi/4 symmetry, and 2. permute them to ensure the ordering
+    fit = lambda alpha: min(
+        alpha % (math.pi / 2), math.pi / 2 - (alpha % (math.pi / 2))
     )
+    alphas = (hx, hy, hz)
+    permutation = sorted(range(3), key=lambda k: fit(alphas[k]), reverse=True)
 
-    H = backend.matrices.H
-    S = backend.matrices.S
-
-    correction = {
-        "left_A": backend.matrices.I(),
-        "left_B": backend.matrices.I(),
-        "right_A": backend.matrices.I(),
-        "right_B": backend.matrices.I(),
-    }
-
-    permutation = [x[1] for x in alphas_ordered]
-
-    if permutation[0] == 1:
-        correction["left_A"] @= S
-        correction["left_B"] @= S
-        correction["right_A"] = dag(S) @ correction["right_A"]
-        correction["right_B"] = dag(S) @ correction["right_B"]
-
-    elif permutation[0] == 2:
-        correction["left_A"] = correction["left_A"] @ H
-        correction["left_B"] = correction["left_B"] @ H
-        correction["right_A"] = dag(H) @ correction["right_A"]
-        correction["right_B"] = dag(H) @ correction["right_B"]
-
+    # The permutation is a change of basis by Clifford unitaries, which are the same for
+    # both qubits, and are applied to the left of the local unitaries and, inverted,
+    # to the right of them. Only the unitaries of the second qubit differ afterwards.
+    left_a, right_a = backend.matrices.I(), backend.matrices.I()
+    if permutation[0] != 0:
+        clifford = (None, backend.matrices.S, backend.matrices.H)[permutation[0]]
+        left_a, right_a = left_a @ clifford, dag(clifford) @ right_a
     if not (permutation[1] == 1 or permutation[2] == 2):
-        correction["left_A"] = correction["left_A"] @ (S @ H @ S)
-        correction["left_B"] = correction["left_B"] @ (S @ H @ S)
-        correction["right_A"] = dag(S @ H @ S) @ correction["right_A"]
-        correction["right_B"] = dag(S @ H @ S) @ correction["right_B"]
+        clifford = backend.matrices.S @ backend.matrices.H @ backend.matrices.S
+        left_a, right_a = left_a @ clifford, dag(clifford) @ right_a
+    left_b, right_b = left_a, right_a
 
     # 3. find local corrections to enforce, as possible, conditions on h
-    paulis = ["X", "Y", "Z"]
-    for i, (alpha, _) in enumerate(alphas_ordered):
+    paulis = (backend.matrices.X, backend.matrices.Y, backend.matrices.Z)
+    for i, k in enumerate(permutation):
+        alpha, pauli = alphas[k], paulis[i]
         if i < 2:
             if alpha < 0:
-                alpha += np.pi / 2
-                p_corr = getattr(backend.matrices, paulis[i])
-                correction["left_A"] = correction["left_A"] @ (1j * p_corr)
-                correction["left_B"] = correction["left_B"] @ p_corr
+                alpha += math.pi / 2
+                left_a = left_a @ (1j * pauli)
+                left_b = left_b @ pauli
             if (
-                alpha > np.pi / 4
+                alpha > math.pi / 4
             ):  # can't conjugate so sign of z alternates to compensate
                 # Swap alpha_i and alpha_z sign
-                correction["left_B"] = correction["left_B"] @ getattr(
-                    backend.matrices, paulis[(i + 1) % 2]
-                )
-                correction["right_B"] = (
-                    getattr(backend.matrices, paulis[(i + 1) % 2])
-                    @ correction["right_B"]
-                )
+                other = paulis[(i + 1) % 2]
+                left_b = left_b @ other
+                right_b = other @ right_b
                 # Add pi/2 to alpha_i
-                correction["left_A"] = correction["left_A"] @ (
-                    1j * getattr(backend.matrices, paulis[i])
-                )
-                correction["left_B"] = correction["left_B"] @ getattr(
-                    backend.matrices, paulis[i]
-                )
-        elif abs(alpha) > np.pi / 4:
-            correction["left_A"] = correction["left_A"] @ (
-                (1j if alpha < 0 else -1j) * getattr(backend.matrices, paulis[i])
-            )
-            correction["left_B"] = correction["left_B"] @ getattr(
-                backend.matrices, paulis[i]
-            )
+                left_a = left_a @ (1j * pauli)
+                left_b = left_b @ pauli
+        elif abs(alpha) > math.pi / 4:
+            left_a = left_a @ ((1j if alpha < 0 else -1j) * pauli)
+            left_b = left_b @ pauli
 
     # 4. apply corrections
-    ua = ua @ correction["left_A"]
-    ub = ub @ correction["left_B"]
-    va = correction["right_A"] @ va
-    vb = correction["right_B"] @ vb
+    ua = ua @ left_a
+    ub = ub @ left_b
+    va = right_a @ va
+    vb = right_b @ vb
     ud = backend.matmul(
-        backend.kron(dag(correction["left_A"]), dag(correction["left_B"])),
-        backend.matmul(
-            ud,
-            backend.kron(dag(correction["right_A"]), dag(correction["right_B"])),
-        ),
+        backend.kron(dag(left_a), dag(left_b)),
+        backend.matmul(ud, backend.kron(dag(right_a), dag(right_b))),
     )
     return ua, ub, ud, va, vb
 
@@ -338,7 +309,7 @@ def magic_decomposition(
     :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
     """
     backend = _check_backend(backend)
-    unitary = backend.cast(unitary, dtype=unitary.dtype)
+    unitary = backend.cast(unitary)
     psi, eigvals = calculate_psi(unitary, backend=backend, weight=weight)
     psi_tilde = backend.conj(backend.sqrt(eigvals)) * backend.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
@@ -394,11 +365,11 @@ def cnot_decomposition(
     h = backend.matrices.H
     u3 = -1j * h
     # use corrected version from PRA paper (not arXiv)
-    u2 = -u3 @ gates.RX(0, 2 * hx - np.pi / 2).matrix(backend)
+    u2 = -u3 @ gates.RX(0, 2 * hx - math.pi / 2).matrix(backend)
     # add an extra exp(-i pi / 4) global phase to get exact match
-    v2 = np.exp(-1j * np.pi / 4) * gates.RZ(0, 2 * hz).matrix(backend)
+    v2 = cmath.exp(-1j * math.pi / 4) * gates.RZ(0, 2 * hz).matrix(backend)
     v3 = gates.RZ(0, -2 * hy).matrix(backend)
-    w = backend.cast((matrices.I - 1j * matrices.X) / np.sqrt(2))
+    w = backend.cast((matrices.I - 1j * matrices.X) / math.sqrt(2))
     # change CNOT to CZ using Hadamard gates
     return [
         gates.H(q1),
@@ -628,17 +599,18 @@ def two_qubit_decomposition(
     """Performs two qubit unitary gate decomposition.
 
     The decomposition has at most three :class:`qibo.gates.CZ` gates [1]. It has two or
-    fewer if the unitary needs fewer, which is decided from the operator-Schmidt
-    coefficients of the unitary [2]: a product of two single-qubit unitaries uses no
-    :class:`qibo.gates.CZ` gate, and a unitary that is locally equivalent to
-    :class:`qibo.gates.CZ` uses one.
+    fewer if the unitary needs fewer, which is decided from its Weyl coordinates, see
+    :func:`qibo.transpiler.decompositions.unitary_decompositions.weyl_decomposition`: a
+    product of two single-qubit unitaries uses no :class:`qibo.gates.CZ` gate, and a
+    unitary that is locally equivalent to :class:`qibo.gates.CZ` uses one.
 
     Args:
         q0 (int): index of the first qubit.
         q1 (int): index of the second qubit.
         unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
-        threshold (float): Threshold for determining if hz component is zero, and
-            if the operator-Schmidt coefficients of the unitary vanish or coincide.
+        threshold (float): Tolerance of the decomposition, which is of the order of the
+            error that neglecting a Weyl coordinate causes, see
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.weyl_decomposition`.
         weight (float, optional): Weight of the imaginary part in the matrix that is
             diagonalized to find the local gates, see
             :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
@@ -654,10 +626,6 @@ def two_qubit_decomposition(
         1. F. Vatan and C. Williams,
         *Optimal quantum circuits for general two-qubit gates*,
         `Phys. Rev. A 69, 032315 (2004) <https://doi.org/10.1103/PhysRevA.69.032315>`_.
-
-        2. V. V. Shende, I. L. Markov and S. S. Bullock,
-        *Minimal universal two-qubit controlled-NOT-based circuits*,
-        `Phys. Rev. A 69, 062321 (2004) <https://doi.org/10.1103/PhysRevA.69.062321>`_.
     """
     backend = _check_backend(backend)
 
@@ -665,78 +633,175 @@ def two_qubit_decomposition(
     if backend.allclose(unitary, backend.identity(4)):
         return []
 
-    # The singular values of the realigned unitary, i.e. its operator-Schmidt coefficients,
-    # do not change under single-qubit gates. They are (2, 0, 0, 0) for a product of
-    # single-qubit gates, which needs no CZ gate, and (sqrt(2), sqrt(2), 0, 0) for a gate
-    # locally equivalent to CZ, which needs one.
-    matrix = backend.to_numpy(unitary)
-    left, singular, right = np.linalg.svd(
-        matrix.reshape(2, 2, 2, 2).transpose(0, 2, 1, 3).reshape(4, 4)
+    cz_count, (hx, hy, hz), (u4, v4, ud, u1, v1) = weyl_decomposition(
+        unitary, threshold=threshold, weight=weight, backend=backend
     )
-    if singular[1] < threshold:
-        factor = math.sqrt(singular[0])
-        return [
-            gates.Unitary(
-                backend.cast(factor * left[:, 0].reshape(2, 2), dtype=matrix.dtype), q0
-            ),
-            gates.Unitary(
-                backend.cast(factor * right[0].reshape(2, 2), dtype=matrix.dtype), q1
-            ),
-        ]
-    if singular[2] < threshold and singular[0] - singular[1] < threshold:
-        # The interaction part of the unitary is then a product of Pauli rotations by
-        # multiples of pi / 2, which are local, and one rotation by an odd multiple of
-        # pi / 4 about an axis P. The latter is exp(i pi / 4 PP) = exp(i pi / 4) (K x K)
-        # CZ (S^dagger K^dagger x S^dagger K^dagger), with K Z K^dagger = P.
-        u4, v4, ud, u1, v1 = (
-            backend.to_numpy(array)
-            for array in magic_decomposition(unitary, backend=backend, weight=weight)
-        )
-        hadamard = np.array([[1, 1], [1, -1]]) / math.sqrt(2)
-        phase = np.diag([1, 1j])
-        for pauli, frame in (
-            (matrices.Z, np.eye(2)),
-            (matrices.X, hadamard),
-            (matrices.Y, phase @ hadamard),
-        ):
-            entangler = (np.eye(4) + 1j * np.kron(pauli, pauli)) / math.sqrt(2)
-            first, coefficients, second = np.linalg.svd(
-                (ud @ entangler.conj().T)
-                .reshape(2, 2, 2, 2)
-                .transpose(0, 2, 1, 3)
-                .reshape(4, 4)
-            )
-            if coefficients[1] < threshold:
-                factor = math.sqrt(coefficients[0])
-                before = phase.conj() @ frame.conj().T
-                after = cmath.exp(1j * math.pi / 4) * frame
-                return [
-                    gates.Unitary(backend.cast(before @ u1, dtype=matrix.dtype), q0),
-                    gates.Unitary(backend.cast(before @ v1, dtype=matrix.dtype), q1),
-                    gates.CZ(q0, q1),
-                    gates.Unitary(
-                        backend.cast(
-                            u4 @ (factor * first[:, 0].reshape(2, 2)) @ after,
-                            dtype=matrix.dtype,
-                        ),
-                        q0,
-                    ),
-                    gates.Unitary(
-                        backend.cast(
-                            v4 @ (factor * second[0].reshape(2, 2)) @ frame,
-                            dtype=matrix.dtype,
-                        ),
-                        q1,
-                    ),
-                ]
 
-    # ``hz`` is defined up to multiples of pi, which only change the global phase of the
-    # unitary. Its representative depends on the choice of the degenerate eigenvectors
-    # in the magic decomposition, e.g. for iSWAP, hence it is compared modulo pi.
-    z_component = _get_z_component(unitary, weight, backend)
-    if abs(math.remainder(z_component, math.pi)) < threshold:
-        return _two_qubit_decomposition_without_z(q0, q1, unitary, weight, backend)
-    return _two_qubit_decomposition_with_z(q0, q1, unitary, weight, backend)
+    if cz_count < 2:
+        # The interaction part of the unitary is then a product of Pauli rotations by
+        # multiples of pi / 2, which are local, and, if a CZ gate is needed, one rotation
+        # by an odd multiple of pi / 4 about an axis P. The latter is exp(i pi / 4 PP) =
+        # exp(i pi / 4) (K x K) CZ (S^dagger K^dagger x S^dagger K^dagger), with
+        # K Z K^dagger = P. Without it, the interaction is itself a product.
+        local = ud
+        if cz_count == 1:
+            hadamard = backend.matrices.H
+            phase = backend.matrices.S
+            axis = max(
+                range(3),
+                key=lambda k: abs(math.remainder((hx, hy, hz)[k], math.pi / 2)),
+            )
+            pauli, frame = (
+                (backend.matrices.X, hadamard),
+                (backend.matrices.Y, phase @ hadamard),
+                (backend.matrices.Z, backend.matrices.I(2)),
+            )[axis]
+            entangler = (
+                backend.matrices.I(4) + 1j * backend.kron(pauli, pauli)
+            ) / math.sqrt(2)
+            local = ud @ backend.dagger(entangler)
+
+        first, coefficients, second = backend.singular_value_decomposition(
+            backend.reshape(
+                backend.transpose(backend.reshape(local, (2, 2, 2, 2)), (0, 2, 1, 3)),
+                (4, 4),
+            )
+        )
+        factor = math.sqrt(coefficients[0])
+        first = factor * first[:, 0].reshape(2, 2)
+        second = factor * second[0].reshape(2, 2)
+        if cz_count == 0:
+            return [
+                gates.Unitary(u4 @ first @ u1, q0),
+                gates.Unitary(v4 @ second @ v1, q1),
+            ]
+
+        before = backend.dagger(phase) @ backend.dagger(frame)
+        after = cmath.exp(1j * math.pi / 4) * frame
+        return [
+            gates.Unitary(before @ u1, q0),
+            gates.Unitary(before @ v1, q1),
+            gates.CZ(q0, q1),
+            gates.Unitary(u4 @ first @ after, q0),
+            gates.Unitary(v4 @ second @ frame, q1),
+        ]
+
+    if cz_count == 2:
+        # Theorem 2 decomposition (2 CNOTs) for the hz = 0 (modulo pi) case.
+        gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
+
+        # Combine with initial and final local unitaries
+        g0, g1 = gatelist[:2]
+        gatelist[0] = gates.Unitary(backend.cast(g0.parameters[0]) @ u1, q0)
+        gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
+
+        g0, g1 = gatelist[-2:]
+        # A shift of ``hz`` by pi multiplies the unitary by a global phase of -1.
+        sign = (-1) ** round(hz / math.pi)
+        gatelist[-2] = gates.Unitary(sign * u4 @ g0.parameters[0], q0)
+        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+        return gatelist
+
+    # Theorem 1 decomposition (3 CNOTs) for the hz != 0 case.
+    cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz, backend=backend)
+
+    # Combine with initial and final local unitaries
+    gatelist = [
+        gates.Unitary(u1, q0),
+        gates.Unitary(backend.matrices.H @ v1, q1),
+    ]
+    gatelist.extend(cnot_dec[1:])
+    g0, g1 = gatelist[-2:]
+    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+    gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    return gatelist
+
+
+def weyl_decomposition(
+    unitary: ArrayLike,
+    threshold: float = 1e-6,
+    weight: float = math.sqrt(2),
+    backend: Backend | None = None,
+) -> tuple[int, tuple[float, float, float], tuple[ArrayLike, ...]]:
+    """Decomposes a two-qubit unitary into local unitaries and an interaction.
+
+    The unitary :math:`U` is written as
+
+    .. math::
+        U = \\left(U_{4} \\otimes V_{4}\\right) \\,
+        e^{-i \\left(h_{x} \\, XX + h_{y} \\, YY + h_{z} \\, ZZ\\right)} \\,
+        \\left(U_{1} \\otimes V_{1}\\right) \\, ,
+
+    where the interaction is the :math:`U_{d}` of
+    :func:`qibo.transpiler.decompositions.unitary_decompositions.magic_decomposition`, and
+    :math:`h_{x}`, :math:`h_{y}` and :math:`h_{z}` are its Weyl coordinates [1]. Local
+    unitaries change a Weyl coordinate by multiples of :math:`\\pi / 2` only, and
+    permute them, so only these coordinates modulo :math:`\\pi / 2` matter for the number
+    of :class:`qibo.gates.CZ` gates that the unitary needs [2]:
+
+    - none if all the coordinates are multiples of :math:`\\pi / 2`, *i.e.* the
+      unitary is a product of single-qubit unitaries;
+    - one if a coordinate is an odd multiple of :math:`\\pi / 4` and the others are
+      multiples of :math:`\\pi / 2`, *i.e.* the unitary is locally equivalent to
+      :class:`qibo.gates.CZ`;
+    - two if :math:`h_{z}` is a multiple of :math:`\\pi`, which the decomposition ensures
+      for any unitary with a coordinate that is a multiple of :math:`\\pi / 2`;
+    - three otherwise.
+
+    A coordinate is taken to be a multiple of :math:`\\pi / 2` if its distance to it is
+    below ``threshold / 2`` for the first two cases, as it is about half of the
+    operator-Schmidt coefficient that it causes, and below ``threshold`` for the third.
+    Neglecting a coordinate then causes an error of the order of ``threshold``.
+
+    Args:
+        unitary (ArrayLike): Unitary :math:`4 \\times 4` to be decomposed.
+        threshold (float, optional): Tolerance for taking a Weyl coordinate to be
+            a multiple of :math:`\\pi / 2`. Defaults to :math:`10^{-6}`.
+        weight (float, optional): Weight of the imaginary part in the matrix that is
+            diagonalized to find the local gates, see
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
+            Defaults to :math:`\\sqrt{2}`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        tuple: Number of :class:`qibo.gates.CZ` gates that the unitary needs, its Weyl
+        coordinates :math:`(h_{x}, h_{y}, h_{z})`, and the output of
+        :func:`qibo.transpiler.decompositions.unitary_decompositions.magic_decomposition`,
+        *i.e.* :math:`U_{4}`, :math:`V_{4}`, :math:`U_{d}`, :math:`U_{1}` and :math:`V_{1}`.
+
+    References:
+        1. J. Zhang, J. Vala, S. Sastry and K. B. Whaley,
+        *Geometric theory of nonlocal two-qubit operations*,
+        `Phys. Rev. A 67, 042313 (2003) <https://doi.org/10.1103/PhysRevA.67.042313>`_.
+
+        2. V. V. Shende, I. L. Markov and S. S. Bullock,
+        *Minimal universal two-qubit controlled-NOT-based circuits*,
+        `Phys. Rev. A 69, 062321 (2004) <https://doi.org/10.1103/PhysRevA.69.062321>`_.
+    """
+    backend = _check_backend(backend)
+
+    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend, weight=weight)
+    ud_diag = to_bell_diagonal(ud, backend=backend)
+    coordinates = tuple(float(h) for h in calculate_h_vector(ud_diag, backend=backend))
+
+    # The distances of the coordinates to the multiples of pi / 2, in decreasing order
+    first, second, _ = sorted(
+        (abs(math.remainder(h, math.pi / 2)) for h in coordinates), reverse=True
+    )
+    if first < threshold / 2:
+        cz_count = 0
+    elif abs(first - math.pi / 4) < threshold / 2 and second < threshold / 2:
+        cz_count = 1
+    elif abs(math.remainder(coordinates[2], math.pi)) < threshold:
+        cz_count = 2
+    else:
+        cz_count = 3
+
+    return cz_count, coordinates, (u4, v4, ud, u1, v1)
 
 
 def _block_diagonal_decomposition(
@@ -999,63 +1064,3 @@ def _euler_sequence(
     ]
 
     return sequence
-
-
-def _get_z_component(unitary: ArrayLike, weight: float, backend: Backend) -> float:
-    """Calculates the hz component from a unitary's magic decomposition."""
-    _, _, ud, _, _ = magic_decomposition(unitary, backend=backend, weight=weight)
-    ud_diag = to_bell_diagonal(ud, backend=backend)
-    _, _, hz = calculate_h_vector(ud_diag, backend=backend)
-    return float(hz)
-
-
-def _two_qubit_decomposition_without_z(
-    q0: int, q1: int, unitary: ArrayLike, weight: float, backend: Backend
-) -> list[Gate]:
-    """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 (modulo pi) case."""
-    # Get magic decomposition
-    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend, weight=weight)
-    ud_diag = to_bell_diagonal(ud, backend=backend)
-    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
-    hx, hy, hz = float(hx), float(hy), float(hz)
-
-    # Get light decomposition
-    gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
-    # Combine with initial and final local unitaries
-    g0, g1 = gatelist[:2]
-    gatelist[0] = gates.Unitary(backend.cast(g0.parameters[0]) @ u1, q0)
-    gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
-
-    g0, g1 = gatelist[-2:]
-    # A shift of ``hz`` by pi multiplies the unitary by a global phase of -1.
-    phase = (-1) ** round(hz / math.pi)
-    gatelist[-2] = gates.Unitary(phase * u4 @ g0.parameters[0], q0)
-    gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
-
-    return gatelist
-
-
-def _two_qubit_decomposition_with_z(
-    q0: int, q1: int, unitary: ArrayLike, weight: float, backend: Backend
-) -> list[Gate]:
-    """Implements Theorem 1 decomposition (3 CNOTs) for hz≠0 case."""
-    # Get magic decomposition
-    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend, weight=weight)
-    ud_diag = to_bell_diagonal(ud, backend=backend)
-    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
-    hx, hy, hz = float(hx), float(hy), float(hz)
-
-    # Get full decomposition
-    cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz, backend=backend)
-
-    # Combine with initial and final local unitaries
-    gatelist = [
-        gates.Unitary(u1, q0),
-        gates.Unitary(backend.matrices.H @ v1, q1),
-    ]
-    gatelist.extend(cnot_dec[1:])
-    g0, g1 = gatelist[-2:]
-    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
-    gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
-
-    return gatelist
