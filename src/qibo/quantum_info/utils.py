@@ -15,6 +15,7 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 if TYPE_CHECKING:  # pragma: no cover
+    from qibo.measurements import MeasurementResult
     from qibo.result import MeasurementOutcomes
 
 
@@ -110,7 +111,7 @@ def bitstring_to_phase(bitstring: str | list | tuple | ArrayLike) -> float:
 
 
 def estimate_phase(
-    outcomes: "Mapping[str, float] | ArrayLike | MeasurementOutcomes",
+    outcomes: "Mapping[str, float] | ArrayLike | MeasurementOutcomes | MeasurementResult",
 ) -> float:
     """Estimates the phase from the outcomes of the counting qubits of quantum phase estimation.
 
@@ -120,7 +121,9 @@ def estimate_phase(
 
     * the result of the execution of a circuit that measures the counting qubits, *e.g.* a
       :class:`qibo.models.qpe.QPE` circuit with ``measure=True``, which must have been executed
-      with a finite number of shots;
+      with a finite number of shots, or the result of joining, with
+      :meth:`qibo.measurements.MeasurementResult.join`, the outcomes of the measurements of a
+      :func:`qibo.models.qpe.IQPE` circuit;
     * a mapping from bitstrings to their frequencies or probabilities, *e.g.* the output of
       :meth:`qibo.result.MeasurementOutcomes.frequencies` with ``binary=True``;
     * a one-dimensional array with the probabilities, or frequencies, of the
@@ -129,7 +132,8 @@ def estimate_phase(
       element is the integer represented by the bitstring.
 
     Args:
-        outcomes (:class:`qibo.result.MeasurementOutcomes` or dict or ndarray): measurement
+        outcomes (:class:`qibo.result.MeasurementOutcomes` or
+            :class:`qibo.measurements.MeasurementResult` or dict or ndarray): measurement
             outcomes of the counting qubits. If it is a mapping, the bitstrings must all have
             the same length.
 
