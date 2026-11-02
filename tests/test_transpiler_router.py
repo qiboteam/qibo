@@ -626,6 +626,58 @@ def test_sabre_trials_invalid(trials):
         Sabre(connectivity=line_connectivity(3), trials=trials)
 
 
+def test_sabre_heuristic_invalid():
+    with pytest.raises(ValueError, match="Unknown heuristic"):
+        Sabre(connectivity=line_connectivity(3), heuristic="invalid")
+
+
+def test_sabre_heuristic_default():
+    assert Sabre().heuristic == "decay"
+
+
+@pytest.mark.parametrize("heuristic", ["basic", "lookahead", "decay"])
+def test_sabre_heuristic_random_circuits(backend, heuristic, grid_connectivity):
+    connectivity = grid_connectivity()
+    circuit = generate_random_circuit(nqubits=5, ngates=40)
+    circuit.add(gates.M(*range(5)))
+    original_circuit = circuit.copy()
+    placer = Random(connectivity)
+    router = Sabre(connectivity, seed=1, heuristic=heuristic)
+
+    placer(circuit, backend=backend)
+    transpiled_circuit, final_layout = router(circuit)
+
+    assert router.added_swaps > 0
+    assert_connectivity(connectivity, transpiled_circuit)
+    assert_placement(transpiled_circuit, connectivity)
+    assert_circuit_equivalence(
+        original_circuit=original_circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_layout=final_layout,
+    )
+
+
+def test_sabre_heuristic_terms():
+    """Each heuristic only uses its own terms, whatever the other arguments are."""
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(3, 3))
+
+    def route(**kwargs):
+        circuit = generate_random_circuit(nqubits=9, ngates=60, seed=11)
+        routed_circuit, final_layout = Sabre(connectivity, seed=3, **kwargs)(circuit)
+        return [(gate.name, gate.qubits) for gate in routed_circuit.queue], final_layout
+
+    basic = route(heuristic="basic", lookahead=5, decay_lookahead=0.3, delta=0.5)
+    lookahead = route(heuristic="lookahead", delta=0.5)
+    decay = route(heuristic="decay")
+
+    # without the other terms, the decay heuristic is the basic and the lookahead ones
+    assert basic == route(heuristic="decay", lookahead=0, delta=0.0)
+    assert lookahead == route(heuristic="decay", delta=0.0)
+    assert decay == route()
+    # and the terms do change the routing
+    assert basic != lookahead != decay != basic
+
+
 @pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
 def test_routing_with_align(router_algorithm):
     connectivity = nx.Graph([(0, 1), (1, 2)])

@@ -269,6 +269,23 @@ class Sabre(Router):
             lowest number of added SWAPs is returned, and the first one among ties.
             The attempts are reproducible if ``seed`` is given, and the first one
             does not depend on ``trials``. Defaults to :math:`1`.
+        heuristic (str, optional): Cost that selects the SWAP gate to be added. It is the
+            distance between the qubits of the gates in the front layer of the circuit,
+            plus the terms below:
+
+            - ``"basic"``: no other term, so ``lookahead``, ``decay_lookahead`` and
+              ``delta`` are not used.
+            - ``"lookahead"``: the distances of the gates in the next ``lookahead`` layers,
+              weighted by ``decay_lookahead``. ``delta`` is not used.
+            - ``"decay"``: the terms of ``"lookahead"``, with the distances of the qubits
+              that were recently swapped increased by ``delta``, which favors
+              non-overlapping SWAPs.
+
+            Defaults to ``"decay"``.
+
+    Raises:
+        ValueError: If ``trials`` is not positive, or ``heuristic`` is not ``"basic"``,
+            ``"lookahead"`` or ``"decay"``.
 
     References:
         1. G. Li, Y. Ding, and Y. Xie,
@@ -285,10 +302,18 @@ class Sabre(Router):
         swap_threshold: float = 1.5,
         seed: int | None = None,
         trials: int = 1,
+        heuristic: str = "decay",
     ):
         if trials < 1:
             raise_error(ValueError, f"``trials`` must be positive, but it is {trials}.")
+        if heuristic not in ("basic", "lookahead", "decay"):
+            raise_error(
+                ValueError,
+                f"Unknown heuristic {heuristic!r}. It must be one of "
+                + "'basic', 'lookahead' or 'decay'.",
+            )
         self.connectivity = connectivity
+        self.heuristic = heuristic
         self.lookahead = lookahead
         self.decay = decay_lookahead
         self.delta = delta
@@ -498,8 +523,9 @@ class Sabre(Router):
         ]
         best_candidate = self._rng.choice(best_candidates)
 
-        for qubit in self.circuit_map.logical_pair_to_physical(best_candidate):
-            self._delta_register[qubit] += self.delta
+        if self.heuristic == "decay":
+            for qubit in self.circuit_map.logical_pair_to_physical(best_candidate):
+                self._delta_register[qubit] += self.delta
         self.circuit_map.update(best_candidate)
         self._temp_added_swaps.append(best_candidate)
 
@@ -514,7 +540,8 @@ class Sabre(Router):
 
         tot_distance = 0.0
         weight = 1.0
-        for layer in range(self.lookahead + 1):
+        lookahead = 0 if self.heuristic == "basic" else self.lookahead
+        for layer in range(lookahead + 1):
             layer_gates = self._get_dag_layer(layer, qubits=True)
             avg_layer_distance = 0.0
             for lq_pair in layer_gates:
