@@ -64,7 +64,9 @@ def test_amplification_operator_grover(backend):
 
 def test_qaa_density_matrix(backend):
     algorithm, oracle = _grover(2)
-    circuit = QAA(algorithm, oracle, niterations=1, density_matrix=True)
+    circuit = QAA(
+        algorithm, oracle, niterations=1, density_matrix=True, backend=backend
+    )
 
     assert circuit.density_matrix
     frequencies = backend.execute_circuit(circuit, nshots=10).frequencies()
@@ -98,7 +100,14 @@ def test_qaa_exact(backend, nqubits, seed):
     algorithm, oracle, good = _problem(backend, nqubits, seed=seed + 100 * nqubits)
 
     initial = _good_probability(backend, algorithm, good)
-    circuit = QAA(algorithm, oracle, probability=initial, exact=True, measure=False)
+    circuit = QAA(
+        algorithm,
+        oracle,
+        probability=initial,
+        exact=True,
+        measure=False,
+        backend=backend,
+    )
 
     # the last qubit is the auxiliary qubit, and a good state has it in the state 1
     assert circuit.nqubits == nqubits + 1
@@ -111,7 +120,7 @@ def test_qaa_exact_integer_iterations(backend):
     """The auxiliary qubit does not spoil the cases that are exact without it."""
     # a = 1 / 4 needs exactly one iteration
     algorithm, oracle = _grover(2)
-    circuit = QAA(algorithm, oracle, probability=1 / 4, exact=True)
+    circuit = QAA(algorithm, oracle, probability=1 / 4, exact=True, backend=backend)
     assert circuit.nqubits == 3
     frequencies = backend.execute_circuit(circuit, nshots=20).frequencies()
     assert frequencies == {"11": 20}
@@ -120,7 +129,7 @@ def test_qaa_exact_integer_iterations(backend):
     algorithm, oracle = Circuit(1), Circuit(1)
     algorithm.add(gates.X(0))
     oracle.add(gates.Z(0))
-    circuit = QAA(algorithm, oracle, probability=1.0, exact=True)
+    circuit = QAA(algorithm, oracle, probability=1.0, exact=True, backend=backend)
     assert circuit.nqubits == 2
     frequencies = backend.execute_circuit(circuit, nshots=20).frequencies()
     assert frequencies == {"1": 20}
@@ -130,7 +139,7 @@ def test_qaa_exact_integer_iterations(backend):
 def test_qaa_grover(backend, nqubits):
     """Grover's search is recovered for a single marked state."""
     algorithm, oracle = _grover(nqubits)
-    circuit = QAA(algorithm, oracle, probability=1 / 2**nqubits)
+    circuit = QAA(algorithm, oracle, probability=1 / 2**nqubits, backend=backend)
 
     backend.set_seed(0)
     frequencies = backend.execute_circuit(circuit, nshots=200).frequencies()
@@ -144,7 +153,11 @@ def test_qaa_larger_circuit(backend):
     algorithm, oracle = _grover(2)
     circuit = Circuit(3)
     circuit.add(gates.X(2))
-    circuit.add(QAA(algorithm, oracle, niterations=1, measure=False).on_qubits(0, 1))
+    circuit.add(
+        QAA(algorithm, oracle, niterations=1, measure=False, backend=backend).on_qubits(
+            0, 1
+        )
+    )
 
     state = backend.execute_circuit(circuit).state()
     backend.assert_allclose(backend.abs(state[7]) ** 2, 1.0, atol=1e-8)
@@ -153,15 +166,15 @@ def test_qaa_larger_circuit(backend):
 def test_qaa_measure(backend):
     algorithm, oracle = _grover(2)
 
-    circuit = QAA(algorithm, oracle, niterations=1, measure=False)
+    circuit = QAA(algorithm, oracle, niterations=1, measure=False, backend=backend)
     assert len(circuit.measurements) == 0
 
-    circuit = QAA(algorithm, oracle, niterations=1)
+    circuit = QAA(algorithm, oracle, niterations=1, backend=backend)
     assert len(circuit.measurements) == 1
     assert circuit.measurements[0].target_qubits == (0, 1)
 
     # the auxiliary qubit is not measured
-    circuit = QAA(algorithm, oracle, probability=1 / 4, exact=True)
+    circuit = QAA(algorithm, oracle, probability=1 / 4, exact=True, backend=backend)
     assert circuit.nqubits == 3
     assert circuit.measurements[0].target_qubits == (0, 1)
 
@@ -173,15 +186,17 @@ def test_qaa_niterations(backend, nqubits, niterations):
     algorithm, oracle, good = _problem(backend, nqubits, seed=10 * nqubits)
 
     initial = _good_probability(backend, algorithm, good)
-    theta = math.asin(math.sqrt(initial))
-    circuit = QAA(algorithm, oracle, niterations=niterations, measure=False)
+    theta = backend.arcsin(backend.sqrt(initial))
+    circuit = QAA(
+        algorithm, oracle, niterations=niterations, measure=False, backend=backend
+    )
 
     assert circuit.nqubits == nqubits
     assert len(circuit.queue) == len(algorithm.queue) + niterations * len(
         amplification_operator(algorithm, oracle).queue
     )
     assert _good_probability(backend, circuit, good) == pytest.approx(
-        math.sin((2 * niterations + 1) * theta) ** 2, abs=1e-8
+        backend.sin((2 * niterations + 1) * theta) ** 2, abs=1e-8
     )
 
 
@@ -191,8 +206,12 @@ def test_qaa_probability(backend, seed):
     algorithm, oracle, good = _problem(backend, 3, seed=seed)
 
     initial = _good_probability(backend, algorithm, good)
-    niterations = math.floor(math.pi / (4 * math.asin(math.sqrt(initial))))
-    circuit = QAA(algorithm, oracle, probability=initial, measure=False)
+    niterations = int(
+        backend.floor(math.pi / (4 * backend.arcsin(backend.sqrt(initial))))
+    )
+    circuit = QAA(
+        algorithm, oracle, probability=initial, measure=False, backend=backend
+    )
 
     assert len(circuit.queue) == len(algorithm.queue) + niterations * len(
         amplification_operator(algorithm, oracle).queue
@@ -207,7 +226,11 @@ def test_qsearch(backend, nqubits):
 
     backend.set_seed(0)
     bitstring, napplications = QSearch(
-        algorithm, oracle, check=lambda bitstring: bitstring == target, seed=0
+        algorithm,
+        oracle,
+        check=lambda bitstring: bitstring == target,
+        seed=0,
+        backend=backend,
     )
 
     assert bitstring == target
@@ -254,7 +277,12 @@ def test_qsearch_no_good_state(backend):
     algorithm, oracle = _grover(2)
 
     bitstring, napplications = QSearch(
-        algorithm, oracle, check=lambda bitstring: False, max_rounds=3, seed=0
+        algorithm,
+        oracle,
+        check=lambda bitstring: False,
+        max_rounds=3,
+        seed=0,
+        backend=backend,
     )
 
     assert bitstring is None
@@ -268,7 +296,9 @@ def test_qsearch_probability_one(backend):
     algorithm.add(gates.X(0))
     oracle.add(gates.Z(0))
 
-    result = QSearch(algorithm, oracle, check=lambda bitstring: bitstring == "1")
+    result = QSearch(
+        algorithm, oracle, check=lambda bitstring: bitstring == "1", backend=backend
+    )
 
     assert result == ("1", 1)
 
