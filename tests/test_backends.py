@@ -1,3 +1,5 @@
+import cmath
+import math
 import sys
 from unittest import mock
 
@@ -373,6 +375,36 @@ def test_schur_real(backend):
     )
 
 
+@pytest.mark.parametrize(
+    "module,dtype,values",
+    [
+        (math, "float64", [1.0, 1.5, 2.0, 10.0]),
+        (cmath, "complex128", [(0.5 + 0.5j), (-0.3 + 0.4j), (1.5 - 0.5j), 2j]),
+    ],
+)
+def test_arccosh(backend, module, dtype, values):
+    """``backend.arccosh`` matches the corresponding function of ``math`` and ``cmath``."""
+    array = backend.cast(values, dtype=dtype)
+    target = backend.cast([module.acosh(value) for value in values], dtype=dtype)
+
+    backend.assert_allclose(backend.arccosh(array), target)
+
+
+@pytest.mark.parametrize(
+    "module,dtype,values",
+    [
+        (math, "float64", [-0.9, -0.5, 0.0, 0.3, 0.8]),
+        (cmath, "complex128", [(0.5 + 0.5j), (-0.3 + 0.4j), (1.5 + 0.5j), 2j]),
+    ],
+)
+def test_arctanh(backend, module, dtype, values):
+    """``backend.arctanh`` matches the corresponding function of ``math`` and ``cmath``."""
+    array = backend.cast(values, dtype=dtype)
+    target = backend.cast([module.atanh(value) for value in values], dtype=dtype)
+
+    backend.assert_allclose(backend.arctanh(array), target)
+
+
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_argmax(backend, axis):
     backend.set_seed(42)
@@ -402,6 +434,36 @@ def test_binary_repr(backend, number, length):
     target = np.binary_repr(number, width=length)
 
     assert backend.binary_repr(number, length) == target
+
+
+@pytest.mark.parametrize(
+    "module,dtype,values",
+    [
+        (math, "float64", [-2.0, -0.5, 0.0, 1.0, 3.0]),
+        (cmath, "complex128", [(0.5 + 0.5j), (-0.3 + 0.4j), (1.5 - 0.5j), 2j]),
+    ],
+)
+def test_cosh(backend, module, dtype, values):
+    """``backend.cosh`` matches the corresponding function of ``math`` and ``cmath``."""
+    array = backend.cast(values, dtype=dtype)
+    target = backend.cast([module.cosh(value) for value in values], dtype=dtype)
+
+    backend.assert_allclose(backend.cosh(array), target)
+
+
+@pytest.mark.parametrize(
+    "module,dtype,values",
+    [
+        (math, "float64", [-1.2, -0.5, 0.0, 0.7, 1.3]),
+        (cmath, "complex128", [(0.5 + 0.5j), (-0.3 + 0.4j), (1.5 - 0.5j), 2j]),
+    ],
+)
+def test_tan(backend, module, dtype, values):
+    """``backend.tan`` matches the corresponding function of ``math`` and ``cmath``."""
+    array = backend.cast(values, dtype=dtype)
+    target = backend.cast([module.tan(value) for value in values], dtype=dtype)
+
+    backend.assert_allclose(backend.tan(array), target)
 
 
 def test_set_backend_error():
