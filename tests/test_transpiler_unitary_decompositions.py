@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 
 from qibo import Circuit, gates
 from qibo.quantum_info.linalg_operations import partial_trace
-from qibo.quantum_info.metrics import average_gate_fidelity, purity
+from qibo.quantum_info.metrics import average_gate_fidelity, process_fidelity, purity
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler import Optimize1qGatesDecomposition
 from qibo.transpiler._exceptions import DecompositionError
@@ -57,30 +57,25 @@ def approximation_fidelities(hx, hy, hz):
     return [(4 * fidelity + 1) / 5 for fidelity in processes]
 
 
-def max_process_fidelity(matrix, ncz, seed):
+def max_process_fidelity(matrix, ncz, seed, backend):
     """Highest process fidelity of ``matrix`` with a circuit of ``ncz`` CZ gates.
 
     The circuit has arbitrary single-qubit gates, so the optimization is numerical.
     """
-    cz = np.diag([1, 1, 1, -1])
+    cz = gates.CZ(0, 1).matrix(backend)
+    channel = lambda array: backend.kron(array, backend.conj(array))
+    target = channel(matrix)
 
-    def u3(theta, phi, lam):
-        return np.array(
-            [
-                [np.cos(theta / 2), -np.exp(1j * lam) * np.sin(theta / 2)],
-                [
-                    np.exp(1j * phi) * np.sin(theta / 2),
-                    np.exp(1j * (phi + lam)) * np.cos(theta / 2),
-                ],
-            ]
-        )
+    def single_qubit(angles):
+        return gates.U3(0, *angles).matrix(backend)
 
     def cost(angles):
         layers = angles.reshape(ncz + 1, 2, 3)
-        circuit = np.kron(u3(*layers[0, 0]), u3(*layers[0, 1]))
+        circuit = backend.kron(single_qubit(layers[0, 0]), single_qubit(layers[0, 1]))
         for layer in layers[1:]:
-            circuit = np.kron(u3(*layer[0]), u3(*layer[1])) @ cz @ circuit
-        return -(abs(np.trace(matrix.conj().T @ circuit)) ** 2) / 16
+            layer = backend.kron(single_qubit(layer[0]), single_qubit(layer[1]))
+            circuit = layer @ cz @ circuit
+        return -process_fidelity(channel(circuit), target, backend=backend)
 
     rng = np.random.default_rng(seed)
     return -min(
@@ -760,15 +755,17 @@ def test_two_qubit_decomposition_approximation_is_optimal(backend, coordinates, 
     )
     circuit = Circuit(2)
     circuit.add(decomposition)
-    overlap = backend.abs(
-        backend.trace(backend.dagger(matrix) @ circuit.unitary(backend))
-    )
     ncz = sum(isinstance(gate, gates.CZ) for gate in decomposition)
-    score = (4 * float(overlap) ** 2 / 16 + 1) / 5 * degree**ncz
+    channel = lambda array: backend.kron(array, backend.conj(array))
+    score = average_gate_fidelity(
+        channel(circuit.unitary(backend)), channel(matrix), backend=backend
+    )
+    score *= degree**ncz
 
-    target = backend.to_numpy(matrix)
     scores = [
-        (4 * max_process_fidelity(target, count, seed=0) + 1) / 5 * degree**count
+        (4 * max_process_fidelity(matrix, count, seed=0, backend=backend) + 1)
+        / 5
+        * degree**count
         for count in range(3)
     ]
     best = max([*scores, degree**3])
