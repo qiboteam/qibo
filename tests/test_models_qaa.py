@@ -6,7 +6,7 @@ import random
 import pytest
 
 from qibo import Circuit, gates
-from qibo.models import FPQAA, QAA, QSearch, amplification_operator
+from qibo.models import FPQAA, OAA, QAA, QSearch, amplification_operator
 from qibo.quantum_info import random_unitary
 
 
@@ -211,22 +211,118 @@ def test_fpqaa_qubits(backend):
     assert len(circuit.queue) == len(algorithm.queue)
 
 
-@pytest.mark.parametrize("niterations", [0, 1, 2, 3, 6])
-@pytest.mark.parametrize("nqubits", [2, 3])
-def test_qaa_niterations(backend, nqubits, niterations):
-    """After m iterations the success probability is sin^2((2m + 1) theta)."""
-    algorithm, oracle, good = _problem(backend, nqubits, seed=10 * nqubits)
+@pytest.mark.parametrize("exact", [False, True])
+def test_oaa_density_matrix(backend, exact):
+    theta = math.pi / 6
+    unitary, _ = _oblivious_problem(backend, 1, 1, theta, seed=0)
+    circuit = OAA(unitary, 1, probability=0.25, exact=exact, density_matrix=True)
 
-    initial = _good_probability(backend, algorithm, good)
-    theta = backend.arcsin(backend.sqrt(initial))
-    circuit = QAA(algorithm, oracle, niterations=niterations, measure=False)
+    assert circuit.density_matrix
+    assert circuit.nqubits == (3 if exact else 2)
 
-    assert circuit.nqubits == nqubits
-    assert len(circuit.queue) == len(algorithm.queue) + niterations * len(
-        amplification_operator(algorithm, oracle).queue
-    )
+    # the probability of the zero state of the auxiliary qubits is 1, for the input state |00>
+    state = backend.execute_circuit(circuit).state()
+    probabilities = backend.diag(state)
     backend.assert_allclose(
-        _good_probability(backend, circuit, good),
+        backend.sum(probabilities[: 2 ** (circuit.nqubits - 1)]),
+        1.0,
+        atol=1e-8,
+        rtol=0.0,
+    )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"niterations": 1, "probability": 0.5},
+        {"niterations": 1, "exact": True},
+        {"niterations": -1},
+        {"niterations": 1.5},
+        {"niterations": True},
+        {"probability": 0.0},
+        {"probability": 1.5},
+        {"probability": "0.5"},
+        {"niterations": 1, "nauxiliary": 0},
+        {"niterations": 1, "nauxiliary": 3},
+        {"niterations": 1, "nauxiliary": 1.0},
+        {"niterations": 1, "nauxiliary": True},
+    ],
+)
+def test_oaa_errors(kwargs):
+    unitary = Circuit(2)
+    unitary.add(gates.RY(0, theta=0.3))
+    kwargs = {"nauxiliary": 1, **kwargs}
+
+    with pytest.raises(ValueError):
+        OAA(unitary, **kwargs)
+
+    with pytest.raises(TypeError):
+        OAA(unitary.queue, 1, niterations=1)
+
+    measured = Circuit(2)
+    measured.add(gates.M(0))
+    with pytest.raises(ValueError):
+        OAA(measured, 1, niterations=1)
+
+
+@pytest.mark.parametrize("seed", [0, 1])
+@pytest.mark.parametrize("theta", [0.1, 0.3, math.pi / 6, 0.9, math.pi / 2])
+@pytest.mark.parametrize("nsystem", [1, 2])
+@pytest.mark.parametrize("nauxiliary", [1, 2, 3])
+def test_oaa_exact(backend, nauxiliary, nsystem, theta, seed):
+    """The unitary V is implemented exactly, for any input state."""
+    unitary, matrix = _oblivious_problem(backend, nauxiliary, nsystem, theta, seed)
+
+    circuit = OAA(unitary, nauxiliary, probability=math.sin(theta) ** 2, exact=True)
+    assert circuit.nqubits == unitary.nqubits + 1
+
+    state, psi = _oblivious_output(backend, circuit, nauxiliary, nsystem, seed + 10)
+
+    # the auxiliary qubits and the extra qubit, which is the last one, are in the state 0
+    backend.assert_allclose(
+        state[: 2 ** (nsystem + 1) : 2], matrix @ psi, atol=1e-8, rtol=0.0
+    )
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+@pytest.mark.parametrize("niterations", [0, 1, 2, 3])
+@pytest.mark.parametrize("theta", [0.3, math.pi / 6, 1.0])
+@pytest.mark.parametrize("nsystem", [1, 2])
+@pytest.mark.parametrize("nauxiliary", [1, 2, 3])
+def test_oaa_niterations(backend, nauxiliary, nsystem, theta, niterations, seed):
+    """The amplitude of V is sin((2l + 1) theta), for any input state."""
+    unitary, matrix = _oblivious_problem(backend, nauxiliary, nsystem, theta, seed)
+
+    circuit = OAA(unitary, nauxiliary, niterations=niterations)
+    assert circuit.nqubits == unitary.nqubits
+    assert len(circuit.queue) >= len(unitary.queue)
+
+    state, psi = _oblivious_output(backend, circuit, nauxiliary, nsystem, seed + 10)
+
+    amplitude = backend.sin((2 * niterations + 1) * theta)
+    backend.assert_allclose(
+        state[: 2**nsystem], amplitude * (matrix @ psi), atol=1e-8, rtol=0.0
+    )
+
+
+@pytest.mark.parametrize("theta", [0.2, 0.5, 0.8, 1.2])
+def test_oaa_probability(backend, theta):
+    """The probability is at least max(p, 1 - p) with l = floor(pi / (4 theta))."""
+    unitary, _ = _oblivious_problem(backend, 1, 2, theta, seed=3)
+
+    probability = math.sin(theta) ** 2
+    niterations = math.floor(math.pi / (4 * theta))
+    circuit = OAA(unitary, 1, probability=probability)
+    expected = OAA(unitary, 1, niterations=niterations)
+    assert len(circuit.queue) == len(expected.queue)
+
+    state, _ = _oblivious_output(backend, circuit, 1, 2, seed=4)
+    success = backend.sum(backend.abs(state[:4]) ** 2)
+
+    assert success >= max(probability, 1 - probability) - 1e-8
+    backend.assert_allclose(
+        success,
         backend.sin((2 * niterations + 1) * theta) ** 2,
         atol=1e-8,
         rtol=0.0,
@@ -345,6 +441,28 @@ def test_qaa_measure(backend):
     assert circuit.measurements[0].target_qubits == (0, 1)
 
 
+@pytest.mark.parametrize("niterations", [0, 1, 2, 3, 6])
+@pytest.mark.parametrize("nqubits", [2, 3])
+def test_qaa_niterations(backend, nqubits, niterations):
+    """After m iterations the success probability is sin^2((2m + 1) theta)."""
+    algorithm, oracle, good = _problem(backend, nqubits, seed=10 * nqubits)
+
+    initial = _good_probability(backend, algorithm, good)
+    theta = backend.arcsin(backend.sqrt(initial))
+    circuit = QAA(algorithm, oracle, niterations=niterations, measure=False)
+
+    assert circuit.nqubits == nqubits
+    assert len(circuit.queue) == len(algorithm.queue) + niterations * len(
+        amplification_operator(algorithm, oracle).queue
+    )
+    backend.assert_allclose(
+        _good_probability(backend, circuit, good),
+        backend.sin((2 * niterations + 1) * theta) ** 2,
+        atol=1e-8,
+        rtol=0.0,
+    )
+
+
 @pytest.mark.parametrize("seed", range(6))
 def test_qaa_probability(backend, seed):
     """The probability is at least max(a, 1 - a) with m = floor(pi / (4 theta))."""
@@ -458,6 +576,46 @@ def _grover(nqubits):
     oracle = Circuit(nqubits)
     oracle.add(gates.Z(nqubits - 1).controlled_by(*range(nqubits - 1)))
     return algorithm, oracle
+
+
+def _oblivious_output(backend, circuit, nauxiliary, nsystem, seed):
+    """Final state when the system qubits are prepared in a random state, and that state.
+
+    The auxiliary qubits are the first ones, and the system qubits are the following ones.
+    """
+    dim = 2**nsystem
+    preparation = random_unitary(dim, seed=seed, backend=backend)
+
+    prepared = Circuit(circuit.nqubits, density_matrix=circuit.density_matrix)
+    prepared.add(gates.Unitary(preparation, *range(nauxiliary, nauxiliary + nsystem)))
+    prepared.add(circuit)
+
+    state = backend.execute_circuit(prepared).state()
+    return state, preparation[:, 0]
+
+
+def _oblivious_problem(backend, nauxiliary, nsystem, theta, seed):
+    """Unitary U that applies V with amplitude sin(theta) when the auxiliary qubits are 0.
+
+    The state with the auxiliary qubits different from 0 depends on the system state, since it
+    is rotated by another random unitary, so it is not a reflection about the input state. If
+    there are several auxiliary qubits, the first one is 0 in this state, so that all of them
+    are needed to tell it from the zero state.
+    """
+    dim = 2**nsystem
+    system = list(range(nauxiliary, nauxiliary + nsystem))
+    matrix = random_unitary(dim, seed=seed, backend=backend)
+    other = random_unitary(dim, seed=seed + 1, backend=backend)
+
+    unitary = Circuit(nauxiliary + nsystem)
+    unitary.add(gates.Unitary(matrix, *system))
+    unitary.add(gates.RY(0, theta=math.pi - 2 * theta))
+    unitary.add(gates.CNOT(0, qubit) for qubit in range(1, nauxiliary))
+    unitary.add(gates.Unitary(other, *system).controlled_by(nauxiliary - 1))
+    if nauxiliary > 1:
+        unitary.add(gates.CNOT(1, 0))
+
+    return unitary, matrix
 
 
 def _problem(backend, nqubits, seed):

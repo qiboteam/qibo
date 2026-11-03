@@ -79,7 +79,7 @@ def amplification_operator(algorithm: Circuit, oracle: Circuit, **kwargs) -> Cir
         Estimation*, `Contemporary Mathematics 305, 53 (2002)
         <https://doi.org/10.1090/conm/305/05215>`_.
     """
-    nqubits = _check_circuits(algorithm, oracle)
+    nqubits = _check_circuits(algorithm=algorithm, oracle=oracle)
     qubits = list(range(nqubits))
 
     circuit = Circuit(nqubits, **kwargs)
@@ -221,7 +221,7 @@ def FPQAA(
         Number of Queries*, `Phys. Rev. Lett. 113, 210501 (2014)
         <https://doi.org/10.1103/PhysRevLett.113.210501>`_.
     """
-    nqubits = _check_circuits(algorithm, oracle)
+    nqubits = _check_circuits(algorithm=algorithm, oracle=oracle)
 
     if isinstance(delta, bool) or not isinstance(delta, Real) or not 0 <= delta <= 1:
         raise_error(
@@ -300,6 +300,167 @@ def FPQAA(
 
     if measure:
         circuit.add(gates.M(*qubits))
+
+    return circuit
+
+
+def OAA(
+    unitary: Circuit,
+    nauxiliary: int,
+    niterations: int | None = None,
+    probability: float | None = None,
+    exact: bool = False,
+    **kwargs,
+) -> Circuit:
+    """Create a circuit that implements Oblivious Amplitude Amplification (OAA).
+
+    Let :math:`U` be the circuit ``unitary``, which acts on :math:`\\mu` auxiliary qubits, the
+    first ones of the circuit, and on :math:`n` system qubits, the last ones. Let
+    :math:`|0^{\\mu}\\rangle` be the all-zero state of the auxiliary qubits and
+    :math:`\\Pi = |0^{\\mu}\\rangle\\langle 0^{\\mu}| \\otimes \\mathbb{1}` the projector onto it.
+    The circuit applies a unitary :math:`V` on the system qubits with amplitude
+    :math:`\\sin(\\theta)`, for every state :math:`|\\psi\\rangle` of the system qubits, *i.e.*
+
+    .. math::
+        U |0^{\\mu}\\rangle |\\psi\\rangle = \\sin(\\theta) |0^{\\mu}\\rangle V |\\psi\\rangle
+        + \\cos(\\theta) |\\Phi^{\\perp}\\rangle,
+
+    where :math:`|\\Phi^{\\perp}\\rangle`, which depends on :math:`|\\psi\\rangle`, satisfies
+    :math:`\\Pi |\\Phi^{\\perp}\\rangle = 0`. This is the case of a block encoding of
+    :math:`\\sin(\\theta) V`, and the probability :math:`p = \\sin^{2}(\\theta)` of measuring the
+    auxiliary qubits in the state :math:`|0^{\\mu}\\rangle` is the same for every
+    :math:`|\\psi\\rangle`. The circuit then boosts this amplitude with the operator
+
+    .. math::
+        \\mathbf{S} = -U \\mathbf{R} U^{\\dagger} \\mathbf{R}, \\qquad
+        \\mathbf{R} = 2 \\Pi - \\mathbb{1},
+
+    which satisfies, for any integer :math:`l`,
+
+    .. math::
+        \\mathbf{S}^{l} U |0^{\\mu}\\rangle |\\psi\\rangle
+        = \\sin((2l + 1)\\theta) |0^{\\mu}\\rangle V |\\psi\\rangle
+        + \\cos((2l + 1)\\theta) |\\Phi^{\\perp}\\rangle.
+
+    In contrast with :func:`qibo.models.qaa.amplification_operator`, :math:`\\mathbf{S}` does not
+    reflect about the state :math:`U|0^{\\mu}\\rangle|\\psi\\rangle`, which is unknown since
+    :math:`|\\psi\\rangle` is not. Thus, the circuit amplifies the implementation of :math:`V`
+    without knowing, preparing or measuring the input state, so it can be a part of a larger
+    circuit. It is applied to the circuit as :math:`U`, followed by :math:`l` times a sign flip of
+    :math:`|0^{\\mu}\\rangle`, :math:`U^{\\dagger}`, the sign flip, :math:`U` and a global phase of
+    :math:`\\pi`, since :math:`\\mathbf{R}` is minus the sign flip. The number :math:`l` of
+    iterations is determined in one of the following ways:
+
+    * ``niterations`` is given, and :math:`l` is its value;
+    * ``probability`` is given, which is :math:`p`, and
+      :math:`l = \\lfloor \\pi / (4 \\theta) \\rfloor`. The probability of measuring the auxiliary
+      qubits in the state :math:`|0^{\\mu}\\rangle` is then at least :math:`\\max(p, 1 - p)`;
+    * ``probability`` is given and ``exact=True``. Then :math:`V` is implemented exactly, *i.e.*
+      the final state is :math:`|0^{\\mu}\\rangle V|\\psi\\rangle`. The circuit uses
+      :math:`l = \\lceil \\pi / (4 \\theta) - 1 / 2 \\rceil` iterations, which is a fraction of an
+      iteration too many. To compensate it, the amplitude is lowered to
+      :math:`\\sin(\\pi / (4l + 2))` with an extra auxiliary qubit, which is the last qubit of
+      the circuit, and rotated by a :math:`R_{y}` gate. The extra qubit is also required to be in
+      the state :math:`|0\\rangle` at the end, where it is found with certainty. For
+      :math:`p = 1 / 4`, one iteration is enough, so :math:`U` is used three times.
+
+    Example:
+        .. testcode::
+
+            import math
+
+            from qibo import Circuit, gates
+            from qibo.models import OAA
+
+            # U acts on 1 auxiliary qubit and 1 system qubit. If the auxiliary qubit is found in
+            # the state 0, which has probability sin(theta)^2 = 1 / 4, V is the X gate
+            theta = math.pi / 6
+            unitary = Circuit(2)
+            unitary.add(gates.X(1))
+            unitary.add(gates.RY(0, theta=math.pi - 2 * theta))
+            unitary.add(gates.H(1).controlled_by(0))
+
+            # one iteration implements V with certainty, so the system qubit, in the state 0,
+            # is flipped without measuring the auxiliary qubit before
+            circuit = Circuit(2)
+            circuit.add(OAA(unitary, 1, probability=1 / 4))
+            circuit.add(gates.M(0, 1))
+
+            result = circuit(nshots=100)
+            print(result.frequencies())
+
+        .. testoutput::
+
+            Counter({'01': 100})
+
+    Args:
+        unitary (:class:`qibo.models.circuit.Circuit`): circuit :math:`U` without measurements.
+        nauxiliary (int): number :math:`\\mu \\geq 1` of auxiliary qubits, which are the first
+            qubits of ``unitary``.
+        niterations (int, optional): number :math:`l \\geq 0` of applications of
+            :math:`\\mathbf{S}`. Exactly one of ``niterations`` and ``probability`` has to be
+            given. Defaults to ``None``.
+        probability (float, optional): probability :math:`p \\in (0, 1]` of measuring the
+            auxiliary qubits in the state :math:`|0^{\\mu}\\rangle` after :math:`U`, from which the
+            number of iterations is computed. Defaults to ``None``.
+        exact (bool, optional): If ``True``, :math:`V` is implemented exactly, which requires
+            ``probability``. Defaults to ``False``.
+        kwargs (dict, optional): Additional arguments used to initialize
+            :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
+            see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: implementation of Oblivious Amplitude
+        Amplification, with one more qubit than ``unitary`` if ``exact=True``.
+
+    References:
+        1. D. W. Berry, A. M. Childs, R. Cleve, R. Kothari, and R. D. Somma, *Exponential
+        improvement in precision for simulating sparse Hamiltonians*, `Forum Math. Sigma 5, e8
+        (2017) <https://doi.org/10.1017/fms.2017.2>`_.
+    """
+    nqubits = _check_circuits(unitary=unitary)
+
+    if (
+        isinstance(nauxiliary, bool)
+        or not isinstance(nauxiliary, Integral)
+        or not 1 <= nauxiliary <= nqubits
+    ):
+        raise_error(
+            ValueError,
+            f"nauxiliary must be an integer between 1 and {nqubits}, "
+            + f"but it is {nauxiliary}.",
+        )
+
+    niterations, probability = _check_iterations(niterations, probability, exact)
+
+    auxiliary = list(range(nauxiliary))
+
+    circuit = Circuit(nqubits + 1 if exact else nqubits, **kwargs)
+    circuit.add(unitary.on_qubits(*range(nqubits)))
+    if exact:
+        # the extra qubit lowers the amplitude to sin(pi / (4l + 2)), for which l iterations
+        # implement V with certainty, and it has to be found in the state 0
+        reduced = math.sin(math.pi / (4 * niterations + 2))
+        rotation = 2 * math.acos(min(reduced / math.sqrt(probability), 1.0))
+        circuit.add(gates.RY(nqubits, theta=rotation))
+        auxiliary.append(nqubits)
+
+    # sign flip of the zero state of the auxiliary qubits, which is minus R
+    flip = Circuit(circuit.nqubits, **kwargs)
+    flip.add(gates.X(qubit) for qubit in auxiliary)
+    flip.add(gates.Z(auxiliary[-1]).controlled_by(*auxiliary[:-1]))
+    flip.add(gates.X(qubit) for qubit in auxiliary)
+
+    # S = -U R U^{-1} R = -U (-flip) U^{-1} (-flip), where the signs of R cancel
+    operator = Circuit(circuit.nqubits, **kwargs)
+    operator.add(flip)
+    operator.add(circuit.invert())
+    operator.add(flip)
+    operator.add(circuit)
+    operator.add(gates.GlobalPhase(math.pi))
+
+    for _ in range(niterations):
+        circuit.add(operator)
 
     return circuit
 
@@ -395,47 +556,10 @@ def QAA(
         Estimation*, `Contemporary Mathematics 305, 53 (2002)
         <https://doi.org/10.1090/conm/305/05215>`_.
     """
-    nqubits = _check_circuits(algorithm, oracle)
-
-    if (niterations is None) == (probability is None):
-        raise_error(
-            ValueError,
-            "Exactly one of niterations and probability must be given, "
-            + f"but niterations is {niterations} and probability is {probability}.",
-        )
-
-    if exact and probability is None:
-        raise_error(ValueError, "exact=True requires probability.")
-
-    if niterations is not None and (
-        isinstance(niterations, bool)
-        or not isinstance(niterations, Integral)
-        or niterations < 0
-    ):
-        raise_error(
-            ValueError,
-            f"niterations must be a non-negative integer, but it is {niterations}.",
-        )
-
-    if probability is not None and (
-        isinstance(probability, bool)
-        or not isinstance(probability, Real)
-        or not 0 < probability <= 1
-    ):
-        raise_error(
-            ValueError,
-            f"probability must be in the interval (0, 1], but it is {probability}.",
-        )
+    nqubits = _check_circuits(algorithm=algorithm, oracle=oracle)
+    niterations, probability = _check_iterations(niterations, probability, exact)
 
     qubits = list(range(nqubits))
-
-    if probability is not None:
-        angle = math.asin(math.sqrt(probability))
-        niterations = (
-            math.ceil(max(math.pi / (4 * angle) - 1 / 2, 0))
-            if exact
-            else math.floor(math.pi / (4 * angle))
-        )
 
     circuit = Circuit(nqubits + 1 if exact else nqubits, **kwargs)
     circuit.add(algorithm.on_qubits(*qubits))
@@ -539,7 +663,7 @@ def QSearch(
     """
     backend = _check_backend(backend)
 
-    _check_circuits(algorithm, oracle)
+    _check_circuits(algorithm=algorithm, oracle=oracle)
 
     if not callable(check):
         raise_error(TypeError, f"check must be callable, but it is {type(check)}.")
@@ -576,19 +700,17 @@ def QSearch(
     return None, napplications
 
 
-def _check_circuits(algorithm: Circuit, oracle: Circuit) -> int:
+def _check_circuits(**circuits: Circuit) -> int:
     """Checks the circuits of the amplitude amplification.
 
     Args:
-        algorithm (:class:`qibo.models.circuit.Circuit`): circuit that prepares the state to be
-            amplified.
-        oracle (:class:`qibo.models.circuit.Circuit`): circuit that multiplies the good states
-            by :math:`-1`.
+        circuits (dict): circuits to be checked, with their names as keys. They cannot contain
+            measurements, and they must have the same number of qubits.
 
     Returns:
         int: number of qubits of the circuits.
     """
-    for name, circuit in (("algorithm", algorithm), ("oracle", oracle)):
+    for name, circuit in circuits.items():
         if not isinstance(circuit, Circuit):
             raise_error(
                 TypeError,
@@ -598,11 +720,66 @@ def _check_circuits(algorithm: Circuit, oracle: Circuit) -> int:
         if len(circuit.measurements) > 0:
             raise_error(ValueError, f"{name} cannot contain measurements.")
 
-    if algorithm.nqubits != oracle.nqubits:
+    nqubits = {circuit.nqubits for circuit in circuits.values()}
+    if len(nqubits) > 1:
         raise_error(
             ValueError,
-            "algorithm and oracle must have the same number of qubits, "
-            + f"but they have {algorithm.nqubits} and {oracle.nqubits}.",
+            f"{' and '.join(circuits)} must have the same number of qubits, "
+            + f"but they have {' and '.join(str(c.nqubits) for c in circuits.values())}.",
         )
 
-    return algorithm.nqubits
+    return nqubits.pop()
+
+
+def _check_iterations(
+    niterations: int | None, probability: float | None, exact: bool
+) -> tuple[int, float | None]:
+    """Checks the arguments that determine the number of iterations of the amplification.
+
+    Args:
+        niterations (int, optional): number of iterations, or ``None``.
+        probability (float, optional): probability of measuring a good state, or ``None``.
+        exact (bool): whether the good state has to be found with certainty.
+
+    Returns:
+        tuple: the number of iterations, which is computed from ``probability`` if
+        ``niterations`` is ``None``, and ``probability``.
+    """
+    if (niterations is None) == (probability is None):
+        raise_error(
+            ValueError,
+            "Exactly one of niterations and probability must be given, "
+            + f"but niterations is {niterations} and probability is {probability}.",
+        )
+
+    if exact and probability is None:
+        raise_error(ValueError, "exact=True requires probability.")
+
+    if niterations is not None and (
+        isinstance(niterations, bool)
+        or not isinstance(niterations, Integral)
+        or niterations < 0
+    ):
+        raise_error(
+            ValueError,
+            f"niterations must be a non-negative integer, but it is {niterations}.",
+        )
+
+    if probability is not None and (
+        isinstance(probability, bool)
+        or not isinstance(probability, Real)
+        or not 0 < probability <= 1
+    ):
+        raise_error(
+            ValueError,
+            f"probability must be in the interval (0, 1], but it is {probability}.",
+        )
+
+    if probability is None:
+        return int(niterations), None
+
+    angle = math.asin(math.sqrt(probability))
+    if exact:
+        return math.ceil(max(math.pi / (4 * angle) - 1 / 2, 0)), float(probability)
+
+    return math.floor(math.pi / (4 * angle)), float(probability)
