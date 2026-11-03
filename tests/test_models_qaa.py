@@ -156,6 +156,28 @@ def test_fpqaa_fixed_point(backend, bound, delta):
             assert _good_probability(backend, circuit, [2]) >= 1 - delta**2 - 1e-8
 
 
+def test_fpqaa_independent_gates(backend):
+    """Each application of the oracle has its own gates, so their parameters are independent."""
+    algorithm, oracle = Circuit(2), Circuit(2)
+    algorithm.add(gates.H(qubit) for qubit in range(2))
+    oracle.add(gates.CU1(0, 1, theta=math.pi))
+
+    circuit = FPQAA(algorithm, oracle, 0.1, 3, measure=False, backend=backend)
+    assert len({id(gate) for gate in circuit.queue}) == len(circuit.queue)
+
+    parameters = circuit.get_parameters()
+    values = [
+        tuple(0.1 * (index + 1) for _ in group)
+        for index, group in enumerate(parameters)
+    ]
+    circuit.set_parameters(values)
+
+    backend.assert_allclose(
+        backend.cast(circuit.get_parameters(), dtype="float64"),
+        backend.cast(values, dtype="float64"),
+    )
+
+
 @pytest.mark.parametrize("delta", [0.0, 0.2, 1.0])
 @pytest.mark.parametrize("niterations", [0, 1, 3])
 @pytest.mark.parametrize("seed", [0, 1])
