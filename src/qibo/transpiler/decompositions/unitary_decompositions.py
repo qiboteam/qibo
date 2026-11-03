@@ -13,6 +13,7 @@ from qibo.quantum_info.linalg_operations import (
     cosine_sin_decomposition,
     schur_decomposition,
 )
+from qibo.quantum_info.metrics import average_gate_fidelity
 from qibo.transpiler._exceptions import DecompositionError
 
 magic_basis = np.array(
@@ -594,6 +595,7 @@ def two_qubit_decomposition(
     unitary: ArrayLike,
     threshold: float = 1e-6,
     weight: float = math.sqrt(2),
+    approximation_degree: float = 1.0,
     backend: Backend | None = None,
 ) -> list[Gate]:
     """Performs two qubit unitary gate decomposition.
@@ -603,6 +605,15 @@ def two_qubit_decomposition(
     :func:`qibo.transpiler.decompositions.unitary_decompositions.weyl_decomposition`: a
     product of two single-qubit unitaries uses no :class:`qibo.gates.CZ` gate, and a
     unitary that is locally equivalent to :class:`qibo.gates.CZ` uses one.
+
+    The decomposition can be approximate, with fewer :class:`qibo.gates.CZ` gates, see
+    ``approximation_degree``. The approximation with :math:`k` gates keeps the local
+    unitaries and replaces the Weyl coordinates of the unitary that :math:`k` gates cannot
+    implement by the closest ones that they can. The coordinates are sorted by decreasing
+    distance to a multiple of :math:`\\pi / 2`, so it keeps the first ones: the
+    approximation with two gates removes :math:`h_{z}`, the one with a single gate keeps
+    only :math:`h_{x}`, which is set to :math:`\\pi / 4`, and the one without gates is a
+    product of single-qubit unitaries.
 
     Args:
         q0 (int): index of the first qubit.
@@ -615,12 +626,24 @@ def two_qubit_decomposition(
             diagonalized to find the local gates, see
             :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
             Defaults to :math:`\\sqrt{2}`.
+        approximation_degree (float, optional): Fidelity of each :class:`qibo.gates.CZ`
+            gate, between :math:`0` and :math:`1`. If it is lower than :math:`1`, the
+            decomposition has the number of :class:`qibo.gates.CZ` gates :math:`k` that
+            maximizes :math:`F_{k} \\, d^{k}`, where :math:`d` is ``approximation_degree`` and
+            :math:`F_{k}` is the :func:`qibo.quantum_info.average_gate_fidelity` between
+            ``unitary`` and its approximation with :math:`k` gates, with
+            :math:`F_{k} = 1` if :math:`k` gates are enough. A lower degree gives fewer
+            gates, and :math:`0` gives none. Defaults to :math:`1`, which is the exact
+            decomposition.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
         list: gates implementing the decomposition
+
+    Raises:
+        ValueError: If ``approximation_degree`` is not between :math:`0` and :math:`1`.
 
     References:
         1. F. Vatan and C. Williams,
@@ -629,6 +652,12 @@ def two_qubit_decomposition(
     """
     backend = _check_backend(backend)
 
+    if not 0.0 <= approximation_degree <= 1.0:
+        raise_error(
+            ValueError,
+            f"``approximation_degree`` must be between 0 and 1, got {approximation_degree}.",
+        )
+
     # Handle identity case efficiently
     if backend.allclose(unitary, backend.identity(4)):
         return []
@@ -636,6 +665,42 @@ def two_qubit_decomposition(
     cz_count, (hx, hy, hz), (u4, v4, ud, u1, v1) = weyl_decomposition(
         unitary, threshold=threshold, weight=weight, backend=backend
     )
+
+    if approximation_degree < 1.0:
+        # The approximation with ``count`` gates has the local unitaries of ``unitary`` and
+        # the Weyl coordinates that ``count`` gates implement and are the closest to its
+        # own. Multiples of pi / 2 are local, and a single gate implements pi / 4. The
+        # coordinates are sorted by decreasing distance to the multiples of pi / 2, so the
+        # last ones are the first to be taken to them, and the first one is the closest
+        # to pi / 4.
+        offsets = [math.remainder(h, math.pi / 2) for h in (hx, hy, hz)]
+        approximations = [
+            (hx - offsets[0], hy - offsets[1], hz - offsets[2]),
+            (
+                hx - math.remainder(hx - math.pi / 4, math.pi / 2),
+                hy - offsets[1],
+                hz - offsets[2],
+            ),
+            (hx, hy, 0.0),
+        ][:cz_count]
+        liouville = backend.kron(ud, backend.conj(ud))
+        best = approximation_degree**cz_count
+        for count, coordinates in enumerate(approximations):
+            interaction = (
+                gates.RXX(0, 1, 2 * coordinates[0]).matrix(backend)
+                @ gates.RYY(0, 1, 2 * coordinates[1]).matrix(backend)
+                @ gates.RZZ(0, 1, 2 * coordinates[2]).matrix(backend)
+            )
+            fidelity = approximation_degree**count * float(
+                average_gate_fidelity(
+                    backend.kron(interaction, backend.conj(interaction)),
+                    liouville,
+                    backend=backend,
+                )
+            )
+            if fidelity > best:
+                best = fidelity
+                cz_count, (hx, hy, hz), ud = count, coordinates, interaction
 
     if cz_count < 2:
         # The interaction part of the unitary is then a product of Pauli rotations by

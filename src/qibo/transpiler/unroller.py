@@ -255,6 +255,19 @@ class Unroller:
             with ``minimize_toffolis``. See
             :func:`qibo.transpiler.multi_controlled_decomposition`.
             Defaults to ``False``.
+        approximation_degree (float, optional): Fidelity of each :class:`qibo.gates.CZ`
+            gate, between :math:`0` and :math:`1`. If it is lower than :math:`1`, the
+            two-qubit gates that are decomposed from their matrix, *i.e.* the unitaries,
+            the :class:`qibo.gates.fSim` and :class:`qibo.gates.GeneralizedfSim` gates and
+            the gates without a known decomposition, can use fewer
+            :class:`qibo.gates.CZ` gates than the exact decomposition, if it increases the
+            expected fidelity, see
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.two_qubit_decomposition`.
+            The other gates are decomposed exactly. Defaults to :math:`1`, which is the exact
+            decomposition.
+
+    Raises:
+        ValueError: If ``approximation_degree`` is not between :math:`0` and :math:`1`.
     """
 
     def __init__(
@@ -266,6 +279,7 @@ class Unroller:
         qubits_initially_zero: bool = False,
         minimize_toffolis: bool = False,
         minimize_depth: bool = False,
+        approximation_degree: float = 1.0,
     ):
         if not native_gates.is_universal:
             raise_error(
@@ -280,6 +294,11 @@ class Unroller:
                 ValueError,
                 "``minimize_toffolis`` and ``minimize_depth`` cannot be used together.",
             )
+        if not 0.0 <= approximation_degree <= 1.0:
+            raise_error(
+                ValueError,
+                f"``approximation_degree`` must be between 0 and 1, got {approximation_degree}.",
+            )
         self.native_gates = native_gates
         self.backend = backend
         self.use_dirty_ancillas = use_dirty_ancillas
@@ -287,6 +306,7 @@ class Unroller:
         self.qubits_initially_zero = qubits_initially_zero
         self.minimize_toffolis = minimize_toffolis
         self.minimize_depth = minimize_depth
+        self.approximation_degree = approximation_degree
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Decomposes a circuit to native gates.
@@ -338,6 +358,7 @@ class Unroller:
                     clean=clean,
                     minimize_toffolis=self.minimize_toffolis,
                     minimize_depth=self.minimize_depth,
+                    approximation_degree=self.approximation_degree,
                 )
             # the global phase, if any, is the last gate of a translation
             if translated and isinstance(translated[-1], gates.GlobalPhase):
@@ -361,6 +382,7 @@ def translate_gate(
     clean: tuple[int, ...] = (),
     minimize_toffolis: bool = False,
     minimize_depth: bool = False,
+    approximation_degree: float = 1.0,
 ) -> list[Gate]:
     """Maps gates to a hardware-native implementation.
 
@@ -386,6 +408,11 @@ def translate_gate(
         minimize_depth (bool, optional): If ``True``, a multi-controlled
             :class:`qibo.gates.X` is decomposed with a logarithmic depth when it has
             auxiliary qubits. Defaults to ``False``.
+        approximation_degree (float, optional): Fidelity of each :class:`qibo.gates.CZ`
+            gate, between :math:`0` and :math:`1`, used to approximate the two-qubit gates
+            that are decomposed from their matrix with fewer :class:`qibo.gates.CZ` gates,
+            see :class:`qibo.transpiler.unroller.Unroller`. Defaults to :math:`1`, which
+            is the exact decomposition.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Native gates that decompose the input gate.
@@ -489,16 +516,26 @@ def translate_gate(
             translated.extend(translate_gate(decomposed_gate, native_gates, backend))
         return merge_global_phases(translated)
 
-    if gate.__class__ not in cz_dec.decompositions or (
-        gate.is_controlled_by and isinstance(gate, (gates.FusedGate, gates.Unitary))
+    if (
+        gate.__class__ not in cz_dec.decompositions
+        or (
+            gate.is_controlled_by and isinstance(gate, (gates.FusedGate, gates.Unitary))
+        )
+        or (
+            approximation_degree < 1.0
+            and isinstance(gate, (gates.fSim, gates.GeneralizedfSim, gates.Unitary))
+        )
     ):
-        # The gate has no registered decomposition, or it is a controlled unitary.
-        # Its matrix is decomposed instead.
+        # The gate has no registered decomposition, it is a controlled unitary, or
+        # its decomposition can be approximated. Its matrix is decomposed instead.
         circuit = Circuit(2)
         circuit.add(gate.on_qubits(dict(zip(gate.qubits, (0, 1)))))
         translated = []
         for decomposed_gate in two_qubit_decomposition(
-            *gate.qubits, circuit.unitary(backend), backend=backend
+            *gate.qubits,
+            circuit.unitary(backend),
+            approximation_degree=approximation_degree,
+            backend=backend,
         ):
             translated.extend(translate_gate(decomposed_gate, native_gates, backend))
         return merge_global_phases(translated)
