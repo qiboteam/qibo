@@ -1317,3 +1317,37 @@ def test_generate_preset_passes_dense_layout(backend, grid_connectivity):
         final_layout=layout,
         native_gates=natives,
     )
+
+
+def test_generate_preset_passes_approximation_degree_structure():
+    connectivity = nx.path_graph(4)
+    passes = generate_preset_passes(connectivity, approximation_degree=0.5).passes
+    # only the unroller to the native gates approximates the two-qubit gates
+    assert passes[1].approximation_degree == 1.0
+    assert passes[-1].approximation_degree == 0.5
+    assert generate_preset_passes(connectivity).passes[-1].approximation_degree == 1.0
+
+    # without connectivity the only unroller decomposes the circuit to the native gates
+    _, unroller = generate_preset_passes(approximation_degree=0.5).passes
+    assert unroller.approximation_degree == 0.5
+
+
+@pytest.mark.parametrize("connectivity", [None, nx.path_graph(2)])
+def test_generate_preset_passes_approximation_degree(backend, connectivity):
+    circuit = Circuit(2)
+    circuit.add(gates.fSim(0, 1, 0.05, 0.02))
+
+    exact = generate_preset_passes(connectivity, backend=backend)
+    approximate = generate_preset_passes(
+        connectivity, approximation_degree=0.9, backend=backend
+    )
+
+    assert _count_two_qubit_gates(exact(circuit, backend=backend)[0]) > 0
+    assert _count_two_qubit_gates(approximate(circuit, backend=backend)[0]) == 0
+
+
+@pytest.mark.parametrize("connectivity", [None, nx.path_graph(3)])
+@pytest.mark.parametrize("degree", [-0.5, 2.0])
+def test_generate_preset_passes_approximation_degree_error(connectivity, degree):
+    with pytest.raises(ValueError, match="approximation_degree"):
+        generate_preset_passes(connectivity, approximation_degree=degree)
