@@ -6,7 +6,7 @@ import random
 import pytest
 
 from qibo import Circuit, gates
-from qibo.models import FPQAA, QAA, QSearch, amplification_operator
+from qibo.models import FPQAA, OAA, QAA, QSearch, amplification_operator
 from qibo.quantum_info import random_unitary
 
 
@@ -232,6 +232,132 @@ def test_fpqaa_qubits(backend):
     # without iterations, the circuit is the algorithm
     circuit = FPQAA(algorithm, oracle, 0.2, 0, measure=False, backend=backend)
     assert len(circuit.queue) == len(algorithm.queue)
+
+
+@pytest.mark.parametrize("exact", [False, True])
+def test_oaa_density_matrix(backend, exact):
+    theta = math.pi / 6
+    unitary, _ = _oblivious_problem(backend, 1, 1, theta, seed=0)
+    circuit = OAA(
+        unitary, 1, probability=0.25, exact=exact, density_matrix=True, backend=backend
+    )
+
+    assert circuit.density_matrix
+    assert circuit.nqubits == (3 if exact else 2)
+
+    # the probability of the zero state of the auxiliary qubits is 1, for the input state |00>
+    state = backend.execute_circuit(circuit).state()
+    probabilities = backend.diag(state)
+    backend.assert_allclose(
+        backend.sum(probabilities[: 2 ** (circuit.nqubits - 1)]),
+        1.0,
+        atol=1e-8,
+        rtol=0.0,
+    )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"niterations": 1, "probability": 0.5},
+        {"niterations": 1, "exact": True},
+        {"niterations": -1},
+        {"niterations": 1.5},
+        {"niterations": True},
+        {"probability": 0.0},
+        {"probability": 1.5},
+        {"probability": "0.5"},
+        {"niterations": 1, "nauxiliary": 0},
+        {"niterations": 1, "nauxiliary": 3},
+        {"niterations": 1, "nauxiliary": 1.0},
+        {"niterations": 1, "nauxiliary": True},
+    ],
+)
+def test_oaa_errors(kwargs):
+    unitary = Circuit(2)
+    unitary.add(gates.RY(0, theta=0.3))
+    kwargs = {"nauxiliary": 1, **kwargs}
+
+    with pytest.raises(ValueError):
+        OAA(unitary, **kwargs)
+
+    with pytest.raises(TypeError):
+        OAA(unitary.queue, 1, niterations=1)
+
+    measured = Circuit(2)
+    measured.add(gates.M(0))
+    with pytest.raises(ValueError):
+        OAA(measured, 1, niterations=1)
+
+
+@pytest.mark.parametrize("seed", [0, 1])
+@pytest.mark.parametrize("theta", [0.1, 0.3, math.pi / 6, 0.9, math.pi / 2])
+@pytest.mark.parametrize("nsystem", [1, 2])
+@pytest.mark.parametrize("nauxiliary", [1, 2, 3])
+def test_oaa_exact(backend, nauxiliary, nsystem, theta, seed):
+    """The unitary V is implemented exactly, for any input state."""
+    unitary, matrix = _oblivious_problem(backend, nauxiliary, nsystem, theta, seed)
+
+    circuit = OAA(
+        unitary,
+        nauxiliary,
+        probability=float(backend.sin(theta) ** 2),
+        exact=True,
+        backend=backend,
+    )
+    assert circuit.nqubits == unitary.nqubits + 1
+
+    state, psi = _oblivious_output(backend, circuit, nauxiliary, nsystem, seed + 10)
+
+    # the auxiliary qubits and the extra qubit, which is the last one, are in the state 0
+    backend.assert_allclose(
+        state[: 2 ** (nsystem + 1) : 2], matrix @ psi, atol=1e-8, rtol=0.0
+    )
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+@pytest.mark.parametrize("niterations", [0, 1, 2, 3])
+@pytest.mark.parametrize("theta", [0.3, math.pi / 6, 1.0])
+@pytest.mark.parametrize("nsystem", [1, 2])
+@pytest.mark.parametrize("nauxiliary", [1, 2, 3])
+def test_oaa_niterations(backend, nauxiliary, nsystem, theta, niterations, seed):
+    """The amplitude of V is sin((2l + 1) theta), for any input state."""
+    unitary, matrix = _oblivious_problem(backend, nauxiliary, nsystem, theta, seed)
+
+    circuit = OAA(unitary, nauxiliary, niterations=niterations, backend=backend)
+    assert circuit.nqubits == unitary.nqubits
+    assert len(circuit.queue) >= len(unitary.queue)
+
+    state, psi = _oblivious_output(backend, circuit, nauxiliary, nsystem, seed + 10)
+
+    amplitude = backend.sin((2 * niterations + 1) * theta)
+    backend.assert_allclose(
+        state[: 2**nsystem], amplitude * (matrix @ psi), atol=1e-8, rtol=0.0
+    )
+
+
+@pytest.mark.parametrize("theta", [0.2, 0.5, 0.8, 1.2])
+def test_oaa_probability(backend, theta):
+    """The probability is at least max(p, 1 - p) with l = floor(pi / (4 theta))."""
+    unitary, _ = _oblivious_problem(backend, 1, 2, theta, seed=3)
+
+    probability = float(backend.sin(theta) ** 2)
+    niterations = int(backend.floor(math.pi / (4 * theta)))
+    circuit = OAA(unitary, 1, probability=probability, backend=backend)
+    expected = OAA(unitary, 1, niterations=niterations, backend=backend)
+    assert len(circuit.queue) == len(expected.queue)
+
+    state, _ = _oblivious_output(backend, circuit, 1, 2, seed=4)
+    success = backend.sum(backend.abs(state[:4]) ** 2)
+
+    assert success >= max(probability, 1 - probability) - 1e-8
+    backend.assert_allclose(
+        success,
+        backend.sin((2 * niterations + 1) * theta) ** 2,
+        atol=1e-8,
+        rtol=0.0,
+    )
 
 
 @pytest.mark.parametrize("measure", [False, True])

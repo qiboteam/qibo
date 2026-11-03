@@ -227,7 +227,7 @@ def FPQAA(
     """
     backend = _check_backend(backend)
 
-    nqubits = _check_circuits(algorithm, oracle)
+    nqubits = _check_circuits(algorithm=algorithm, oracle=oracle)
 
     if isinstance(delta, bool) or not isinstance(delta, Real) or not 0 <= delta <= 1:
         raise_error(
@@ -331,6 +331,7 @@ def OAA(
     niterations: int | None = None,
     probability: float | None = None,
     exact: bool = False,
+    backend: Backend = None,
     **kwargs,
 ) -> Circuit:
     """Create a circuit that implements Oblivious Amplitude Amplification (OAA).
@@ -426,6 +427,9 @@ def OAA(
             number of iterations is computed. Defaults to ``None``.
         exact (bool, optional): If ``True``, :math:`V` is implemented exactly, which requires
             ``probability``. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
+            calculation of the number of iterations and of the rotation angle. If ``None``, it
+            uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize
             :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
             see the documentation of :class:`qibo.models.circuit.Circuit`.
@@ -439,6 +443,8 @@ def OAA(
         improvement in precision for simulating sparse Hamiltonians*, `Forum Math. Sigma 5, e8
         (2017) <https://doi.org/10.1017/fms.2017.2>`_.
     """
+    backend = _check_backend(backend)
+
     nqubits = _check_circuits(unitary=unitary)
 
     if (
@@ -452,7 +458,9 @@ def OAA(
             + f"but it is {nauxiliary}.",
         )
 
-    niterations, probability = _check_iterations(niterations, probability, exact)
+    niterations, probability = _check_iterations(
+        niterations, probability, exact, backend
+    )
 
     auxiliary = list(range(nauxiliary))
 
@@ -461,8 +469,10 @@ def OAA(
     if exact:
         # the extra qubit lowers the amplitude to sin(pi / (4l + 2)), for which l iterations
         # implement V with certainty, and it has to be found in the state 0
-        reduced = math.sin(math.pi / (4 * niterations + 2))
-        rotation = 2 * math.acos(min(reduced / math.sqrt(probability), 1.0))
+        reduced = backend.sin(math.pi / (4 * niterations + 2))
+        rotation = float(
+            2 * backend.arccos(min(reduced / backend.sqrt(probability), 1.0))
+        )
         circuit.add(gates.RY(nqubits, theta=rotation))
         auxiliary.append(nqubits)
 
@@ -583,47 +593,12 @@ def QAA(
     """
     backend = _check_backend(backend)
 
-    nqubits = _check_circuits(algorithm, oracle)
-
-    if (niterations is None) == (probability is None):
-        raise_error(
-            ValueError,
-            "Exactly one of niterations and probability must be given, "
-            + f"but niterations is {niterations} and probability is {probability}.",
-        )
-
-    if exact and probability is None:
-        raise_error(ValueError, "exact=True requires probability.")
-
-    if niterations is not None and (
-        isinstance(niterations, bool)
-        or not isinstance(niterations, Integral)
-        or niterations < 0
-    ):
-        raise_error(
-            ValueError,
-            f"niterations must be a non-negative integer, but it is {niterations}.",
-        )
-
-    if probability is not None and (
-        isinstance(probability, bool)
-        or not isinstance(probability, Real)
-        or not 0 < probability <= 1
-    ):
-        raise_error(
-            ValueError,
-            f"probability must be in the interval (0, 1], but it is {probability}.",
-        )
+    nqubits = _check_circuits(algorithm=algorithm, oracle=oracle)
+    niterations, probability = _check_iterations(
+        niterations, probability, exact, backend
+    )
 
     qubits = list(range(nqubits))
-
-    if probability is not None:
-        angle = float(backend.arcsin(backend.sqrt(probability)))
-        niterations = (
-            int(backend.ceil(max(math.pi / (4 * angle) - 1 / 2, 0)))
-            if exact
-            else int(backend.floor(math.pi / (4 * angle)))
-        )
 
     circuit = Circuit(nqubits + 1 if exact else nqubits, **kwargs)
     circuit.add(algorithm.on_qubits(*qubits))
@@ -798,7 +773,10 @@ def _check_circuits(**circuits: Circuit) -> int:
 
 
 def _check_iterations(
-    niterations: int | None, probability: float | None, exact: bool
+    niterations: int | None,
+    probability: float | None,
+    exact: bool,
+    backend: Backend = None,
 ) -> tuple[int, float | None]:
     """Checks the arguments that determine the number of iterations of the amplification.
 
@@ -806,11 +784,16 @@ def _check_iterations(
         niterations (int, optional): number of iterations, or ``None``.
         probability (float, optional): probability of measuring a good state, or ``None``.
         exact (bool): whether the good state has to be found with certainty.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
+            calculation of the number of iterations. If ``None``, it uses the current backend.
+            Defaults to ``None``.
 
     Returns:
         tuple: the number of iterations, which is computed from ``probability`` if
         ``niterations`` is ``None``, and ``probability``.
     """
+    backend = _check_backend(backend)
+
     if (niterations is None) == (probability is None):
         raise_error(
             ValueError,
@@ -844,8 +827,9 @@ def _check_iterations(
     if probability is None:
         return int(niterations), None
 
-    angle = math.asin(math.sqrt(probability))
+    angle = float(backend.arcsin(backend.sqrt(probability)))
     if exact:
-        return math.ceil(max(math.pi / (4 * angle) - 1 / 2, 0)), float(probability)
+        niterations = int(backend.ceil(max(math.pi / (4 * angle) - 1 / 2, 0)))
+        return niterations, float(probability)
 
-    return math.floor(math.pi / (4 * angle)), float(probability)
+    return int(backend.floor(math.pi / (4 * angle))), float(probability)
