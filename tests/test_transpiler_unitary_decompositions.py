@@ -5,7 +5,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.quantum_info.linalg_operations import partial_trace
-from qibo.quantum_info.metrics import purity
+from qibo.quantum_info.metrics import average_gate_fidelity, purity
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler import Optimize1qGatesDecomposition
 from qibo.transpiler._exceptions import DecompositionError
@@ -34,6 +34,26 @@ def bell_unitary(hx, hy, hz, backend):
     )
 
     return backend.expm(-1j * ham)
+
+
+def approximation_fidelities(hx, hy, hz):
+    """Average gate fidelities of the best approximations with 0, 1, 2 and 3 CZ gates.
+
+    The Weyl coordinates are sorted, with :math:`\\pi / 4 \\geq h_{x} \\geq h_{y} \\geq |h_{z}|`.
+    """
+
+    def process(x, y, z):
+        return (math.cos(x) * math.cos(y) * math.cos(z)) ** 2 + (
+            math.sin(x) * math.sin(y) * math.sin(z)
+        ) ** 2
+
+    processes = (
+        process(hx, hy, hz),
+        process(hx - math.pi / 4, hy, hz),
+        math.cos(hz) ** 2,
+        1.0,
+    )
+    return [(4 * fidelity + 1) / 5 for fidelity in processes]
 
 
 def assert_single_qubits(backend, psi, ua, ub):
@@ -595,3 +615,89 @@ def test_two_qubit_decomposition_real_matrix(backend, gate, cz_count):
     circuit = Circuit(2)
     circuit.add(decomposition)
     backend.assert_allclose(circuit.unitary(backend), matrix, atol=1e-8, rtol=1e-8)
+
+
+@pytest.mark.parametrize("degree", [0.0, 0.8, 0.9, 0.95, 0.99, 1.0])
+@pytest.mark.parametrize(
+    "coordinates",
+    [(0.5, 0.3, 0.1), (0.7, 0.1, 0.05), (0.4, 0.2, 0.0), (math.pi / 4, 0.0, 0.0)],
+)
+def test_two_qubit_decomposition_approximation(backend, coordinates, degree):
+    """The decomposition has the number of CZ gates that maximizes the fidelity."""
+    fidelities = approximation_fidelities(*coordinates)
+    expected = max(range(4), key=lambda count: fidelities[count] * degree**count)
+
+    left = backend.kron(
+        random_unitary(2, seed=1, backend=backend),
+        random_unitary(2, seed=2, backend=backend),
+    )
+    right = backend.kron(
+        random_unitary(2, seed=3, backend=backend),
+        random_unitary(2, seed=4, backend=backend),
+    )
+    matrix = left @ bell_unitary(*coordinates, backend) @ right
+
+    decomposition = two_qubit_decomposition(
+        0, 1, matrix, approximation_degree=degree, backend=backend
+    )
+    circuit = Circuit(2)
+    circuit.add(decomposition)
+    unitary = circuit.unitary(backend)
+
+    assert sum(isinstance(gate, gates.CZ) for gate in decomposition) == expected
+    channel = lambda array: backend.kron(array, backend.conj(array))
+    fidelity = average_gate_fidelity(channel(unitary), channel(matrix), backend=backend)
+    backend.assert_allclose(fidelity, fidelities[expected], atol=1e-6)
+    if degree == 1.0:
+        backend.assert_allclose(unitary, matrix, atol=1e-6)
+
+
+def test_two_qubit_decomposition_approximation_degree_one_is_default(backend):
+    matrix = random_unitary(4, seed=7, backend=backend)
+    default = two_qubit_decomposition(0, 1, matrix, backend=backend)
+    exact = two_qubit_decomposition(
+        0, 1, matrix, approximation_degree=1.0, backend=backend
+    )
+    assert [gate.name for gate in default] == [gate.name for gate in exact]
+
+
+@pytest.mark.parametrize("degree", [0.0, 0.5])
+def test_two_qubit_decomposition_approximation_product_of_single_qubit_gates(
+    backend, degree
+):
+    """A product of single-qubit gates is exact, as it needs no CZ gate."""
+    matrix = backend.kron(
+        random_unitary(2, seed=5, backend=backend),
+        random_unitary(2, seed=6, backend=backend),
+    )
+
+    decomposition = two_qubit_decomposition(
+        0, 1, matrix, approximation_degree=degree, backend=backend
+    )
+    circuit = Circuit(2)
+    circuit.add(decomposition)
+
+    assert [len(gate.qubits) for gate in decomposition] == [1, 1]
+    backend.assert_allclose(circuit.unitary(backend), matrix, atol=1e-6)
+
+
+@pytest.mark.parametrize("degree", [-0.1, 1.1])
+def test_two_qubit_decomposition_approximation_degree_error(backend, degree):
+    matrix = random_unitary(4, seed=1, backend=backend)
+    with pytest.raises(ValueError, match="approximation_degree"):
+        two_qubit_decomposition(
+            0, 1, matrix, approximation_degree=degree, backend=backend
+        )
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_weyl_decomposition_coordinates_are_sorted(backend, seed):
+    """The approximations with fewer CZ gates rely on the sorting of the coordinates.
+
+    The distances of the coordinates to the multiples of pi / 2 decrease.
+    """
+    matrix = random_unitary(4, seed=seed, backend=backend)
+    _, coordinates, _ = weyl_decomposition(matrix, backend=backend)
+    distances = [abs(math.remainder(h, math.pi / 2)) for h in coordinates]
+    assert distances[0] >= distances[1] - 1e-9
+    assert distances[1] >= distances[2] - 1e-9
