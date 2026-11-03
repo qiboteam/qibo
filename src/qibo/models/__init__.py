@@ -26,6 +26,7 @@ from qibo.models.error_mitigation import CDR, ICS, ZNE, vnCDR
 from qibo.models.evolution import AdiabaticEvolution, StateEvolution
 from qibo.models.grover import Grover
 from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
+from qibo.models.qaa import QAA, QSearch, amplification_operator
 from qibo.models.qft import QFT
 from qibo.models.qpe import IQPE, QPE
 from qibo.models.qsp import qsp_circuit, qsp_phases
@@ -38,6 +39,7 @@ __all__ = [
     "FALQON",
     "ICS",
     "IQPE",
+    "QAA",
     "QAOA",
     "QFT",
     "QPE",
@@ -47,7 +49,9 @@ __all__ = [
     "Circuit",
     "DoubleBracketIteration",
     "Grover",
+    "QSearch",
     "StateEvolution",
+    "amplification_operator",
     "binary_encoder",
     "block_encoding_circuit",
     "comp_basis_encoder",
