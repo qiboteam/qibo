@@ -295,6 +295,7 @@ def FPQAA(
     ]
 
     # the oracle flips the auxiliary qubit if and only if the state is good
+    all_qubits = list(range(nqubits + 1))
     flip = Circuit(nqubits + 1, **kwargs)
     flip.add(gates.H(auxiliary))
     flip.add(oracle.controlled_by(auxiliary))
@@ -305,10 +306,11 @@ def FPQAA(
     circuit = Circuit(nqubits + 1, **kwargs)
     circuit.add(algorithm.on_qubits(*qubits))
     for alpha, beta in zip(alphas, [-alpha for alpha in reversed(alphas)]):
-        # S_chi(beta), which multiplies the good states by exp(i beta)
-        circuit.add(flip)
+        # S_chi(beta), which multiplies the good states by exp(i beta). New gates are used in
+        # each application, so that the parameters of each of them can be set independently
+        circuit.add(flip.on_qubits(*all_qubits))
         circuit.add(gates.U1(auxiliary, theta=beta))
-        circuit.add(flip)
+        circuit.add(flip.on_qubits(*all_qubits))
 
         # S_Psi(alpha) = A S_0(alpha) A^{-1}, where S_0(alpha) multiplies |0> by exp(-i alpha)
         circuit.add(inverse.on_qubits(*qubits))
