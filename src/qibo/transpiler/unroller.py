@@ -222,8 +222,6 @@ class Unroller:
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
             Native gates to use in the transpiled circuit. They must be universal,
             see :attr:`qibo.transpiler.unroller.NativeGates.is_universal`.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use for
-            gate matrix. Defaults to ``None``.
         use_dirty_ancillas (bool, optional): If ``True``, the qubits of the circuit
             that a multi-controlled gate does not act on are used as dirty auxiliary
             qubits in its decomposition, which makes the cost of a multi-controlled
@@ -265,6 +263,8 @@ class Unroller:
             :func:`qibo.transpiler.decompositions.unitary_decompositions.two_qubit_decomposition`.
             The other gates are decomposed exactly. Defaults to :math:`1`, which is the exact
             decomposition.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use for
+            gate matrix. Defaults to ``None``.
 
     Raises:
         ValueError: If ``approximation_degree`` is not between :math:`0` and :math:`1`.
@@ -273,13 +273,13 @@ class Unroller:
     def __init__(
         self,
         native_gates: NativeGates,
-        backend: Backend | None = None,
         use_dirty_ancillas: bool = False,
         min_qubits: int = 1,
         qubits_initially_zero: bool = False,
         minimize_toffolis: bool = False,
         minimize_depth: bool = False,
         approximation_degree: float = 1.0,
+        backend: Backend | None = None,
     ):
         if not native_gates.is_universal:
             raise_error(
@@ -377,12 +377,12 @@ class Unroller:
 def translate_gate(
     gate: Gate,
     native_gates: NativeGates,
-    backend: Backend | None = None,
     free: tuple[int, ...] = (),
     clean: tuple[int, ...] = (),
     minimize_toffolis: bool = False,
     minimize_depth: bool = False,
     approximation_degree: float = 1.0,
+    backend: Backend | None = None,
 ) -> list[Gate]:
     """Maps gates to a hardware-native implementation.
 
@@ -390,9 +390,6 @@ def translate_gate(
         gate (:class:`qibo.gates.abstract.Gate`): Gate to be decomposed.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
             Native gates supported by the hardware.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use
-            for gate matrix. If ``None``, defaults to the global backend.
-            Defaults to ``None``.
         free (tuple[int, ...], optional): Ids of free qubits that can be used as
             dirty auxiliary qubits to decompose multi-controlled gates. Defaults
             to an empty tuple, which uses no auxiliary qubits.
@@ -413,6 +410,9 @@ def translate_gate(
             that are decomposed from their matrix with fewer :class:`qibo.gates.CZ` gates,
             see :class:`qibo.transpiler.unroller.Unroller`. Defaults to :math:`1`, which
             is the exact decomposition.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use
+            for gate matrix. If ``None``, defaults to the global backend.
+            Defaults to ``None``.
 
     Returns:
         list[:class:`qibo.gates.abstract.Gate`]: Native gates that decompose the input gate.
@@ -500,7 +500,9 @@ def translate_gate(
             )
         translated = []
         for decomposed_gate in decomposed_gates:
-            translated.extend(translate_gate(decomposed_gate, native_gates, backend))
+            translated.extend(
+                translate_gate(decomposed_gate, native_gates, backend=backend)
+            )
         return merge_global_phases(translated)
 
     if len(gate.qubits) == 1:
@@ -513,7 +515,9 @@ def translate_gate(
         for decomposed_gate in quantum_shannon_decomposition(
             gate.qubits, gate.matrix(backend), backend=backend
         ):
-            translated.extend(translate_gate(decomposed_gate, native_gates, backend))
+            translated.extend(
+                translate_gate(decomposed_gate, native_gates, backend=backend)
+            )
         return merge_global_phases(translated)
 
     if (
@@ -537,7 +541,9 @@ def translate_gate(
             approximation_degree=approximation_degree,
             backend=backend,
         ):
-            translated.extend(translate_gate(decomposed_gate, native_gates, backend))
+            translated.extend(
+                translate_gate(decomposed_gate, native_gates, backend=backend)
+            )
         return merge_global_phases(translated)
 
     decomposition_2q = _translate_two_qubit_gates(gate, native_gates, backend)
