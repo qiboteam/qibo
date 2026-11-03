@@ -104,6 +104,7 @@ def FPQAA(
     niterations: int | None = None,
     probability: float | None = None,
     measure: bool = True,
+    backend: Backend = None,
     **kwargs,
 ) -> Circuit:
     """Creates a circuit that implements fixed-point Quantum Amplitude Amplification (FPQAA).
@@ -208,6 +209,9 @@ def FPQAA(
             iterations is computed. It requires :math:`\\delta > 0`. Defaults to ``None``.
         measure (bool, optional): If ``True``, adds a measurement of the qubits of
             ``algorithm`` at the end of the circuit. Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
+            calculation of the number of iterations and of the phases. If ``None``, it
+            uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize
             :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
             see the documentation of :class:`qibo.models.circuit.Circuit`.
@@ -221,6 +225,8 @@ def FPQAA(
         Number of Queries*, `Phys. Rev. Lett. 113, 210501 (2014)
         <https://doi.org/10.1103/PhysRevLett.113.210501>`_.
     """
+    backend = _check_backend(backend)
+
     nqubits = _check_circuits(algorithm, oracle)
 
     if isinstance(delta, bool) or not isinstance(delta, Real) or not 0 <= delta <= 1:
@@ -262,14 +268,29 @@ def FPQAA(
 
     if probability is not None:
         # L is the smallest odd integer such that the fixed-point bound holds for probability
-        width = math.inf if probability == 1 else math.atanh(math.sqrt(probability))
-        niterations = max(math.ceil((math.acosh(1 / delta) / width - 1) / 2), 0)
+        width = (
+            math.inf
+            if probability == 1
+            else float(backend.arctanh(backend.sqrt(probability)))
+        )
+        niterations = max(
+            int(backend.ceil((backend.arccosh(1 / delta) / width - 1) / 2)), 0
+        )
 
     length = 2 * niterations + 1
-    gamma = 0.0 if delta == 0 else 1 / math.cosh(math.acosh(1 / delta) / length)
+    gamma = (
+        0.0
+        if delta == 0
+        else float(1 / backend.cosh(backend.arccosh(1 / delta) / length))
+    )
+    # the phases are 2 cot^{-1}(x), which for x in the real line is 2 arctan2(1, x)
     alphas = [
-        math.pi
-        - 2 * math.atan(math.tan(2 * math.pi * j / length) * math.sqrt(1 - gamma**2))
+        float(
+            2
+            * backend.arctan2(
+                1.0, backend.tan(2 * math.pi * j / length) * backend.sqrt(1 - gamma**2)
+            )
+        )
         for j in range(1, niterations + 1)
     ]
 

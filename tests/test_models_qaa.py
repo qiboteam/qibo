@@ -69,8 +69,12 @@ def test_fpqaa_delta_one(backend):
     algorithm, oracle, good = _problem(backend, 3, seed=7)
 
     for niterations in range(5):
-        fixed_point = FPQAA(algorithm, oracle, 1.0, niterations, measure=False)
-        grover = QAA(algorithm, oracle, niterations=niterations, measure=False)
+        fixed_point = FPQAA(
+            algorithm, oracle, 1.0, niterations, measure=False, backend=backend
+        )
+        grover = QAA(
+            algorithm, oracle, niterations=niterations, measure=False, backend=backend
+        )
 
         backend.assert_allclose(
             _good_probability(backend, fixed_point, [2 * index for index in good]),
@@ -83,8 +87,8 @@ def test_fpqaa_delta_one(backend):
 @pytest.mark.parametrize("measure", [False, True])
 def test_fpqaa_density_matrix(backend, measure):
     algorithm, oracle = _grover(2)
-    circuit = QAA(
-        algorithm, oracle, niterations=1, density_matrix=True, backend=backend
+    circuit = FPQAA(
+        algorithm, oracle, 0.1, 3, measure=measure, density_matrix=True, backend=backend
     )
 
     assert circuit.density_matrix
@@ -125,13 +129,15 @@ def test_fpqaa_errors(kwargs):
 def test_fpqaa_fixed_point(backend, bound, delta):
     """The failure probability stays bounded for every probability above the bound,
     even if the number of iterations is increased."""
-    niterations = math.ceil(
-        (math.acosh(1 / delta) / math.atanh(math.sqrt(bound)) - 1) / 2
+    niterations = int(
+        backend.ceil(
+            (backend.arccosh(1 / delta) / backend.arctanh(backend.sqrt(bound)) - 1) / 2
+        )
     )
 
     for extra in (0, 1, 4):
         for angle in (0.1, 0.3, 0.6, 1.0, 1.4):
-            initial = math.sin(angle) ** 2
+            initial = backend.sin(angle) ** 2
             if initial < bound:
                 continue
 
@@ -140,7 +146,12 @@ def test_fpqaa_fixed_point(backend, bound, delta):
             oracle.add(gates.Z(0))
 
             circuit = FPQAA(
-                algorithm, oracle, delta, niterations + extra, measure=False
+                algorithm,
+                oracle,
+                delta,
+                niterations + extra,
+                measure=False,
+                backend=backend,
             )
             assert _good_probability(backend, circuit, [2]) >= 1 - delta**2 - 1e-8
 
@@ -154,14 +165,16 @@ def test_fpqaa_probability_equation(backend, nqubits, seed, niterations, delta):
     algorithm, oracle, good = _problem(backend, nqubits, seed=seed + 10 * nqubits)
 
     initial = float(_good_probability(backend, algorithm, good))
-    circuit = FPQAA(algorithm, oracle, delta, niterations, measure=False)
+    circuit = FPQAA(
+        algorithm, oracle, delta, niterations, measure=False, backend=backend
+    )
 
     assert circuit.nqubits == nqubits + 1
 
     # the good states are measured with the auxiliary qubit, the last one, in the state 0
     backend.assert_allclose(
         _good_probability(backend, circuit, [2 * index for index in good]),
-        _fixed_point_probability(initial, 2 * niterations + 1, delta),
+        _fixed_point_probability(backend, initial, 2 * niterations + 1, delta),
         atol=1e-8,
         rtol=0.0,
     )
@@ -173,19 +186,25 @@ def test_fpqaa_probability_equation(backend, nqubits, seed, niterations, delta):
     )
 
 
-@pytest.mark.parametrize("delta", [0.1, 0.5, 1.0])
-@pytest.mark.parametrize("bound", [0.02, 0.25, 1.0])
+@pytest.mark.parametrize("delta", [0.01, 0.1, 0.5, 1.0])
+@pytest.mark.parametrize("bound", [0.02, 0.25, 0.9, 1.0])
 def test_fpqaa_probability_iterations(backend, bound, delta):
     """The number of iterations is the smallest one that satisfies the bound."""
     algorithm, oracle = Circuit(1), Circuit(1)
-    algorithm.add(gates.RY(0, theta=2 * math.asin(math.sqrt(bound))))
+    algorithm.add(gates.RY(0, theta=float(2 * backend.arcsin(backend.sqrt(bound)))))
     oracle.add(gates.Z(0))
 
-    width = math.inf if bound == 1 else math.atanh(math.sqrt(bound))
-    niterations = max(math.ceil((math.acosh(1 / delta) / width - 1) / 2), 0)
+    width = math.inf if bound == 1 else backend.arctanh(backend.sqrt(bound))
+    niterations = max(
+        int(backend.ceil((backend.arccosh(1 / delta) / width - 1) / 2)), 0
+    )
 
-    circuit = FPQAA(algorithm, oracle, delta, probability=bound, measure=False)
-    expected = FPQAA(algorithm, oracle, delta, niterations, measure=False)
+    circuit = FPQAA(
+        algorithm, oracle, delta, probability=bound, measure=False, backend=backend
+    )
+    expected = FPQAA(
+        algorithm, oracle, delta, niterations, measure=False, backend=backend
+    )
     assert len(circuit.queue) == len(expected.queue)
 
     success = _good_probability(backend, circuit, [2])
@@ -193,53 +212,38 @@ def test_fpqaa_probability_iterations(backend, bound, delta):
 
     # one iteration less cannot satisfy the bound, unless delta is 1 and it is trivial
     if niterations > 0:
-        fewer = FPQAA(algorithm, oracle, delta, niterations - 1, measure=False)
+        fewer = FPQAA(
+            algorithm, oracle, delta, niterations - 1, measure=False, backend=backend
+        )
         assert _good_probability(backend, fewer, [2]) < 1 - delta**2
 
 
 def test_fpqaa_qubits(backend):
     algorithm, oracle = _grover(3)
 
-    circuit = FPQAA(algorithm, oracle, 0.2, 2, measure=False)
+    circuit = FPQAA(algorithm, oracle, 0.2, 2, measure=False, backend=backend)
     assert circuit.nqubits == 4
     assert len(circuit.measurements) == 0
 
     # the auxiliary qubit is not measured
-    circuit = FPQAA(algorithm, oracle, 0.2, 2)
+    circuit = FPQAA(algorithm, oracle, 0.2, 2, backend=backend)
     assert circuit.measurements[0].target_qubits == (0, 1, 2)
 
     # without iterations, the circuit is the algorithm
-    circuit = FPQAA(algorithm, oracle, 0.2, 0, measure=False)
+    circuit = FPQAA(algorithm, oracle, 0.2, 0, measure=False, backend=backend)
     assert len(circuit.queue) == len(algorithm.queue)
-
-
-@pytest.mark.parametrize("niterations", [0, 1, 2, 3, 6])
-@pytest.mark.parametrize("nqubits", [2, 3])
-def test_qaa_niterations(backend, nqubits, niterations):
-    """After m iterations the success probability is sin^2((2m + 1) theta)."""
-    algorithm, oracle, good = _problem(backend, nqubits, seed=10 * nqubits)
-
-    initial = _good_probability(backend, algorithm, good)
-    theta = backend.arcsin(backend.sqrt(initial))
-    circuit = QAA(algorithm, oracle, niterations=niterations, measure=False)
-
-    assert circuit.nqubits == nqubits
-    assert len(circuit.queue) == len(algorithm.queue) + niterations * len(
-        amplification_operator(algorithm, oracle).queue
-    )
-    backend.assert_allclose(
-        _good_probability(backend, circuit, good),
-        backend.sin((2 * niterations + 1) * theta) ** 2,
-        atol=1e-8,
-        rtol=0.0,
-    )
 
 
 @pytest.mark.parametrize("measure", [False, True])
 def test_qaa_density_matrix(backend, measure):
     algorithm, oracle = _grover(2)
     circuit = QAA(
-        algorithm, oracle, niterations=1, measure=measure, density_matrix=True
+        algorithm,
+        oracle,
+        niterations=1,
+        measure=measure,
+        density_matrix=True,
+        backend=backend,
     )
 
     assert circuit.density_matrix
@@ -274,7 +278,7 @@ def test_qaa_exact(backend, nqubits, seed):
     """A good state is found with certainty when the probability is known."""
     algorithm, oracle, good = _problem(backend, nqubits, seed=seed + 100 * nqubits)
 
-    initial = _good_probability(backend, algorithm, good)
+    initial = float(_good_probability(backend, algorithm, good))
     circuit = QAA(
         algorithm,
         oracle,
@@ -374,8 +378,11 @@ def test_qaa_niterations(backend, nqubits, niterations):
     assert len(circuit.queue) == len(algorithm.queue) + niterations * len(
         amplification_operator(algorithm, oracle).queue
     )
-    assert _good_probability(backend, circuit, good) == pytest.approx(
-        backend.sin((2 * niterations + 1) * theta) ** 2, abs=1e-8
+    backend.assert_allclose(
+        _good_probability(backend, circuit, good),
+        backend.sin((2 * niterations + 1) * theta) ** 2,
+        atol=1e-8,
+        rtol=0.0,
     )
 
 
@@ -384,7 +391,7 @@ def test_qaa_probability(backend, seed):
     """The probability is at least max(a, 1 - a) with m = floor(pi / (4 theta))."""
     algorithm, oracle, good = _problem(backend, 3, seed=seed)
 
-    initial = _good_probability(backend, algorithm, good)
+    initial = float(_good_probability(backend, algorithm, good))
     niterations = int(
         backend.floor(math.pi / (4 * backend.arcsin(backend.sqrt(initial))))
     )
@@ -468,20 +475,24 @@ def test_qsearch_probability_one(backend):
     assert result == ("1", 1)
 
 
-def _chebyshev(degree, x):
+def _chebyshev(backend, degree, x):
     """Chebyshev polynomial of the first kind, which is extended for ``x > 1``."""
     if abs(x) <= 1:
-        return math.cos(degree * math.acos(x))
-    return math.cosh(degree * math.acosh(x))
+        return backend.cos(degree * backend.arccos(x))
+    return backend.cosh(degree * backend.arccosh(x))
 
 
-def _fixed_point_probability(initial, length, delta):
+def _fixed_point_probability(backend, initial, length, delta):
     """Success probability of the fixed-point amplification."""
     if delta == 0:
         return 1 - (1 - initial) ** length
 
-    factor = math.cosh(math.acosh(1 / delta) / length)
-    return 1 - delta**2 * _chebyshev(length, factor * math.sqrt(1 - initial)) ** 2
+    factor = backend.cosh(backend.arccosh(1 / delta) / length)
+    return (
+        1
+        - delta**2
+        * _chebyshev(backend, length, factor * backend.sqrt(1 - initial)) ** 2
+    )
 
 
 def _good_probability(backend, circuit, good):
