@@ -438,6 +438,19 @@ class Backend:
         """
         return self.engine.arccos(array, **kwargs)
 
+    def arccosh(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the element-wise inverse hyperbolic cosine of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``arccosh`` of.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise inverse hyperbolic cosine of elements in ``array``.
+        """
+        return self.engine.arccosh(array, **kwargs)
+
     def arcsin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         """Calculate the element-wise inverse sine of values in ``array``.
 
@@ -473,6 +486,19 @@ class Backend:
             ArrayLike: Array of angles in radians, in the range :math:`[-\\pi, \\, \\pi]`.
         """
         return self.engine.arctan2(array_1, array_2, **kwargs)
+
+    def arctanh(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the element-wise inverse hyperbolic tangent of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``arctanh`` of.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise inverse hyperbolic tangent of elements in ``array``.
+        """
+        return self.engine.arctanh(array, **kwargs)
 
     def argmax(self, array: ArrayLike, axis: int | None = None, **kwargs) -> ArrayLike:
         """Return the indices of the maximum values in ``array`` along an ``axis``.
@@ -682,6 +708,19 @@ class Backend:
             ArrayLike: Array with the element-wise cosine of elements in `array``.
         """
         return self.engine.cos(array, **kwargs)
+
+    def cosh(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the element-wise hyperbolic cosine of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``cosh`` of.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise hyperbolic cosine of elements in ``array``.
+        """
+        return self.engine.cosh(array, **kwargs)
 
     def cosine_sin_decomposition(
         self, array: ArrayLike, block_nrows: int, block_ncols: int
@@ -1931,6 +1970,19 @@ class Backend:
             ArrayLike: The resulting array with two swapped axes.
         """
         return self.engine.swapaxes(array, axis_1, axis_2)
+
+    def tan(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        """Calculate the element-wise tangent of values in ``array``.
+
+        Args:
+            array (ArrayLike): array to calculate ``tan`` of.
+            kwargs (optional): additional options for this function.
+                For more details, see the corresponding engine's documentation.
+
+        Returns:
+            ArrayLike: Array with the element-wise tangent of elements in ``array``.
+        """
+        return self.engine.tan(array, **kwargs)
 
     def tanh(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         """Calculate the element-wise hyperbolic tangent of values in ``array``.
