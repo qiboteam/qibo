@@ -6,7 +6,7 @@ import random
 import pytest
 
 from qibo import Circuit, gates
-from qibo.models import FPQAA, OAA, QAA, QSearch, amplification_operator
+from qibo.models import FPQAA, QAA, QSearch, amplification_operator
 from qibo.quantum_info import random_unitary
 
 
