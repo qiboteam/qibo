@@ -311,6 +311,7 @@ def QAA(
     probability: float | None = None,
     exact: bool = False,
     measure: bool = True,
+    backend: Backend = None,
     **kwargs,
 ) -> Circuit:
     """Creates a circuit that implements Quantum Amplitude Amplification (QAA).
@@ -360,6 +361,9 @@ def QAA(
             requires ``probability``. Defaults to ``False``.
         measure (bool, optional): If ``True``, adds a measurement of the qubits of
             ``algorithm`` at the end of the circuit. Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
+            calculation of the number of iterations and of the rotation angle. If ``None``, it
+            uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize
             :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
             see the documentation of :class:`qibo.models.circuit.Circuit`.
@@ -395,6 +399,8 @@ def QAA(
         Estimation*, `Contemporary Mathematics 305, 53 (2002)
         <https://doi.org/10.1090/conm/305/05215>`_.
     """
+    backend = _check_backend(backend)
+
     nqubits = _check_circuits(algorithm, oracle)
 
     if (niterations is None) == (probability is None):
@@ -430,11 +436,11 @@ def QAA(
     qubits = list(range(nqubits))
 
     if probability is not None:
-        angle = math.asin(math.sqrt(probability))
+        angle = float(backend.arcsin(backend.sqrt(probability)))
         niterations = (
-            math.ceil(max(math.pi / (4 * angle) - 1 / 2, 0))
+            int(backend.ceil(max(math.pi / (4 * angle) - 1 / 2, 0)))
             if exact
-            else math.floor(math.pi / (4 * angle))
+            else int(backend.floor(math.pi / (4 * angle)))
         )
 
     circuit = Circuit(nqubits + 1 if exact else nqubits, **kwargs)
@@ -442,8 +448,10 @@ def QAA(
     if exact:
         # the auxiliary qubit lowers the success probability to sin^2(pi / (4m + 2)),
         # for which m iterations are enough to find a good state with certainty
-        reduced = math.sin(math.pi / (4 * niterations + 2)) ** 2
-        rotation = 2 * math.asin(math.sqrt(min(reduced / probability, 1.0)))
+        reduced = backend.sin(math.pi / (4 * niterations + 2)) ** 2
+        rotation = float(
+            2 * backend.arcsin(backend.sqrt(min(reduced / probability, 1.0)))
+        )
         circuit.add(gates.RY(nqubits, theta=rotation))
         oracle = oracle.controlled_by(nqubits)
 
@@ -563,9 +571,9 @@ def QSearch(
 
     napplications = 0
     for step in range(1, max_rounds + 1):
-        maximum = math.ceil(growth**step)
+        maximum = int(backend.ceil(growth**step))
         for niterations in (0, int(generator.integers(1, maximum + 1))):
-            circuit = QAA(algorithm, oracle, niterations=niterations)
+            circuit = QAA(algorithm, oracle, niterations=niterations, backend=backend)
             outcome = backend.execute_circuit(circuit, nshots=1).frequencies()
             bitstring = next(iter(outcome))
 
