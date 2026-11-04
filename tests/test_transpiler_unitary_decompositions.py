@@ -2,10 +2,11 @@ import math
 
 import numpy as np
 import pytest
+from scipy.optimize import minimize
 
 from qibo import Circuit, gates
 from qibo.quantum_info.linalg_operations import partial_trace
-from qibo.quantum_info.metrics import average_gate_fidelity, purity
+from qibo.quantum_info.metrics import average_gate_fidelity, process_fidelity, purity
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler import Optimize1qGatesDecomposition
 from qibo.transpiler._exceptions import DecompositionError
@@ -54,6 +55,33 @@ def approximation_fidelities(hx, hy, hz):
         1.0,
     )
     return [(4 * fidelity + 1) / 5 for fidelity in processes]
+
+
+def max_process_fidelity(matrix, ncz, seed, backend):
+    """Highest process fidelity of ``matrix`` with a circuit of ``ncz`` CZ gates.
+
+    The circuit has arbitrary single-qubit gates, so the optimization is numerical.
+    """
+    cz = gates.CZ(0, 1).matrix(backend)
+    channel = lambda array: backend.kron(array, backend.conj(array))
+    target = channel(matrix)
+
+    def single_qubit(angles):
+        return gates.U3(0, *angles).matrix(backend)
+
+    def cost(angles):
+        layers = angles.reshape(ncz + 1, 2, 3)
+        circuit = backend.kron(single_qubit(layers[0, 0]), single_qubit(layers[0, 1]))
+        for layer in layers[1:]:
+            layer = backend.kron(single_qubit(layer[0]), single_qubit(layer[1]))
+            circuit = layer @ cz @ circuit
+        return -process_fidelity(channel(circuit), target, backend=backend)
+
+    rng = np.random.default_rng(seed)
+    return -min(
+        minimize(cost, rng.uniform(0, 2 * np.pi, 6 * (ncz + 1)), method="BFGS").fun
+        for _ in range(8)
+    )
 
 
 def assert_single_qubits(backend, psi, ua, ub):
@@ -701,3 +729,46 @@ def test_weyl_decomposition_coordinates_are_sorted(backend, seed):
     distances = [abs(math.remainder(h, math.pi / 2)) for h in coordinates]
     assert distances[0] >= distances[1] - 1e-9
     assert distances[1] >= distances[2] - 1e-9
+
+
+@pytest.mark.parametrize(
+    "coordinates, degree",
+    [((0.5, 0.3, 0.1), 0.9), ((0.7, 0.1, 0.05), 0.9), ((0.6, 0.4, -0.2), 0.95)],
+)
+def test_two_qubit_decomposition_approximation_is_optimal(backend, coordinates, degree):
+    """The approximation has the best expected fidelity of all circuits with CZ gates.
+
+    The best circuit with each number of CZ gates is found numerically.
+    """
+    left = backend.kron(
+        random_unitary(2, seed=11, backend=backend),
+        random_unitary(2, seed=12, backend=backend),
+    )
+    right = backend.kron(
+        random_unitary(2, seed=13, backend=backend),
+        random_unitary(2, seed=14, backend=backend),
+    )
+    matrix = left @ bell_unitary(*coordinates, backend) @ right
+
+    decomposition = two_qubit_decomposition(
+        0, 1, matrix, approximation_degree=degree, backend=backend
+    )
+    circuit = Circuit(2)
+    circuit.add(decomposition)
+    ncz = sum(isinstance(gate, gates.CZ) for gate in decomposition)
+    channel = lambda array: backend.kron(array, backend.conj(array))
+    score = average_gate_fidelity(
+        channel(circuit.unitary(backend)), channel(matrix), backend=backend
+    )
+    score *= degree**ncz
+
+    scores = [
+        (4 * max_process_fidelity(matrix, count, seed=0, backend=backend) + 1)
+        / 5
+        * degree**count
+        for count in range(3)
+    ]
+    best = max([*scores, degree**3])
+    # no circuit does better, and the optimization reaches the approximation
+    assert score >= best - 1e-6
+    assert best >= score - 1e-3

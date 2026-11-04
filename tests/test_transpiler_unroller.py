@@ -369,8 +369,8 @@ def test_translate_gate_free_qubits(backend):
     gate = gates.X(4).controlled_by(0, 1, 2, 3)
     natives = NativeGates.default()
 
-    without = translate_gate(gate, natives, backend)
-    with_free = translate_gate(gate, natives, backend, free=(5, 6))
+    without = translate_gate(gate, natives, backend=backend)
+    with_free = translate_gate(gate, natives, free=(5, 6), backend=backend)
 
     count = lambda gate_list: sum(isinstance(g, gates.CZ) for g in gate_list)
     assert count(with_free) < count(without)
