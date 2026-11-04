@@ -316,7 +316,7 @@ class QASMParser:
                 val = self._unroll_expression(getattr(expr, attr))
                 expr_dict[attr] += str(val)
 
-        return "".join(list(expr_dict.values()))
+        return f"({''.join(expr_dict.values())})"
 
     def _def_gate(self, definition):
         """Converts a :class:`openqasm3.ast.QuantumGateDefinition` statement
