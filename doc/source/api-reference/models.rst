@@ -148,10 +148,20 @@ what is known about :math:`a`, the following can be used:
 * :func:`qibo.models.qaa.QAA` builds the circuit :math:`\mathbf{Q}^{m}\mathcal{A}`, either with a
   chosen number :math:`m` of iterations, or with the number that is computed from a known
   :math:`a`, which can also find a good state with certainty;
+* :func:`qibo.models.qaa.FPQAA` builds a fixed-point version, which only needs a lower bound of
+  :math:`a`, and whose failure probability stays below a chosen bound if more iterations are
+  applied, while keeping the quadratic speedup;
+* :func:`qibo.models.qaa.OAA` builds an oblivious version, which amplifies the amplitude with
+  which a circuit implements a unitary on an input state that is unknown, so that the reflection
+  about that state, which is not available, is not needed;
 * :func:`qibo.models.qaa.QSearch` finds a good state when :math:`a` is unknown, by running circuits
   with an exponentially increasing number of iterations.
 
 .. autofunction:: qibo.models.qaa.amplification_operator
+
+.. autofunction:: qibo.models.qaa.FPQAA
+
+.. autofunction:: qibo.models.qaa.OAA
 
 .. autofunction:: qibo.models.qaa.QAA
 
