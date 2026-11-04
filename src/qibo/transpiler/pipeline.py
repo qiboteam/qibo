@@ -236,6 +236,7 @@ def generate_preset_passes(
     use_dirty_ancillas: bool = True,
     minimize_toffolis: bool | None = None,
     minimize_depth: bool = False,
+    routing_trials: int = 5,
     backend: Backend | None = None,
 ) -> Passes:
     """Generate a ready-to-use transpiler pipeline that does not optimize the circuit.
@@ -256,7 +257,7 @@ def generate_preset_passes(
     4. The placer selected by ``layout_method``, if it is not the trivial one.
     5. The router selected by ``routing_method``, which adds the SWAP gates that make all
        the gates executable. By default, it is :class:`qibo.transpiler.router.Sabre`
-       with the best of five trials.
+       with the best of ``routing_trials`` trials.
     6. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates,
        approximating some two-qubit gates with fewer entangling gates if
        ``approximation_degree`` is lower than :math:`1`.
@@ -309,7 +310,8 @@ def generate_preset_passes(
             requires ``connectivity``. Defaults to ``None``, which is ``"trivial"``.
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuit executable. It can be ``"sabre"``
-            (:class:`qibo.transpiler.router.Sabre` with five trials), ``"shortest_paths"``
+            (:class:`qibo.transpiler.router.Sabre` with ``routing_trials`` trials),
+            ``"shortest_paths"``
             (:class:`qibo.transpiler.router.ShortestPaths`), ``"star"``
             (:class:`qibo.transpiler.router.StarConnectivityRouter`), ``"none"``
             (:class:`qibo.transpiler.router.NoRouting`, which raises an error if the
@@ -350,6 +352,10 @@ def generate_preset_passes(
             that is logarithmic in the number of controls, see
             :class:`qibo.transpiler.unroller.Unroller`. It cannot be used together with
             ``minimize_toffolis``. Defaults to ``False``.
+        routing_trials (int, optional): Number of independent routing attempts of the
+            ``"sabre"`` router, which keeps the best one, see
+            :class:`qibo.transpiler.router.Sabre`. It is not used by the other routers, nor
+            by the router of the ``"reverse_traversal"`` placer. Defaults to :math:`5`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -362,8 +368,9 @@ def generate_preset_passes(
             is given without ``connectivity``.
         PlacementError: If ``initial_layout`` is given with a non-trivial ``layout_method``.
         ValueError: If ``layout_method`` or ``routing_method`` is not a valid method, if
-            ``approximation_degree`` is not between :math:`0` and :math:`1`, or if
-            ``minimize_toffolis`` and ``minimize_depth`` are both ``True``.
+            ``approximation_degree`` is not between :math:`0` and :math:`1`, if
+            ``minimize_toffolis`` and ``minimize_depth`` are both ``True``, or if
+            ``routing_trials`` is not positive and the router is ``"sabre"``.
     """
     if connectivity is None and not (
         initial_layout is None and layout_method is None and routing_method is None
@@ -418,7 +425,7 @@ def generate_preset_passes(
     }
     routers = {
         "none": NoRouting,
-        "sabre": lambda: Sabre(seed=seed, trials=5),
+        "sabre": lambda: Sabre(seed=seed, trials=routing_trials),
         "shortest_paths": lambda: ShortestPaths(seed=seed),
         "star": StarConnectivityRouter,
     }
@@ -527,6 +534,7 @@ def transpile(
     use_dirty_ancillas: bool = True,
     minimize_toffolis: bool | None = None,
     minimize_depth: bool = False,
+    routing_trials: int = 5,
     num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
@@ -652,6 +660,9 @@ def transpile(
             :class:`qibo.gates.X` gates with auxiliary qubits are decomposed with a depth
             that is logarithmic in the number of controls. It cannot be used together with
             ``minimize_toffolis``. Defaults to ``False``.
+        routing_trials (int, optional): Number of independent routing attempts of the
+            ``"sabre"`` router, which keeps the best one. It is not used by the other
+            routers. Defaults to :math:`5`.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -671,8 +682,9 @@ def transpile(
     Raises:
         ValueError: If ``num_processes`` is not a positive integer, if ``callback`` is
             given with more than one process, if ``approximation_degree`` is not between
-            :math:`0` and :math:`1`, or if ``minimize_toffolis`` and ``minimize_depth`` are
-            both ``True``.
+            :math:`0` and :math:`1`, if ``minimize_toffolis`` and ``minimize_depth`` are
+            both ``True``, or if ``routing_trials`` is not positive and the router is
+            ``"sabre"``.
         BrokenProcessPool: If a worker process ends abruptly. A common cause is a script
             that calls this function with several processes without the
             ``if __name__ == "__main__":`` guard.
@@ -707,6 +719,7 @@ def transpile(
         use_dirty_ancillas=use_dirty_ancillas,
         minimize_toffolis=minimize_toffolis,
         minimize_depth=minimize_depth,
+        routing_trials=routing_trials,
         backend=backend,
     )
     if isinstance(circuits, Circuit):

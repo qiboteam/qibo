@@ -1459,3 +1459,34 @@ def test_transpile_synthesis_options(backend, monkeypatch):
     assert not options["use_dirty_ancillas"]
     assert options["minimize_toffolis"] is False
     assert options["minimize_depth"]
+
+
+def test_generate_preset_passes_routing_trials():
+    connectivity = nx.path_graph(4)
+    passes = generate_preset_passes(connectivity, routing_trials=3).passes
+    (router,) = [pass_ for pass_ in passes if isinstance(pass_, Sabre)]
+    assert router.trials == 3
+
+    # the other routers do not use the trials
+    passes = generate_preset_passes(
+        connectivity, routing_method="shortest_paths", routing_trials=0
+    ).passes
+    assert any(isinstance(pass_, ShortestPaths) for pass_ in passes)
+
+    with pytest.raises(ValueError, match="trials"):
+        generate_preset_passes(connectivity, routing_trials=0)
+
+
+def test_transpile_routing_trials(backend, monkeypatch):
+    calls = []
+    generate = pipeline_module.generate_preset_passes
+
+    def spy(*args, **kwargs):
+        calls.append(kwargs)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline_module, "generate_preset_passes", spy)
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(0, 2))
+    transpile(circuit, nx.path_graph(3), routing_trials=2, seed=0, backend=backend)
+    assert calls[-1]["routing_trials"] == 2
