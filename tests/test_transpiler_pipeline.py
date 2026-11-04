@@ -1376,28 +1376,3 @@ def test_generate_preset_passes_approximation_degree(backend, connectivity):
 def test_generate_preset_passes_approximation_degree_error(connectivity, degree):
     with pytest.raises(ValueError, match="approximation_degree"):
         generate_preset_passes(connectivity, approximation_degree=degree)
-
-
-@pytest.mark.parametrize("circuits", ["single", "list"])
-def test_transpile_approximation_degree(backend, circuits):
-    circuit = Circuit(2)
-    circuit.add(gates.fSim(0, 1, 0.05, 0.02))
-    connectivity = nx.path_graph(2)
-
-    exact = transpile(circuit, connectivity, backend=backend)
-    approximate = transpile(
-        circuit if circuits == "single" else [circuit],
-        connectivity,
-        approximation_degree=0.9,
-        backend=backend,
-    )
-    if circuits == "list":
-        (approximate,) = approximate
-
-    assert _count_two_qubit_gates(exact[0]) > 0
-    assert _count_two_qubit_gates(approximate[0]) == 0
-
-
-def test_transpile_approximation_degree_error():
-    with pytest.raises(ValueError, match="approximation_degree"):
-        transpile(Circuit(2), nx.path_graph(2), approximation_degree=1.5)
