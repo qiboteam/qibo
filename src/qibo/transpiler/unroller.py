@@ -522,6 +522,8 @@ def translate_gate(
             gate.is_controlled_by and isinstance(gate, (gates.FusedGate, gates.Unitary))
         )
         or (
+            # re-decomposed from the matrix, even if there is a registered decomposition,
+            # so that the approximation can use fewer CZ gates than the registered one
             approximation_degree < 1.0
             and isinstance(gate, (gates.fSim, gates.GeneralizedfSim, gates.Unitary))
         )

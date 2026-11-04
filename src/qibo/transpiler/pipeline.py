@@ -434,7 +434,9 @@ def generate_preset_passes(
     ]
     if connectivity.is_directed():
         # the unroller does not choose the direction of the two-qubit gates, and the
-        # gates that reverse them are not necessarily native
+        # gates that reverse them are not necessarily native. They are decomposed exactly,
+        # without ``approximation_degree``, since they are simple gates that cannot be
+        # approximated with fewer entangling gates.
         passes.extend([GateDirection(), Unroller(native_gates, backend=backend)])
 
     return Passes(
@@ -488,6 +490,7 @@ def transpile(
     routing_method: str | Router | None = None,
     layout_trials: int = 1,
     callback: Callable | None = None,
+    approximation_degree: float = 1.0,
     num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
@@ -589,6 +592,12 @@ def transpile(
         callback (Callable, optional): Function called after each pass that runs, for each
             circuit, see :class:`qibo.transpiler.pipeline.Passes`. It cannot be used with
             more than one process. Defaults to ``None``.
+        approximation_degree (float, optional): Fidelity of each entangling gate, between
+            :math:`0` and :math:`1`. If it is lower than :math:`1`, the two-qubit gates that
+            are decomposed from their matrix are approximated with fewer entangling gates,
+            if it increases the expected fidelity, see
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. Defaults to :math:`1`,
+            which is the exact decomposition.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -606,8 +615,9 @@ def transpile(
         list of these pairs, in the same order.
 
     Raises:
-        ValueError: If ``num_processes`` is not a positive integer, or if ``callback`` is
-            given with more than one process.
+        ValueError: If ``num_processes`` is not a positive integer, if ``callback`` is
+            given with more than one process, or if ``approximation_degree`` is not between
+            :math:`0` and :math:`1`.
         BrokenProcessPool: If a worker process ends abruptly. A common cause is a script
             that calls this function with several processes without the
             ``if __name__ == "__main__":`` guard.
@@ -636,6 +646,7 @@ def transpile(
         routing_method=routing_method,
         layout_trials=layout_trials,
         callback=callback,
+        approximation_degree=approximation_degree,
         backend=backend,
     )
     if isinstance(circuits, Circuit):
