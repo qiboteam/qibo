@@ -434,7 +434,9 @@ def generate_preset_passes(
     ]
     if connectivity.is_directed():
         # the unroller does not choose the direction of the two-qubit gates, and the
-        # gates that reverse them are not necessarily native
+        # gates that reverse them are not necessarily native. They are decomposed exactly,
+        # without ``approximation_degree``, since they are simple gates that cannot be
+        # approximated with fewer entangling gates.
         passes.extend([GateDirection(), Unroller(native_gates, backend=backend)])
 
     return Passes(
@@ -591,8 +593,9 @@ def transpile(
             circuit, see :class:`qibo.transpiler.pipeline.Passes`. It cannot be used with
             more than one process. Defaults to ``None``.
         approximation_degree (float, optional): Fidelity of each entangling gate, between
-            :math:`0` and :math:`1`. If it is lower than :math:`1`, some two-qubit gates are
-            approximated with fewer :class:`qibo.gates.CZ` gates, see
+            :math:`0` and :math:`1`. If it is lower than :math:`1`, the two-qubit gates that
+            are decomposed from their matrix are approximated with fewer entangling gates,
+            if it increases the expected fidelity, see
             :func:`qibo.transpiler.pipeline.generate_preset_passes`. Defaults to :math:`1`,
             which is the exact decomposition.
         num_processes (int, optional): Number of worker processes that transpile the
