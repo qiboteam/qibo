@@ -263,6 +263,14 @@ class Unroller:
             :func:`qibo.transpiler.decompositions.unitary_decompositions.two_qubit_decomposition`.
             The other gates are decomposed exactly. Defaults to :math:`1`, which is the exact
             decomposition.
+        threshold (float, optional): Tolerance of the decomposition of the two-qubit gates
+            that are decomposed from their matrix, like for ``approximation_degree``, see
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.two_qubit_decomposition`.
+            Defaults to ``None``, which uses its default value.
+        weight (float, optional): Weight of the imaginary part in the matrix that is
+            diagonalized to decompose those gates, see
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.two_qubit_decomposition`.
+            Defaults to ``None``, which uses its default value.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use for
             gate matrix. Defaults to ``None``.
 
@@ -279,6 +287,8 @@ class Unroller:
         minimize_toffolis: bool = False,
         minimize_depth: bool = False,
         approximation_degree: float = 1.0,
+        threshold: float | None = None,
+        weight: float | None = None,
         backend: Backend | None = None,
     ):
         if not native_gates.is_universal:
@@ -307,6 +317,8 @@ class Unroller:
         self.minimize_toffolis = minimize_toffolis
         self.minimize_depth = minimize_depth
         self.approximation_degree = approximation_degree
+        self.threshold = threshold
+        self.weight = weight
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Decomposes a circuit to native gates.
@@ -359,6 +371,8 @@ class Unroller:
                     minimize_toffolis=self.minimize_toffolis,
                     minimize_depth=self.minimize_depth,
                     approximation_degree=self.approximation_degree,
+                    threshold=self.threshold,
+                    weight=self.weight,
                 )
             # the global phase, if any, is the last gate of a translation
             if translated and isinstance(translated[-1], gates.GlobalPhase):
@@ -382,6 +396,8 @@ def translate_gate(
     minimize_toffolis: bool = False,
     minimize_depth: bool = False,
     approximation_degree: float = 1.0,
+    threshold: float | None = None,
+    weight: float | None = None,
     backend: Backend | None = None,
 ) -> list[Gate]:
     """Maps gates to a hardware-native implementation.
@@ -410,6 +426,14 @@ def translate_gate(
             that are decomposed from their matrix with fewer :class:`qibo.gates.CZ` gates,
             see :class:`qibo.transpiler.unroller.Unroller`. Defaults to :math:`1`, which
             is the exact decomposition.
+        threshold (float, optional): Tolerance of the decomposition of the two-qubit gates
+            that are decomposed from their matrix, like for ``approximation_degree``, see
+            :class:`qibo.transpiler.unroller.Unroller`. Defaults to ``None``, which uses
+            the default value of the decomposition.
+        weight (float, optional): Weight of the imaginary part in the matrix that is
+            diagonalized to decompose those gates, see
+            :class:`qibo.transpiler.unroller.Unroller`. Defaults to ``None``, which uses
+            the default value of the decomposition.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use
             for gate matrix. If ``None``, defaults to the global backend.
             Defaults to ``None``.
@@ -527,21 +551,28 @@ def translate_gate(
         )
         or (
             # re-decomposed from the matrix, even if there is a registered decomposition,
-            # so that the approximation can use fewer CZ gates than the registered one
-            approximation_degree < 1.0
+            # so that the options of the decomposition are used, for example, the
+            # approximation can use fewer CZ gates than the registered one
+            (approximation_degree < 1.0 or threshold is not None or weight is not None)
             and isinstance(gate, (gates.fSim, gates.GeneralizedfSim, gates.Unitary))
         )
     ):
         # The gate has no registered decomposition, it is a controlled unitary, or
-        # its decomposition can be approximated. Its matrix is decomposed instead.
+        # its decomposition has options. Its matrix is decomposed instead.
         circuit = Circuit(2)
         circuit.add(gate.on_qubits(dict(zip(gate.qubits, (0, 1)))))
         translated = []
+        options = {
+            name: value
+            for name, value in (("threshold", threshold), ("weight", weight))
+            if value is not None
+        }
         for decomposed_gate in two_qubit_decomposition(
             *gate.qubits,
             circuit.unitary(backend),
             approximation_degree=approximation_degree,
             backend=backend,
+            **options,
         ):
             translated.extend(
                 translate_gate(decomposed_gate, native_gates, backend=backend)

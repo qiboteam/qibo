@@ -1422,3 +1422,65 @@ def test_translate_gate_approximation_degree(backend):
 def test_unroller_approximation_degree_error(degree):
     with pytest.raises(ValueError, match="approximation_degree"):
         Unroller(NativeGates.default(), approximation_degree=degree)
+
+
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.default(),
+        NativeGates.default() | NativeGates.iSWAP,
+        NativeGates.RZ | NativeGates.SX | NativeGates.X | NativeGates.CNOT,
+    ],
+    ids=["CZ", "CZ-iSWAP", "CNOT"],
+)
+def test_unroller_threshold_neglects_weak_interactions(backend, natives):
+    """A gate with Weyl coordinates below the tolerance is a product of local gates."""
+    circuit = Circuit(2)
+    circuit.add(gates.fSim(0, 1, 0.05, 0.02))
+    target = backend.to_numpy(circuit.unitary(backend))
+
+    exact = Unroller(natives, backend=backend)(circuit)
+    neglected = Unroller(natives, threshold=1.0, backend=backend)(circuit)
+
+    assert any(len(gate.qubits) == 2 for gate in exact.queue)
+    assert all(len(gate.qubits) < 2 for gate in neglected.queue)
+    result = backend.to_numpy(neglected.unitary(backend))
+    overlap = np.abs(np.trace(target.conj().T @ result)) / target.shape[0]
+    assert 0.99 < overlap < 1.0
+
+
+@pytest.mark.parametrize("weight", [0.5, 1.0, 2.0])
+def test_unroller_weight_keeps_the_decomposition_exact(backend, weight):
+    circuit = Circuit(2)
+    circuit.add(gates.Unitary(random_unitary(4, seed=3, backend=backend), 0, 1))
+    _assert_unrolled(circuit, NativeGates.default(), backend, weight=weight)
+
+
+def test_translate_gate_synthesis_options_are_forwarded(backend, monkeypatch):
+    calls = []
+
+    def spy(*args, **kwargs):
+        calls.append(kwargs)
+        return two_qubit_decomposition(*args, **kwargs)
+
+    monkeypatch.setattr("qibo.transpiler.unroller.two_qubit_decomposition", spy)
+    gate = gates.Unitary(random_unitary(4, seed=1, backend=backend), 0, 1)
+    natives = NativeGates.default()
+
+    # the registered decomposition is used without options
+    translate_gate(gate, natives, backend=backend)
+    assert calls == []
+
+    translate_gate(gate, natives, threshold=1e-3, backend=backend)
+    assert calls[-1]["threshold"] == 1e-3
+    assert "weight" not in calls[-1]
+
+    translate_gate(gate, natives, weight=1.0, backend=backend)
+    assert calls[-1]["weight"] == 1.0
+    assert "threshold" not in calls[-1]
+
+    circuit = Circuit(2)
+    circuit.add(gate)
+    Unroller(natives, threshold=1e-3, weight=1.0, backend=backend)(circuit)
+    assert calls[-1]["threshold"] == 1e-3
+    assert calls[-1]["weight"] == 1.0
