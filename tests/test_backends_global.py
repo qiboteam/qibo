@@ -285,3 +285,63 @@ def test_construct_backend_import_error(monkeypatch, missing_provider):
         construct_backend("provider")
 
     assert isinstance(excinfo.value, MissingBackend) == missing_provider
+
+
+def test_reset_backend():
+    qibo.set_backend("numpy")
+    assert _Global._backend is not None
+    assert qibo.get_backend().name == "numpy"
+
+    # Reset with no arguments
+    qibo.set_backend()
+    assert _Global._backend is None
+    assert _Global._transpiler is None
+
+    # Getting backend creates the default backend
+    assert qibo.get_backend().name == "numpy"
+
+    # Reset with explicit None
+    qibo.set_backend(None)
+    assert _Global._backend is None
+    assert _Global._transpiler is None
+
+    # Passing kwargs when resetting should raise an error
+    with pytest.raises(ValueError):
+        qibo.set_backend(None, platform="numpy")
+
+
+def test_reset_transpiler():
+    connectivity = _star_connectivity()
+    transpiler = Passes(
+        connectivity=connectivity,
+        passes=[
+            Preprocessing(),
+            Random(seed=0),
+            Sabre(),
+            Unroller(NativeGates.default()),
+        ],
+    )
+    qibo.set_transpiler(transpiler)
+    assert qibo.get_transpiler() == transpiler
+
+    # Reset with no arguments
+    qibo.set_transpiler()
+    assert _Global._transpiler is None
+    assert qibo.get_transpiler() != transpiler
+
+    # Reset with explicit None
+    qibo.set_transpiler(transpiler)
+    assert qibo.get_transpiler() == transpiler
+    qibo.set_transpiler(None)
+    assert _Global._transpiler is None
+
+
+def test_global_reset():
+    _Global.set_backend("numpy")
+    _Global.transpiler()
+    assert _Global._backend is not None
+    assert _Global._transpiler is not None
+
+    _Global.reset()
+    assert _Global._backend is None
+    assert _Global._transpiler is None
