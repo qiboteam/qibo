@@ -1204,6 +1204,31 @@ def test_generate_preset_passes_callback_and_transpile_list(backend):
     assert counts == [0, 1, 2, 4, 0, 1, 2, 4]
 
 
+@pytest.mark.parametrize("connectivity", [None, nx.path_graph(2)])
+def test_transpile_approximation_degree(backend, connectivity):
+    circuit = Circuit(2)
+    circuit.add(gates.fSim(0, 1, 0.05, 0.02))
+
+    exact, _ = transpile(circuit, connectivity, backend=backend)
+    approximate, _ = transpile(
+        circuit, connectivity, approximation_degree=0.9, backend=backend
+    )
+    assert _count_two_qubit_gates(exact) > 0
+    assert _count_two_qubit_gates(approximate) == 0
+
+    # the degree is shared by the circuits of a list
+    results = transpile(
+        [circuit, circuit], connectivity, approximation_degree=0.9, backend=backend
+    )
+    assert [_count_two_qubit_gates(transpiled) for transpiled, _ in results] == [0, 0]
+
+
+@pytest.mark.parametrize("degree", [-0.5, 2.0])
+def test_transpile_approximation_degree_error(degree):
+    with pytest.raises(ValueError, match="approximation_degree"):
+        transpile(Circuit(2), approximation_degree=degree)
+
+
 def test_transpile_in_parallel(backend):
     connectivity = nx.path_graph(5)
     circuits = [generate_random_circuit(5, 30, seed=seed) for seed in (1, 2, 3)]
