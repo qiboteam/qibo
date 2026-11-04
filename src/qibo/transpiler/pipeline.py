@@ -230,6 +230,7 @@ def generate_preset_passes(
     routing_method: str | Router | None = None,
     layout_trials: int = 1,
     callback: Callable | None = None,
+    approximation_degree: float = 1.0,
     backend: Backend | None = None,
 ) -> Passes:
     """Generate a ready-to-use transpiler pipeline that does not optimize the circuit.
@@ -251,7 +252,9 @@ def generate_preset_passes(
     5. The router selected by ``routing_method``, which adds the SWAP gates that make all
        the gates executable. By default, it is :class:`qibo.transpiler.router.Sabre`
        with the best of five trials.
-    6. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates.
+    6. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates,
+       approximating some two-qubit gates with fewer entangling gates if
+       ``approximation_degree`` is lower than :math:`1`.
 
     If ``connectivity`` is directed, the pipeline ends with a
     :class:`qibo.transpiler.optimizer.GateDirection` pass and an unroller, so that the
@@ -314,6 +317,13 @@ def generate_preset_passes(
             placers. Defaults to :math:`1`.
         callback (Callable, optional): Function called after each pass that runs, see
             :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+        approximation_degree (float, optional): Fidelity of each entangling gate, between
+            :math:`0` and :math:`1`. If it is lower than :math:`1`, the unroller that
+            decomposes the circuit to the native gates approximates the two-qubit gates that
+            it decomposes from their matrix with fewer :class:`qibo.gates.CZ` gates, if it
+            increases the expected fidelity, see
+            :class:`qibo.transpiler.unroller.Unroller`. The multi-qubit gates are decomposed
+            exactly. Defaults to :math:`1`, which is the exact decomposition.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -325,7 +335,8 @@ def generate_preset_passes(
         ConnectivityError: If ``initial_layout``, ``layout_method`` or ``routing_method``
             is given without ``connectivity``.
         PlacementError: If ``initial_layout`` is given with a non-trivial ``layout_method``.
-        ValueError: If ``layout_method`` or ``routing_method`` is not a valid method.
+        ValueError: If ``layout_method`` or ``routing_method`` is not a valid method, or if
+            ``approximation_degree`` is not between :math:`0` and :math:`1`.
     """
     if connectivity is None and not (
         initial_layout is None and layout_method is None and routing_method is None
@@ -350,7 +361,14 @@ def generate_preset_passes(
 
     if connectivity is None:
         return Passes(
-            passes=[Validation(), Unroller(native_gates, **unroller_kwargs)],
+            passes=[
+                Validation(),
+                Unroller(
+                    native_gates,
+                    approximation_degree=approximation_degree,
+                    **unroller_kwargs,
+                ),
+            ],
             native_gates=native_gates,
             on_qubits=on_qubits,
             callback=callback,
@@ -384,6 +402,7 @@ def generate_preset_passes(
             f"Unknown layout method {layout_method!r}. It must be a placer or one of "
             + f"{['trivial', *placers]}.",
         )
+
     if placer is not None and initial_layout is not None:
         raise_error(
             PlacementError,
@@ -409,12 +428,16 @@ def generate_preset_passes(
         Preprocessing(initial_layout=initial_layout),
         *([] if placer is None else [placer]),
         router,
-        Unroller(native_gates, backend=backend),
+        Unroller(
+            native_gates, approximation_degree=approximation_degree, backend=backend
+        ),
     ]
     if connectivity.is_directed():
         # the unroller does not choose the direction of the two-qubit gates, and the
-        # gates that reverse them are not necessarily native
-        passes += [GateDirection(), Unroller(native_gates, backend=backend)]
+        # gates that reverse them are not necessarily native. They are decomposed exactly,
+        # without ``approximation_degree``, since they are simple gates that cannot be
+        # approximated with fewer entangling gates.
+        passes.extend([GateDirection(), Unroller(native_gates, backend=backend)])
 
     return Passes(
         passes=passes,
@@ -467,6 +490,7 @@ def transpile(
     routing_method: str | Router | None = None,
     layout_trials: int = 1,
     callback: Callable | None = None,
+    approximation_degree: float = 1.0,
     num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
@@ -568,6 +592,12 @@ def transpile(
         callback (Callable, optional): Function called after each pass that runs, for each
             circuit, see :class:`qibo.transpiler.pipeline.Passes`. It cannot be used with
             more than one process. Defaults to ``None``.
+        approximation_degree (float, optional): Fidelity of each entangling gate, between
+            :math:`0` and :math:`1`. If it is lower than :math:`1`, the two-qubit gates that
+            are decomposed from their matrix are approximated with fewer entangling gates,
+            if it increases the expected fidelity, see
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. Defaults to :math:`1`,
+            which is the exact decomposition.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -585,8 +615,9 @@ def transpile(
         list of these pairs, in the same order.
 
     Raises:
-        ValueError: If ``num_processes`` is not a positive integer, or if ``callback`` is
-            given with more than one process.
+        ValueError: If ``num_processes`` is not a positive integer, if ``callback`` is
+            given with more than one process, or if ``approximation_degree`` is not between
+            :math:`0` and :math:`1`.
         BrokenProcessPool: If a worker process ends abruptly. A common cause is a script
             that calls this function with several processes without the
             ``if __name__ == "__main__":`` guard.
@@ -615,6 +646,7 @@ def transpile(
         routing_method=routing_method,
         layout_trials=layout_trials,
         callback=callback,
+        approximation_degree=approximation_degree,
         backend=backend,
     )
     if isinstance(circuits, Circuit):

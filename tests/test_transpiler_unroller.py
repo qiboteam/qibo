@@ -14,6 +14,7 @@ from qibo.transpiler.asserts import assert_decomposition
 from qibo.transpiler.decompositions.cz_decompositions import native_cz_dec
 from qibo.transpiler.decompositions.unitary_decompositions import (
     single_qubit_decomposition,
+    two_qubit_decomposition,
 )
 from qibo.transpiler.unroller import NativeGates, Unroller, translate_gate
 
@@ -1328,3 +1329,96 @@ def test_unroller_unitary_min_qubits(backend):
         1.0,
         atol=1e-6,
     )
+
+
+def _approximation_gate(name, backend):
+    if name == "Unitary":
+        return gates.Unitary(random_unitary(4, seed=1, backend=backend), 0, 1)
+    if name == "GeneralizedfSim":
+        return gates.GeneralizedfSim(
+            0, 1, random_unitary(2, seed=1, backend=backend), 0.4
+        )
+    return gates.fSim(0, 1, 0.3, 0.2)
+
+
+@pytest.mark.parametrize("name", ["Unitary", "fSim", "GeneralizedfSim"])
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.default(),
+        NativeGates.default() | NativeGates.iSWAP,
+        NativeGates.RZ | NativeGates.SX | NativeGates.X | NativeGates.CNOT,
+    ],
+    ids=["CZ", "CZ-iSWAP", "CNOT"],
+)
+def test_unroller_approximation_degree_zero(backend, name, natives):
+    """Without fidelity in the CZ gates, the two-qubit gates are products of local gates."""
+    circuit = Circuit(2)
+    circuit.add(_approximation_gate(name, backend))
+
+    unrolled = Unroller(natives, backend=backend, approximation_degree=0.0)(circuit)
+
+    assert all(len(gate.qubits) < 2 for gate in unrolled.queue)
+    reference = Circuit(2)
+    reference.add(
+        two_qubit_decomposition(
+            0, 1, circuit.unitary(backend), approximation_degree=0.0, backend=backend
+        )
+    )
+    target = backend.to_numpy(reference.unitary(backend))
+    result = backend.to_numpy(unrolled.unitary(backend))
+    overlap = np.abs(np.trace(target.conj().T @ result)) / target.shape[0]
+    backend.assert_allclose(overlap, 1.0, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.default(),
+        NativeGates.default() | NativeGates.iSWAP,
+        NativeGates.RZ | NativeGates.SX | NativeGates.X | NativeGates.CNOT,
+    ],
+    ids=["CZ", "CZ-iSWAP", "CNOT"],
+)
+def test_unroller_approximation_degree_drops_weak_interactions(backend, natives):
+    """A gate that is almost local is exact with degree one and local with degree 0.9."""
+    circuit = Circuit(2)
+    circuit.add(gates.fSim(0, 1, 0.05, 0.02))
+    target = backend.to_numpy(circuit.unitary(backend))
+
+    exact = Unroller(natives, backend=backend, approximation_degree=1.0)(circuit)
+    approximate = Unroller(natives, backend=backend, approximation_degree=0.9)(circuit)
+
+    assert any(len(gate.qubits) == 2 for gate in exact.queue)
+    assert all(len(gate.qubits) < 2 for gate in approximate.queue)
+    result = backend.to_numpy(approximate.unitary(backend))
+    overlap = np.abs(np.trace(target.conj().T @ result)) / target.shape[0]
+    assert 0.99 < overlap < 1.0
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [gates.CNOT(0, 1), gates.SWAP(0, 1), gates.iSWAP(0, 1), gates.RXX(0, 1, 0.1)],
+)
+def test_unroller_approximation_degree_keeps_registered_decompositions(backend, gate):
+    """Gates with a known decomposition are exact, as they are not decomposed from their matrix."""
+    circuit = Circuit(2)
+    circuit.add(gate)
+    _assert_unrolled(circuit, NativeGates.default(), backend, approximation_degree=0.0)
+
+
+def test_translate_gate_approximation_degree(backend):
+    gate = gates.fSim(0, 1, 0.05, 0.02)
+    natives = NativeGates.default()
+    exact = translate_gate(gate, natives, backend=backend)
+    approximate = translate_gate(
+        gate, natives, backend=backend, approximation_degree=0.0
+    )
+    assert any(len(gate.qubits) == 2 for gate in exact)
+    assert all(len(gate.qubits) < 2 for gate in approximate)
+
+
+@pytest.mark.parametrize("degree", [-0.1, 1.1])
+def test_unroller_approximation_degree_error(degree):
+    with pytest.raises(ValueError, match="approximation_degree"):
+        Unroller(NativeGates.default(), approximation_degree=degree)
