@@ -42,6 +42,7 @@ from qibo.transpiler.unroller import NativeGates, Unroller
 
 __all__ = [
     "BarrierBeforeFinalMeasurements",
+    "CommutativeCancellation",
     "ConsolidateBlocks",
     "Dense",
     "FilterGates",
