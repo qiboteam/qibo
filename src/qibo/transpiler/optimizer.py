@@ -5,11 +5,13 @@ from collections.abc import Callable
 from inspect import signature
 
 import networkx as nx
+from numpy.typing import ArrayLike
 
 from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
+from qibo.quantum_info.linalg_operations import commutator
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     DecompositionError,
@@ -158,6 +160,175 @@ class BarrierBeforeFinalMeasurements(Optimizer):
         new.add(final[::-1])
 
         return new
+
+
+class CommutativeCancellation(Optimizer):
+    """Merges rotations and cancels pairs of gates through the gates that commute with them.
+
+    A rotation is a single-qubit gate without control qubits that is a rotation around the
+    :math:`X`, :math:`Y` or :math:`Z` axis, up to a global phase, *e.g.*
+    :class:`qibo.gates.RZ`, :class:`qibo.gates.T`, :class:`qibo.gates.SX` or
+    :class:`qibo.gates.Y`. Two rotations around the same axis on the same qubit are merged
+    into a single :class:`qibo.gates.RX`, :class:`qibo.gates.RY` or :class:`qibo.gates.RZ`
+    gate if all the gates between them commute with the second one, where two gates
+    commute when applying them in either order gives the same matrix. The merged rotation
+    is left out if it is the identity. Then, the pairs of gates whose product is the
+    identity are cancelled through the gates that commute with them, see
+    :class:`qibo.transpiler.optimizer.InverseCancellation`.
+
+    Measurements, alignments, barriers, noise channels and fused gates are never merged
+    nor cancelled, and stop the search across them on their qubits. Gates with sympy
+    parameters are not merged, but the gates that commute with them do not stop the search.
+    The gates are compared through their matrices at their current parameter values, so a
+    merged rotation is not tracked by the returned circuit anymore. The pass is applied
+    once, use :class:`qibo.transpiler.optimizer.FixedPoint` to repeat it.
+
+    Example:
+        The two :class:`qibo.gates.RZ` gates on the first qubit merge, as the
+        controlled-NOT gate between them commutes with them.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import CommutativeCancellation
+
+            circuit = Circuit(2)
+            circuit.add(gates.RZ(0, 0.3))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.RZ(0, 0.4))
+
+            CommutativeCancellation()(circuit).draw()
+
+        .. testoutput::
+
+            0: ─RZ─o─
+            1: ────X─
+
+    Args:
+        atol (float, optional): Tolerance on the angle of a rotation to be the identity
+            and on the difference between the matrices that are compared. Defaults to
+            :math:`10^{-12}`.
+        up_to_global_phase (bool, optional): If ``False``, two rotations are merged only
+            when the new rotation has exactly the same matrix as their product, which keeps
+            the global phase of the circuit. Defaults to ``True``.
+    """
+
+    def __init__(self, atol: float = 1e-12, up_to_global_phase: bool = True):
+        if atol < 0:
+            raise_error(ValueError, f"``atol`` must be non-negative, but got {atol}.")
+        self.atol = atol
+        self.up_to_global_phase = up_to_global_phase
+
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
+        """Merge the rotations and cancel the pairs of gates through commuting gates.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
+                build the gate matrices. If ``None``, defaults to the global backend.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the merged rotations and
+            without the cancelled pairs.
+        """
+        backend = _check_backend(backend)
+
+        uncancellable = (gates.M, gates.Align, gates.Channel, SpecialGate)
+        # ``kept`` holds the surviving gates in order (removed ones are set to ``None``),
+        # ``kept_numeric`` holds the same gates with numbers instead of sympy parameters,
+        # ``rotations`` holds the axis, global phase and angle of the rotations and
+        # ``stacks`` holds, for each qubit, the positions in ``kept`` of the surviving
+        # gates acting on it. The last position is the latest gate.
+        kept = []
+        kept_numeric = []
+        rotations = []
+        stacks = {qubit: [] for qubit in range(circuit.nqubits)}
+        for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
+            rotation = None
+            if (
+                numeric is gate
+                and len(gate.qubits) == 1
+                and not isinstance(gate, uncancellable)
+            ):
+                rotation = _rotation(gate.matrix(backend), self.atol, backend)
+
+            merged = False
+            if rotation is not None:
+                axis, phase, angle = rotation
+                # The latest gates on the qubit are visited, which have to commute with
+                # ``gate`` to merge it with a rotation around the same axis.
+                for position in reversed(stacks[gate.qubits[0]]):
+                    partner = kept[position]
+                    if (
+                        rotations[position] is not None
+                        and rotations[position][0] == axis
+                    ):
+                        total_phase = phase + rotations[position][1]
+                        total_angle = angle + rotations[position][2]
+                        period = 2 * math.pi
+                        if not self.up_to_global_phase:
+                            # The rotation by an angle plus 2 pi is minus the rotation,
+                            # which compensates a global phase of pi.
+                            shift = math.remainder(total_phase, 2 * math.pi)
+                            if abs(shift) <= self.atol:
+                                period = 4 * math.pi
+                            elif abs(abs(shift) - math.pi) <= self.atol:
+                                total_angle += 2 * math.pi
+                                period = 4 * math.pi
+                            else:
+                                continue
+                        total_angle = math.remainder(total_angle, period)
+
+                        merged = True
+                        if abs(total_angle) <= self.atol:
+                            for qubit in partner.qubits:
+                                stacks[qubit].remove(position)
+                            kept[position] = None
+                            rotations[position] = None
+                        else:
+                            kept[position] = (gates.RX, gates.RY, gates.RZ)[axis](
+                                gate.qubits[0], total_angle
+                            )
+                            kept_numeric[position] = kept[position]
+                            rotations[position] = (axis, 0.0, total_angle)
+                        break
+
+                    if (
+                        isinstance(partner, uncancellable)
+                        or kept_numeric[position] is None
+                    ):
+                        break
+                    # The gates are compared on the qubits they act on, relabelled as
+                    # 0, 1, 2, and so on.
+                    relabel = {
+                        qubit: new_qubit
+                        for new_qubit, qubit in enumerate(
+                            sorted(set(gate.qubits) | set(partner.qubits))
+                        )
+                    }
+                    matrices = []
+                    for operator in (kept_numeric[position], numeric):
+                        embedded = Circuit(len(relabel))
+                        embedded.add(operator.on_qubits(relabel))
+                        matrices.append(embedded.unitary(backend))
+                    if (
+                        backend.matrix_norm(commutator(*matrices), order="fro")
+                        > self.atol
+                    ):
+                        break
+
+            if not merged:
+                kept.append(gate)
+                kept_numeric.append(numeric)
+                rotations.append(rotation)
+                for qubit in gate.qubits:
+                    stacks[qubit].append(len(kept) - 1)
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add([gate for gate in kept if gate is not None])
+
+        return InverseCancellation(self.atol, commutation=True)(new, backend)
 
 
 class ConsolidateBlocks(Optimizer):
@@ -681,21 +852,12 @@ class InverseCancellation(Optimizer):
                         sorted(set(gate.qubits) | set(partner.qubits))
                     )
                 }
-                forward = Circuit(len(relabel))
-                forward.add(
-                    [partner_numeric.on_qubits(relabel), numeric.on_qubits(relabel)]
-                )
-                backward = Circuit(len(relabel))
-                backward.add(
-                    [numeric.on_qubits(relabel), partner_numeric.on_qubits(relabel)]
-                )
-                if (
-                    backend.matrix_norm(
-                        forward.unitary(backend) - backward.unitary(backend),
-                        order="fro",
-                    )
-                    > self.atol
-                ):
+                matrices = []
+                for operator in (partner_numeric, numeric):
+                    embedded = Circuit(len(relabel))
+                    embedded.add(operator.on_qubits(relabel))
+                    matrices.append(embedded.unitary(backend))
+                if backend.matrix_norm(commutator(*matrices), order="fro") > self.atol:
                     break
 
             if index is None:
@@ -2038,3 +2200,35 @@ def _numeric_gates(circuit: Circuit) -> list[Gate | None]:
         numeric.append(gate)
 
     return numeric
+
+
+def _rotation(
+    matrix: ArrayLike, atol: float, backend: Backend
+) -> tuple[int, float, float] | None:
+    """Axis, global phase and angle of a single-qubit gate that is a Pauli rotation.
+
+    The matrix is :math:`e^{i \\gamma} (\\cos(\\theta / 2) I - i \\sin(\\theta / 2) P)`, where
+    :math:`P` is the Pauli matrix :math:`X`, :math:`Y` or :math:`Z`, and the function
+    returns the index of :math:`P` in that order, :math:`\\gamma` and :math:`\\theta`. It
+    returns ``None`` if the matrix is not a rotation, or if it is the identity up to a phase.
+    """
+    paulis = (backend.matrices.X, backend.matrices.Y, backend.matrices.Z)
+    components = [backend.trace(pauli @ matrix) / 2 for pauli in paulis]
+    sizes = [float(backend.abs(component)) for component in components]
+    axis = sizes.index(max(sizes))
+    if sizes[axis] <= atol or any(
+        size > atol for index, size in enumerate(sizes) if index != axis
+    ):
+        return None
+
+    # the identity and Pauli components are e^{i gamma} cos(theta / 2) and
+    # e^{i gamma} sin(theta / 2), and gamma is taken from the largest one
+    cosine = backend.trace(matrix) / 2
+    sine = 1j * components[axis]
+    reference = cosine if backend.abs(cosine) >= backend.abs(sine) else sine
+    phase = backend.arctan2(backend.imag(reference), backend.real(reference))
+    unphase = backend.cos(phase) - 1j * backend.sin(phase)
+    angle = 2 * backend.arctan2(
+        backend.real(sine * unphase), backend.real(cosine * unphase)
+    )
+    return axis, float(phase), float(angle)
