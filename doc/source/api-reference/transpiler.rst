@@ -173,6 +173,22 @@ Optimize 1-qubit gates decomposition
     :member-order: bysource
 
 
+Optimize 1-qubit gates simple commutation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.Optimize1qGatesSimpleCommutation
+    :members:
+    :member-order: bysource
+
+
+Optimize swap before measure
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.OptimizeSwapBeforeMeasure
+    :members:
+    :member-order: bysource
+
+
 Parametrized gate fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
