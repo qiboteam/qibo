@@ -393,13 +393,6 @@ def test_inverse_cancellation_pipeline(backend, star_connectivity):
     assert [gate.name for gate in transpiled.queue] == ["cx"]
 
 
-def _assert_equal_up_to_phase(backend, circuit, optimized):
-    first = circuit.unitary(backend)
-    second = optimized.unitary(backend)
-    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
-    backend.assert_allclose(overlap, 1.0, atol=1e-8)
-
-
 @pytest.mark.parametrize(
     "queue, expected",
     [
@@ -464,7 +457,11 @@ def test_commutative_cancellation_merges_gate_families(backend, queue, expected)
         # the angle of a rotation is defined up to a global phase, that is, modulo 2 pi
         difference = math.remainder(float(gate.parameters[0]) - angle, 2 * math.pi)
         backend.assert_allclose(difference, 0.0, atol=1e-8)
-    _assert_equal_up_to_phase(backend, circuit, optimized)
+    # the circuits are equal up to a global phase if the overlap of their unitaries is one
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
 
 
 def test_commutative_cancellation_removes_identity(backend):
@@ -641,7 +638,13 @@ def test_commutative_cancellation_random_circuits(backend, seed, up_to_global_ph
 
     assert optimized.ngates <= circuit.ngates
     if up_to_global_phase:
-        _assert_equal_up_to_phase(backend, circuit, optimized)
+        # the circuits are equal up to a global phase if the overlap of their unitaries is one
+        first = circuit.unitary(backend)
+        second = optimized.unitary(backend)
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
     else:
         backend.assert_allclose(
             optimized.unitary(backend), circuit.unitary(backend), atol=1e-8

@@ -11,6 +11,7 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
+from qibo.quantum_info.linalg_operations import commutator
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     DecompositionError,
@@ -296,9 +297,24 @@ class CommutativeCancellation(Optimizer):
                     if (
                         isinstance(partner, uncancellable)
                         or kept_numeric[position] is None
-                        or not _commute(
-                            kept_numeric[position], numeric, self.atol, backend
+                    ):
+                        break
+                    # The gates are compared on the qubits they act on, relabelled as
+                    # 0, 1, 2, and so on.
+                    relabel = {
+                        qubit: new_qubit
+                        for new_qubit, qubit in enumerate(
+                            sorted(set(gate.qubits) | set(partner.qubits))
                         )
+                    }
+                    matrices = []
+                    for operator in (kept_numeric[position], numeric):
+                        embedded = Circuit(len(relabel))
+                        embedded.add(operator.on_qubits(relabel))
+                        matrices.append(embedded.unitary(backend))
+                    if (
+                        backend.matrix_norm(commutator(*matrices), order="fro")
+                        > self.atol
                     ):
                         break
 
@@ -828,11 +844,20 @@ class InverseCancellation(Optimizer):
                 # Otherwise the search goes on only through gates that commute with
                 # ``gate``. They are compared on the qubits they act on, relabelled
                 # as 0, 1, 2, and so on.
-                if (
-                    blocked
-                    or not self.commutation
-                    or not _commute(partner_numeric, numeric, self.atol, backend)
-                ):
+                if blocked or not self.commutation:
+                    break
+                relabel = {
+                    qubit: new_qubit
+                    for new_qubit, qubit in enumerate(
+                        sorted(set(gate.qubits) | set(partner.qubits))
+                    )
+                }
+                matrices = []
+                for operator in (partner_numeric, numeric):
+                    embedded = Circuit(len(relabel))
+                    embedded.add(operator.on_qubits(relabel))
+                    matrices.append(embedded.unitary(backend))
+                if backend.matrix_norm(commutator(*matrices), order="fro") > self.atol:
                     break
 
             if index is None:
@@ -2139,30 +2164,6 @@ class Validation(Optimizer):
                 )
 
         return circuit
-
-
-def _commute(first: Gate, second: Gate, atol: float, backend: Backend) -> bool:
-    """Whether two gates commute, within ``atol``.
-
-    The matrices of the gates are compared on the qubits that they act on, relabelled as
-    0, 1, 2, and so on.
-    """
-    relabel = {
-        qubit: new_qubit
-        for new_qubit, qubit in enumerate(
-            sorted(set(first.qubits) | set(second.qubits))
-        )
-    }
-    forward = Circuit(len(relabel))
-    forward.add([first.on_qubits(relabel), second.on_qubits(relabel)])
-    backward = Circuit(len(relabel))
-    backward.add([second.on_qubits(relabel), first.on_qubits(relabel)])
-    return (
-        backend.matrix_norm(
-            forward.unitary(backend) - backward.unitary(backend), order="fro"
-        )
-        <= atol
-    )
 
 
 def _numeric_gates(circuit: Circuit) -> list[Gate | None]:
