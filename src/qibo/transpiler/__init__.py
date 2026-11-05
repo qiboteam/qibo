@@ -7,6 +7,7 @@ from qibo.transpiler.decompositions.unitary_decompositions import (
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import (
     BarrierBeforeFinalMeasurements,
+    CommutativeCancellation,
     ConsolidateBlocks,
     FilterGates,
     FixedPoint,

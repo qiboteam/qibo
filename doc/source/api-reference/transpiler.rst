@@ -133,6 +133,14 @@ Barrier before final measurements
     :member-order: bysource
 
 
+Commutative cancellation
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.CommutativeCancellation
+    :members:
+    :member-order: bysource
+
+
 Filter gates
 ^^^^^^^^^^^^
 
