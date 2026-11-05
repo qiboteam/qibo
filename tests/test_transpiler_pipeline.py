@@ -1376,3 +1376,117 @@ def test_generate_preset_passes_approximation_degree(backend, connectivity):
 def test_generate_preset_passes_approximation_degree_error(connectivity, degree):
     with pytest.raises(ValueError, match="approximation_degree"):
         generate_preset_passes(connectivity, approximation_degree=degree)
+
+
+def test_generate_preset_passes_synthesis_options_structure():
+    connectivity = nx.path_graph(4)
+    passes = generate_preset_passes(connectivity, threshold=0.5, weight=1.0).passes
+    # only the unroller to the native gates uses the options of the two-qubit synthesis
+    assert (passes[1].threshold, passes[1].weight) == (None, None)
+    assert (passes[-1].threshold, passes[-1].weight) == (0.5, 1.0)
+
+    # without connectivity the only unroller decomposes the circuit to the native gates
+    _, unroller = generate_preset_passes(threshold=0.5, weight=1.0).passes
+    assert (unroller.threshold, unroller.weight) == (0.5, 1.0)
+
+
+def test_generate_preset_passes_multi_controlled_options():
+    default = generate_preset_passes(nx.path_graph(4)).passes[1]
+    assert default.use_dirty_ancillas
+    assert not default.minimize_toffolis
+    assert not default.minimize_depth
+
+    # minimizing the Toffolis follows the clean qubits, unless the depth is minimized
+    zero = generate_preset_passes(nx.path_graph(4), qubits_initially_zero=True).passes[
+        1
+    ]
+    assert zero.minimize_toffolis
+    depth = generate_preset_passes(
+        nx.path_graph(4), qubits_initially_zero=True, minimize_depth=True
+    ).passes[1]
+    assert depth.minimize_depth
+    assert not depth.minimize_toffolis
+
+    explicit = generate_preset_passes(
+        nx.path_graph(4), use_dirty_ancillas=False, minimize_toffolis=True
+    ).passes[1]
+    assert explicit.minimize_toffolis
+    assert not explicit.use_dirty_ancillas
+
+    # without connectivity the only unroller also decomposes the multi-controlled gates
+    _, unroller = generate_preset_passes(minimize_depth=True).passes
+    assert unroller.minimize_depth
+
+
+@pytest.mark.parametrize("connectivity", [None, nx.path_graph(3)])
+def test_generate_preset_passes_minimize_toffolis_and_depth_error(connectivity):
+    with pytest.raises(ValueError, match="cannot be used together"):
+        generate_preset_passes(
+            connectivity, minimize_toffolis=True, minimize_depth=True
+        )
+
+
+def test_transpile_synthesis_options(backend, monkeypatch):
+    circuit = Circuit(2)
+    circuit.add(gates.fSim(0, 1, 0.05, 0.02))
+    connectivity = nx.path_graph(2)
+
+    exact = transpile(circuit, connectivity, backend=backend)
+    neglected = transpile(circuit, connectivity, threshold=1.0, backend=backend)
+    assert _count_two_qubit_gates(exact[0]) > 0
+    assert _count_two_qubit_gates(neglected[0]) == 0
+
+    calls = []
+    generate = pipeline_module.generate_preset_passes
+
+    def spy(*args, **kwargs):
+        calls.append(kwargs)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline_module, "generate_preset_passes", spy)
+    transpile(
+        circuit,
+        connectivity,
+        weight=1.0,
+        use_dirty_ancillas=False,
+        minimize_toffolis=False,
+        minimize_depth=True,
+        backend=backend,
+    )
+    options = calls[-1]
+    assert options["threshold"] is None
+    assert options["weight"] == 1.0
+    assert not options["use_dirty_ancillas"]
+    assert options["minimize_toffolis"] is False
+    assert options["minimize_depth"]
+
+
+def test_generate_preset_passes_routing_trials():
+    connectivity = nx.path_graph(4)
+    passes = generate_preset_passes(connectivity, routing_trials=3).passes
+    (router,) = [pass_ for pass_ in passes if isinstance(pass_, Sabre)]
+    assert router.trials == 3
+
+    # the other routers do not use the trials
+    passes = generate_preset_passes(
+        connectivity, routing_method="shortest_paths", routing_trials=0
+    ).passes
+    assert any(isinstance(pass_, ShortestPaths) for pass_ in passes)
+
+    with pytest.raises(ValueError, match="trials"):
+        generate_preset_passes(connectivity, routing_trials=0)
+
+
+def test_transpile_routing_trials(backend, monkeypatch):
+    calls = []
+    generate = pipeline_module.generate_preset_passes
+
+    def spy(*args, **kwargs):
+        calls.append(kwargs)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline_module, "generate_preset_passes", spy)
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(0, 2))
+    transpile(circuit, nx.path_graph(3), routing_trials=2, seed=0, backend=backend)
+    assert calls[-1]["routing_trials"] == 2
