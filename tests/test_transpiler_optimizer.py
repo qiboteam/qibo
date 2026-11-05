@@ -24,6 +24,8 @@ from qibo.transpiler.optimizer import (
     GateDirection,
     InverseCancellation,
     Optimize1qGatesDecomposition,
+    Optimize1qGatesSimpleCommutation,
+    OptimizeSwapBeforeMeasure,
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
@@ -659,6 +661,339 @@ def test_commutative_cancellation_pipeline(backend, star_connectivity):
     pipeline = Passes([CommutativeCancellation()], connectivity=star_connectivity())
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["rz", "cx"]
+
+
+def _random_swap_circuit(seed):
+    generator = random.Random(seed)
+    circuit = Circuit(4)
+    for _ in range(8):
+        qubit = generator.randrange(4)
+        circuit.add(generator.choice([gates.RX, gates.RY])(qubit, generator.random()))
+        circuit.add(gates.CNOT(*generator.sample(range(4), 2)))
+    for _ in range(4):
+        circuit.add(gates.SWAP(*generator.sample(range(4), 2)))
+    circuit.add(gates.M(0, 1, 2, 3))
+    return circuit
+
+
+@pytest.mark.parametrize(
+    "queue, expected",
+    [
+        ([gates.SWAP(0, 1), gates.M(0, 1)], [("measure", (1, 0))]),
+        (
+            [gates.SWAP(0, 1), gates.SWAP(1, 2), gates.M(0, 1, 2)],
+            [("measure", (1, 2, 0))],
+        ),
+        (
+            [
+                gates.SWAP(0, 1),
+                gates.M(0, register_name="a"),
+                gates.M(1, register_name="b"),
+            ],
+            [("measure", (1,)), ("measure", (0,))],
+        ),
+        ([gates.SWAP(0, 1), gates.M(1)], [("measure", (0,))]),
+        (
+            [gates.SWAP(0, 1), gates.M(0, 2), gates.X(2)],
+            [("measure", (1, 2)), ("x", (2,))],
+        ),
+        (
+            [gates.SWAP(1, 2), gates.M(0, 1), gates.M(2, register_name="b")],
+            [("measure", (0, 2)), ("measure", (1,))],
+        ),
+    ],
+)
+def test_optimize_swap_before_measure(backend, queue, expected):
+    circuit = Circuit(3)
+    circuit.add(gates.RY(0, 0.3))
+    circuit.add(gates.RY(1, 1.1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(queue)
+
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+
+    assert [(gate.name, gate.qubits) for gate in optimized.queue[3:]] == expected
+    for measurement, new_measurement in zip(
+        circuit.measurements, optimized.measurements
+    ):
+        assert measurement.register_name == new_measurement.register_name
+        backend.assert_allclose(
+            backend.execute_circuit(optimized).probabilities(
+                qubits=new_measurement.target_qubits
+            ),
+            backend.execute_circuit(circuit).probabilities(
+                qubits=measurement.target_qubits
+            ),
+            atol=1e-10,
+        )
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        [gates.SWAP(0, 1), gates.H(1), gates.M(0, 1)],
+        [gates.SWAP(0, 1), gates.CNOT(0, 2), gates.M(0, 1)],
+        [gates.SWAP(0, 1), gates.Align(0), gates.M(0, 1)],
+        [gates.SWAP(0, 1)],
+        [gates.SWAP(0, 1), gates.H(2)],
+        [gates.M(0, 1), gates.SWAP(0, 1)],
+        [gates.SWAP(0, 1).controlled_by(2), gates.M(0, 1)],
+        [gates.SWAP(0, 2), gates.M(0, 1), gates.H(2)],
+        [gates.FSWAP(0, 1), gates.M(0, 1)],
+    ],
+)
+def test_optimize_swap_before_measure_keeps_the_swap(backend, queue):
+    circuit = Circuit(3)
+    circuit.add(queue)
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+
+def test_optimize_swap_before_measure_basis_and_collapse(backend):
+    # the measurements in other bases are preceded by gates that change the basis
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.M(0, basis=gates.X))
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.M(0, collapse=True))
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [("measure", (1,))]
+    assert optimized.queue[0].collapse
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_optimize_swap_before_measure_random_circuits(backend, seed):
+    circuit = _random_swap_circuit(seed)
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+
+    assert optimized.ngates < circuit.ngates
+    assert not any(isinstance(gate, gates.SWAP) for gate in optimized.queue[-3:])
+    (measurement,) = circuit.measurements
+    (new_measurement,) = optimized.measurements
+    backend.assert_allclose(
+        backend.execute_circuit(optimized).probabilities(
+            qubits=new_measurement.target_qubits
+        ),
+        backend.execute_circuit(circuit).probabilities(
+            qubits=measurement.target_qubits
+        ),
+        atol=1e-10,
+    )
+
+
+def test_optimize_swap_before_measure_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.X(0))
+    circuit.add(gates.SWAP(0, 2))
+    circuit.add(gates.M(0, 2))
+    pipeline = Passes([OptimizeSwapBeforeMeasure()], connectivity=star_connectivity())
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in transpiled.queue] == [
+        ("x", (0,)),
+        ("measure", (2, 0)),
+    ]
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4), gates.H(0)],
+        [gates.H(0), gates.RZ(0, 0.3), gates.CZ(0, 1), gates.RZ(0, 0.4), gates.H(0)],
+        [
+            gates.H(1),
+            gates.RZ(1, 0.3),
+            gates.RZZ(0, 1, 0.5),
+            gates.RZ(1, 0.4),
+            gates.H(1),
+        ],
+        [
+            gates.RY(1, 0.5),
+            gates.RX(1, 0.3),
+            gates.CNOT(0, 1),
+            gates.RX(1, 0.4),
+            gates.RY(1, 0.2),
+        ],
+        [
+            gates.RZ(0, 0.1),
+            gates.CNOT(0, 1),
+            gates.RZ(0, 0.2),
+            gates.CNOT(0, 1),
+            gates.RZ(0, 0.3),
+        ],
+    ],
+)
+def test_optimize_1q_gates_simple_commutation(backend, queue):
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = Optimize1qGatesSimpleCommutation()(circuit, backend=backend)
+
+    assert optimized.ngates == 3
+    # the circuits are equal up to a global phase if the overlap of their unitaries is one
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        # the gates do not commute with the blocker
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(1, 0), gates.RZ(0, 0.4), gates.H(0)],
+        # the blockers are not unitaries, or have symbols
+        [gates.H(0), gates.RZ(0, 0.3), gates.M(0), gates.RZ(0, 0.4), gates.H(0)],
+        [gates.H(0), gates.RZ(0, 0.3), gates.Align(0), gates.RZ(0, 0.4), gates.H(0)],
+        [
+            gates.H(0),
+            gates.RZ(0, 0.3),
+            gates.RZZ(0, 1, sympy.Symbol("x")),
+            gates.RZ(0, 0.4),
+        ],
+        [
+            gates.RZ(0, 0.3),
+            gates.RZ(0, sympy.Symbol("x")),
+            gates.RZ(0, 0.4),
+            gates.H(0),
+        ],
+        # there is no run to move the gates into
+        [
+            gates.RZ(0, 0.3),
+            gates.CNOT(0, 1),
+            gates.CNOT(0, 1),
+            gates.H(0),
+            gates.RZ(0, 0.1),
+        ],
+        [gates.CNOT(0, 1), gates.RZ(0, 0.3), gates.CNOT(0, 1)],
+    ],
+)
+def test_optimize_1q_gates_simple_commutation_keeps_the_circuit(backend, queue):
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = Optimize1qGatesSimpleCommutation()(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+
+def test_optimize_1q_gates_simple_commutation_basis(backend):
+    # the circuit is rewritten with the gates of the basis, even if it has more gates
+    basis = ["rz", "sx", "cx"]
+    for queue in (
+        [gates.H(0), gates.CNOT(0, 1), gates.RZ(0, 0.4)],
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4), gates.H(0)],
+    ):
+        circuit = Circuit(2)
+        circuit.add(queue)
+        optimized = Optimize1qGatesSimpleCommutation(basis=basis)(
+            circuit, backend=backend
+        )
+        assert {gate.name for gate in optimized.queue} <= set(basis)
+        first = circuit.unitary(backend)
+        second = optimized.unitary(backend)
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+    # the gates do not move if the number of gates, which are in the basis, does not decrease
+    circuit = Circuit(2)
+    circuit.add([gates.SX(0), gates.CNOT(0, 1), gates.RZ(0, 0.4)])
+    optimized = Optimize1qGatesSimpleCommutation(basis=basis)(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+
+@pytest.mark.parametrize("up_to_global_phase", [True, False])
+def test_optimize_1q_gates_simple_commutation_global_phase(backend, up_to_global_phase):
+    circuit = Circuit(2)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.GlobalPhase(0.2))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, 0.4))
+    optimized = Optimize1qGatesSimpleCommutation(up_to_global_phase=up_to_global_phase)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in optimized.queue][:2] == ["global_phase", "cx"]
+    assert optimized.ngates == 3
+
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    if up_to_global_phase:
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+    else:
+        backend.assert_allclose(second, first, atol=1e-8)
+
+
+def test_optimize_1q_gates_simple_commutation_negative_atol():
+    with pytest.raises(ValueError, match="atol"):
+        Optimize1qGatesSimpleCommutation(atol=-1.0)
+
+
+@pytest.mark.parametrize("up_to_global_phase", [True, False])
+@pytest.mark.parametrize("seed", range(10))
+def test_optimize_1q_gates_simple_commutation_random_circuits(
+    backend, seed, up_to_global_phase
+):
+    generator = random.Random(seed)
+    one_qubit = [
+        lambda qubit: gates.RZ(qubit, generator.random()),
+        lambda qubit: gates.RX(qubit, generator.random()),
+        lambda qubit: gates.RY(qubit, generator.random()),
+        lambda qubit: gates.U3(qubit, *(generator.random() for _ in range(3))),
+        gates.H,
+        gates.T,
+        gates.S,
+        gates.X,
+        gates.SX,
+    ]
+    two_qubit = [gates.CNOT, gates.CZ, gates.CY, gates.SWAP]
+    circuit = Circuit(3)
+    for _ in range(18):
+        if generator.random() < 0.65:
+            circuit.add(generator.choice(one_qubit)(generator.randrange(3)))
+        else:
+            circuit.add(generator.choice(two_qubit)(*generator.sample(range(3), 2)))
+
+    optimized = Optimize1qGatesSimpleCommutation(up_to_global_phase=up_to_global_phase)(
+        circuit, backend=backend
+    )
+
+    assert optimized.ngates <= circuit.ngates
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    if up_to_global_phase:
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+    else:
+        backend.assert_allclose(second, first, atol=1e-8)
+
+
+def test_optimize_1q_gates_simple_commutation_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.RZ(0, 0.4))
+    circuit.add(gates.H(0))
+    pipeline = Passes(
+        [Optimize1qGatesSimpleCommutation()], connectivity=star_connectivity()
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert transpiled.ngates == 3
 
 
 @pytest.mark.parametrize("power", range(20))
