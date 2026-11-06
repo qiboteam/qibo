@@ -18,7 +18,7 @@ from qibo.transpiler._exceptions import (
     PlacementError,
     TranspilerPipelineError,
 )
-from qibo.transpiler.abstract import Optimizer
+from qibo.transpiler.abstract import Optimizer, Placer
 from qibo.transpiler.asserts import (
     _transpose_qubits,
     assert_circuit_equivalence,
@@ -33,6 +33,7 @@ from qibo.transpiler.pipeline import (
     transpile,
 )
 from qibo.transpiler.placer import (
+    Dense,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
@@ -1535,7 +1536,7 @@ def test_transpile_optimization_level_0_is_the_default(backend):
 
 
 @pytest.mark.parametrize("connectivity", [None, nx.path_graph(3)])
-@pytest.mark.parametrize("optimization_level", [1, -1, "0", None])
+@pytest.mark.parametrize("optimization_level", [2, -1, "0", None])
 def test_optimization_level_error(connectivity, optimization_level):
     with pytest.raises(ValueError, match="optimization_level"):
         generate_preset_passes(connectivity, optimization_level=optimization_level)
@@ -1554,3 +1555,240 @@ def test_transpile_forwards_the_optimization_level(monkeypatch):
     monkeypatch.setattr(pipeline_module, "generate_preset_passes", spy)
     transpile(Circuit(2), nx.path_graph(2), optimization_level=0)
     assert calls[-1]["optimization_level"] == 0
+
+
+def test_generate_preset_passes_optimization_level_1_structure():
+    connectivity = nx.path_graph(4)
+    passes = generate_preset_passes(connectivity, optimization_level=1).passes
+    assert _names(passes) == [
+        "Validation",
+        "Unroller",
+        "InverseCancellation",
+        "CommutativeCancellation",
+        "Preprocessing",
+        "ReverseTraversal",
+        "Sabre",
+        "ConsolidateBlocks",
+        "Unroller",
+        "FixedPoint",
+    ]
+    assert _names(passes[-1].optimizers) == [
+        "Optimize1qGatesDecomposition",
+        "InverseCancellation",
+    ]
+    assert passes[-1].optimizers[0].basis == set(NativeGates.default().gate_names)
+
+
+def test_generate_preset_passes_optimization_level_1_directed_and_unconnected():
+    # the last optimizers also act on the gates that fix the direction
+    connectivity = nx.DiGraph([(0, 1), (1, 2)])
+    passes = generate_preset_passes(connectivity, optimization_level=1).passes
+    assert _names(passes)[-3:] == ["GateDirection", "Unroller", "FixedPoint"]
+
+    # without connectivity there are no layout and routing, and the unroller is split
+    passes = generate_preset_passes(optimization_level=1).passes
+    assert _names(passes) == [
+        "Validation",
+        "Unroller",
+        "InverseCancellation",
+        "CommutativeCancellation",
+        "ConsolidateBlocks",
+        "Unroller",
+        "FixedPoint",
+    ]
+    assert passes[1].min_qubits == 3
+    assert passes[-2].min_qubits == 1
+
+
+def test_generate_preset_passes_optimization_level_1_without_euler_basis():
+    """The single-qubit optimizer is not used if the native gates have no Euler basis."""
+    natives = NativeGates.PRX | NativeGates.CZ | NativeGates.M
+    passes = generate_preset_passes(
+        nx.path_graph(3), natives, optimization_level=1
+    ).passes
+    assert _names(passes[-1].optimizers) == ["InverseCancellation"]
+
+
+@pytest.mark.parametrize(
+    "kwargs, trials, placer",
+    [
+        ({}, 5, ReverseTraversal),
+        ({"layout_trials": 2}, 2, ReverseTraversal),
+        ({"layout_method": "reverse_traversal"}, 5, ReverseTraversal),
+        ({"layout_method": "trivial"}, None, None),
+        ({"layout_method": "dense"}, None, Dense),
+        ({"initial_layout": [2, 1, 0]}, None, None),
+        ({"routing_method": "shortest_paths"}, None, None),
+        ({"routing_method": ShortestPaths()}, None, None),
+        ({"routing_method": "sabre"}, 5, ReverseTraversal),
+    ],
+)
+def test_generate_preset_passes_optimization_level_1_layout(kwargs, trials, placer):
+    passes = generate_preset_passes(
+        nx.path_graph(3), optimization_level=1, **kwargs
+    ).passes
+    placers = [pass_ for pass_ in passes if isinstance(pass_, Placer)]
+    assert [type(pass_) for pass_ in placers] == ([] if placer is None else [placer])
+    if trials is not None:
+        assert placers[0].trials == trials
+
+
+def test_generate_preset_passes_level_0_layout_trials():
+    passes = generate_preset_passes(
+        nx.path_graph(3), layout_method="reverse_traversal", optimization_level=0
+    ).passes
+    (placer,) = [pass_ for pass_ in passes if isinstance(pass_, ReverseTraversal)]
+    assert placer.trials == 1
+
+
+@pytest.mark.parametrize("optimization_level", [0, 1])
+def test_generate_preset_passes_sampling_only(optimization_level):
+    default = generate_preset_passes(
+        nx.path_graph(3), optimization_level=optimization_level
+    )
+    sampling = generate_preset_passes(
+        nx.path_graph(3), optimization_level=optimization_level, sampling_only=True
+    )
+    if optimization_level == 0:
+        # there are no optimizers
+        assert _names(sampling.passes) == _names(default.passes)
+    else:
+        assert _names(sampling.passes)[2:5] == [
+            "OptimizeSwapBeforeMeasure",
+            "RemoveDiagonalGatesBeforeMeasurement",
+            "RemoveFinalReset",
+        ]
+        assert _names(sampling.passes)[5:] == _names(default.passes)[2:]
+
+
+@pytest.mark.parametrize(
+    "natives",
+    [
+        NativeGates.default(),
+        NativeGates.I
+        | NativeGates.RZ
+        | NativeGates.SX
+        | NativeGates.X
+        | NativeGates.CNOT,
+        NativeGates.U3 | NativeGates.CZ | NativeGates.M,
+    ],
+    ids=["default", "SX-CNOT", "U3"],
+)
+@pytest.mark.parametrize("directed", [False, True])
+def test_generate_preset_passes_optimization_level_1(backend, natives, directed):
+    connectivity = (
+        nx.DiGraph([(0, 1), (2, 1), (2, 3), (4, 3), (4, 0)])
+        if directed
+        else nx.path_graph(5)
+    )
+    circuit = generate_random_circuit(nqubits=5, ngates=30, seed=4)
+    circuit.add(gates.M(*range(5)))
+
+    pipeline = generate_preset_passes(
+        connectivity, natives, seed=1, optimization_level=1, backend=backend
+    )
+    transpiled, final_layout = pipeline(circuit, backend=backend)
+    assert pipeline.is_satisfied(transpiled)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=natives,
+    )
+
+    baseline, _ = generate_preset_passes(
+        connectivity, natives, seed=1, backend=backend
+    )(circuit, backend=backend)
+    assert _count_two_qubit_gates(transpiled) <= _count_two_qubit_gates(baseline)
+    assert transpiled.ngates < baseline.ngates
+
+
+def test_generate_preset_passes_optimization_level_1_without_connectivity(backend):
+    circuit = Circuit(3)
+    circuit.add(
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4), gates.H(0)]
+    )
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    baseline = generate_preset_passes(backend=backend)(circuit, backend=backend)[0]
+    optimized = generate_preset_passes(optimization_level=1, backend=backend)(
+        circuit, backend=backend
+    )[0]
+
+    assert optimized.ngates < baseline.ngates
+    first = baseline.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+def test_generate_preset_passes_sampling_only_removes_swaps(backend):
+    circuit = Circuit(3)
+    circuit.add([gates.RY(0, 0.8), gates.RY(1, 1.3), gates.SWAP(0, 1), gates.M(0, 1)])
+    connectivity = nx.path_graph(3)
+    kwargs = {"optimization_level": 1, "seed": 0, "backend": backend}
+
+    exact, _ = generate_preset_passes(connectivity, **kwargs)(circuit, backend=backend)
+    sampling, _ = generate_preset_passes(connectivity, sampling_only=True, **kwargs)(
+        circuit, backend=backend
+    )
+
+    assert sum(isinstance(gate, gates.CZ) for gate in exact.queue) == 3
+    assert sum(isinstance(gate, gates.CZ) for gate in sampling.queue) == 0
+
+
+def test_transpile_optimization_level_1(backend, monkeypatch):
+    calls = []
+    generate = pipeline_module.generate_preset_passes
+
+    def spy(*args, **kwargs):
+        calls.append(kwargs)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline_module, "generate_preset_passes", spy)
+    circuit = Circuit(3)
+    circuit.add(
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4), gates.M(0)]
+    )
+    exact, _ = transpile(circuit, nx.path_graph(3), seed=0, backend=backend)
+    optimized, _ = transpile(
+        [circuit],
+        nx.path_graph(3),
+        seed=0,
+        optimization_level=1,
+        sampling_only=True,
+        backend=backend,
+    )[0]
+
+    assert calls[-1]["optimization_level"] == 1
+    assert calls[-1]["sampling_only"]
+    assert optimized.ngates < exact.ngates
+
+
+def test_transpile_sampling_only_warns_without_measurements(caplog):
+    with_measurement = Circuit(2)
+    with_measurement.add([gates.H(0), gates.M(0)])
+    without_measurement = Circuit(2)
+    without_measurement.add(gates.H(0))
+    connectivity = nx.path_graph(2)
+
+    with caplog.at_level("WARNING"):
+        transpile(
+            with_measurement, connectivity, optimization_level=1, sampling_only=True
+        )
+    assert "sampling_only" not in caplog.text
+
+    with caplog.at_level("WARNING"):
+        transpile(
+            [with_measurement, without_measurement],
+            connectivity,
+            optimization_level=1,
+            sampling_only=True,
+        )
+    assert caplog.text.count("sampling_only") == 1
+
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        transpile(without_measurement, connectivity, sampling_only=True)
+        transpile(without_measurement, connectivity, optimization_level=1)
+    assert "sampling_only" not in caplog.text
