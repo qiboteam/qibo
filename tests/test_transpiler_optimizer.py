@@ -519,6 +519,141 @@ def test_commutative_cancellation_cancels_pairs_through_commuting_gates(backend)
     backend.assert_allclose(optimized.queue[0].parameters[0], 0.6)
 
 
+@pytest.mark.parametrize(
+    "queue, basis, expected",
+    [
+        # the rotation gate is in the basis
+        (
+            [gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4)],
+            ["rz", "cx"],
+            ["rz", "cx"],
+        ),
+        (
+            [gates.RX(1, 0.3), gates.CNOT(0, 1), gates.RX(1, 0.4)],
+            ["rx", "cx"],
+            ["rx", "cx"],
+        ),
+        (
+            [gates.RY(1, 0.3), gates.CY(0, 1), gates.RY(1, 0.4)],
+            ["ry", "cy"],
+            ["ry", "cy"],
+        ),
+        # it is not, and the angle is not special
+        (
+            [gates.RX(1, 0.3), gates.CNOT(0, 1), gates.RX(1, 0.4)],
+            ["rz", "sx", "x", "cx"],
+            ["rx", "cx", "rx"],
+        ),
+        # rotations by pi and by +-pi / 2 around X
+        (
+            [gates.SX(1), gates.CNOT(0, 1), gates.SX(1)],
+            ["sx", "x", "cx"],
+            ["x", "cx"],
+        ),
+        (
+            [gates.SX(1), gates.CNOT(0, 1), gates.SX(1)],
+            ["sx", "cx"],
+            ["sx", "cx", "sx"],
+        ),
+        (
+            [gates.RX(1, math.pi / 4), gates.CNOT(0, 1), gates.RX(1, math.pi / 4)],
+            ["sx", "cx"],
+            ["sx", "cx"],
+        ),
+        (
+            [gates.X(1), gates.CNOT(0, 1), gates.SX(1)],
+            ["sxdg", "cx"],
+            ["sxdg", "cx"],
+        ),
+        (
+            [gates.SX(1), gates.CNOT(0, 1), gates.SX(1), gates.CNOT(0, 1), gates.SX(1)],
+            ["x", "sx", "sxdg", "cx"],
+            ["sxdg"],
+        ),
+        # rotations by pi around Y and Z
+        (
+            [gates.RY(1, 0.3), gates.CY(0, 1), gates.RY(1, math.pi - 0.3)],
+            ["y", "cy"],
+            ["y", "cy"],
+        ),
+        (
+            [gates.RZ(0, 0.5), gates.CNOT(0, 1), gates.RZ(0, math.pi - 0.5)],
+            ["z", "cx"],
+            ["z", "cx"],
+        ),
+        # the identity is left out, as it needs no gate
+        ([gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, -0.3)], ["cx"], ["cx"]),
+        # a rotation that cannot be merged does not stop the search of another one
+        ([gates.SX(1), gates.RX(1, 0.3), gates.SX(1)], ["sx", "x", "cx"], ["x", "rx"]),
+    ],
+)
+def test_commutative_cancellation_basis(backend, queue, basis, expected):
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = CommutativeCancellation(basis=basis)(circuit, backend=backend)
+
+    assert [gate.name for gate in optimized.queue] == expected
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+def test_commutative_cancellation_basis_exact_global_phase(backend):
+    """The gates that are the rotation up to a global phase are not used."""
+    circuit = Circuit(2)
+    circuit.add([gates.RX(1, math.pi / 4), gates.CNOT(0, 1), gates.RX(1, math.pi / 4)])
+    basis = ["sx", "x", "cx"]
+
+    optimized = CommutativeCancellation(up_to_global_phase=False, basis=basis)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in optimized.queue] == ["rx", "cx", "rx"]
+    optimized = CommutativeCancellation(basis=basis)(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["sx", "cx"]
+
+    # the rotation gate is exact
+    circuit = Circuit(2)
+    circuit.add([gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4)])
+    optimized = CommutativeCancellation(up_to_global_phase=False, basis=["rz", "cx"])(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in optimized.queue] == ["rz", "cx"]
+    backend.assert_allclose(
+        optimized.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_commutative_cancellation_basis_random_circuits(backend, seed):
+    generator = random.Random(seed)
+    basis = ["rz", "sx", "sxdg", "x", "z", "cx", "cz"]
+    one_qubit = [
+        lambda qubit: gates.RZ(
+            qubit, generator.choice([0.3, -0.3, 0.7, math.pi / 2, math.pi])
+        ),
+        gates.SX,
+        gates.X,
+        gates.Z,
+    ]
+    two_qubit = [gates.CNOT, gates.CZ]
+    circuit = Circuit(3)
+    for _ in range(16):
+        if generator.random() < 0.6:
+            circuit.add(generator.choice(one_qubit)(generator.randrange(3)))
+        else:
+            circuit.add(generator.choice(two_qubit)(*generator.sample(range(3), 2)))
+
+    optimized = CommutativeCancellation(basis=basis)(circuit, backend=backend)
+
+    assert {gate.name for gate in optimized.queue} <= set(basis)
+    assert optimized.ngates <= circuit.ngates
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
 def test_commutative_cancellation_uncancellable_gates(backend):
     circuit = Circuit(2)
     circuit.add(gates.RZ(0, 0.3))

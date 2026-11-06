@@ -306,11 +306,17 @@ def generate_preset_passes(
       also removes the gates close to the identity if ``approximation_degree`` is lower
       than :math:`1`.
     * :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the last unroller.
+    * At the end, :class:`qibo.transpiler.optimizer.ConsolidateBlocks` again, followed by
+      an unroller and, if ``connectivity`` is directed, by the gates that fix the direction,
+      since the blocks of the native circuit can have fewer entangling gates.
     * A second loop at the end, of
+      :class:`qibo.transpiler.optimizer.RemoveIdentityEquivalent`,
       :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`,
-      :class:`qibo.transpiler.optimizer.Optimize1qGatesSimpleCommutation` and
-      :class:`qibo.transpiler.optimizer.InverseCancellation` with commutation. It is also
-      left out if the native gates have no Euler basis.
+      :class:`qibo.transpiler.optimizer.Optimize1qGatesSimpleCommutation`,
+      :class:`qibo.transpiler.optimizer.CommutativeCancellation`, which only writes the
+      native gates, and :class:`qibo.transpiler.optimizer.InverseCancellation` with
+      commutation. The single-qubit optimizers are left out if the native gates have no
+      Euler basis.
 
     The optimizers can change the global phase of the circuit, and the gates that they
     merge do not keep their trainable parameters.
@@ -474,7 +480,12 @@ def generate_preset_passes(
         "weight": weight,
     }
     before_layout, before_unroller, after_unroller = _optimization_stages(
-        optimization_level, native_gates, sampling_only, approximation_degree
+        optimization_level,
+        native_gates,
+        sampling_only,
+        approximation_degree,
+        connectivity is not None and connectivity.is_directed(),
+        backend,
     )
 
     if connectivity is None:
@@ -866,6 +877,8 @@ def _optimization_stages(
     native_gates: NativeGates,
     sampling_only: bool,
     approximation_degree: float,
+    directed: bool,
+    backend: Backend | None,
 ) -> tuple[list[Optimizer], list[Optimizer], list[Optimizer]]:
     """Optimizers of the optimization level, see :func:`generate_preset_passes`.
 
@@ -877,6 +890,10 @@ def _optimization_stages(
             of the measured qubits are included.
         approximation_degree (float): Fidelity of each entangling gate, which sets how
             close to the identity a gate has to be to be removed.
+        directed (bool): Whether the connectivity is directed, so that the gates that fix
+            the direction are applied again after the unroller of the optimizers.
+        backend (:class:`qibo.backends.abstract.Backend` or None): Backend of the
+            unroller of the optimizers.
 
     Returns:
         tuple[list, list, list]: Optimizers to run before the layout, before the last
@@ -908,15 +925,31 @@ def _optimization_stages(
     if optimization_level >= 2:
         before_layout.append(RemoveIdentityEquivalent(approximation_degree))
         before_unroller.append(CommutativeCancellation())
-        if has_euler_basis:
-            after_unroller.append(
-                FixedPoint(
-                    [
-                        Optimize1qGatesDecomposition(basis=basis),
-                        Optimize1qGatesSimpleCommutation(basis=basis),
-                        InverseCancellation(commutation=True),
-                    ]
-                )
+
+        # the two-qubit blocks are rewritten again once the circuit is native, which can
+        # have fewer entangling gates after the other optimizers, and the gates that
+        # the unroller writes are native but their direction has to be fixed again
+        after_unroller.extend(
+            [ConsolidateBlocks(), Unroller(native_gates, backend=backend)]
+        )
+        if directed:
+            after_unroller.extend(
+                [GateDirection(), Unroller(native_gates, backend=backend)]
             )
+        loop = [RemoveIdentityEquivalent(approximation_degree)]
+        if has_euler_basis:
+            loop.extend(
+                [
+                    Optimize1qGatesDecomposition(basis=basis),
+                    Optimize1qGatesSimpleCommutation(basis=basis),
+                ]
+            )
+        loop.extend(
+            [
+                CommutativeCancellation(basis=basis),
+                InverseCancellation(commutation=True),
+            ]
+        )
+        after_unroller.append(FixedPoint(loop))
 
     return before_layout, before_unroller, after_unroller

@@ -1815,22 +1815,29 @@ def test_generate_preset_passes_optimization_level_2_structure():
         "CommutativeCancellation",
         "Unroller",
         "FixedPoint",
+        "ConsolidateBlocks",
+        "Unroller",
         "FixedPoint",
     ]
-    assert _names(passes[-2].optimizers) == [
+    assert _names(passes[-4].optimizers) == [
         "Optimize1qGatesDecomposition",
         "InverseCancellation",
     ]
     assert _names(passes[-1].optimizers) == [
+        "RemoveIdentityEquivalent",
         "Optimize1qGatesDecomposition",
         "Optimize1qGatesSimpleCommutation",
+        "CommutativeCancellation",
         "InverseCancellation",
     ]
-    assert not passes[-2].optimizers[-1].commutation
+    assert not passes[-4].optimizers[-1].commutation
     assert passes[-1].optimizers[-1].commutation
+    # the optimizers after the translation only write native gates
     basis = set(NativeGates.default().gate_names)
-    assert passes[-1].optimizers[0].basis == basis
     assert passes[-1].optimizers[1].basis == basis
+    assert passes[-1].optimizers[2].basis == basis
+    assert passes[-1].optimizers[3].basis == basis
+    assert passes[-2].native_gates == NativeGates.default()
 
 
 @pytest.mark.parametrize("approximation_degree", [1.0, 0.9])
@@ -1846,16 +1853,27 @@ def test_generate_preset_passes_optimization_level_2_approximation_degree(
         pass_ for pass_ in passes if isinstance(pass_, RemoveIdentityEquivalent)
     ]
     assert identity.approximation_degree == approximation_degree
+    (in_loop,) = [
+        optimizer
+        for optimizer in passes[-1].optimizers
+        if isinstance(optimizer, RemoveIdentityEquivalent)
+    ]
+    assert in_loop.approximation_degree == approximation_degree
 
 
 def test_generate_preset_passes_optimization_level_2_directed_and_unconnected():
-    # the last loops also act on the gates that fix the direction
+    # the direction is fixed again after the unroller that follows the last consolidation
     connectivity = nx.DiGraph([(0, 1), (1, 2)])
     passes = generate_preset_passes(connectivity, optimization_level=2).passes
-    assert _names(passes)[-4:] == [
+    assert _names(passes)[-9:] == [
+        "Unroller",
         "GateDirection",
         "Unroller",
         "FixedPoint",
+        "ConsolidateBlocks",
+        "Unroller",
+        "GateDirection",
+        "Unroller",
         "FixedPoint",
     ]
 
@@ -1871,10 +1889,13 @@ def test_generate_preset_passes_optimization_level_2_directed_and_unconnected():
         "CommutativeCancellation",
         "Unroller",
         "FixedPoint",
+        "ConsolidateBlocks",
+        "Unroller",
         "FixedPoint",
     ]
     assert passes[1].min_qubits == 3
-    assert passes[-3].min_qubits == 1
+    assert passes[-5].min_qubits == 1
+    assert passes[-2].min_qubits == 1
 
 
 def test_generate_preset_passes_optimization_level_2_without_euler_basis():
@@ -1883,8 +1904,13 @@ def test_generate_preset_passes_optimization_level_2_without_euler_basis():
     passes = generate_preset_passes(
         nx.path_graph(3), natives, optimization_level=2
     ).passes
-    assert _names(passes).count("FixedPoint") == 1
-    assert _names(passes[-1].optimizers) == ["InverseCancellation"]
+    assert _names(passes).count("FixedPoint") == 2
+    assert _names(passes[-4].optimizers) == ["InverseCancellation"]
+    assert _names(passes[-1].optimizers) == [
+        "RemoveIdentityEquivalent",
+        "CommutativeCancellation",
+        "InverseCancellation",
+    ]
     assert "Optimize1qGatesSimpleCommutation" not in _names(passes)
 
 
@@ -2020,3 +2046,26 @@ def test_transpile_optimization_level_2(backend, monkeypatch):
     assert calls[-1]["optimization_level"] == 2
     assert calls[-1]["approximation_degree"] == 0.95
     assert optimized.ngates < exact.ngates
+
+
+def test_generate_preset_passes_optimization_level_2_consolidates_the_native_circuit(
+    backend,
+):
+    """A block of two-qubit gates that need more CZ gates than they count before the unroller."""
+    circuit = Circuit(2)
+    circuit.add([gates.RXX(0, 1, 0.3), gates.RYY(0, 1, 0.4), gates.RZZ(0, 1, 0.5)])
+    kwargs = {"seed": 0, "layout_method": "trivial", "backend": backend}
+    connectivity = nx.path_graph(2)
+    level_1, _ = generate_preset_passes(connectivity, optimization_level=1, **kwargs)(
+        circuit, backend=backend
+    )
+    level_2, _ = generate_preset_passes(connectivity, optimization_level=2, **kwargs)(
+        circuit, backend=backend
+    )
+
+    cz = lambda circuit: sum(isinstance(gate, gates.CZ) for gate in circuit.queue)
+    assert cz(level_2) < cz(level_1)
+    first = level_1.unitary(backend)
+    second = level_2.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)

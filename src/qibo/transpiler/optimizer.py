@@ -176,6 +176,14 @@ class CommutativeCancellation(Optimizer):
     identity are cancelled through the gates that commute with them, see
     :class:`qibo.transpiler.optimizer.InverseCancellation`.
 
+    If ``basis`` is given, the merged rotation is written only with the gates of the
+    basis, so that the pass does not add gates that are not native. If the basis has not
+    the rotation gate, it can be a :class:`qibo.gates.X`, :class:`qibo.gates.Y` or
+    :class:`qibo.gates.Z` gate, for a rotation by :math:`\\pi`, or a
+    :class:`qibo.gates.SX` or :class:`qibo.gates.SXDG` gate, for a rotation by
+    :math:`\\pm\\pi / 2` around :math:`X`, but only if ``up_to_global_phase`` is ``True``.
+    Otherwise, the rotations are not merged.
+
     Measurements, alignments, barriers, noise channels and fused gates are never merged
     nor cancelled, and stop the search across them on their qubits. Gates with sympy
     parameters are not merged, but the gates that commute with them do not stop the search.
@@ -211,13 +219,23 @@ class CommutativeCancellation(Optimizer):
         up_to_global_phase (bool, optional): If ``False``, two rotations are merged only
             when the new rotation has exactly the same matrix as their product, which keeps
             the global phase of the circuit. Defaults to ``True``.
+        basis (list[str], optional): Names of the gates that the merged rotations can be
+            written with, as in :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`.
+            Defaults to ``None``, which allows :class:`qibo.gates.RX`,
+            :class:`qibo.gates.RY` and :class:`qibo.gates.RZ`.
     """
 
-    def __init__(self, atol: float = 1e-12, up_to_global_phase: bool = True):
+    def __init__(
+        self,
+        atol: float = 1e-12,
+        up_to_global_phase: bool = True,
+        basis: list[str] | None = None,
+    ):
         if atol < 0:
             raise_error(ValueError, f"``atol`` must be non-negative, but got {atol}.")
         self.atol = atol
         self.up_to_global_phase = up_to_global_phase
+        self.basis = None if basis is None else set(basis)
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Merge the rotations and cancel the pairs of gates through commuting gates.
@@ -280,18 +298,28 @@ class CommutativeCancellation(Optimizer):
                                 continue
                         total_angle = math.remainder(total_angle, period)
 
-                        merged = True
                         if abs(total_angle) <= self.atol:
                             for qubit in partner.qubits:
                                 stacks[qubit].remove(position)
                             kept[position] = None
                             rotations[position] = None
                         else:
-                            kept[position] = (gates.RX, gates.RY, gates.RZ)[axis](
-                                gate.qubits[0], total_angle
+                            new_gate = _rotation_gate(
+                                gate.qubits[0],
+                                axis,
+                                total_angle,
+                                self.basis,
+                                self.up_to_global_phase,
+                                self.atol,
                             )
-                            kept_numeric[position] = kept[position]
+                            if new_gate is None:
+                                # the merged rotation cannot be written with the basis
+                                continue
+                            kept[position] = new_gate
+                            kept_numeric[position] = new_gate
+                            # the special gates are only used up to a global phase
                             rotations[position] = (axis, 0.0, total_angle)
+                        merged = True
                         break
 
                     if (
@@ -2557,3 +2585,51 @@ def _rotation(
         backend.real(sine * unphase), backend.real(cosine * unphase)
     )
     return axis, float(phase), float(angle)
+
+
+def _rotation_gate(
+    qubit: int,
+    axis: int,
+    angle: float,
+    basis: set[str] | None,
+    up_to_global_phase: bool,
+    atol: float,
+) -> Gate | None:
+    """Gate of a Pauli rotation that is written with the gates of ``basis``.
+
+    Args:
+        qubit (int): Qubit of the gate.
+        axis (int): Index of the Pauli matrix of the rotation, in the order :math:`X`,
+            :math:`Y` and :math:`Z`.
+        angle (float): Angle of the rotation, between :math:`-\\pi` and :math:`\\pi` if
+            ``up_to_global_phase`` is ``True``.
+        basis (set[str] or None): Names of the allowed gates. If ``None``, all the
+            rotation gates are allowed.
+        up_to_global_phase (bool): If ``True``, the gates that are the rotation up to a
+            global phase are allowed.
+        atol (float): Tolerance on the angle of the special gates.
+
+    Returns:
+        :class:`qibo.gates.abstract.Gate` or None: The rotation gate if it is in the basis,
+        otherwise the equivalent special gate, if there is one in the basis, and ``None``
+        if there is not.
+    """
+    rotation = (gates.RX, gates.RY, gates.RZ)[axis]
+    if basis is None or rotation.__name__.lower() in basis:
+        return rotation(qubit, angle)
+
+    if up_to_global_phase:
+        # the rotation by pi or by +-pi / 2 are other gates, up to a global phase
+        special = (
+            ((gates.X, math.pi), (gates.SX, math.pi / 2), (gates.SXDG, -math.pi / 2)),
+            ((gates.Y, math.pi),),
+            ((gates.Z, math.pi),),
+        )[axis]
+        for gate, target in special:
+            distance = (
+                abs(abs(angle) - target) if target == math.pi else abs(angle - target)
+            )
+            if gate.__name__.lower() in basis and distance <= atol:
+                return gate(qubit)
+
+    return None
