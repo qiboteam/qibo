@@ -408,6 +408,7 @@ def test_calculate_psi_weight(backend):
         (gates.RX, gates.S),
         (gates.RX, gates.T),
         (gates.RZ, gates.H, gates.T),
+        (gates.RZ, gates.GPI2),
         (gates.PRX,),
     ],
 )
@@ -435,7 +436,13 @@ def test_single_qubit_decomposition(backend, gate_classes):
 
 @pytest.mark.parametrize(
     "gate_classes",
-    [(gates.RX, gates.RZ), (gates.RZ, gates.H), (gates.RZ, gates.SX), (gates.PRX,)],
+    [
+        (gates.RX, gates.RZ),
+        (gates.RZ, gates.H),
+        (gates.RZ, gates.SX),
+        (gates.RZ, gates.GPI2),
+        (gates.PRX,),
+    ],
 )
 def test_single_qubit_decomposition_special_unitaries(backend, gate_classes):
     # The identity needs no gates, and the Pauli gates are special cases of the rotations
