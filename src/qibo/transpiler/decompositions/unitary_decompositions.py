@@ -38,6 +38,7 @@ _EULER_BASES = {
     "XYX": ("rx", "ry"),
     "ZSX": ("rz", "sx"),
     "ZSXX": ("rz", "sx", "x"),
+    "ZGPI2": ("rz", "gpi2"),
 }
 
 # Single-qubit gates without parameters and the angle of the rotations of the gates
@@ -1121,11 +1122,16 @@ def _euler_sequence(
             (gates.RZ, phi + math.pi),
         ]
 
+    if name == "ZGPI2":
+        # GPI2 with angle zero is the SX gate, up to a global phase
+        steps = [(gates.GPI2, 0.0) if step == (gates.SX,) else step for step in steps]
+
     # Rotations by a multiple of 2 pi are left out.
+    rotations = (gates.RX, gates.RY, gates.RZ, gates.U1)
     sequence = [
         step[0](qubit, *step[1:])
         for step in steps
-        if len(step) != 2 or abs(math.remainder(step[1], 2 * math.pi)) > atol
+        if step[0] not in rotations or abs(math.remainder(step[1], 2 * math.pi)) > atol
     ]
 
     return sequence

@@ -893,7 +893,9 @@ class Optimize1qGatesDecomposition(Optimizer):
     * ``"ZSX"``: :class:`qibo.gates.RZ` gates separated by :class:`qibo.gates.SX`
       gates, where SX is the square root of the Pauli X gate;
     * ``"ZSXX"``: as ``"ZSX"``, with a :class:`qibo.gates.X` gate replacing two SX
-      gates when possible.
+      gates when possible;
+    * ``"ZGPI2"``: as ``"ZSX"``, with :class:`qibo.gates.GPI2` gates of angle zero
+      replacing the SX gates, as they are equal up to a global phase.
 
     Rotations by a multiple of :math:`2 \\pi` are left out, so runs equal to the
     identity are removed. A run is replaced if it contains a gate whose name is not

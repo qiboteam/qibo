@@ -39,6 +39,7 @@ from qibo.transpiler.optimizer import (
 )
 from qibo.transpiler.pipeline import Passes, generate_preset_passes
 from qibo.transpiler.router import Sabre
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 def test_preprocessing_error(star_connectivity):
@@ -1728,6 +1729,7 @@ BASES = {
     "XYX": ["rx", "ry", "cx"],
     "ZSX": ["rz", "sx", "cx"],
     "ZSXX": ["rz", "sx", "x", "cx"],
+    "ZGPI2": ["rz", "gpi2", "cx"],
 }
 
 
@@ -1774,6 +1776,9 @@ def test_optimize_1q_gates_decomposition_random(backend, basis):
         ("ZSX", 0.7, ["rz", "sx", "rz", "sx", "rz"]),
         ("ZSXX", np.pi, ["rz", "x", "rz"]),
         ("ZSXX", 0.7, ["rz", "sx", "rz", "sx", "rz"]),
+        ("ZGPI2", 0.0, ["rz"]),
+        ("ZGPI2", np.pi / 2, ["rz", "gpi2", "rz"]),
+        ("ZGPI2", 0.7, ["rz", "gpi2", "rz", "gpi2", "rz"]),
         ("U321", 0.0, ["u1"]),
         ("U321", np.pi / 2, ["u2"]),
         ("U321", 0.7, ["u3"]),
@@ -1787,6 +1792,39 @@ def test_optimize_1q_gates_decomposition_special_angles(backend, basis, theta, n
         [name for name in BASES[basis] if name != "cx"]
     )(circuit, backend=backend)
     assert [gate.name for gate in optimized.queue] == names
+
+
+def test_optimize_1q_gates_decomposition_gpi2_has_angle_zero(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.U3(0, 0.7, 0.4, 0.9))
+    optimized = Optimize1qGatesDecomposition(["rz", "gpi2"])(circuit, backend=backend)
+    gpi2 = [gate for gate in optimized.queue if gate.name == "gpi2"]
+    assert len(gpi2) == 2
+    assert all(gate.parameters == (0.0,) for gate in gpi2)
+
+
+def test_optimize_1q_gates_decomposition_native_gates(backend):
+    """The runs after the unroller are rewritten with the native gates."""
+    natives = NativeGates.default()
+    basis = ["id", "z", "rz", "gpi2", "cz"]
+    generator = np.random.default_rng(0)
+    circuit = Circuit(2)
+    for _ in range(3):
+        for qubit in (0, 1):
+            circuit.add(gates.U3(qubit, *generator.uniform(-3, 3, 3)))
+            circuit.add(gates.RX(qubit, generator.uniform(-3, 3)))
+            circuit.add(gates.H(qubit))
+        circuit.add(gates.CZ(0, 1))
+    unrolled = Unroller(natives, backend=backend)(circuit)
+
+    optimized = Optimize1qGatesDecomposition(basis)(unrolled, backend=backend)
+
+    assert {gate.name for gate in optimized.queue} <= {*basis, "global_phase"}
+    assert optimized.ngates < unrolled.ngates
+    first = unrolled.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
 
 
 def test_optimize_1q_gates_decomposition_identity(backend):
