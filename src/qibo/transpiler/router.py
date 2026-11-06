@@ -427,7 +427,11 @@ class Sabre(Router):
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
         _check_connected_components(self.circuit_map, self.connectivity)
-        self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
+        # the nodes are the logical qubits after the relabeling, so the matrix is indexed
+        # by them, and not by the position of the nodes in the graph
+        self._dist_matrix = nx.floyd_warshall_numpy(
+            self.connectivity, nodelist=sorted(self.connectivity.nodes)
+        )
         # The distance between qubits in different connected components is infinite. The
         # SWAP gates never change the components of the qubits, so a finite value that is
         # larger than the other distances is equivalent for the cost of the candidates,
@@ -454,7 +458,8 @@ class Sabre(Router):
         return final_measurements[::-1]
 
     def _append_final_measurements(self, routed_circuit: Circuit) -> Circuit:
-        """Appends final measurement gates on the correct qubits conserving the measurement register.
+        """Appends final measurement gates on the correct qubits conserving
+        the measurement register.
 
         Args:
             routed_circuit (:class:`qibo.models.circuit.Circuit`): Routed circuit without

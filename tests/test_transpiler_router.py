@@ -1095,3 +1095,49 @@ def test_no_routing_errors():
 
     with pytest.raises(PlacementError):
         NoRouting(nx.path_graph(4))(Circuit(3))
+
+
+@pytest.mark.parametrize(
+    "wire_names", [[0, 1, 2, 3, 4], [2, 0, 4, 1, 3], [4, 3, 2, 1, 0]]
+)
+def test_sabre_distances_follow_the_layout(wire_names):
+    """The distance between two logical qubits is the one of the nodes they sit on."""
+    connectivity = nx.path_graph(5)
+    circuit = Circuit(5, wire_names=wire_names)
+    circuit.add(gates.CNOT(0, 1))
+    router = Sabre(connectivity, seed=0)
+    router(circuit)
+
+    distances = dict(nx.all_pairs_shortest_path_length(connectivity))
+    for first, second in itertools.product(range(5), repeat=2):
+        assert (
+            router._dist_matrix[first, second]
+            == distances[wire_names[first]][wire_names[second]]
+        )
+
+
+def test_sabre_layout_does_not_change_the_swaps(backend):
+    """Random circuits have no preferred layout, so the swaps do not depend on it."""
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(3, 3))
+    nqubits = connectivity.number_of_nodes()
+
+    def swaps(wire_names, seed):
+        circuit = Circuit(nqubits, wire_names=wire_names)
+        rng = backend.default_rng(seed)
+        for _ in range(40):
+            qubits = backend.random_choice(
+                nqubits, size=2, seed=rng, replace=False, dtype=backend.int64
+            )
+            circuit.add(gates.CNOT(*qubits))
+        routed, _ = Sabre(connectivity, seed=0)(circuit)
+        return sum(isinstance(gate, gates.SWAP) for gate in routed.queue)
+
+    identity = sum(swaps(list(range(nqubits)), seed) for seed in range(4))
+    generator = random.Random(0)
+    permuted = 0
+    for seed in range(4):
+        wire_names = list(range(nqubits))
+        generator.shuffle(wire_names)
+        permuted += swaps(wire_names, seed)
+
+    assert permuted <= 1.4 * identity
