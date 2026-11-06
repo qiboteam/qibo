@@ -32,10 +32,12 @@ from qibo.transpiler.optimizer import (
     GateDirection,
     InverseCancellation,
     Optimize1qGatesDecomposition,
+    Optimize1qGatesSimpleCommutation,
     OptimizeSwapBeforeMeasure,
     Preprocessing,
     RemoveDiagonalGatesBeforeMeasurement,
     RemoveFinalReset,
+    RemoveIdentityEquivalent,
     Validation,
 )
 from qibo.transpiler.placer import (
@@ -54,7 +56,7 @@ from qibo.transpiler.router import (
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 # Optimization levels of :func:`qibo.transpiler.pipeline.generate_preset_passes`.
-_OPTIMIZATION_LEVELS = (0, 1)
+_OPTIMIZATION_LEVELS = (0, 1, 2)
 
 
 class Passes:
@@ -284,8 +286,9 @@ def generate_preset_passes(
     :class:`qibo.transpiler.optimizer.GateDirection` pass and an unroller, so that the
     two-qubit gates act in the direction of the edges.
 
-    The optimization level :math:`1` adds optimizers to the pipeline. The ones that can write
-    gates that are not native run before the last unroller:
+    The optimization levels :math:`1` and :math:`2` add optimizers to the pipeline. The ones
+    that can write gates that are not native run before the last unroller. Level :math:`1`
+    adds:
 
     * :class:`qibo.transpiler.optimizer.InverseCancellation` and
       :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the layout.
@@ -296,6 +299,18 @@ def generate_preset_passes(
       at the end. The first one is left out if the native gates have no Euler basis.
     * The ``"reverse_traversal"`` placer with five trials, unless ``layout_method`` or
       ``initial_layout`` is given.
+
+    Level :math:`2` adds, to the optimizers of level :math:`1`:
+
+    * :class:`qibo.transpiler.optimizer.RemoveIdentityEquivalent` before the layout, which
+      also removes the gates close to the identity if ``approximation_degree`` is lower
+      than :math:`1`.
+    * :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the last unroller.
+    * A second loop at the end, of
+      :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`,
+      :class:`qibo.transpiler.optimizer.Optimize1qGatesSimpleCommutation` and
+      :class:`qibo.transpiler.optimizer.InverseCancellation` with commutation. It is also
+      left out if the native gates have no Euler basis.
 
     The optimizers can change the global phase of the circuit, and the gates that they
     merge do not keep their trainable parameters.
@@ -395,11 +410,11 @@ def generate_preset_passes(
             by the router of the ``"reverse_traversal"`` placer. Defaults to :math:`5`.
         optimization_level (int, optional): Optimization level of the pipeline. It can be
             :math:`0`, which is the pipeline described above, that only makes the circuit
-            executable on the hardware and does not optimize it, or :math:`1`, which adds
-            the optimizers described above. Defaults to :math:`0`.
-        sampling_only (bool, optional): If ``True``, the optimizers of level :math:`1` also
-            use the rewrites that keep the distribution of the measured qubits, but can
-            change the state of the circuit before the measurements:
+            executable on the hardware and does not optimize it, or :math:`1` or :math:`2`,
+            which add the optimizers described above. Defaults to :math:`0`.
+        sampling_only (bool, optional): If ``True``, the optimizers of levels :math:`1` and
+            :math:`2` also use the rewrites that keep the distribution of the measured
+            qubits, but can change the state of the circuit before the measurements:
             :class:`qibo.transpiler.optimizer.OptimizeSwapBeforeMeasure`,
             :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement` and
             :class:`qibo.transpiler.optimizer.RemoveFinalReset`, before the layout. It has
@@ -459,7 +474,7 @@ def generate_preset_passes(
         "weight": weight,
     }
     before_layout, before_unroller, after_unroller = _optimization_stages(
-        optimization_level, native_gates, sampling_only
+        optimization_level, native_gates, sampling_only, approximation_degree
     )
 
     if connectivity is None:
@@ -747,8 +762,8 @@ def transpile(
             ``"sabre"`` router, which keeps the best one. It is not used by the other
             routers. Defaults to :math:`5`.
         optimization_level (int, optional): Optimization level of the pipeline, see
-            :func:`qibo.transpiler.pipeline.generate_preset_passes`. It can be :math:`0` or
-            :math:`1`. Defaults to :math:`0`, which does not optimize the circuits.
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. It can be :math:`0`,
+            :math:`1` or :math:`2`. Defaults to :math:`0`, which does not optimize the circuits.
         sampling_only (bool, optional): If ``True``, the optimizers also use the rewrites
             that keep the distribution of the measured qubits but can change the state of
             the circuit before the measurements, see
@@ -847,7 +862,10 @@ def transpile(
 
 
 def _optimization_stages(
-    optimization_level: int, native_gates: NativeGates, sampling_only: bool
+    optimization_level: int,
+    native_gates: NativeGates,
+    sampling_only: bool,
+    approximation_degree: float,
 ) -> tuple[list[Optimizer], list[Optimizer], list[Optimizer]]:
     """Optimizers of the optimization level, see :func:`generate_preset_passes`.
 
@@ -857,6 +875,8 @@ def _optimization_stages(
             hardware.
         sampling_only (bool): If ``True``, the optimizers that keep only the distribution
             of the measured qubits are included.
+        approximation_degree (float): Fidelity of each entangling gate, which sets how
+            close to the identity a gate has to be to be removed.
 
     Returns:
         tuple[list, list, list]: Optimizers to run before the layout, before the last
@@ -879,9 +899,24 @@ def _optimization_stages(
 
     # the single-qubit optimizer does nothing if the native gates have no Euler basis
     basis = native_gates.gate_names
+    has_euler_basis = bool(Optimize1qGatesDecomposition(basis=basis).euler_bases)
     loop = [InverseCancellation()]
-    if Optimize1qGatesDecomposition(basis=basis).euler_bases:
+    if has_euler_basis:
         loop.insert(0, Optimize1qGatesDecomposition(basis=basis))
     after_unroller.append(FixedPoint(loop))
+
+    if optimization_level >= 2:
+        before_layout.append(RemoveIdentityEquivalent(approximation_degree))
+        before_unroller.append(CommutativeCancellation())
+        if has_euler_basis:
+            after_unroller.append(
+                FixedPoint(
+                    [
+                        Optimize1qGatesDecomposition(basis=basis),
+                        Optimize1qGatesSimpleCommutation(basis=basis),
+                        InverseCancellation(commutation=True),
+                    ]
+                )
+            )
 
     return before_layout, before_unroller, after_unroller
