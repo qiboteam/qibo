@@ -1123,12 +1123,12 @@ def test_sabre_layout_does_not_change_the_swaps(backend):
 
     def swaps(wire_names, seed):
         circuit = Circuit(nqubits, wire_names=wire_names)
+        rng = backend.default_rng(seed)
         for _ in range(40):
-            circuit.add(
-                gates.CNOT(
-                    *backend.random_integers(0, nqubits, 2, seed=seed, replace=False)
-                )
+            qubits = backend.random_choice(
+                nqubits, size=2, seed=rng, replace=False, dtype=backend.int64
             )
+            circuit.add(gates.CNOT(*qubits))
         routed, _ = Sabre(connectivity, seed=0)(circuit)
         return sum(isinstance(gate, gates.SWAP) for gate in routed.queue)
 
