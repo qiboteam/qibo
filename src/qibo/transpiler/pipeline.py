@@ -10,7 +10,7 @@ import networkx as nx
 
 from qibo import Circuit
 from qibo.backends import Backend, _check_backend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     DecompositionError,
@@ -25,7 +25,19 @@ from qibo.transpiler.asserts import (
     assert_placement,
 )
 from qibo.transpiler.layout import TranspileLayout
-from qibo.transpiler.optimizer import GateDirection, Preprocessing, Validation
+from qibo.transpiler.optimizer import (
+    CommutativeCancellation,
+    ConsolidateBlocks,
+    FixedPoint,
+    GateDirection,
+    InverseCancellation,
+    Optimize1qGatesDecomposition,
+    OptimizeSwapBeforeMeasure,
+    Preprocessing,
+    RemoveDiagonalGatesBeforeMeasurement,
+    RemoveFinalReset,
+    Validation,
+)
 from qibo.transpiler.placer import (
     Dense,
     Random,
@@ -42,11 +54,12 @@ from qibo.transpiler.router import (
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 # Optimization levels of :func:`qibo.transpiler.pipeline.generate_preset_passes`.
-_OPTIMIZATION_LEVELS = (0,)
+_OPTIMIZATION_LEVELS = (0, 1)
 
 
 class Passes:
-    """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially.
+    """Define a transpiler pipeline consisting of smaller transpiler steps that
+    are applied sequentially.
 
     Args:
         passes (list, optional): List of transpiler passes to be applied sequentially.
@@ -231,7 +244,7 @@ def generate_preset_passes(
     qubits_initially_zero: bool = False,
     layout_method: str | Placer | None = None,
     routing_method: str | Router | None = None,
-    layout_trials: int = 1,
+    layout_trials: int | None = None,
     callback: Callable | None = None,
     approximation_degree: float = 1.0,
     threshold: float | None = None,
@@ -241,12 +254,13 @@ def generate_preset_passes(
     minimize_depth: bool = False,
     routing_trials: int = 5,
     optimization_level: int = 0,
+    sampling_only: bool = False,
     backend: Backend | None = None,
 ) -> Passes:
-    """Generate a ready-to-use transpiler pipeline that does not optimize the circuit.
+    """Generate a ready-to-use transpiler pipeline.
 
-    The pipeline only makes the circuit executable on the hardware, with the following
-    passes:
+    With the default ``optimization_level=0``, the pipeline only makes the circuit
+    executable on the hardware, with the following passes:
 
     1. :class:`qibo.transpiler.optimizer.Validation` raises an error at the start if the
        circuit cannot be transpiled, *e.g.* if it has a noise channel, more qubits than
@@ -269,6 +283,22 @@ def generate_preset_passes(
     If ``connectivity`` is directed, the pipeline ends with a
     :class:`qibo.transpiler.optimizer.GateDirection` pass and an unroller, so that the
     two-qubit gates act in the direction of the edges.
+
+    The optimization level :math:`1` adds optimizers to the pipeline. The ones that can write
+    gates that are not native run before the last unroller:
+
+    * :class:`qibo.transpiler.optimizer.InverseCancellation` and
+      :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the layout.
+    * :class:`qibo.transpiler.optimizer.ConsolidateBlocks` before the last unroller, which
+      rewrites the blocks of two-qubit gates that have fewer :class:`qibo.gates.CZ` gates.
+    * A loop of :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`, with the
+      native gates as ``basis``, and :class:`qibo.transpiler.optimizer.InverseCancellation`
+      at the end. The first one is left out if the native gates have no Euler basis.
+    * The ``"reverse_traversal"`` placer with five trials, unless ``layout_method`` or
+      ``initial_layout`` is given.
+
+    The optimizers can change the global phase of the circuit, and the gates that they
+    merge do not keep their trainable parameters.
 
     Without ``connectivity`` there is nothing to place and route, so the pipeline only
     validates the circuit and decomposes it to the native gates.
@@ -311,7 +341,9 @@ def generate_preset_passes(
             (:class:`qibo.transpiler.placer.ReverseTraversal` with
             :class:`qibo.transpiler.router.Sabre`), ``"star"``
             (:class:`qibo.transpiler.placer.StarConnectivityPlacer`) or a placer. It
-            requires ``connectivity``. Defaults to ``None``, which is ``"trivial"``.
+            requires ``connectivity``. Defaults to ``None``, which is ``"trivial"``, or
+            ``"reverse_traversal"`` if ``optimization_level`` is at least :math:`1`,
+            ``initial_layout`` is ``None`` and ``routing_method`` is ``None`` or ``"sabre"``.
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuit executable. It can be ``"sabre"``
             (:class:`qibo.transpiler.router.Sabre` with ``routing_trials`` trials),
@@ -325,7 +357,8 @@ def generate_preset_passes(
         layout_trials (int, optional): Number of layout attempts of the
             ``"reverse_traversal"`` placer, see
             :class:`qibo.transpiler.placer.ReverseTraversal`. It is not used by the other
-            placers. Defaults to :math:`1`.
+            placers. Defaults to ``None``, which is :math:`1` if ``optimization_level`` is
+            :math:`0` and :math:`5` otherwise.
         callback (Callable, optional): Function called after each pass that runs, see
             :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         approximation_degree (float, optional): Fidelity of each entangling gate, between
@@ -362,7 +395,15 @@ def generate_preset_passes(
             by the router of the ``"reverse_traversal"`` placer. Defaults to :math:`5`.
         optimization_level (int, optional): Optimization level of the pipeline. It can be
             :math:`0`, which is the pipeline described above, that only makes the circuit
-            executable on the hardware and does not optimize it. Defaults to :math:`0`.
+            executable on the hardware and does not optimize it, or :math:`1`, which adds
+            the optimizers described above. Defaults to :math:`0`.
+        sampling_only (bool, optional): If ``True``, the optimizers of level :math:`1` also
+            use the rewrites that keep the distribution of the measured qubits, but can
+            change the state of the circuit before the measurements:
+            :class:`qibo.transpiler.optimizer.OptimizeSwapBeforeMeasure`,
+            :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement` and
+            :class:`qibo.transpiler.optimizer.RemoveFinalReset`, before the layout. It has
+            no effect if ``optimization_level`` is :math:`0`. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -417,17 +458,37 @@ def generate_preset_passes(
         "threshold": threshold,
         "weight": weight,
     }
+    before_layout, before_unroller, after_unroller = _optimization_stages(
+        optimization_level, native_gates, sampling_only
+    )
 
     if connectivity is None:
+        passes = [Validation()]
+        if optimization_level == 0:
+            passes.append(Unroller(native_gates, **synthesis, **unroller_kwargs))
+        else:
+            passes.append(Unroller(native_gates, min_qubits=3, **unroller_kwargs))
+            passes.extend([*before_layout, *before_unroller])
+            passes.append(Unroller(native_gates, **synthesis, backend=backend))
+            passes.extend(after_unroller)
         return Passes(
-            passes=[
-                Validation(),
-                Unroller(native_gates, **synthesis, **unroller_kwargs),
-            ],
+            passes=passes,
             native_gates=native_gates,
             on_qubits=on_qubits,
             callback=callback,
         )
+
+    # the layout is searched by default from the first level, unless the user gives a layout
+    # or a router that does not work with it
+    if (
+        layout_method is None
+        and initial_layout is None
+        and optimization_level >= 1
+        and (routing_method is None or routing_method == "sabre")
+    ):
+        layout_method = "reverse_traversal"
+    if layout_trials is None:
+        layout_trials = 1 if optimization_level == 0 else 5
 
     placers = {
         "dense": Dense,
@@ -480,9 +541,11 @@ def generate_preset_passes(
     passes = [
         Validation(initial_layout=initial_layout),
         Unroller(native_gates, min_qubits=3, **unroller_kwargs),
+        *before_layout,
         Preprocessing(initial_layout=initial_layout),
         *([] if placer is None else [placer]),
         router,
+        *before_unroller,
         Unroller(native_gates, **synthesis, backend=backend),
     ]
     if connectivity.is_directed():
@@ -491,6 +554,7 @@ def generate_preset_passes(
         # without ``approximation_degree``, since they are simple gates that cannot be
         # approximated with fewer entangling gates.
         passes.extend([GateDirection(), Unroller(native_gates, backend=backend)])
+    passes.extend(after_unroller)
 
     return Passes(
         passes=passes,
@@ -541,7 +605,7 @@ def transpile(
     qubits_initially_zero: bool = False,
     layout_method: str | Placer | None = None,
     routing_method: str | Router | None = None,
-    layout_trials: int = 1,
+    layout_trials: int | None = None,
     callback: Callable | None = None,
     approximation_degree: float = 1.0,
     threshold: float | None = None,
@@ -551,13 +615,15 @@ def transpile(
     minimize_depth: bool = False,
     routing_trials: int = 5,
     optimization_level: int = 0,
+    sampling_only: bool = False,
     num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
-    """Transpile one or more circuits in a single call, without optimizing them.
+    """Transpile one or more circuits in a single call.
 
     It builds the pipeline of :func:`qibo.transpiler.pipeline.generate_preset_passes` once
-    and applies it to the circuits, which makes them executable on the hardware.
+    and applies it to the circuits, which makes them executable on the hardware, and
+    optimizes them if ``optimization_level`` is higher than :math:`0`.
     All the arguments except ``circuits`` and ``num_processes`` are the ones of
     :func:`qibo.transpiler.pipeline.generate_preset_passes`, and they are shared by all the
     circuits.
@@ -648,7 +714,8 @@ def transpile(
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuits executable. Defaults to ``None``.
         layout_trials (int, optional): Number of layout attempts of the
-            ``"reverse_traversal"`` placer. Defaults to :math:`1`.
+            ``"reverse_traversal"`` placer. Defaults to ``None``, which is :math:`1` if
+            ``optimization_level`` is :math:`0` and :math:`5` otherwise.
         callback (Callable, optional): Function called after each pass that runs, for each
             circuit, see :class:`qibo.transpiler.pipeline.Passes`. It cannot be used with
             more than one process. Defaults to ``None``.
@@ -680,8 +747,14 @@ def transpile(
             ``"sabre"`` router, which keeps the best one. It is not used by the other
             routers. Defaults to :math:`5`.
         optimization_level (int, optional): Optimization level of the pipeline, see
-            :func:`qibo.transpiler.pipeline.generate_preset_passes`. Defaults to :math:`0`,
-            which does not optimize the circuits.
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. It can be :math:`0` or
+            :math:`1`. Defaults to :math:`0`, which does not optimize the circuits.
+        sampling_only (bool, optional): If ``True``, the optimizers also use the rewrites
+            that keep the distribution of the measured qubits but can change the state of
+            the circuit before the measurements, see
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. It logs a warning
+            for the circuits without measurements, and it has no effect if
+            ``optimization_level`` is :math:`0`. Defaults to ``False``.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -721,6 +794,12 @@ def transpile(
             "``callback`` cannot be used with more than one process, because it would "
             + "be called in the worker processes.",
         )
+    if sampling_only and optimization_level > 0:
+        for circuit in [circuits] if isinstance(circuits, Circuit) else circuits:
+            if not circuit.measurements:
+                log.warning(
+                    "``sampling_only`` has no effect on a circuit without measurements."
+                )
     passes = generate_preset_passes(
         connectivity=connectivity,
         native_gates=native_gates,
@@ -740,6 +819,7 @@ def transpile(
         minimize_depth=minimize_depth,
         routing_trials=routing_trials,
         optimization_level=optimization_level,
+        sampling_only=sampling_only,
         backend=backend,
     )
     if isinstance(circuits, Circuit):
@@ -764,3 +844,44 @@ def transpile(
             )
 
     return results
+
+
+def _optimization_stages(
+    optimization_level: int, native_gates: NativeGates, sampling_only: bool
+) -> tuple[list[Optimizer], list[Optimizer], list[Optimizer]]:
+    """Optimizers of the optimization level, see :func:`generate_preset_passes`.
+
+    Args:
+        optimization_level (int): Optimization level.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): Native gates of the
+            hardware.
+        sampling_only (bool): If ``True``, the optimizers that keep only the distribution
+            of the measured qubits are included.
+
+    Returns:
+        tuple[list, list, list]: Optimizers to run before the layout, before the last
+        unroller, and after it.
+    """
+    before_layout, before_unroller, after_unroller = [], [], []
+    if optimization_level == 0:
+        return before_layout, before_unroller, after_unroller
+
+    if sampling_only:
+        before_layout.extend(
+            [
+                OptimizeSwapBeforeMeasure(),
+                RemoveDiagonalGatesBeforeMeasurement(),
+                RemoveFinalReset(),
+            ]
+        )
+    before_layout.extend([InverseCancellation(), CommutativeCancellation()])
+    before_unroller.append(ConsolidateBlocks())
+
+    # the single-qubit optimizer does nothing if the native gates have no Euler basis
+    basis = native_gates.gate_names
+    loop = [InverseCancellation()]
+    if Optimize1qGatesDecomposition(basis=basis).euler_bases:
+        loop.insert(0, Optimize1qGatesDecomposition(basis=basis))
+    after_unroller.append(FixedPoint(loop))
+
+    return before_layout, before_unroller, after_unroller
