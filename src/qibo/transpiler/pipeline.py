@@ -41,6 +41,9 @@ from qibo.transpiler.router import (
 )
 from qibo.transpiler.unroller import NativeGates, Unroller
 
+# Optimization levels of :func:`qibo.transpiler.pipeline.generate_preset_passes`.
+_OPTIMIZATION_LEVELS = (0,)
+
 
 class Passes:
     """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially.
@@ -237,6 +240,7 @@ def generate_preset_passes(
     minimize_toffolis: bool | None = None,
     minimize_depth: bool = False,
     routing_trials: int = 5,
+    optimization_level: int = 0,
     backend: Backend | None = None,
 ) -> Passes:
     """Generate a ready-to-use transpiler pipeline that does not optimize the circuit.
@@ -356,6 +360,9 @@ def generate_preset_passes(
             ``"sabre"`` router, which keeps the best one, see
             :class:`qibo.transpiler.router.Sabre`. It is not used by the other routers, nor
             by the router of the ``"reverse_traversal"`` placer. Defaults to :math:`5`.
+        optimization_level (int, optional): Optimization level of the pipeline. It can be
+            :math:`0`, which is the pipeline described above, that only makes the circuit
+            executable on the hardware and does not optimize it. Defaults to :math:`0`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -369,9 +376,17 @@ def generate_preset_passes(
         PlacementError: If ``initial_layout`` is given with a non-trivial ``layout_method``.
         ValueError: If ``layout_method`` or ``routing_method`` is not a valid method, if
             ``approximation_degree`` is not between :math:`0` and :math:`1`, if
-            ``minimize_toffolis`` and ``minimize_depth`` are both ``True``, or if
-            ``routing_trials`` is not positive and the router is ``"sabre"``.
+            ``minimize_toffolis`` and ``minimize_depth`` are both ``True``, if
+            ``routing_trials`` is not positive and the router is ``"sabre"``, or if
+            ``optimization_level`` is not a valid level.
     """
+    if optimization_level not in _OPTIMIZATION_LEVELS:
+        raise_error(
+            ValueError,
+            f"``optimization_level`` must be one of {list(_OPTIMIZATION_LEVELS)}, "
+            + f"but it is {optimization_level!r}.",
+        )
+
     if connectivity is None and not (
         initial_layout is None and layout_method is None and routing_method is None
     ):
@@ -535,6 +550,7 @@ def transpile(
     minimize_toffolis: bool | None = None,
     minimize_depth: bool = False,
     routing_trials: int = 5,
+    optimization_level: int = 0,
     num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
@@ -663,6 +679,9 @@ def transpile(
         routing_trials (int, optional): Number of independent routing attempts of the
             ``"sabre"`` router, which keeps the best one. It is not used by the other
             routers. Defaults to :math:`5`.
+        optimization_level (int, optional): Optimization level of the pipeline, see
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. Defaults to :math:`0`,
+            which does not optimize the circuits.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -683,8 +702,8 @@ def transpile(
         ValueError: If ``num_processes`` is not a positive integer, if ``callback`` is
             given with more than one process, if ``approximation_degree`` is not between
             :math:`0` and :math:`1`, if ``minimize_toffolis`` and ``minimize_depth`` are
-            both ``True``, or if ``routing_trials`` is not positive and the router is
-            ``"sabre"``.
+            both ``True``, if ``routing_trials`` is not positive and the router is
+            ``"sabre"``, or if ``optimization_level`` is not a valid level.
         BrokenProcessPool: If a worker process ends abruptly. A common cause is a script
             that calls this function with several processes without the
             ``if __name__ == "__main__":`` guard.
@@ -720,6 +739,7 @@ def transpile(
         minimize_toffolis=minimize_toffolis,
         minimize_depth=minimize_depth,
         routing_trials=routing_trials,
+        optimization_level=optimization_level,
         backend=backend,
     )
     if isinstance(circuits, Circuit):

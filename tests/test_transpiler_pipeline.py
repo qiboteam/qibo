@@ -1490,3 +1490,67 @@ def test_transpile_routing_trials(backend, monkeypatch):
     circuit.add(gates.CZ(0, 2))
     transpile(circuit, nx.path_graph(3), routing_trials=2, seed=0, backend=backend)
     assert calls[-1]["routing_trials"] == 2
+
+
+def _names(passes):
+    return [type(pass_).__name__ for pass_ in passes]
+
+
+def test_generate_preset_passes_optimization_level_0_is_the_default():
+    connectivity = nx.path_graph(4)
+    default = generate_preset_passes(connectivity).passes
+    level_0 = generate_preset_passes(connectivity, optimization_level=0).passes
+    assert _names(level_0) == _names(default)
+    assert _names(default) == [
+        "Validation",
+        "Unroller",
+        "Preprocessing",
+        "Sabre",
+        "Unroller",
+    ]
+
+    default = generate_preset_passes().passes
+    assert _names(generate_preset_passes(optimization_level=0).passes) == _names(
+        default
+    )
+    assert _names(default) == ["Validation", "Unroller"]
+
+
+def test_transpile_optimization_level_0_is_the_default(backend):
+    connectivity = nx.path_graph(4)
+    circuit = generate_random_circuit(nqubits=4, ngates=20, seed=3)
+    circuit.add(gates.M(*range(4)))
+
+    default, default_layout = transpile(circuit, connectivity, seed=1, backend=backend)
+    level_0, level_0_layout = transpile(
+        circuit, connectivity, seed=1, optimization_level=0, backend=backend
+    )
+
+    assert [(gate.name, gate.qubits) for gate in level_0.queue] == [
+        (gate.name, gate.qubits) for gate in default.queue
+    ]
+    backend.assert_allclose(level_0.unitary(backend), default.unitary(backend))
+    assert level_0_layout == default_layout
+    assert vars(level_0_layout) == vars(default_layout)
+
+
+@pytest.mark.parametrize("connectivity", [None, nx.path_graph(3)])
+@pytest.mark.parametrize("optimization_level", [1, -1, "0", None])
+def test_optimization_level_error(connectivity, optimization_level):
+    with pytest.raises(ValueError, match="optimization_level"):
+        generate_preset_passes(connectivity, optimization_level=optimization_level)
+    with pytest.raises(ValueError, match="optimization_level"):
+        transpile(Circuit(2), connectivity, optimization_level=optimization_level)
+
+
+def test_transpile_forwards_the_optimization_level(monkeypatch):
+    calls = []
+    generate = pipeline_module.generate_preset_passes
+
+    def spy(*args, **kwargs):
+        calls.append(kwargs)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline_module, "generate_preset_passes", spy)
+    transpile(Circuit(2), nx.path_graph(2), optimization_level=0)
+    assert calls[-1]["optimization_level"] == 0
