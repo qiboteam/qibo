@@ -43,6 +43,7 @@ class GateDecompositions:
     def __init__(self):
         self.decompositions = {}
         self._epsilon = None
+        self._mpmath_dps = None
 
     def add(self, gate, decomposition):
         """Register a decomposition for a gate."""
@@ -105,6 +106,7 @@ class GateDecompositions:
 
         mpmath.mp.dps = mpmath_dps
         self._epsilon = mpmath.mpmathify(epsilon)
+        self._mpmath_dps = mpmath_dps
 
     def _rz_into_cliff_and_t(
         self,

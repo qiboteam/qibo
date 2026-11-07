@@ -1665,6 +1665,59 @@ def test_clifford_plus_t_decomposition_is_exact(backend, name, args):
     )
 
 
+@pytest.mark.parametrize(
+    "name, args, controls",
+    [
+        ("RZ", (0, 0.3), ()),
+        ("RX", (0, 0.7), ()),
+        ("U3", (0, 0.3, 0.5, 0.9), ()),
+        ("PRX", (0, 0.3, 0.8), ()),
+        ("CRZ", (0, 1, 0.3), ()),
+        ("CU1", (0, 1, 0.9), ()),
+        ("RZ", (1, 0.3), (0,)),
+    ],
+)
+def test_clifford_plus_t_decomposition_precision(backend, name, args, controls):
+    """The precision sets the number of T gates, also with nested decompositions."""
+    pytest.importorskip("pygridsynth")
+    gate = getattr(gates, name)(*args)
+    if controls:
+        gate = gate.controlled_by(*controls)
+    nqubits = len(gate.qubits)
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+
+    counts = []
+    for epsilon, atol in ((1e-2, 1e-1), (1e-8, 1e-6)):
+        decomposed_gates = gate.decompose(method="clifford_plus_t", epsilon=epsilon)
+        counts.append(sum(g.name in ("t", "tdg") for g in decomposed_gates))
+        decomposed = Circuit(nqubits)
+        decomposed.add(decomposed_gates)
+        backend.assert_allclose(
+            decomposed.unitary(backend), circuit.unitary(backend), atol=atol
+        )
+
+    assert counts[0] < counts[1]
+
+
+def test_clifford_plus_t_precision_is_restored():
+    pytest.importorskip("pygridsynth")
+    mpmath = pytest.importorskip("mpmath")
+    gate = gates.RZ(0, 0.3)
+    default = len(gate.decompose(method="clifford_plus_t"))
+    decimal_places = mpmath.mp.dps
+
+    coarse = gate.decompose(method="clifford_plus_t", epsilon=1e-2, mpmath_dps=50)
+    assert len(coarse) < default
+    assert mpmath.mp.dps == decimal_places
+    assert len(gate.decompose(method="clifford_plus_t")) == default
+
+    # a gate without decomposition is returned as it is, and the precision is restored too
+    unchanged = gates.H(0).decompose(method="clifford_plus_t", epsilon=1e-2)
+    assert [g.name for g in unchanged] == ["h"]
+    assert len(gate.decompose(method="clifford_plus_t")) == default
+
+
 @pytest.mark.parametrize("applyx", [False, True])
 def test_toffoli(backend, applyx):
     if applyx:

@@ -229,9 +229,10 @@ class Gate:
             kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
                 one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
                 of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
-                This precision defaults to :math:`\\epsilon = 10^{-16}`.
-                Another possible keyword argument is ``mpmath_dps``, which defines the
-                number of decimal places used by the ``mpmath`` package.
+                This precision defaults to :math:`\\epsilon = 10^{-16}` and applies to
+                every rotation of the decomposition. Another possible keyword argument is
+                ``mpmath_dps``, which defines the number of decimal places used
+                by the ``mpmath`` package.
                 ``mpmmath_dps`` defaults to :math:`256`. For gates controlled by more than one
                 qubit and ``method = "standard"``, the keyword arguments ``clean``,
                 ``minimize_toffolis`` and ``minimize_depth`` are passed to
@@ -303,7 +304,7 @@ class Gate:
                         gate.is_controlled_by = True
                         gate.control_qubits += self.control_qubits
         else:
-            decomposed = self._base_decompose(*free, method=method)
+            decomposed = self._base_decompose(*free, method=method, **kwargs)
 
         # Step 4: Decompose recursively until no multi-controlled gates are left.
         # Gates controlled by more than one qubit are always decomposed, except
@@ -584,11 +585,18 @@ class Gate:
                     clifford_plus_t,
                 )
 
-                mpmath_dps = kwargs.get("mpmath_dps", 256)
-                epsilon = kwargs.get("epsilon", 1e-16)
-
                 func = clifford_plus_t
-                func._set_precision_cliff_plus_t(epsilon, mpmath_dps)
+                if "epsilon" in kwargs or "mpmath_dps" in kwargs:
+                    # The precision is set for this decomposition, including the
+                    # decompositions of the gates that it contains, and then restored
+                    previous = (func._epsilon, func._mpmath_dps)
+                    func._set_precision_cliff_plus_t(
+                        kwargs.get("epsilon", 1e-16), kwargs.get("mpmath_dps", 256)
+                    )
+                    try:
+                        return func(self)
+                    finally:
+                        func._set_precision_cliff_plus_t(*previous)
 
             else:
                 from qibo.transpiler.decompositions.standard_decompositions import (
