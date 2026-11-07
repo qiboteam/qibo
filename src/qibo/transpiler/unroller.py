@@ -45,6 +45,10 @@ _TWO_QUBIT_GATES = (
     "SWAP",
 )
 
+# Names of the gates that differ from the lowercase name of their class, which is
+# the name of the other gates.
+_GATE_NAMES = {"CNOT": "cx", "I": "id"}
+
 
 class FlagMeta(EnumMeta):
     """Metaclass for :class:`qibo.transpiler.unroller.NativeGates`
@@ -212,6 +216,19 @@ class NativeGates(Flag, metaclass=FlagMeta):
             getattr(gates, native.name)
             for native in NativeGates
             if native & self and native.name in _TWO_QUBIT_GATES
+        )
+
+    @property
+    def gate_names(self) -> tuple[str, ...]:
+        """Names of the gates in the native gates, without the measurement.
+
+        The names are the ones of :attr:`qibo.gates.abstract.Gate.name`, *e.g.* ``"cx"``
+        for :class:`qibo.gates.gates.CNOT`. They can be the ``basis`` of
+        :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`.
+        """
+        return tuple(
+            _GATE_NAMES.get(gate.__name__, gate.__name__.lower())
+            for gate in (*self.single_qubit_gates, *self.two_qubit_gates)
         )
 
 

@@ -1,5 +1,6 @@
-import itertools
 import math
+from inspect import signature
+from itertools import combinations
 from unittest.mock import Mock
 
 import numpy as np
@@ -380,7 +381,7 @@ def _native_gate_sets():
     """All non-empty combinations of the native gates that matter for universality."""
     names = ["Z", "RZ", "GPI2", "U3", "CZ", "iSWAP", "CNOT"]
     for size in range(1, len(names) + 1):
-        for combination in itertools.combinations(names, size):
+        for combination in combinations(names, size):
             natives = NativeGates.I | NativeGates.M
             for name in combination:
                 natives |= getattr(NativeGates, name)
@@ -754,7 +755,7 @@ def test_single_qubit_decomposition_is_consistent_with_is_universal(backend):
     unitary = random_unitary(2, seed=0, backend=backend)
     target = backend.to_numpy(unitary)
     for size in range(1, 4):
-        for combination in itertools.combinations(names, size):
+        for combination in combinations(names, size):
             natives = NativeGates.from_gatelist(
                 [getattr(gates, name) for name in combination] + [gates.CZ]
             )
@@ -1484,3 +1485,32 @@ def test_translate_gate_synthesis_options_are_forwarded(backend, monkeypatch):
     Unroller(natives, threshold=1e-3, weight=1.0, backend=backend)(circuit)
     assert calls[-1]["threshold"] == 1e-3
     assert calls[-1]["weight"] == 1.0
+
+
+def test_native_gates_gate_names():
+    assert NativeGates.default().gate_names == ("id", "z", "rz", "gpi2", "cz")
+    natives = NativeGates.I | NativeGates.CNOT | NativeGates.SX | NativeGates.RZ
+    assert (natives | NativeGates.M).gate_names == ("id", "rz", "sx", "cx")
+    assert NativeGates.NONE.gate_names == ()
+
+
+@pytest.mark.parametrize(
+    "native",
+    [
+        native
+        for native in NativeGates
+        if native not in (NativeGates.NONE, NativeGates.M)
+    ],
+    ids=lambda native: native.name,
+)
+def test_native_gates_gate_names_are_the_names_of_the_gates(native):
+    (gate_class,) = (*native.single_qubit_gates, *native.two_qubit_gates)
+    # one qubit per target, and an angle for each of the other required arguments
+    required = [
+        parameter
+        for name, parameter in signature(gate_class.__init__).parameters.items()
+        if name != "self" and parameter.default is parameter.empty
+    ]
+    nqubits = 1 if gate_class in native.single_qubit_gates else 2
+    arguments = [*range(nqubits), *[0.1] * (len(required) - nqubits)]
+    assert native.gate_names == (gate_class(*arguments).name,)
