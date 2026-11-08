@@ -5,13 +5,14 @@ from itertools import product
 import pytest
 
 from qibo import Circuit, gates
-from qibo.models import VBE, Cuccaro, Draper
+from qibo.models import TTK, VBE, Adder, Cuccaro, Draper
 
 # adders, and the number of auxiliary qubits that they use for the sum of nbits-bit integers
 ADDERS = [
     (VBE, lambda nbits: nbits),
     (Cuccaro, lambda nbits: 1),
     (Draper, lambda nbits: 0),
+    (TTK, lambda nbits: 0),
 ]
 
 
@@ -92,6 +93,23 @@ def test_Draper_gates(nbits):
     assert circuit.ngates == circuit.gate_types[gates.H] + circuit.gate_types[gates.CU1]
 
 
+def test_TTK_half_adder():
+    circuit = TTK(1)
+
+    assert circuit.gate_types[gates.TOFFOLI] == 1
+    assert circuit.gate_types[gates.CNOT] == 1
+    assert circuit.ngates == 2
+
+
+@pytest.mark.parametrize("nbits", [2, 3, 4, 8])
+def test_TTK_gates(nbits):
+    circuit = TTK(nbits)
+
+    assert circuit.gate_types[gates.TOFFOLI] == 2 * nbits - 1
+    assert circuit.gate_types[gates.CNOT] == 5 * nbits - 5
+    assert circuit.ngates == 7 * nbits - 6
+
+
 @pytest.mark.parametrize("nbits", [1, 2, 4])
 def test_VBE_gates(nbits):
     circuit = VBE(nbits)
@@ -99,3 +117,28 @@ def test_VBE_gates(nbits):
     assert circuit.gate_types[gates.TOFFOLI] == 4 * nbits - 2
     assert circuit.gate_types[gates.CNOT] == 4 * nbits
     assert circuit.ngates == 8 * nbits - 2
+
+
+@pytest.mark.parametrize("method", ["Cuccaro", "Draper", "TTK", "VBE"])
+def test_Adder(backend, method):
+    nbits = 3
+    methods = {"Cuccaro": Cuccaro, "Draper": Draper, "TTK": TTK, "VBE": VBE}
+
+    circuit = Adder(nbits, method=method)
+
+    assert circuit.raw == methods[method](nbits).raw
+    assert _add(backend, circuit, nbits, 5, 6) == (5, 11, 0)
+
+
+def test_Adder_default_and_kwargs():
+    assert Adder(3).raw == Cuccaro(3).raw
+    assert Adder(2, "TTK", density_matrix=True).density_matrix
+
+
+@pytest.mark.parametrize("method", ["Gidney", "cuccaro", 1, None, ["VBE"]])
+def test_Adder_errors(method):
+    with pytest.raises(ValueError):
+        Adder(2, method=method)
+
+    with pytest.raises(ValueError):
+        Adder(0)
