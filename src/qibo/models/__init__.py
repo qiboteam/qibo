@@ -28,6 +28,7 @@ from qibo.models.evolution import AdiabaticEvolution, StateEvolution
 from qibo.models.grover import Grover
 from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
 from qibo.models.qaa import FPQAA, OAA, QAA, QSearch, amplification_operator
+from qibo.models.qae import QAE
 from qibo.models.qft import QFT
 from qibo.models.qpe import IQPE, QPE
 from qibo.models.qsp import qsp_circuit, qsp_phases
@@ -43,6 +44,7 @@ __all__ = [
     "IQPE",
     "OAA",
     "QAA",
+    "QAE",
     "QAOA",
     "QFT",
     "QPE",
