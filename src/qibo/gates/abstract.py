@@ -233,7 +233,7 @@ class Gate:
                 every rotation of the decomposition. Another possible keyword argument is
                 ``mpmath_dps``, which defines the number of decimal places used
                 by the ``mpmath`` package.
-                ``mpmmath_dps`` defaults to :math:`256`. For gates controlled by more than one
+                ``mpmath_dps`` defaults to :math:`256`. For gates controlled by more than one
                 qubit and ``method = "standard"``, the keyword arguments ``clean``,
                 ``minimize_toffolis`` and ``minimize_depth`` are passed to
                 :func:`qibo.transpiler.multi_controlled_decomposition`.
@@ -573,7 +573,7 @@ class Gate:
                 This precision defaults to :math:`\\epsilon = 10^{-16}`.
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
-                ``mpmmath_dps`` defaults to :math:`256`.
+                ``mpmath_dps`` defaults to :math:`256`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Synthesis of the original

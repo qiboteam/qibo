@@ -1703,13 +1703,21 @@ def test_clifford_plus_t_decomposition_precision(backend, name, args, controls):
 def test_clifford_plus_t_precision_is_restored():
     pytest.importorskip("pygridsynth")
     mpmath = pytest.importorskip("mpmath")
+    from qibo.transpiler.decompositions.clifford_plus_t_decompositions import (
+        clifford_plus_t,
+    )
+
     gate = gates.RZ(0, 0.3)
     default = len(gate.decompose(method="clifford_plus_t"))
     decimal_places = mpmath.mp.dps
+    # the default precision is set when the decompositions are created
+    precision = (clifford_plus_t._epsilon, clifford_plus_t._mpmath_dps)
+    assert None not in precision
 
     coarse = gate.decompose(method="clifford_plus_t", epsilon=1e-2, mpmath_dps=50)
     assert len(coarse) < default
     assert mpmath.mp.dps == decimal_places
+    assert (clifford_plus_t._epsilon, clifford_plus_t._mpmath_dps) == precision
     assert len(gate.decompose(method="clifford_plus_t")) == default
 
     # a gate without decomposition is returned as it is, and the precision is restored too
