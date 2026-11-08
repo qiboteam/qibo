@@ -1,4 +1,5 @@
 from qibo.models import hep
+from qibo.models.adders import VBE
 from qibo.models.block_encoding import block_encoding_circuit
 from qibo.models.circuit import Circuit
 from qibo.models.double_bracket import DoubleBracketIteration
@@ -85,5 +86,6 @@ __all__ = [
     "unary_encoder",
     "unary_encoder_random_gaussian",
     "up_to_k_hamming_weight_encoder",
+    "VBE",
     "vnCDR",
 ]

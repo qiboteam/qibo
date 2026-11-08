@@ -192,6 +192,12 @@ Quantum Singular Value Transformation
 .. autofunction:: qibo.models.qsvt.qsvt_circuit
 
 
+Quantum Adders
+^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.adders.VBE
+
+
 Block Encoding
 ^^^^^^^^^^^^^^
 
