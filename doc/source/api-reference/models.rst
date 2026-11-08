@@ -195,9 +195,13 @@ Quantum Singular Value Transformation
 Quantum Adders
 ^^^^^^^^^^^^^^
 
+.. autofunction:: qibo.models.adders.Adder
+
 .. autofunction:: qibo.models.adders.Cuccaro
 
 .. autofunction:: qibo.models.adders.Draper
+
+.. autofunction:: qibo.models.adders.TTK
 
 .. autofunction:: qibo.models.adders.VBE
 
