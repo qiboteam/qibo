@@ -1,7 +1,6 @@
 """Tests for the quantum adders defined in `qibo/models/adders.py`."""
 
 import math
-import random
 from itertools import product
 
 import pytest
@@ -119,15 +118,14 @@ def test_adders_carry_propagation(backend, adder, nauxiliary, modular, nbits):
 
 @pytest.mark.parametrize("nbits", [4, 7, 8, 11, 16])
 @pytest.mark.parametrize("adder", CLASSICAL_ADDERS)
-def test_adders_classical(adder, nbits):
+def test_adders_classical(backend, adder, nbits):
     circuit = adder(nbits)
     largest = 2**nbits - 1
 
-    random.seed(nbits)
+    backend.set_seed(nbits)
     pairs = [(largest, 1), (1, largest), (largest, largest), (0, largest)]
-    pairs.extend(
-        (random.randrange(2**nbits), random.randrange(2**nbits)) for _ in range(50)
-    )
+    random_pairs = backend.random_integers(2**nbits, size=(50, 2))
+    pairs.extend((int(a), int(b)) for a, b in random_pairs)
     for a, b in pairs:
         assert _classical_add(circuit, nbits, a, b) == (a, a + b, 0)
 
