@@ -250,6 +250,12 @@ Quantum Counting
 .. autofunction:: qibo.models.Counting
 
 
+Maximum-likelihood Quantum Amplitude Estimation (MLQAE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.MLQAE
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
