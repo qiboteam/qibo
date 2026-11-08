@@ -1,5 +1,13 @@
 from qibo.models import hep
-from qibo.models.adders import TTK, VBE, Adder, Cuccaro, Draper
+from qibo.models.adders import (
+    DKRS,
+    TTK,
+    VBE,
+    Adder,
+    Cuccaro,
+    Draper,
+    Gidney,
+)
 from qibo.models.block_encoding import block_encoding_circuit
 from qibo.models.circuit import Circuit
 from qibo.models.double_bracket import DoubleBracketIteration
@@ -39,6 +47,7 @@ from qibo.models.variational import AAVQE, FALQON, QAOA, VQE
 __all__ = [
     "AAVQE",
     "CDR",
+    "DKRS",
     "FALQON",
     "FPQAA",
     "ICS",
@@ -59,6 +68,7 @@ __all__ = [
     "Cuccaro",
     "DoubleBracketIteration",
     "Draper",
+    "Gidney",
     "Grover",
     "QSearch",
     "StateEvolution",
