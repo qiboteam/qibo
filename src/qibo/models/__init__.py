@@ -49,6 +49,7 @@ __all__ = [
     "QAOA",
     "QFT",
     "QPE",
+    "VBE",
     "VQE",
     "ZNE",
     "AdiabaticEvolution",
@@ -86,6 +87,5 @@ __all__ = [
     "unary_encoder",
     "unary_encoder_random_gaussian",
     "up_to_k_hamming_weight_encoder",
-    "VBE",
     "vnCDR",
 ]
