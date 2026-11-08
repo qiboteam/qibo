@@ -210,6 +210,18 @@ Quantum Adders
 .. autofunction:: qibo.models.adders.VBE
 
 
+Deutsch-Jozsa
+^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.DeutschJozsa
+
+
+Bernstein-Vazirani
+^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.BernsteinVazirani
+
+
 Block Encoding
 ^^^^^^^^^^^^^^
 

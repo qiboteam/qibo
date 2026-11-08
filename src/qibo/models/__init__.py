@@ -8,8 +8,10 @@ from qibo.models.adders import (
     Draper,
     Gidney,
 )
+from qibo.models.bernstein_vazirani import BernsteinVazirani
 from qibo.models.block_encoding import block_encoding_circuit
 from qibo.models.circuit import Circuit
+from qibo.models.deutsch_jozsa import DeutschJozsa
 from qibo.models.double_bracket import DoubleBracketIteration
 from qibo.models.encodings import (
     binary_encoder,
@@ -64,8 +66,10 @@ __all__ = [
     "ZNE",
     "Adder",
     "AdiabaticEvolution",
+    "BernsteinVazirani",
     "Circuit",
     "Cuccaro",
+    "DeutschJozsa",
     "DoubleBracketIteration",
     "Draper",
     "Gidney",
