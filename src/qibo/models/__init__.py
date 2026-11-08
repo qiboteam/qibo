@@ -1,5 +1,5 @@
 from qibo.models import hep
-from qibo.models.adders import VBE
+from qibo.models.adders import VBE, Cuccaro, Draper
 from qibo.models.block_encoding import block_encoding_circuit
 from qibo.models.circuit import Circuit
 from qibo.models.double_bracket import DoubleBracketIteration
@@ -54,7 +54,9 @@ __all__ = [
     "ZNE",
     "AdiabaticEvolution",
     "Circuit",
+    "Cuccaro",
     "DoubleBracketIteration",
+    "Draper",
     "Grover",
     "QSearch",
     "StateEvolution",
