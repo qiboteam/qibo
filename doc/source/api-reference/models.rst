@@ -332,6 +332,12 @@ Graph state
 .. autofunction:: qibo.models.encodings.graph_state
 
 
+Grover-Rudolph state preparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.encodings.grover_rudolph
+
+
 Fanout gate synthesis in log depth
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
