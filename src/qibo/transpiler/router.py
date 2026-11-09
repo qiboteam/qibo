@@ -162,6 +162,7 @@ class CircuitMap:
         last_swap_block = self._routed_blocks.return_last_block()
         physical_swap = last_swap_block.qubits
         logical_swap = self._p2l[physical_swap[0]], self._p2l[physical_swap[1]]
+
         self._routed_blocks.remove_block(last_swap_block)
         self._swaps -= 1
 
