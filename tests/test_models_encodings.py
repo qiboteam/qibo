@@ -30,6 +30,7 @@ from qibo.models.encodings import (
     folded_xxz_eigenstate,
     ghz_state,
     graph_state,
+    grover_rudolph,
     hamming_weight_encoder,
     ladder_synthesis,
     leaf_separable_encoder,
@@ -982,6 +983,32 @@ def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
 
         circuit = graph_state(matrix)
         backend.assert_circuitclose(circuit, target)
+
+
+@pytest.mark.parametrize("parametrization", ["hopf", "mottonen"])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4])
+def test_grover_rudolph(backend, nqubits, parametrization):
+    rng = np.random.default_rng(10)
+    distribution = backend.cast(rng.random(2**nqubits), dtype=backend.float64)
+
+    circuit = grover_rudolph(distribution, parametrization, backend=backend)
+    state = backend.execute_circuit(circuit).state()
+
+    target = backend.sqrt(distribution / backend.sum(distribution))
+
+    assert circuit.nqubits == nqubits
+    backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
+
+
+def test_grover_rudolph_errors(backend):
+    with pytest.raises(ValueError):
+        grover_rudolph([0.5, 0.5], "hyperspherical", backend=backend)
+
+    with pytest.raises(ValueError):
+        grover_rudolph([0.5, -0.1, 0.3, 0.3], backend=backend)
+
+    with pytest.raises(ValueError):
+        grover_rudolph([0.2, 0.3, 0.5], backend=backend)
 
 
 @pytest.mark.parametrize("method", [None, "parity"])

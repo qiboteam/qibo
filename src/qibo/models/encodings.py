@@ -736,6 +736,64 @@ def graph_state(matrix: ArrayLike, backend: Backend | None = None, **kwargs) -> 
     return circuit
 
 
+def grover_rudolph(
+    distribution: ArrayLike,
+    parametrization: str = "hopf",
+    backend: Backend | None = None,
+    **kwargs,
+) -> Circuit:
+    """Create circuit that loads a discrete probability distribution in the amplitudes.
+
+    Given a non-negative vector :math:`\\mathbf{p} \\in \\mathbb{R}_{\\geq 0}^{d}`, with
+    :math:`d = 2^{n}`, this function generates a circuit that prepares
+
+    .. math::
+        \\sum_{j=0}^{d-1} \\, \\sqrt{\\frac{p_{j}}{\\|\\mathbf{p}\\|_{1}}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`b_{j} \\in \\{0, \\, 1\\}^{\\otimes \\, n}` is the :math:`n`-bit representation
+    of the integer :math:`j`. It is a wrapper of :func:`qibo.models.encodings.binary_encoder`.
+
+    Args:
+        distribution (ArrayLike): :math:`1`-dimensional array with non-negative entries
+            and length :math:`2^{n}`. It does not need to be normalized.
+        parametrization (str, optional): either ``hopf`` or ``mottonen``.
+            Defaults to ``hopf``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``distribution``.
+
+    References:
+        1. L. Grover and T. Rudolph, *Creating superpositions that correspond to efficiently
+        integrable probability distributions*,
+        `arXiv:quant-ph/0208112 <https://arxiv.org/abs/quant-ph/0208112>`_.
+    """
+    backend = _check_backend(backend)
+
+    if parametrization not in ("hopf", "mottonen"):
+        raise_error(ValueError, "``parametrization`` must be ``hopf`` or ``mottonen``.")
+
+    distribution = backend.cast(distribution, dtype=backend.float64)
+    dims = len(distribution)
+
+    if (dims & (dims - 1)) != 0 or backend.any(distribution < 0):
+        raise_error(
+            ValueError,
+            "``distribution`` must have non-negative entries and length a power of 2.",
+        )
+
+    return binary_encoder(
+        int(math.log2(dims)),
+        parametrization,
+        data=backend.sqrt(distribution),
+        backend=backend,
+        **kwargs,
+    )
+
+
 def hamming_weight_encoder(
     nqubits: int,
     weight: int,
