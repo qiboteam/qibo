@@ -5,7 +5,7 @@ from numpy.typing import ArrayLike
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-from qibo.models._signal_processing import _spectral_factor
+from qibo.models.algorithms._signal_processing import _spectral_factor
 from qibo.models.circuit import Circuit
 
 
@@ -34,7 +34,7 @@ def qsvt_circuit(block_encoding: Circuit, phases: ArrayLike, nancillas: int) -> 
         block_encoding (:class:`qibo.models.circuit.Circuit`): circuit that
             implements :math:`U`. Its first ``nancillas`` qubits are the ancillas.
         phases (ArrayLike): phases of the polynomial, e.g. the output of
-            :func:`qibo.models.qsvt.qsvt_phases`.
+            :func:`qibo.models.qsvt_phases`.
         nancillas (int): number :math:`a` of ancilla qubits of ``block_encoding``.
 
     Returns:
@@ -52,7 +52,7 @@ def qsvt_circuit(block_encoding: Circuit, phases: ArrayLike, nancillas: int) -> 
             import math
 
             from qibo import Circuit, gates, get_backend
-            from qibo.models.qsvt import qsvt_circuit, qsvt_phases
+            from qibo.models import qsvt_circuit, qsvt_phases
 
             backend = get_backend()
 
@@ -123,10 +123,10 @@ def qsvt_phases(coefficients: ArrayLike, backend: Backend = None) -> ArrayLike:
     Given the Chebyshev series :math:`P(x) = \\sum_{k = 0}^{d} c_{k} T_{k}(x)` of a real
     polynomial of degree :math:`d \\ge 1` with the parity of :math:`d` and
     :math:`|P(x)| \\le 1` for :math:`x \\in [-1, 1]`, it finds the phases for which
-    :func:`qibo.models.qsvt.qsvt_circuit` applies :math:`P` to the singular values
+    :func:`qibo.models.qsvt_circuit` applies :math:`P` to the singular values
     (Corollary 11 of Ref. [1]). The polynomial is completed into a unitary matrix whose
     entries are trigonometric polynomials, using the spectral factorization of
-    :math:`1 - P^{2}` that :func:`qibo.models.qsp.qsp_phases` uses for the Fourier-based
+    :math:`1 - P^{2}` that :func:`qibo.models.qsp_phases` uses for the Fourier-based
     QSP, and the phases are then extracted one at a time as in Ref. [2].
 
     The coefficients are divided by its (grid-estimated) :math:`\\max_{x} |P(x)|`

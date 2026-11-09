@@ -3,8 +3,8 @@ from numpy.typing import ArrayLike
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
+from qibo.models.algorithms.lcu import lcu_circuit
 from qibo.models.circuit import Circuit
-from qibo.models.lcu import lcu_circuit
 
 
 def block_encoding_circuit(
@@ -34,7 +34,7 @@ def block_encoding_circuit(
       value decomposition of :math:`B`.
     - ``method="lcu"``: the matrix is decomposed as a sum of Pauli strings,
       :math:`A = \\sum_{i} c_{i} P_{i}`, with complex coefficients :math:`c_{i}`, and
-      the circuit is the one of :func:`qibo.models.lcu.lcu_circuit`. The normalization
+      the circuit is the one of :func:`qibo.models.lcu_circuit`. The normalization
       is :math:`\\alpha = \\sum_{i} |c_{i}|`, and :math:`a = \\max(1, \\lceil \\log_{2} L
       \\rceil)`, with :math:`L` the number of non-zero coefficients.
 
@@ -55,7 +55,7 @@ def block_encoding_circuit(
         tuple: circuit on :math:`a + n` qubits, with the auxiliary qubits at the first
         qubits, the normalization :math:`\\alpha`, and the number :math:`a` of auxiliary
         qubits. The circuit and the number of auxiliary qubits are the arguments of
-        :func:`qibo.models.qsvt.qsvt_circuit`.
+        :func:`qibo.models.qsvt_circuit`.
 
     Example:
         Encode :math:`X / 2`, with :math:`X` the Pauli-:math:`X` matrix. The
@@ -66,7 +66,7 @@ def block_encoding_circuit(
         .. testcode::
 
             from qibo import get_backend
-            from qibo.models.block_encoding import block_encoding_circuit
+            from qibo.models import block_encoding_circuit
 
             backend = get_backend()
 

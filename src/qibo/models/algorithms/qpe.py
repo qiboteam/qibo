@@ -7,8 +7,8 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.measurements import MeasurementResult
+from qibo.models.algorithms.qft import QFT
 from qibo.models.circuit import Circuit
-from qibo.models.qft import QFT
 
 
 def IQPE(
@@ -21,9 +21,9 @@ def IQPE(
     Given a unitary :math:`U` and one of its eigenstates :math:`|\\psi\\rangle`, such that
     :math:`U|\\psi\\rangle = e^{2 \\pi i \\varphi}|\\psi\\rangle`, the circuit estimates
     :math:`\\varphi \\in [0, \\, 1)` with :math:`t` bits of precision, where :math:`t` is
-    ``nbits``, as :func:`qibo.models.qpe.QPE` does. However, a single counting qubit is
+    ``nbits``, as :func:`qibo.models.QPE` does. However, a single counting qubit is
     measured :math:`t` times, instead of using :math:`t` counting qubits and the inverse
-    :class:`qibo.models.qft.QFT`. The circuit acts on :math:`1 + n` qubits, with :math:`n` being
+    :class:`qibo.models.QFT`. The circuit acts on :math:`1 + n` qubits, with :math:`n` being
     the number of qubits of :math:`U`. The first qubit is the counting qubit and the last
     :math:`n` qubits are the target qubits.
 
@@ -55,14 +55,14 @@ def IQPE(
     obtained with :func:`qibo.quantum_info.estimate_phase`.
 
     .. note::
-        As in :func:`qibo.models.qpe.QPE`, :math:`U` is applied :math:`2^{t} - 1` times in
+        As in :func:`qibo.models.QPE`, :math:`U` is applied :math:`2^{t} - 1` times in
         total. The circuit has fewer qubits, but when it is simulated, each shot has to be
         simulated separately because of the measurements with collapse.
 
     Args:
         unitary (:class:`qibo.models.circuit.Circuit` or :class:`qibo.gates.Gate` or ndarray):
             unitary :math:`U`, given as a circuit, as a gate, *e.g.* :class:`qibo.gates.Unitary`,
-            or as a matrix. See :func:`qibo.models.qpe.QPE` for the details.
+            or as a matrix. See :func:`qibo.models.QPE` for the details.
         nbits (int): number of bits :math:`t` of the phase to be estimated, which sets the
             resolution :math:`2^{-t}` and the number of measurements.
         kwargs (dict, optional): Additional arguments used to initialize
@@ -165,7 +165,7 @@ def QPE(
        the circuit;
     2. :math:`U^{2^{t - 1 - j}}`, controlled by the counting qubit :math:`j`, acting on the
        last :math:`n` qubits of the circuit, the target qubits;
-    3. the inverse :class:`qibo.models.qft.QFT` on the counting qubits;
+    3. the inverse :class:`qibo.models.QFT` on the counting qubits;
     4. the measurement of the counting qubits, if ``measure=True``.
 
     The target qubits have to be prepared in :math:`|\\psi\\rangle` before the circuit is applied,

@@ -1,19 +1,19 @@
-"""Tests for quantum signal processing in `qibo/models/qsp.py`."""
+"""Tests for quantum signal processing in `qibo/models/algorithms/qsp.py`."""
 
 import math
 
 import pytest
 from numpy.typing import ArrayLike
-from qibo.models.qsp import (
+
+from qibo import Circuit, gates
+from qibo.backends import Backend
+from qibo.models.algorithms.qsp import (
     _fourier_qsp_analytic_extension_coefficients,
     _fourier_qsp_bounded_error_coefficients,
     _qsp_hamiltonian_simulation_phases,
     qsp_circuit,
     qsp_phases,
 )
-
-from qibo import Circuit, gates
-from qibo.backends import Backend
 
 
 @pytest.mark.parametrize(

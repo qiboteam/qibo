@@ -4,8 +4,8 @@ from numbers import Integral
 
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
+from qibo.models.algorithms.qaa import QAA
 from qibo.models.circuit import Circuit
-from qibo.models.qaa import QAA
 
 
 def MLQAE(
@@ -23,8 +23,8 @@ def MLQAE(
     :math:`|0\\rangle` is the all-zero state, and the good states are marked by the oracle. Let
     :math:`\\theta_{a} \\in [0, \\, \\pi / 2]` be such that :math:`a = \\sin^{2}(\\theta_{a})`.
     After :math:`m` applications of the operator :math:`\\mathbf{Q}` of
-    :func:`qibo.models.qaa.amplification_operator`, the probability of measuring a good state is
-    :math:`\\sin^{2}((2m + 1)\\theta_{a})`. Differently from :func:`qibo.models.qae.QAE`, there
+    :func:`qibo.models.amplification_operator`, the probability of measuring a good state is
+    :math:`\\sin^{2}((2m + 1)\\theta_{a})`. Differently from :func:`qibo.models.QAE`, there
     are no counting qubits nor controlled operations. Instead, the circuit
     :math:`\\mathbf{Q}^{m}\\mathcal{A}` is measured ``nshots`` times for each :math:`m` in
     :math:`\\{0, \\, 1, \\, 2, \\, 4, \\, \\dots, \\, 2^{L - 1}\\}`, where :math:`L` is ``nlevels``.
@@ -71,7 +71,7 @@ def MLQAE(
         oracle (:class:`qibo.models.circuit.Circuit`): circuit :math:`\\mathbf{S}_{\\chi}` that
             multiplies the good states by :math:`-1`, without measurements and with the same
             number of qubits as ``algorithm``. See
-            :func:`qibo.models.qaa.amplification_operator`.
+            :func:`qibo.models.amplification_operator`.
         check (Callable): function that receives a measured bitstring, *e.g.* ``"101"``, and
             returns ``True`` if the state is good.
         nlevels (int, optional): number :math:`L` of levels of the schedule of the numbers of
