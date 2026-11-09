@@ -39,6 +39,7 @@ from qibo.models.error_mitigation import CDR, ICS, ZNE, vnCDR
 from qibo.models.evolution import AdiabaticEvolution, StateEvolution
 from qibo.models.grover import Grover
 from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
+from qibo.models.mlqae import MLQAE
 from qibo.models.qaa import FPQAA, OAA, QAA, QSearch, amplification_operator
 from qibo.models.qae import QAE
 from qibo.models.qft import QFT
@@ -55,6 +56,7 @@ __all__ = [
     "FPQAA",
     "ICS",
     "IQPE",
+    "MLQAE",
     "OAA",
     "QAA",
     "QAE",
