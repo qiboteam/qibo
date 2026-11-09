@@ -2,11 +2,11 @@
 
 import pytest
 from numpy.typing import ArrayLike
+from qibo.models.block_encoding import block_encoding_circuit
+from qibo.models.qsvt import qsvt_circuit, qsvt_phases
 
 from qibo import models
 from qibo.backends import Backend
-from qibo.models.block_encoding import block_encoding_circuit
-from qibo.models.qsvt import qsvt_circuit, qsvt_phases
 
 
 @pytest.mark.parametrize("norm", [0.4, 2.5])

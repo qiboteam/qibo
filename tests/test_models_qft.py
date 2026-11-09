@@ -2,9 +2,9 @@
 
 import numpy as np
 import pytest
+from qibo.models.qft import _DistributedQFT
 
 from qibo.models import QFT
-from qibo.models.qft import _DistributedQFT
 from qibo.quantum_info import random_statevector
 
 

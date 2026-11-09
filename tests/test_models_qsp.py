@@ -4,9 +4,6 @@ import math
 
 import pytest
 from numpy.typing import ArrayLike
-
-from qibo import Circuit, gates
-from qibo.backends import Backend
 from qibo.models.qsp import (
     _fourier_qsp_analytic_extension_coefficients,
     _fourier_qsp_bounded_error_coefficients,
@@ -14,6 +11,9 @@ from qibo.models.qsp import (
     qsp_circuit,
     qsp_phases,
 )
+
+from qibo import Circuit, gates
+from qibo.backends import Backend
 
 
 @pytest.mark.parametrize(

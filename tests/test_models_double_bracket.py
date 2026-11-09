@@ -4,10 +4,10 @@ import math
 from itertools import pairwise
 
 import pytest
+from qibo.models.double_bracket import DoubleBracketIteration
 
 from qibo import hamiltonians, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.models.double_bracket import DoubleBracketIteration
 from qibo.quantum_info import (
     commutator,
     double_commutator,

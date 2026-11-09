@@ -1,9 +1,9 @@
 """Tests for linear combination of unitaries in `qibo/models/lcu.py`."""
 
 import pytest
+from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
 
 from qibo import Circuit, gates, models
-from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
 from qibo.quantum_info import random_unitary
 
 
