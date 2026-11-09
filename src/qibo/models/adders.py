@@ -15,7 +15,7 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
     .. math::
         \\ket{a} \\, \\ket{b} \\, \\ket{0} \\mapsto \\ket{a} \\, \\ket{a + b} \\, \\ket{0} \\, ,
 
-    where the last register are the auxiliary qubits, if the adder has any. The first :math:`n`
+    where the last register holds the auxiliary qubits, if the adder has any. The first :math:`n`
     qubits hold :math:`a`, and the next :math:`n + 1` qubits hold :math:`b`, with the overflow
     bit being the last one, which must be in the state :math:`\\ket{0}` at the beginning. In
     every register, the least significant bit comes first. The adders differ in the number of
@@ -102,7 +102,7 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
         "VBE": VBE,
     }
 
-    if method not in tuple(methods):
+    if method not in methods:
         raise_error(
             ValueError,
             f"method must be one of {tuple(methods)}, but it is {method}.",
