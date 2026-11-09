@@ -102,7 +102,7 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
         "VBE": VBE,
     }
 
-    if method not in methods:
+    if method not in tuple(methods):
         raise_error(
             ValueError,
             f"method must be one of {tuple(methods)}, but it is {method}.",
