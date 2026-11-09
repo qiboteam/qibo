@@ -208,6 +208,12 @@ Linear Combination of Unitaries
 .. autofunction:: qibo.models.lcu.lcu_select
 
 
+Quantum Amplitude Estimation (QAE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.qae.QAE
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
