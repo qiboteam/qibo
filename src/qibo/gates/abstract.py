@@ -589,14 +589,14 @@ class Gate:
                 if "epsilon" in kwargs or "mpmath_dps" in kwargs:
                     # The precision is set for this decomposition, including the
                     # decompositions of the gates that it contains, and then restored
-                    previous = (func._epsilon, func._mpmath_dps)
-                    func._set_precision_cliff_plus_t(
+                    previous = func.get_precision()
+                    func.set_precision(
                         kwargs.get("epsilon", 1e-16), kwargs.get("mpmath_dps", 256)
                     )
                     try:
                         return func(self)
                     finally:
-                        func._set_precision_cliff_plus_t(*previous)
+                        func.set_precision(*previous)
 
             else:
                 from qibo.transpiler.decompositions.standard_decompositions import (
