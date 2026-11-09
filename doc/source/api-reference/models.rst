@@ -244,6 +244,12 @@ Quantum Amplitude Estimation (QAE)
 .. autofunction:: qibo.models.qae.QAE
 
 
+Quantum Counting
+^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.Counting
+
+
 Iterative Quantum Amplitude Estimation (IQAE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -11,6 +11,7 @@ from qibo.models.adders import (
 from qibo.models.bernstein_vazirani import BernsteinVazirani
 from qibo.models.block_encoding import block_encoding_circuit
 from qibo.models.circuit import Circuit
+from qibo.models.counting import Counting
 from qibo.models.deutsch_jozsa import DeutschJozsa
 from qibo.models.double_bracket import DoubleBracketIteration
 from qibo.models.encodings import (
@@ -68,6 +69,7 @@ __all__ = [
     "AdiabaticEvolution",
     "BernsteinVazirani",
     "Circuit",
+    "Counting",
     "Cuccaro",
     "DeutschJozsa",
     "DoubleBracketIteration",
