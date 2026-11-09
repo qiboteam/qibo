@@ -63,6 +63,11 @@ class HardwareModel:
             Defaults to an empty dictionary.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Errors that follow the native
             gates, on the qubit positions. Defaults to ``None``, which is a noiseless device.
+        measures (dict, optional): Measures of the calibration that the errors come from, as
+            pairs of the mean and its uncertainty, which is ``None`` if it is not known. The
+            keys are ``"t1"``, ``"t2"`` and ``"rb_fidelity"``, with qubit names as the keys of
+            their values, and ``"cz_fidelity"``, with pairs of qubit names, *e.g.*
+            ``{"t1": {0: (60000.0, 500.0)}}``. Defaults to an empty dictionary.
         symmetric (dict, optional): Only for a list of couplings. It tells if the two-qubit
             gate of a coupling is symmetric, as ``symmetric`` of the natives of ``qibolab``, with
             pairs as keys, *e.g.* ``{(0, 1): False}``. The couplings that are not symmetric are
@@ -76,6 +81,7 @@ class HardwareModel:
     native_gates: NativeGates = field(default_factory=NativeGates.default)
     durations: dict = field(default_factory=dict)
     noise_model: NoiseModel | None = None
+    measures: dict = field(default_factory=dict)
     symmetric: InitVar[dict | None] = None
 
     def __post_init__(self, symmetric: dict | None):
@@ -140,8 +146,9 @@ class HardwareModel:
                 :class:`HardwareModel`. Defaults to ``None``.
 
         Returns:
-            :class:`HardwareModel`: Model with the noise model of the calibration. The errors
-            of a coupling are only in the directions of the connectivity.
+            :class:`HardwareModel`: Model with the noise model of the calibration, which only
+            uses the means, and with its measures and their uncertainties. The errors of a
+            coupling are only in the directions of the connectivity.
         """
         if not isinstance(calibration, dict) or not isinstance(
             calibration.get("single_qubits"), dict
@@ -151,22 +158,43 @@ class HardwareModel:
                 "``calibration`` must be the content of a ``calibration.json`` exported "
                 + "by ``qibocal``.",
             )
+
         native_gates = NativeGates.default() if native_gates is None else native_gates
+
         if gates.CZ not in native_gates.two_qubit_gates:
             raise_error(ValueError, "The native gates must contain ``CZ``.")
 
         single = {
             _name(key): value for key, value in calibration["single_qubits"].items()
         }
-        pairs = {
-            tuple(_name(part) for part in key.split("-")): value
-            for key, value in (calibration.get("two_qubits") or {}).items()
+
+        # the keys of the pairs have the names of the two qubits, like "0-1" or "A1-A2"
+        two_qubits = calibration.get("two_qubits") or {}
+        pairs = {}
+        for key, value in two_qubits.items():
+            names = [_name(name) for name in key.split("-")]
+            pairs[tuple(names)] = value
+
+        measures = {
+            key: {
+                name: tuple(data[key])
+                for name, data in single.items()
+                if data.get(key) is not None
+            }
+            for key in ("t1", "t2", "rb_fidelity")
         }
+        measures["cz_fidelity"] = {
+            pair: tuple(data["cz_fidelity"])
+            for pair, data in pairs.items()
+            if data.get("cz_fidelity") is not None
+        }
+
         hardware = cls(
             tuple(single),
             list(pairs) if connectivity is None else connectivity,
             native_gates,
             dict(durations),
+            measures=measures,
             symmetric=symmetric,
         )
 
@@ -179,14 +207,14 @@ class HardwareModel:
         coherence = {}
         for qubit, data in single.items():
             index = position[qubit]
-            t_1, t_2 = _mean(data.get("t1")), _mean(data.get("t2"))
+            t_1, t_2 = measures["t1"].get(qubit), measures["t2"].get(qubit)
             if t_1 is not None and t_2 is not None:
-                coherence[qubit] = (t_1, min(t_2, 2 * t_1))
+                coherence[qubit] = (t_1[0], min(t_2[0], 2 * t_1[0]))
             if (
-                rb := _mean(data.get("rb_fidelity"))
+                rb := measures["rb_fidelity"].get(qubit)
             ) is not None and qubit in coherence:
                 time = durations["1q"]
-                error = (1 - rb) / pulses_per_clifford
+                error = (1 - rb[0]) / pulses_per_clifford
                 lam = 2 * max(error - _thermal_infidelity(*coherence[qubit], time), 0)
                 for gate in physical:
                     noise_model.add(DepolarizingError(lam), gate, index)
@@ -200,10 +228,11 @@ class HardwareModel:
 
         directed = hardware.connectivity.is_directed()
         for first, second in hardware.connectivity.edges:
-            pair = pairs.get((first, second)) or pairs.get((second, first)) or {}
-            fidelity = _mean(pair.get("cz_fidelity"))
-            if fidelity is None or not {first, second} <= set(coherence):
+            cz_fidelity = measures["cz_fidelity"]
+            measure = cz_fidelity.get((first, second), cz_fidelity.get((second, first)))
+            if measure is None or not {first, second} <= set(coherence):
                 continue
+            fidelity = measure[0]
             time = durations.get(
                 (first, second), durations.get((second, first), durations["2q"])
             )
@@ -233,11 +262,6 @@ class HardwareModel:
 
 
 _VIRTUAL = (gates.I, gates.Z, gates.RZ)
-
-
-def _mean(measure: list | None) -> float | None:
-    """Mean of a ``qibocal`` measure, a pair of mean and uncertainty, or ``None``."""
-    return None if measure is None else measure[0]
 
 
 def _name(key: str) -> int | str:
