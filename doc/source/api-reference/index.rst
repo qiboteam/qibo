@@ -10,6 +10,7 @@ the public API.
     :maxdepth: 2
 
     models
+    algorithms
     gates
     channels
     noise
