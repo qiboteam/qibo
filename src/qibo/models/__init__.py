@@ -1,6 +1,18 @@
 from qibo.models import hep
+from qibo.models.adders import (
+    DKRS,
+    TTK,
+    VBE,
+    Adder,
+    Cuccaro,
+    Draper,
+    Gidney,
+)
+from qibo.models.bernstein_vazirani import BernsteinVazirani
 from qibo.models.block_encoding import block_encoding_circuit
 from qibo.models.circuit import Circuit
+from qibo.models.counting import Counting
+from qibo.models.deutsch_jozsa import DeutschJozsa
 from qibo.models.double_bracket import DoubleBracketIteration
 from qibo.models.encodings import (
     binary_encoder,
@@ -11,6 +23,7 @@ from qibo.models.encodings import (
     folded_xxz_eigenstate,
     ghz_state,
     graph_state,
+    grover_rudolph,
     hamming_weight_encoder,
     ladder_synthesis,
     leaf_separable_encoder,
@@ -26,7 +39,9 @@ from qibo.models.error_mitigation import CDR, ICS, ZNE, vnCDR
 from qibo.models.evolution import AdiabaticEvolution, StateEvolution
 from qibo.models.grover import Grover
 from qibo.models.lcu import lcu_circuit, lcu_prepare, lcu_select
+from qibo.models.mlqae import MLQAE
 from qibo.models.qaa import FPQAA, OAA, QAA, QSearch, amplification_operator
+from qibo.models.qae import QAE
 from qibo.models.qft import QFT
 from qibo.models.qpe import IQPE, QPE
 from qibo.models.qsp import qsp_circuit, qsp_phases
@@ -36,20 +51,32 @@ from qibo.models.variational import AAVQE, FALQON, QAOA, VQE
 __all__ = [
     "AAVQE",
     "CDR",
+    "DKRS",
     "FALQON",
     "FPQAA",
     "ICS",
     "IQPE",
+    "MLQAE",
     "OAA",
     "QAA",
+    "QAE",
     "QAOA",
     "QFT",
     "QPE",
+    "TTK",
+    "VBE",
     "VQE",
     "ZNE",
+    "Adder",
     "AdiabaticEvolution",
+    "BernsteinVazirani",
     "Circuit",
+    "Counting",
+    "Cuccaro",
+    "DeutschJozsa",
     "DoubleBracketIteration",
+    "Draper",
+    "Gidney",
     "Grover",
     "QSearch",
     "StateEvolution",
@@ -63,6 +90,7 @@ __all__ = [
     "folded_xxz_eigenstate",
     "ghz_state",
     "graph_state",
+    "grover_rudolph",
     "hamming_weight_encoder",
     "hep",
     "ladder_synthesis",

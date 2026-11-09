@@ -192,6 +192,36 @@ Quantum Singular Value Transformation
 .. autofunction:: qibo.models.qsvt.qsvt_circuit
 
 
+Quantum Adders
+^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.adders.Adder
+
+.. autofunction:: qibo.models.adders.Cuccaro
+
+.. autofunction:: qibo.models.adders.DKRS
+
+.. autofunction:: qibo.models.adders.Draper
+
+.. autofunction:: qibo.models.adders.Gidney
+
+.. autofunction:: qibo.models.adders.TTK
+
+.. autofunction:: qibo.models.adders.VBE
+
+
+Deutsch-Jozsa
+^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.DeutschJozsa
+
+
+Bernstein-Vazirani
+^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.BernsteinVazirani
+
+
 Block Encoding
 ^^^^^^^^^^^^^^
 
@@ -206,6 +236,24 @@ Linear Combination of Unitaries
 .. autofunction:: qibo.models.lcu.lcu_prepare
 
 .. autofunction:: qibo.models.lcu.lcu_select
+
+
+Quantum Amplitude Estimation (QAE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.qae.QAE
+
+
+Quantum Counting
+^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.Counting
+
+
+Maximum-likelihood Quantum Amplitude Estimation (MLQAE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.MLQAE
 
 
 Iterative Quantum Amplitude Estimation (IQAE)
@@ -330,6 +378,12 @@ Graph state
 ^^^^^^^^^^^
 
 .. autofunction:: qibo.models.encodings.graph_state
+
+
+Grover-Rudolph state preparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.encodings.grover_rudolph
 
 
 Fanout gate synthesis in log depth
