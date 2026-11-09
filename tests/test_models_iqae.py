@@ -2,9 +2,9 @@
 
 import numpy as np
 import pytest
+from qibo.models.iqae import IQAE
 
 from qibo import Circuit, gates
-from qibo.models.iqae import IQAE
 
 
 def test_iqae_init(backend):

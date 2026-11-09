@@ -1,7 +1,8 @@
 import argparse
 
-from qibo import Circuit, gates
 from qibo.models.grover import Grover
+
+from qibo import Circuit, gates
 
 
 def main(nqubits):
