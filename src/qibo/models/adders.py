@@ -15,7 +15,7 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
     .. math::
         \\ket{a} \\, \\ket{b} \\, \\ket{0} \\mapsto \\ket{a} \\, \\ket{a + b} \\, \\ket{0} \\, ,
 
-    where the last register are the auxiliary qubits, if the adder has any. The first :math:`n`
+    where the last register holds the auxiliary qubits, if the adder has any. The first :math:`n`
     qubits hold :math:`a`, and the next :math:`n + 1` qubits hold :math:`b`, with the overflow
     bit being the last one, which must be in the state :math:`\\ket{0}` at the beginning. In
     every register, the least significant bit comes first. The adders differ in the number of
@@ -585,6 +585,9 @@ def Gidney(nbits: int, **kwargs) -> Circuit:
 
             circuit.add(gates.H(carries[k + 1]))
             outcome = circuit.add(gates.M(carries[k + 1], collapse=True))
+
+            # the outcome is only known when each shot is executed, so the corrections
+            # are always added, with an angle that is 0, *i.e.* the identity, if it is 0
             phase = math.pi * outcome.symbols[0]
             circuit.add(gates.CU1(register_a[k], register_b[k], theta=phase))
             circuit.add(gates.RX(carries[k + 1], theta=phase))
