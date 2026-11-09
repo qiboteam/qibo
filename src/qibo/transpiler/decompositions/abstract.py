@@ -43,10 +43,36 @@ class GateDecompositions:
     def __init__(self):
         self.decompositions = {}
         self._epsilon = None
+        self._mpmath_dps = None
 
     def add(self, gate, decomposition):
         """Register a decomposition for a gate."""
         self.decompositions[gate] = decomposition
+
+    def get_precision(self) -> tuple:
+        """Return the precision of the Clifford + :class:`qibo.gates.gates.T` decompositions.
+
+        Returns:
+            tuple: precision :math:`\\epsilon` of the approximation of each gate, which is an
+            ``mpmath`` number, and number of decimal places used by ``mpmath``. Both are
+            ``None`` if the precision was not set.
+        """
+        return self._epsilon, self._mpmath_dps
+
+    def set_precision(self, epsilon: float = 1e-16, mpmath_dps: int = 256):
+        """Set the precision of the Clifford + :class:`qibo.gates.gates.T` decompositions.
+
+        Args:
+            epsilon (float, optional): precision :math:`\\epsilon` of the approximation of each
+                gate. Defaults to :math:`10^{-16}`.
+            mpmath_dps (int, optional): number of decimal places used by the ``mpmath``
+                package. Defaults to :math:`256`.
+        """
+        import mpmath
+
+        mpmath.mp.dps = mpmath_dps
+        self._epsilon = mpmath.mpmathify(epsilon)
+        self._mpmath_dps = mpmath_dps
 
     def _check_instance(self, gate: gates.Gate, backend: Backend | None = None) -> list:
         special_gates = (
@@ -97,14 +123,6 @@ class GateDecompositions:
             ]
 
         return merge_global_phases(decomposition)
-
-    def _set_precision_cliff_plus_t(
-        self, epsilon: float = 1e-16, mpmath_dps: int = 256
-    ):
-        import mpmath
-
-        mpmath.mp.dps = mpmath_dps
-        self._epsilon = mpmath.mpmathify(epsilon)
 
     def _rz_into_cliff_and_t(
         self,
