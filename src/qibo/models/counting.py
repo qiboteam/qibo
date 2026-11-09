@@ -38,7 +38,7 @@ def Counting(
             from qibo.models import Counting
             from qibo.quantum_info import estimate_phase
 
-            # oracle that marks the states 10 and 11 of 2 qubits
+            # oracle that marks the states 01 and 11 of 2 qubits
             oracle = Circuit(2)
             oracle.add(gates.Z(0))
 
