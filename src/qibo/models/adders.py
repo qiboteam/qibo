@@ -585,6 +585,9 @@ def Gidney(nbits: int, **kwargs) -> Circuit:
 
             circuit.add(gates.H(carries[k + 1]))
             outcome = circuit.add(gates.M(carries[k + 1], collapse=True))
+
+            # the outcome is only known when each shot is executed, so the corrections
+            # are always added, with an angle that is 0, *i.e.* the identity, if it is 0
             phase = math.pi * outcome.symbols[0]
             circuit.add(gates.CU1(register_a[k], register_b[k], theta=phase))
             circuit.add(gates.RX(carries[k + 1], theta=phase))
