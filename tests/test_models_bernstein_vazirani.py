@@ -45,3 +45,11 @@ def test_bernstein_vazirani_measure(measure):
 def test_bernstein_vazirani_errors():
     with pytest.raises(TypeError):
         BernsteinVazirani(gates.CNOT(0, 1))
+
+    with pytest.raises(ValueError):
+        BernsteinVazirani(Circuit(1))
+
+    oracle = _oracle([1, 0, 1], 0)
+    oracle.add(gates.M(0))
+    with pytest.raises(ValueError):
+        BernsteinVazirani(oracle)
