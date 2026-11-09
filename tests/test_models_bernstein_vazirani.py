@@ -1,4 +1,4 @@
-"""Tests for the Bernstein-Vazirani algorithm defined in `qibo/models/bernstein_vazirani.py`."""
+"""Tests for the Bernstein-Vazirani algorithm defined in `qibo/models/algorithms/bernstein_vazirani.py`."""
 
 import pytest
 

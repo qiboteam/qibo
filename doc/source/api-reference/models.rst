@@ -72,19 +72,19 @@ for a detailed description of the fusion algorithm and worked examples.
 Quantum Fourier Transform (QFT)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.models.qft.QFT
+.. autoclass:: qibo.models.QFT
     :members:
     :member-order: bysource
 
 Quantum Phase Estimation (QPE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.qpe.QPE
+.. autofunction:: qibo.models.QPE
 
 Iterative Quantum Phase Estimation (IQPE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.qpe.IQPE
+.. autofunction:: qibo.models.IQPE
 
 Variational Quantum Eigensolver (VQE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -93,7 +93,7 @@ Variational Quantum Eigensolver (VQE)
     :members:
     :member-order: bysource
 
-Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)
+Adiabatically-assisted Variational Quantum Eigensolver (AAVQE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.models.variational.AAVQE
@@ -118,7 +118,7 @@ Feedback-based Algorithm for Quantum Optimization (FALQON)
 Grover's Algorithm
 ^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.models.grover.Grover
+.. autoclass:: qibo.models.Grover
     :members:
     :member-order: bysource
 
@@ -144,34 +144,34 @@ where :math:`\mathbf{S}_{\chi}` changes the sign of the amplitude of the good st
 :math:`\sin^{2}((2m + 1)\theta_{a})`, where :math:`a = \sin^{2}(\theta_{a})`. Depending on
 what is known about :math:`a`, the following can be used:
 
-* :func:`qibo.models.qaa.amplification_operator` builds the circuit of :math:`\mathbf{Q}`;
-* :func:`qibo.models.qaa.QAA` builds the circuit :math:`\mathbf{Q}^{m}\mathcal{A}`, either with a
+* :func:`qibo.models.amplification_operator` builds the circuit of :math:`\mathbf{Q}`;
+* :func:`qibo.models.QAA` builds the circuit :math:`\mathbf{Q}^{m}\mathcal{A}`, either with a
   chosen number :math:`m` of iterations, or with the number that is computed from a known
   :math:`a`, which can also find a good state with certainty;
-* :func:`qibo.models.qaa.FPQAA` builds a fixed-point version, which only needs a lower bound of
+* :func:`qibo.models.FPQAA` builds a fixed-point version, which only needs a lower bound of
   :math:`a`, and whose failure probability stays below a chosen bound if more iterations are
   applied, while keeping the quadratic speedup;
-* :func:`qibo.models.qaa.OAA` builds an oblivious version, which amplifies the amplitude with
+* :func:`qibo.models.OAA` builds an oblivious version, which amplifies the amplitude with
   which a circuit implements a unitary on an input state that is unknown, so that the reflection
   about that state, which is not available, is not needed;
-* :func:`qibo.models.qaa.QSearch` finds a good state when :math:`a` is unknown, by running circuits
+* :func:`qibo.models.QSearch` finds a good state when :math:`a` is unknown, by running circuits
   with an exponentially increasing number of iterations.
 
-.. autofunction:: qibo.models.qaa.amplification_operator
+.. autofunction:: qibo.models.amplification_operator
 
-.. autofunction:: qibo.models.qaa.FPQAA
+.. autofunction:: qibo.models.FPQAA
 
-.. autofunction:: qibo.models.qaa.OAA
+.. autofunction:: qibo.models.OAA
 
-.. autofunction:: qibo.models.qaa.QAA
+.. autofunction:: qibo.models.QAA
 
-.. autofunction:: qibo.models.qaa.QSearch
+.. autofunction:: qibo.models.QSearch
 
 
 Double-Bracket Iterations
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.models.double_bracket.DoubleBracketIteration
+.. autoclass:: qibo.models.DoubleBracketIteration
     :members:
     :member-order: bysource
 
@@ -179,35 +179,35 @@ Double-Bracket Iterations
 Quantum Signal Processing
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.qsp.qsp_phases
+.. autofunction:: qibo.models.qsp_phases
 
-.. autofunction:: qibo.models.qsp.qsp_circuit
+.. autofunction:: qibo.models.qsp_circuit
 
 
 Quantum Singular Value Transformation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.qsvt.qsvt_phases
+.. autofunction:: qibo.models.qsvt_phases
 
-.. autofunction:: qibo.models.qsvt.qsvt_circuit
+.. autofunction:: qibo.models.qsvt_circuit
 
 
 Quantum Adders
 ^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.adders.Adder
+.. autofunction:: qibo.models.Adder
 
-.. autofunction:: qibo.models.adders.Cuccaro
+.. autofunction:: qibo.models.Cuccaro
 
-.. autofunction:: qibo.models.adders.DKRS
+.. autofunction:: qibo.models.DKRS
 
-.. autofunction:: qibo.models.adders.Draper
+.. autofunction:: qibo.models.Draper
 
-.. autofunction:: qibo.models.adders.Gidney
+.. autofunction:: qibo.models.Gidney
 
-.. autofunction:: qibo.models.adders.TTK
+.. autofunction:: qibo.models.TTK
 
-.. autofunction:: qibo.models.adders.VBE
+.. autofunction:: qibo.models.VBE
 
 
 Deutsch-Jozsa
@@ -225,23 +225,23 @@ Bernstein-Vazirani
 Block Encoding
 ^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.block_encoding.block_encoding_circuit
+.. autofunction:: qibo.models.block_encoding_circuit
 
 
 Linear Combination of Unitaries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.lcu.lcu_circuit
+.. autofunction:: qibo.models.lcu_circuit
 
-.. autofunction:: qibo.models.lcu.lcu_prepare
+.. autofunction:: qibo.models.lcu_prepare
 
-.. autofunction:: qibo.models.lcu.lcu_select
+.. autofunction:: qibo.models.lcu_select
 
 
 Quantum Amplitude Estimation (QAE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.qae.QAE
+.. autofunction:: qibo.models.QAE
 
 
 Quantum Counting
@@ -259,11 +259,11 @@ Maximum-likelihood Quantum Amplitude Estimation (MLQAE)
 Iterative Quantum Amplitude Estimation (IQAE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.models.iqae.IQAE
+.. autoclass:: qibo.models.IQAE
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.models.iqae.IterativeAmplitudeEstimationResult
+.. autoclass:: qibo.models.IterativeAmplitudeEstimationResult
     :members:
     :member-order: bysource
 

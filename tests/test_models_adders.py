@@ -1,4 +1,4 @@
-"""Tests for the quantum adders defined in `qibo/models/adders.py`."""
+"""Tests for the quantum adders defined in `qibo/models/algorithms/adders.py`."""
 
 import math
 from itertools import product
