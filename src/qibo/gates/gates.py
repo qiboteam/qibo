@@ -111,7 +111,7 @@ class X(Gate):
                 This precision defaults to :math:`\\epsilon = 10^{-16}`.
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
-                ``mpmmath_dps`` defaults to :math:`256`.
+                ``mpmath_dps`` defaults to :math:`256`.
                 For gates controlled by more than two qubits and ``method = "standard"``,
                 the keyword arguments ``clean``, ``minimize_toffolis`` and
                 ``minimize_depth`` are passed to
@@ -2458,7 +2458,7 @@ class RBS(ParametrizedGate):
                 This precision defaults to :math:`\\epsilon = 10^{-16}`.
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
-                ``mpmmath_dps`` defaults to :math:`256`.
+                ``mpmath_dps`` defaults to :math:`256`.
 
         References:
             1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,

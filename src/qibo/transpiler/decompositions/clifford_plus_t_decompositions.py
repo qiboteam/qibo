@@ -8,7 +8,7 @@ from qibo.transpiler.decompositions.abstract import GateDecompositions
 if find_spec("pygridsynth") and find_spec("mpmath"):
     METHOD = "clifford_plus_t"
     clifford_plus_t = GateDecompositions()
-    clifford_plus_t._set_precision_cliff_plus_t()
+    clifford_plus_t.set_precision()
     clifford_plus_t.add(
         gates.SDG,
         [
