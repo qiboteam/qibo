@@ -573,7 +573,9 @@ class Gate:
                 This precision defaults to :math:`\\epsilon = 10^{-16}`.
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
-                ``mpmath_dps`` defaults to :math:`256`.
+                ``mpmath_dps`` defaults to :math:`256`. If only one of them is given, the
+                other keeps its default value, which can be changed with
+                :meth:`qibo.transpiler.decompositions.abstract.GateDecompositions.set_precision`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Synthesis of the original
@@ -587,16 +589,22 @@ class Gate:
 
                 func = clifford_plus_t
                 if "epsilon" in kwargs or "mpmath_dps" in kwargs:
+                    import mpmath
+
                     # The precision is set for this decomposition, including the
-                    # decompositions of the gates that it contains, and then restored
-                    previous = func.get_precision()
+                    # decompositions of the gates that it contains, and then restored.
+                    # What is not given keeps the default precision
+                    epsilon, mpmath_dps = func.get_precision()
+                    previous_dps = mpmath.mp.dps
                     func.set_precision(
-                        kwargs.get("epsilon", 1e-16), kwargs.get("mpmath_dps", 256)
+                        kwargs.get("epsilon", epsilon),
+                        kwargs.get("mpmath_dps", mpmath_dps),
                     )
                     try:
                         return func(self)
                     finally:
-                        func.set_precision(*previous)
+                        func.set_precision(epsilon, mpmath_dps)
+                        mpmath.mp.dps = previous_dps
 
             else:
                 from qibo.transpiler.decompositions.standard_decompositions import (

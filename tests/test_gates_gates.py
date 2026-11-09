@@ -1709,16 +1709,21 @@ def test_clifford_plus_t_precision_is_restored():
 
     gate = gates.RZ(0, 0.3)
     default = len(gate.decompose(method="clifford_plus_t"))
-    decimal_places = mpmath.mp.dps
     # the default precision is set when the decompositions are created
     precision = clifford_plus_t.get_precision()
     assert None not in precision
 
-    coarse = gate.decompose(method="clifford_plus_t", epsilon=1e-2, mpmath_dps=50)
-    assert len(coarse) < default
-    assert mpmath.mp.dps == decimal_places
-    assert clifford_plus_t.get_precision() == precision
-    assert len(gate.decompose(method="clifford_plus_t")) == default
+    # the precision of mpmath that was in use before is restored, and not the default one
+    decimal_places = mpmath.mp.dps
+    try:
+        mpmath.mp.dps = 40
+        coarse = gate.decompose(method="clifford_plus_t", epsilon=1e-2, mpmath_dps=50)
+        assert len(coarse) < default
+        assert mpmath.mp.dps == 40
+        assert clifford_plus_t.get_precision() == precision
+        assert len(gate.decompose(method="clifford_plus_t")) == default
+    finally:
+        mpmath.mp.dps = decimal_places
 
     # a gate without decomposition is returned as it is, and the precision is restored too
     unchanged = gates.H(0).decompose(method="clifford_plus_t", epsilon=1e-2)
@@ -2726,6 +2731,32 @@ def test_check_engine_torch():
 
         engine = _check_engine(tensor)
         assert engine is mock_torch
+
+
+def test_clifford_plus_t_partial_precision():
+    pytest.importorskip("pygridsynth")
+    from qibo.transpiler.decompositions.clifford_plus_t_decompositions import (
+        clifford_plus_t,
+    )
+
+    gate = gates.RZ(0, 0.3)
+    default = len(gate.decompose(method="clifford_plus_t"))
+    precision = clifford_plus_t.get_precision()
+
+    try:
+        # only one argument keeps the other one as set by the user, and not its hard-coded value
+        clifford_plus_t.set_precision(1e-4)
+        partial = len(gate.decompose(method="clifford_plus_t", mpmath_dps=100))
+        explicit = len(
+            gate.decompose(method="clifford_plus_t", epsilon=1e-4, mpmath_dps=100)
+        )
+        assert partial == explicit
+        assert partial < default
+
+        clifford_plus_t.set_precision(1e-16, 60)
+        assert len(gate.decompose(method="clifford_plus_t", epsilon=1e-4)) < default
+    finally:
+        clifford_plus_t.set_precision(*precision)
 
 
 def test_clifford_plus_t_precision_accessors():
