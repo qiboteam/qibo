@@ -59,21 +59,6 @@ def IQPE(
         total. The circuit has fewer qubits, but when it is simulated, each shot has to be
         simulated separately because of the measurements with collapse.
 
-    Args:
-        unitary (:class:`qibo.models.circuit.Circuit` or :class:`qibo.gates.Gate` or ndarray):
-            unitary :math:`U`, given as a circuit, as a gate, *e.g.* :class:`qibo.gates.Unitary`,
-            or as a matrix. See :func:`qibo.models.QPE` for the details.
-        nbits (int): number of bits :math:`t` of the phase to be estimated, which sets the
-            resolution :math:`2^{-t}` and the number of measurements.
-        kwargs (dict, optional): Additional arguments used to initialize
-            :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
-            see the documentation of :class:`qibo.models.circuit.Circuit`.
-
-    Returns:
-        tuple: the circuit that implements the Iterative Quantum Phase Estimation and the
-        list of :class:`qibo.measurements.MeasurementResult` with the outcomes of the
-        measurements of the counting qubit, from the most to the least significant bit.
-
     Example:
         .. testcode::
 
@@ -103,6 +88,21 @@ def IQPE(
         .. testoutput::
 
             0.3125
+
+    Args:
+        unitary (:class:`qibo.models.circuit.Circuit` or :class:`qibo.gates.Gate` or ndarray):
+            unitary :math:`U`, given as a circuit, as a gate, *e.g.* :class:`qibo.gates.Unitary`,
+            or as a matrix. See :func:`qibo.models.QPE` for the details.
+        nbits (int): number of bits :math:`t` of the phase to be estimated, which sets the
+            resolution :math:`2^{-t}` and the number of measurements.
+        kwargs (dict, optional): Additional arguments used to initialize
+            :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
+            see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        tuple: the circuit that implements the Iterative Quantum Phase Estimation and the
+        list of :class:`qibo.measurements.MeasurementResult` with the outcomes of the
+        measurements of the counting qubit, from the most to the least significant bit.
 
     References:
         1. A. Yu. Kitaev, *Quantum measurements and the Abelian Stabilizer Problem*,
