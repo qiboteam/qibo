@@ -1,8 +1,9 @@
 import numpy as np
 import scipy.stats
 
-from qibo import Circuit, gates
+from qibo import gates
 from qibo.config import raise_error
+from qibo.models.circuit import Circuit
 
 
 class IQAE:
@@ -49,7 +50,7 @@ class IQAE:
         .. testcode::
 
             from qibo import Circuit, gates
-            from qibo.models.iqae import IQAE
+            from qibo.models import IQAE
 
             # Defining circuit A to integrate sin(x)^2 from [0,1]
             a_circuit = Circuit(2)
@@ -262,7 +263,7 @@ class IQAE:
             backend: the qibo backend.
 
         Returns:
-            A :class:`qibo.models.iqae.IterativeAmplitudeEstimationResult` results object.
+            A :class:`qibo.models.IterativeAmplitudeEstimationResult` results object.
         """
         from qibo.backends import _check_backend
 
