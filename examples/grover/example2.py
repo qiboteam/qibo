@@ -4,7 +4,7 @@ import numpy as np
 from scipy.special import binom
 
 from qibo import Circuit, gates
-from qibo.models.grover import Grover
+from qibo.models import Grover
 
 
 def one_sum(sum_qubits):

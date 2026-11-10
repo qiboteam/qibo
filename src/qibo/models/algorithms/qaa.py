@@ -112,7 +112,7 @@ def FPQAA(
     Let :math:`\\mathcal{A}` be the circuit ``algorithm``, :math:`\\chi` a Boolean function that
     marks "good" computational basis states, and :math:`a` the probability of measuring a good
     state in :math:`|\\Psi\\rangle = \\mathcal{A}|0\\rangle`, where :math:`|0\\rangle` is the
-    all-zero state. The success probability of :func:`qibo.models.qaa.QAA` oscillates with the
+    all-zero state. The success probability of :func:`qibo.models.QAA` oscillates with the
     number of iterations, so too many iterations decrease it, and the right number depends on
     :math:`a`. In contrast, this circuit, which follows Yoder, Low and Chuang, only needs a lower
     bound for :math:`a`, and more iterations never push its success probability below the bound.
@@ -148,8 +148,8 @@ def FPQAA(
     The lower bound on :math:`a` decreases as :math:`L` grows, and it is about
     :math:`(\\log(2 / \\delta) / L)^{2}` for large :math:`L` and small :math:`\\delta`. Thus, the
     oracle is used :math:`2l = L - 1` times, which is in :math:`O(\\log(2 / \\delta) / \\sqrt{a})`
-    for a suitable :math:`L`, as in :func:`qibo.models.qaa.QAA`. For :math:`\\delta = 1` the circuit
-    is Grover's one, *i.e.* the one of :func:`qibo.models.qaa.QAA` with ``niterations=l``, and for
+    for a suitable :math:`L`, as in :func:`qibo.models.QAA`. For :math:`\\delta = 1` the circuit
+    is Grover's one, *i.e.* the one of :func:`qibo.models.QAA` with ``niterations=l``, and for
     :math:`\\delta = 0` and :math:`l = 1` it is the :math:`\\pi / 3` fixed-point search of
     Grover, whose probability is :math:`1 - (1 - a)^{L}`.
 
@@ -198,7 +198,7 @@ def FPQAA(
             measurements.
         oracle (:class:`qibo.models.circuit.Circuit`): circuit :math:`\\mathbf{S}_{\\chi}` that
             multiplies the good states by :math:`-1`, without measurements and with the same
-            number of qubits as ``algorithm``. See :func:`qibo.models.qaa.amplification_operator`.
+            number of qubits as ``algorithm``. See :func:`qibo.models.amplification_operator`.
         delta (float): bound :math:`\\delta \\in [0, 1]` of the failure probability, which is
             at most :math:`\\delta^{2}` over the range of :math:`a` above.
         niterations (int, optional): number :math:`l \\geq 0` of generalized Grover iterates.
@@ -366,7 +366,7 @@ def OAA(
         = \\sin((2l + 1)\\theta) |0^{\\mu}\\rangle V |\\psi\\rangle
         + \\cos((2l + 1)\\theta) |\\Phi^{\\perp}\\rangle.
 
-    In contrast with :func:`qibo.models.qaa.amplification_operator`, :math:`\\mathbf{S}` does not
+    In contrast with :func:`qibo.models.amplification_operator`, :math:`\\mathbf{S}` does not
     reflect about the state :math:`U|0^{\\mu}\\rangle|\\psi\\rangle`, which is unknown since
     :math:`|\\psi\\rangle` is not. Thus, the circuit amplifies the implementation of :math:`V`
     without knowing, preparing or measuring the input state, so it can be a part of a larger
@@ -514,7 +514,7 @@ def QAA(
     computational basis states, let :math:`a` be the probability of measuring a good state in
     :math:`\\mathcal{A}|0\\rangle`, where :math:`|0\\rangle` is the all-zero state. The circuit
     applies :math:`\\mathcal{A}` and then :math:`m` times the operator :math:`\\mathbf{Q}` of
-    :func:`qibo.models.qaa.amplification_operator`, such that the probability of measuring a good
+    :func:`qibo.models.amplification_operator`, such that the probability of measuring a good
     state becomes :math:`\\sin^{2}((2m + 1)\\theta_{a})`, with :math:`a = \\sin^{2}(\\theta_{a})`
     and :math:`0 \\leq \\theta_{a} \\leq \\pi / 2`. The number :math:`m` of iterations is
     determined in one of the following ways:
@@ -537,14 +537,14 @@ def QAA(
 
     The circuit acts on the qubits of ``algorithm``, plus the auxiliary qubit if ``exact=True``,
     and the measurement, if ``measure=True``, is applied to the qubits of ``algorithm`` only. If
-    the probability :math:`a` is unknown, use :func:`qibo.models.qaa.QSearch`.
+    the probability :math:`a` is unknown, use :func:`qibo.models.QSearch`.
 
     Args:
         algorithm (:class:`qibo.models.circuit.Circuit`): circuit :math:`\\mathcal{A}` without
             measurements.
         oracle (:class:`qibo.models.circuit.Circuit`): circuit :math:`\\mathbf{S}_{\\chi}` that
             multiplies the good states by :math:`-1`, without measurements and with the same
-            number of qubits as ``algorithm``. See :func:`qibo.models.qaa.amplification_operator`.
+            number of qubits as ``algorithm``. See :func:`qibo.models.amplification_operator`.
         niterations (int, optional): number :math:`m \\geq 0` of applications of
             :math:`\\mathbf{Q}`. Exactly one of ``niterations`` and ``probability`` has to be
             given. Defaults to ``None``.
@@ -644,7 +644,7 @@ def QSearch(
     2. measures :math:`\\mathcal{A}|0\\rangle`, and stops if the outcome is good;
     3. draws an integer :math:`j` uniformly at random between :math:`1` and :math:`M`, measures
        :math:`\\mathbf{Q}^{j}\\mathcal{A}|0\\rangle`, with :math:`\\mathbf{Q}` the operator of
-       :func:`qibo.models.qaa.amplification_operator`, and stops if the outcome is good.
+       :func:`qibo.models.amplification_operator`, and stops if the outcome is good.
 
     A good outcome is detected with the classical function ``check``. If :math:`a > 0`, the
     expected number of applications of :math:`\\mathcal{A}` and :math:`\\mathcal{A}^{-1}` is in
@@ -656,7 +656,7 @@ def QSearch(
             measurements.
         oracle (:class:`qibo.models.circuit.Circuit`): circuit :math:`\\mathbf{S}_{\\chi}` that
             multiplies the good states by :math:`-1`, without measurements and with the same
-            number of qubits as ``algorithm``. See :func:`qibo.models.qaa.amplification_operator`.
+            number of qubits as ``algorithm``. See :func:`qibo.models.amplification_operator`.
         check (Callable): function that receives a measured bitstring, *e.g.* ``"101"``, and
             returns ``True`` if the state is good.
         growth (float, optional): factor :math:`c` by which the maximum number of iterations
@@ -686,9 +686,9 @@ def QSearch(
             algorithm = Circuit(nqubits)
             algorithm.add(gates.H(qubit) for qubit in range(nqubits))
             oracle = Circuit(nqubits)
-            oracle.add(gates.X(2))
+            oracle.add(gates.X(1))
             oracle.add(gates.Z(3).controlled_by(0, 1, 2))
-            oracle.add(gates.X(2))
+            oracle.add(gates.X(1))
 
             bitstring, napplications = QSearch(
                 algorithm, oracle, check=lambda bitstring: bitstring == "1011", seed=0

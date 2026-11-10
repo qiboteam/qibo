@@ -1,4 +1,4 @@
-"""Tests for quantum singular value transformation in `qibo/models/qsvt.py`."""
+"""Tests for quantum singular value transformation in `qibo/models/algorithms/qsvt.py`."""
 
 import math
 
@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 
 from qibo import Circuit, gates, models
 from qibo.backends import Backend
-from qibo.models.qsvt import qsvt_circuit, qsvt_phases
+from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
 from qibo.quantum_info.random_ensembles import random_unitary
 
 

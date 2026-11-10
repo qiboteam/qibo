@@ -1,4 +1,4 @@
-"""Tests for the Quantum Counting circuit defined in `qibo/models/counting.py`."""
+"""Tests for the Quantum Counting circuit defined in `qibo/models/algorithms/counting.py`."""
 
 import math
 
