@@ -7,74 +7,133 @@ from qibo.models.circuit import Circuit
 
 
 class IQAE:
-    """Model that performs the Iterative Quantum Amplitude Estimation algorithm.
+    """Iterative Quantum Amplitude Estimation (IQAE).
 
-    The implemented class in this code utilizes the Iterative Quantum Amplitude
-    Estimation (IQAE) algorithm, which was proposed in `arxiv:1912.05559
-    <https://arxiv.org/abs/1912.05559>`_. The algorithm provides an estimated
-    output that, with a probability ``alpha``, differs from the target value by
-    ``epsilon``. Both ``alpha`` and ``epsilon`` can be specified.
+    Let :math:`\\mathcal{A}` be a circuit on :math:`n + 1` qubits, such that
 
-    Unlike Brassard's original QAE algorithm `arxiv:quant-ph/0005055
-    <http://arxiv.org/abs/quant-ph/0005055>`_, this implementation does not rely
-    on Quantum Phase Estimation but instead is based solely on Grover's
-    algorithm. The IQAE algorithm employs a series of carefully selected Grover
-    iterations to determine an estimate for the target amplitude.
+    .. math::
+        \\mathcal{A} \\ket{0}_{n} \\ket{0} = \\sqrt{1 - a} \\, \\ket{\\psi_{0}}_{n} \\ket{0}
+        + \\sqrt{a} \\, \\ket{\\psi_{1}}_{n} \\ket{1},
 
-    Args:
-        circuit_a (:class:`qibo.models.circuit.Circuit`): quantum circuit that
-            specifies the QAE problem.
+    where :math:`\\ket{\\psi_{0}}_{n}` and :math:`\\ket{\\psi_{1}}_{n}` are normalized states
+    and :math:`a \\in [0, 1]` is the unknown probability of measuring the last qubit in the state
+    :math:`\\ket{1}`. Let :math:`\\mathbf{Q}` be the operator of
+    :func:`qibo.models.amplification_operator` for :math:`\\mathcal{A}` and for the oracle that
+    multiplies by :math:`-1` the states with the last qubit in the state :math:`\\ket{1}`,
+    *e.g.* a :class:`qibo.gates.Z` gate on the last qubit. For :math:`a = \\sin^{2}(\\theta_{a})`
+    and any integer :math:`k \\geq 0`,
 
-        circuit_q (:class:`qibo.models.circuit.Circuit`): quantum circuit of the
-            Grover/Amplification operator.
+    .. math::
+        \\mathbf{Q}^{k} \\mathcal{A} \\ket{0}_{n} \\ket{0}
+        = \\cos((2k + 1) \\theta_{a}) \\ket{\\psi_{0}}_{n} \\ket{0}
+        + \\sin((2k + 1) \\theta_{a}) \\ket{\\psi_{1}}_{n} \\ket{1},
 
-        alpha (float): confidence level, the target probability is 1 - ``alpha``,
-            has values between 0 and 1.
+    so the probability of measuring the last qubit in the state :math:`\\ket{1}` is
+    :math:`\\sin^{2}((2k + 1) \\theta_{a})`. In contrast with :func:`qibo.models.QAE`, IQAE does
+    not use quantum phase estimation, hence it needs neither counting qubits nor controlled
+    powers of :math:`\\mathbf{Q}`. It only applies :math:`\\mathbf{Q}` to
+    :math:`\\mathcal{A}\\ket{0}` and measures the last qubit. Starting from the interval
+    :math:`[\\theta_{l}, \\theta_{u}] = [0, \\pi / 2]` for :math:`\\theta_{a}`, each iteration
+    :math:`i`
 
-        epsilon (float): target precision for estimation target `a`, has values
-            between 0 and 0.5.
+    1. finds the largest power :math:`k_{i}` such that :math:`K_{i} = 4 k_{i} + 2 \\geq 2 K_{i-1}`
+       and the interval :math:`K_{i} [\\theta_{l}, \\theta_{u}]`, modulo :math:`2 \\pi`, lies
+       completely in :math:`[0, \\pi]` or in :math:`[\\pi, 2 \\pi]`. If there is none, it keeps
+       :math:`k_{i-1}`;
+    2. measures the last qubit of :math:`\\mathbf{Q}^{k_{i}} \\mathcal{A} \\ket{0}` ``n_shots``
+       times, or fewer times in the last iterations, where more shots would not improve the
+       result (the "no-overshooting" condition). With all of the shots of the iterations that
+       share :math:`k_{i}`, it computes a confidence interval of
+       :math:`\\sin^{2}((2 k_{i} + 1) \\theta_{a}) = (1 - \\cos(K_{i} \\theta_{a})) / 2`;
+    3. inverts the cosine, which is unambiguous in each half of the circle, and shrinks
+       :math:`[\\theta_{l}, \\theta_{u}]`.
 
-        method (str): statistical method used to estimate the confidence
-            intervals in each iteration, can be either `chernoff` (default) for
-            the Chernoff intervals or `beta` for the Clopper-Pearson intervals.
+    The algorithm stops when :math:`\\theta_{u} - \\theta_{l} \\leq 2 \\epsilon`, where
+    :math:`\\epsilon` is ``epsilon``, and it returns the interval
+    :math:`[a_{l}, a_{u}] = [\\sin^{2}(\\theta_{l}), \\sin^{2}(\\theta_{u})]`. The significance
+    level of each confidence interval is the one of the algorithm, :math:`\\alpha`, divided by the
+    maximum number :math:`\\lceil \\log_{2}(\\pi / (8 \\epsilon)) \\rceil` of rounds, a round being
+    the set of iterations with the same :math:`k_{i}`. Then, :math:`a_{u} - a_{l} \\leq 2 \\epsilon`
+    and :math:`a` lies in :math:`[a_{l}, a_{u}]` with probability at least :math:`1 - \\alpha`.
+    Thus, the estimation :math:`(a_{l} + a_{u}) / 2` differs from :math:`a` by at most
+    :math:`\\epsilon` with that probability. If ``n_shots`` is not larger than
 
-        n_shots (int): number of shots.
+    .. math::
+        N_{\\max}(\\epsilon, \\alpha) = \\left\\lceil \\frac{32}{(1 - 2 \\sin(\\pi / 14))^{2}}
+        \\log\\left(\\frac{2}{\\alpha} \\log_{2}\\left(\\frac{\\pi}{4 \\epsilon}\\right)\\right)
+        \\right\\rceil,
 
-    Raises:
-        ValueError: If ``epsilon`` is not in (0, 0.5].
-        ValueError: If ``alpha`` is not in (0, 1).
-        ValueError: If ``method`` is not supported.
-        ValueError: If the number of qubits in ``circuit_a`` is greater than in ``circuit_q``.
+    the algorithm ends after at most
+    :math:`\\lceil \\log_{2}(\\pi / (8 \\epsilon)) \\rceil` rounds and
+    :math:`\\mathbf{Q}` is applied fewer than
+    :math:`(50 / \\epsilon) \\log((2 / \\alpha) \\log_{2}(\\pi / (4 \\epsilon)))` times. This is the
+    quadratic speedup over the :math:`O(1 / \\epsilon^{2})` samples of classical Monte Carlo
+    simulation, up to a double-logarithmic factor.
+
+    .. note::
+        For the default values of ``epsilon`` and ``alpha``, :math:`N_{\\max} = 590`, which is
+        smaller than the default ``n_shots``.
+
+    The circuit ``circuit_q`` can act on more qubits than ``circuit_a``, *e.g.* on auxiliary
+    qubits, as long as it leaves them in the state :math:`\\ket{0}`.
 
     Example:
         .. testcode::
 
+            import math
+
             from qibo import Circuit, gates
-            from qibo.models import IQAE
+            from qibo.models import IQAE, amplification_operator
 
-            # Defining circuit A to integrate sin(x)^2 from [0,1]
-            a_circuit = Circuit(2)
-            a_circuit.add(gates.H(0))
-            a_circuit.add(gates.RY(q = 1, theta = 1 / 2))
-            a_circuit.add(gates.CU3(0, 1, 1, 0, 0))
-            # Defining circuit Q = -A S_0 A^-1 S_X
-            q_circuit = Circuit(2)
-            # S_X
-            q_circuit.add(gates.Z(q = 1))
-            # A^-1
-            q_circuit = q_circuit + a_circuit.invert()
-            # S_0
-            q_circuit.add(gates.X(0))
-            q_circuit.add(gates.X(1))
-            q_circuit.add(gates.CZ(0, 1))
-            # A
-            q_circuit = q_circuit + a_circuit
+            # A applies a Hadamard gate on the first qubit and, if it is in the state 1, a
+            # rotation of angle 2 on the last qubit, so a = sin(1)^2 / 2
+            algorithm = Circuit(2)
+            algorithm.add(gates.H(0))
+            algorithm.add(gates.CRY(0, 1, theta=2.0))
 
-            # Executing IQAE and obtaining the result
-            iae = IQAE(a_circuit, q_circuit)
-            results = iae.execute()
-            integral_value = results.estimation
-            integral_error = results.epsilon_estimated
+            # the oracle multiplies by -1 the states with the last qubit in the state 1
+            oracle = Circuit(2)
+            oracle.add(gates.Z(1))
+            operator = amplification_operator(algorithm, oracle)
+
+            iqae = IQAE(algorithm, operator, alpha=0.05, epsilon=0.01)
+            result = iqae.execute()
+
+            print(abs(result.estimation - math.sin(1.0) ** 2 / 2) <= 0.01)
+
+        .. testoutput::
+
+            True
+
+    Args:
+        circuit_a (:class:`qibo.models.circuit.Circuit`): circuit :math:`\\mathcal{A}` without
+            measurements. Its last qubit is the one that is measured.
+        circuit_q (:class:`qibo.models.circuit.Circuit`): circuit of the operator
+            :math:`\\mathbf{Q}`, which has to act on at least as many qubits as ``circuit_a``.
+        alpha (float, optional): significance level :math:`\\alpha \\in (0, 1)`, *i.e.* the
+            probability that the interval returned does not contain :math:`a` is at most
+            ``alpha``. Defaults to :math:`0.05`.
+        epsilon (float, optional): target accuracy :math:`\\epsilon \\in (0, 0.5]` of the
+            estimation of :math:`a`. Defaults to :math:`0.005`.
+        n_shots (int, optional): number of shots of each iteration. Defaults to :math:`1024`.
+        method (str, optional): method used to compute the confidence intervals of each
+            iteration, either ``"chernoff"`` for the Chernoff-Hoeffding intervals or ``"beta"``
+            for the Clopper-Pearson intervals. Defaults to ``"chernoff"``.
+
+    References:
+        1. D. Grinko, J. Gacon, C. Zoufal, and S. Woerner, *Iterative quantum amplitude
+        estimation*, `npj Quantum Inf. 7, 52 (2021) <https://doi.org/10.1038/s41534-021-00379-1>`_,
+        `arXiv:1912.05559 <https://arxiv.org/abs/1912.05559>`_.
+
+        2. G. Brassard, P. Høyer, M. Mosca, and A. Tapp, *Quantum Amplitude Amplification and
+        Estimation*, `Contemporary Mathematics 305, 53 (2002)
+        <https://doi.org/10.1090/conm/305/05215>`_.
+
+        3. C. J. Clopper and E. S. Pearson, *The use of confidence or fiducial limits illustrated
+        in the case of the binomial*, Biometrika 26, 404 (1934).
+
+        4. W. Hoeffding, *Probability inequalities for sums of bounded random variables*,
+        J. Am. Stat. Assoc. 58, 13 (1963).
     """
 
     def __init__(
@@ -121,12 +180,14 @@ class IQAE:
         self.method = method
 
     def construct_qae_circuit(self, k):
-        """Generates quantum circuit for QAE.
+        """Creates the circuit that applies :math:`\\mathbf{Q}^{k}` to
+        :math:`\\mathcal{A}\\ket{0}` and measures the last qubit of ``circuit_a``.
 
         Args:
-            k (int): number of times the amplification operator ``circuit_q`` is applied.
+            k (int): number :math:`k \\geq 0` of applications of ``circuit_q``.
+
         Returns:
-            The quantum circuit of the QAE algorithm.
+            :class:`qibo.models.circuit.Circuit`: circuit with as many qubits as ``circuit_q``.
         """
         initialization_circuit_a = self.circuit_a
         amplification_circuit_q = self.circuit_q
@@ -144,15 +205,18 @@ class IQAE:
         return qc
 
     def clopper_pearson(self, count, n, alpha):
-        """Calculates the confidence interval for the quantity to estimate `a`.
+        """Calculates the Clopper-Pearson confidence interval of the probability :math:`a`.
 
         Args:
-            count (int): number of successes.
+            count (int): number of successes, *i.e.* of measurements of the state
+                :math:`\\ket{1}`.
             n (int): total number of trials.
-            alpha (float): significance level. Must be in (0, 0.5).
+            alpha (float): significance level, *i.e.* the probability that the interval does not
+                contain :math:`a` is at most ``alpha``.
 
-        Return:
-            The confidence interval [a_min, a_max].
+        Returns:
+            tuple: lower and upper bounds of the interval. A bound that cannot be computed, which
+            happens if ``count`` is :math:`0` or ``n``, is replaced by :math:`0` or :math:`1`.
         """
         beta_prob_function = scipy.stats.beta.ppf
         a_min = beta_prob_function(alpha / 2, count, n - count + 1)
@@ -164,15 +228,20 @@ class IQAE:
         return a_min, a_max
 
     def h_calc_CP(self, n_successes, n_total_shots, upper_bound_t):
-        """Calculates the `h` function.
+        """Calculates half of the width of the Clopper-Pearson interval of :math:`K \\theta_{a}`.
+
+        The Clopper-Pearson interval :math:`[a_{\\min}, a_{\\max}]` of the probability :math:`a`
+        has significance level ``alpha`` / ``upper_bound_t``, and the result is
+        :math:`|\\arccos(1 - 2 a_{\\max}) - \\arccos(1 - 2 a_{\\min})| / 2`.
 
         Args:
             n_successes (int): number of successes.
             n_total_shots (int): total number of trials.
-            upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
+            upper_bound_t (int): maximum number :math:`T` of rounds needed to achieve the target
+                accuracy.
 
         Returns:
-            The h function for the given inputs.
+            float: half of the width of the interval of :math:`K \\theta_{a}`, in radians.
         """
         a_min, a_max = self.clopper_pearson(
             n_successes, n_total_shots, alpha=(self.alpha / upper_bound_t)
@@ -180,15 +249,20 @@ class IQAE:
         return np.abs(np.arccos(1 - 2 * a_max) - np.arccos(1 - 2 * a_min)) / 2
 
     def calc_L_range_CP(self, n_shots, upper_bound_t):
-        """Calculate the confidence interval for the Clopper-Pearson method.
+        """Calculates the maximum and minimum errors of an iteration with Clopper-Pearson intervals.
+
+        They are the maximum and the minimum of :meth:`h_calc_CP` over the fractions of successes
+        in :math:`[0, 1]`, divided by :math:`2 \\pi`. The maximum is the quantity
+        :math:`L_{\\max}` of the no-overshooting condition.
 
         Args:
             n_shots (int): number of shots.
-            upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
+            upper_bound_t (int): maximum number :math:`T` of rounds needed to achieve the target
+                accuracy.
 
         Returns:
-            max_L, min_L (float, float): The maximum and minimum possible error which could be returned
-            on a given iteration.
+            tuple: maximum and minimum errors that an iteration can return, in units of
+            :math:`2 \\pi`.
         """
         x = np.linspace(0, np.pi, 10000)
         x_domain = [x <= 1.0 + 1 / 10 / n_shots]
@@ -201,15 +275,24 @@ class IQAE:
         return max_L, min_L
 
     def calc_L_range_CH(self, n_shots, upper_bound_t):
-        """Calculate the confidence interval for the Chernoff method.
+        """Calculates the maximum and minimum errors of an iteration, with Chernoff-Hoeffding.
+
+        The maximum error is
+
+        .. math::
+            L_{\\max} = \\frac{1}{2 \\pi} \\arcsin\\left(\\left(\\frac{2}{N_{shots}}
+            \\log\\left(\\frac{2 T}{\\alpha}\\right)\\right)^{1 / 4}\\right),
+
+        which is used in the no-overshooting condition.
 
         Args:
-            n_shots (int): number of shots.
-            upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
+            n_shots (int): number of shots :math:`N_{shots}`.
+            upper_bound_t (int): maximum number :math:`T` of rounds needed to achieve the target
+                accuracy.
 
         Returns:
-            max_L, min_L (float, float): The maximum and minimum possible error which could be returned
-            on a given iteration.
+            tuple: maximum error, in units of :math:`2 \\pi`, and a lower value that is not used by
+            :meth:`execute`.
         """
         max_L = (
             np.arcsin(
@@ -222,24 +305,26 @@ class IQAE:
         return max_L, min_L
 
     def find_next_k(self, uppercase_k_i, up_i, theta_l, theta_u, r=2):
-        r"""Find the largest integer ``uppercase_k`` such that the interval ``uppercase_k`` * [ ``theta_l`` , ``theta_u`` ]
-        lies completely in [0, `\pi`] or [`\pi`, 2 `\pi`].
+        """Finds the next factor :math:`K`, which is the procedure *FindNextK* of [1].
+
+        It is the largest :math:`K = 4k + 2 \\geq r K_{i}` such that the interval
+        :math:`K [\\theta_{l}, \\theta_{u}]` lies completely in :math:`[0, \\pi]` or in
+        :math:`[\\pi, 2 \\pi]`, modulo :math:`2 \\pi`. All of the angles are divided by
+        :math:`2 \\pi`.
 
         Args:
-            uppercase_k_i (int): the current ``uppercase_k`` such ``uppercase_k`` = 4 ``k`` + 2,
-                where ``k`` is the power of the operator ``circuit_q``.
-
-            up_i (bool): boolean flag of whether theta_interval lies in the
-                upper half-circle [0, `\pi`] or in the lower one [`\pi`, 2 `\pi`].
-
-            theta_l (float): the current lower limit of the confidence interval for the angle theta.
-
-            theta_u (float): the current upper limit of the confidence interval for the angle theta.
-
-            r (int): lower bound for ``uppercase_k``.
+            uppercase_k_i (int): current factor :math:`K_{i} = 4 k_{i} + 2`, where :math:`k_{i}`
+                is the power of ``circuit_q``.
+            up_i (bool): whether the current interval of :math:`K_{i} \\theta_{a}` lies in the
+                upper half of the circle, :math:`[0, \\pi]`, or in the lower one.
+            theta_l (float): lower limit of the current interval of :math:`\\theta_{a}`.
+            theta_u (float): upper limit of the current interval of :math:`\\theta_{a}`.
+            r (int, optional): minimum ratio :math:`K / K_{i}`. Defaults to :math:`2`.
 
         Returns:
-            The next power `K_i`, and boolean flag for the extrapolated interval.
+            tuple: next factor :math:`K = 4k + 2`, and whether the extrapolated interval lies in
+            the upper half of the circle. If there is no valid :math:`K`, it returns
+            ``uppercase_k_i`` and ``up_i``.
         """
         uppercase_k_max = int(1 / (2 * (theta_u - theta_l)))
         uppercase_k = uppercase_k_max - (uppercase_k_max - 2) % 4
@@ -257,13 +342,15 @@ class IQAE:
         return (uppercase_k_i, up_i)
 
     def execute(self, backend=None):
-        """Execute IQAE algorithm.
+        """Executes the IQAE algorithm.
 
         Args:
-            backend: the qibo backend.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend used to execute
+                the circuits. If ``None``, it uses the current backend. Defaults to ``None``.
 
         Returns:
-            A :class:`qibo.models.IterativeAmplitudeEstimationResult` results object.
+            :class:`qibo.models.IterativeAmplitudeEstimationResult`: result with the estimation
+            of :math:`a`, its interval and the information of each iteration.
         """
         from qibo.backends import _check_backend
 
@@ -365,7 +452,9 @@ class IQAE:
                 theta_min_i = 1 - np.arccos(1 - 2 * a_max_i) / 2 / np.pi
                 theta_max_i = 1 - np.arccos(1 - 2 * a_min_i) / 2 / np.pi
 
-            theta = min(int(uppercase_k_i * theta_u), int(uppercase_k_i * theta_l))
+            # the interval lies in a single turn, which is found from its center, because the
+            # ends can be on the border of two turns, where rounding errors change the turn
+            theta = int(uppercase_k_i * (theta_u + theta_l) / 2)
 
             theta_u = (theta + theta_max_i) / uppercase_k_i
             theta_l = (theta + theta_min_i) / uppercase_k_i
@@ -392,7 +481,26 @@ class IQAE:
 
 
 class IterativeAmplitudeEstimationResult:
-    """The ``IterativeAmplitudeEstimationResult`` result object."""
+    """Result of :meth:`qibo.models.IQAE.execute`.
+
+    Attributes:
+        alpha (float): significance level :math:`\\alpha`.
+        epsilon_target (float): target accuracy :math:`\\epsilon`.
+        epsilon_estimated (float): estimated accuracy, *i.e.* half of the width
+            :math:`(a_{u} - a_{l}) / 2` of the final interval.
+        estimation (float): estimation :math:`(a_{l} + a_{u}) / 2` of :math:`a`.
+        estimate_intervals (list): initial bounds :math:`0` and :math:`1` of :math:`a`, followed by
+            the interval :math:`[a_{l}, a_{u}]` after each iteration.
+        theta_intervals (list): initial bounds :math:`0` and :math:`1 / 4` of
+            :math:`\\theta_{a} / (2 \\pi)`, followed by the interval
+            :math:`[\\theta_{l}, \\theta_{u}] / (2 \\pi)` after each iteration.
+        num_oracle_queries (int): total number of applications of ``circuit_q``.
+        k_list (list): power of ``circuit_q``, starting with :math:`k_{0} = 0` and followed by the
+            one of each iteration.
+        ratios (list): number of times that the state :math:`\\ket{1}` was measured in each
+            iteration.
+        shots (list): number of shots of each iteration.
+    """
 
     def __init__(self):
         self._alpha = None
