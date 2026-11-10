@@ -8,11 +8,60 @@ from qibo.models.circuit import Circuit
 def QFT(nqubits: int, with_swaps: bool = True, accelerators=None, **kwargs) -> Circuit:
     """Creates a circuit that implements the Quantum Fourier Transform.
 
+    The Quantum Fourier Transform (QFT) on :math:`n` qubits is the unitary operator that acts on
+    the computational basis states as
+
+    .. math::
+        \\text{QFT} \\, \\ket{j} = \\frac{1}{\\sqrt{N}} \\sum_{k=0}^{N-1}
+        e^{2 \\pi i j k / N} \\ket{k} \\, ,
+
+    where :math:`N = 2^{n}`, *i.e.* it applies the discrete Fourier transform to the amplitudes
+    of a state. The integer :math:`j = j_{1} 2^{n - 1} + \\cdots + j_{n} 2^{0}` is represented by
+    the bitstring :math:`j_{1} \\cdots j_{n}` of the qubits, with the first qubit being the most
+    significant one. The circuit is the one in Fig. 5.1 of Ref. [1]. For each qubit
+    :math:`q = 0, \\dots, n - 1`, from the first to the last, it applies
+
+    1. a Hadamard gate on the qubit :math:`q`;
+    2. the controlled-:math:`R_{k}` gates, implemented with :class:`qibo.gates.CU1`, that have
+       the qubit :math:`q + k - 1` as control and the qubit :math:`q` as target, for
+       :math:`k = 2, \\dots, n - q`, where
+
+       .. math::
+           R_{k} = \\begin{pmatrix} 1 & 0 \\\\ 0 & e^{2 \\pi i / 2^{k}} \\end{pmatrix} \\, .
+
+    If ``with_swaps=True``, :math:`\\lfloor n / 2 \\rfloor` :class:`qibo.gates.SWAP` gates are
+    added at the end to reverse the order of the qubits. Hence, the circuit has
+    :math:`n (n + 1) / 2` Hadamard and controlled phase gates, plus the swaps, which is
+    :math:`\\Theta(n^{2})` gates. The inverse QFT is obtained with
+    :meth:`qibo.models.circuit.Circuit.invert`.
+
+    Example:
+        .. testcode::
+
+            import numpy as np
+
+            from qibo.backends import NumpyBackend
+            from qibo.models import QFT
+
+            backend = NumpyBackend()
+
+            nqubits = 6
+            dims = 2**nqubits
+
+            # Random normalized initial state vector
+            initial_state = random_statevector(dims, backend=backend)
+
+            circuit = QFT(nqubits)
+
+            # Execute the circuit
+            final_state = circuit(initial_state)
+
     Args:
         nqubits (int): number of qubits in the circuit.
         with_swaps (bool, optional): If ``True``, uses :class:`qibo.gates.SWAP` gates
             at the end of the circuit so that the qubit order in the final
-            state is the same as the initial state. Defauts to ``True``.
+            state is the same as the initial state. Otherwise, the qubits of the final state are
+            in the reverse order. Defaults to ``True``.
         accelerators (dict, optional): Accelerator device dictionary in order to use a
             distributed circuit. If ``None``, a simple (non-distributed)
             circuit will be used.
@@ -23,18 +72,9 @@ def QFT(nqubits: int, with_swaps: bool = True, accelerators=None, **kwargs) -> C
     Returns:
         :class:`qibo.models.Circuit`: implementation of the Quantum Fourier Transform.
 
-    Example:
-        .. testcode::
-
-            import numpy as np
-            from qibo.models import QFT
-            nqubits = 6
-            circuit = QFT(nqubits)
-            # Random normalized initial state vector
-            init_state = np.random.random(2 ** nqubits) + 1j * np.random.random(2 ** nqubits)
-            init_state = init_state / np.sqrt((np.abs(init_state)**2).sum())
-            # Execute the circuit
-            final_state = circuit(init_state)
+    References:
+        1. M. A. Nielsen and I. L. Chuang, *Quantum Computation and Quantum Information*,
+        `Cambridge University Press (2010), Sec. 5.1 <https://doi.org/10.1017/CBO9780511976667>`_.
     """
     if accelerators is not None:
         if not with_swaps:
