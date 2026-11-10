@@ -1,6 +1,6 @@
+from qibo.models.algorithms.qaa import amplification_operator
+from qibo.models.algorithms.qpe import QPE
 from qibo.models.circuit import Circuit
-from qibo.models.qaa import amplification_operator
-from qibo.models.qpe import QPE
 
 
 def QAE(
@@ -21,8 +21,8 @@ def QAE(
     number of qubits of :math:`\\mathcal{A}`, and it is composed of the following steps:
 
     1. :math:`\\mathcal{A}` on the last :math:`n` qubits of the circuit;
-    2. the :func:`qibo.models.qpe.QPE` of the amplification operator :math:`\\mathbf{Q}` of
-       :func:`qibo.models.qaa.amplification_operator`, with the :math:`t` first qubits as
+    2. the :func:`qibo.models.QPE` of the amplification operator :math:`\\mathbf{Q}` of
+       :func:`qibo.models.amplification_operator`, with the :math:`t` first qubits as
        counting qubits.
 
     The state :math:`|\\Psi\\rangle` is a superposition of two eigenvectors of :math:`\\mathbf{Q}`,

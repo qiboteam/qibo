@@ -42,7 +42,7 @@ class Grover:
             import numpy as np
 
             from qibo import Circuit, gates
-            from qibo.models.grover import Grover
+            from qibo.models import Grover
 
             # Create an oracle. Ex: Oracle that detects state |11111>
             oracle = Circuit(5 + 1)
@@ -275,5 +275,5 @@ class Grover:
         return self.solution, self.iterations
 
     def __call__(self, nshots=100, freq=False, logs=False, backend=None):
-        """Equivalent to :meth:`qibo.models.grover.Grover.execute`."""
+        """Equivalent to :meth:`qibo.models.Grover.execute`."""
         return self.execute(nshots=nshots, freq=freq, logs=logs, backend=backend)

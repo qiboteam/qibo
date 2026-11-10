@@ -120,10 +120,10 @@ def estimate_phase(
     first one is used. The outcomes can be given as
 
     * the result of the execution of a circuit that measures the counting qubits, *e.g.* a
-      :class:`qibo.models.qpe.QPE` circuit with ``measure=True``, which must have been executed
+      :class:`qibo.models.QPE` circuit with ``measure=True``, which must have been executed
       with a finite number of shots, or the result of joining, with
       :meth:`qibo.measurements.MeasurementResult.join`, the outcomes of the measurements of a
-      :func:`qibo.models.qpe.IQPE` circuit;
+      :func:`qibo.models.IQPE` circuit;
     * a mapping from bitstrings to their frequencies or probabilities, *e.g.* the output of
       :meth:`qibo.result.MeasurementOutcomes.frequencies` with ``binary=True``;
     * a one-dimensional array with the probabilities, or frequencies, of the

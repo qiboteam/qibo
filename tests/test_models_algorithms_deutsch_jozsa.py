@@ -1,4 +1,4 @@
-"""Tests for the Deutsch-Jozsa algorithm defined in `qibo/models/deutsch_jozsa.py`."""
+"""Tests for the Deutsch-Jozsa algorithm defined in `qibo/models/algorithms/deutsch_jozsa.py`."""
 
 import pytest
 
