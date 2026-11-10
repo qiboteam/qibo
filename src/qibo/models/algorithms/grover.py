@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 from qibo import gates
@@ -28,10 +30,8 @@ class Grover:
     :math:`\\sin^{2}((2 j + 1) \\theta)`, with :math:`\\sin^{2}(\\theta) = t / N` [2]. The number
     of iterations is chosen as follows:
 
-    * if ``number_solutions`` :math:`t` is given, it is
-      :math:`\\lfloor (\\pi / 4) \\sqrt{N / t} \\rfloor`. This approximates the number
-      :math:`\\lfloor \\pi / (4 \\theta) \\rfloor` of Ref. [2], for which the probability of
-      failure is at most :math:`t / N`, and it is accurate for :math:`t \\ll N`;
+    * if ``number_solutions`` :math:`t` is given, it is :math:`\\lfloor \\pi / (4 \\theta) \\rfloor`
+      [2], for which the probability of failure is at most :math:`t / N`;
     * if ``target_amplitude`` :math:`a` is given, it is :math:`\\lfloor \\pi / (4 a) \\rfloor`
       [3], where :math:`a` is the absolute value of the amplitude of the target state in
       :math:`\\ket{\\psi}`. This allows using any superposition;
@@ -276,15 +276,15 @@ class Grover:
     def iterative_grover(self, lamda_value=6 / 5, backend=None):
         """Finds a solution with the iterative algorithm, for an unknown number of solutions.
 
-        It is based on the algorithm of Ref. [2], Sec. 4, whose expected number of Grover
-        iterations is in :math:`O(\\sqrt{N / t})`, where :math:`t` is the unknown number of
-        solutions. Starting with :math:`m = 1`, in each round the algorithm:
+        It is the algorithm of Ref. [2], Sec. 4, whose expected number of Grover iterations is in
+        :math:`O(\\sqrt{N / t})`, where :math:`t` is the unknown number of solutions. Starting
+        with :math:`m = 1`, in each round the algorithm:
 
-        1. draws an integer :math:`j` uniformly at random between :math:`0` and
-           :math:`\\lfloor m \\rfloor`;
-        2. if :math:`j \\neq 0`, applies :math:`j` Grover iterations to the initial state,
-           measures the qubits that store the superposition once, and returns the bitstring if
-           ``check`` is ``True`` for it. If :math:`j = 0`, nothing is measured;
+        1. draws an integer :math:`j` uniformly at random among the non-negative integers
+           smaller than :math:`m`;
+        2. applies :math:`j` Grover iterations to the initial state, which are none if
+           :math:`j = 0`, measures the qubits that store the superposition once, and returns the
+           bitstring if ``check`` is ``True`` for it;
         3. sets :math:`m \\leftarrow \\min(\\lambda \\, m, \\sqrt{N})`, where :math:`\\lambda` is
            ``lamda_value``.
 
@@ -309,20 +309,19 @@ class Grover:
 
         backend = _check_backend(backend)
 
-        k = 1
+        m = 1
         lamda = lamda_value
         total_iterations = 0
         while True:
-            it = np.random.randint(k + 1)
-            if it != 0:
-                total_iterations += it
-                circuit = self.circuit(it)
-                result = backend.execute_circuit(circuit, nshots=1)
-                measured = result.frequencies(binary=True).most_common(1)[0][0]
-                if self.check(measured, *self.check_args):
-                    return measured, total_iterations
-            k = min(lamda * k, np.sqrt(self.sup_size))
-            if total_iterations > (9 / 4) * np.sqrt(self.sup_size):
+            it = np.random.randint(math.ceil(m))
+            total_iterations += it
+            circuit = self.circuit(it)
+            result = backend.execute_circuit(circuit, nshots=1)
+            measured = result.frequencies(binary=True).most_common(1)[0][0]
+            if self.check(measured, *self.check_args):
+                return measured, total_iterations
+            m = min(lamda * m, math.sqrt(self.sup_size))
+            if total_iterations > (9 / 4) * math.sqrt(self.sup_size):
                 log.warning("Too many total iterations, output might not be solution.")
                 return measured, total_iterations
 
@@ -363,7 +362,8 @@ class Grover:
             if self.targ_a:
                 it = int(np.pi * (1 / self.targ_a) / 4)
             else:
-                it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
+                theta = math.asin(math.sqrt(self.num_sol / self.sup_size))
+                it = int(math.pi / (4 * theta))
             circuit = self.circuit(it)
             result = backend.execute_circuit(circuit, nshots=nshots)
             result = result.frequencies(binary=True)
