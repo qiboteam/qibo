@@ -2679,6 +2679,10 @@ class DEUTSCH(ParametrizedGate):
     def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0], np.pi)
 
+    def _dagger(self) -> Gate:
+        theta = math.pi - self.parameters[0]
+        return self.__class__(*self.init_args, theta, trainable=self.trainable)
+
 
 class FanOut(Gate):
     """The :math:`\\textrm{FanOut}` gate.
