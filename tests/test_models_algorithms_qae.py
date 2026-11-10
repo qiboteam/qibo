@@ -1,4 +1,4 @@
-"""Tests for the Quantum Amplitude Estimation circuit defined in `qibo/models/qae.py`."""
+"""Tests for the Quantum Amplitude Estimation circuit defined in `qibo/models/algorithms/qae.py`."""
 
 import math
 

@@ -1,4 +1,4 @@
-"""Test Grover model defined in `qibo/models/grover.py`."""
+"""Test Grover model defined in `qibo/models/algorithms/grover.py`."""
 
 import numpy as np
 import pytest

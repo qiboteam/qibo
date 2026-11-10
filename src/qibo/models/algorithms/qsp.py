@@ -10,7 +10,7 @@ from scipy.stats import binom
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-from qibo.models._signal_processing import _spectral_factor
+from qibo.models.algorithms._signal_processing import _spectral_factor
 from qibo.models.circuit import Circuit
 
 
@@ -39,7 +39,7 @@ def qsp_circuit(
             that implements :math:`W` or :math:`e^{-i t H}`, depending on
             ``method``. It has to be exact, including its global phase, since it
             is applied under control.
-        phases (ArrayLike): output of :func:`qibo.models.qsp.qsp_phases` for the
+        phases (ArrayLike): output of :func:`qibo.models.qsp_phases` for the
             same ``method``.
         method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
             Fourier-based QSP of Ref. [2]. Defaults to ``None``.
@@ -56,7 +56,7 @@ def qsp_circuit(
         .. testcode::
 
             from qibo import Circuit, gates, get_backend
-            from qibo.models.qsp import qsp_circuit, qsp_phases
+            from qibo.models import qsp_circuit, qsp_phases
 
             backend = get_backend()
 
@@ -84,7 +84,7 @@ def qsp_circuit(
         .. testcode::
 
             from qibo import Circuit, gates, get_backend
-            from qibo.models.qsp import qsp_circuit, qsp_phases
+            from qibo.models import qsp_circuit, qsp_phases
 
             backend = get_backend()
 
@@ -166,7 +166,7 @@ def qsp_phases(
             Defaults to ``None``.
 
     Returns:
-        ArrayLike: phases for :func:`qibo.models.qsp.qsp_circuit` with the same
+        ArrayLike: phases for :func:`qibo.models.qsp_circuit` with the same
         ``method``. An array of length :math:`N` if ``method=None``, or an array
         of shape :math:`(q + 1, 4)` if ``method="fourier"``.
 
@@ -666,13 +666,13 @@ def _qsp_hamiltonian_simulation_phases(
         tau (float): simulation length :math:`\\tau`.
         epsilon (float): target error.
         extraction (str, optional): how the phases are extracted, see
-            :func:`qibo.models.qsp.qsp_phases`. Defaults to ``"phase_sums"``.
+            :func:`qibo.models.qsp_phases`. Defaults to ``"phase_sums"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        ArrayLike: phases for :func:`qibo.models.qsp.qsp_circuit`.
+        ArrayLike: phases for :func:`qibo.models.qsp_circuit`.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
@@ -716,7 +716,7 @@ def _qsp_phases(
 
     The complementary polynomials are computed with the Fejér-Riesz
     factorization, and the phases are extracted as in
-    :func:`qibo.models.qsp.qsp_phases`.
+    :func:`qibo.models.qsp_phases`.
 
     Args:
         cosine_coefficients (ArrayLike): cosine coefficients

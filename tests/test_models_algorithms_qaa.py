@@ -1,4 +1,4 @@
-"""Tests for the Quantum Amplitude Amplification circuits defined in `qibo/models/qaa.py`."""
+"""Tests for the Quantum Amplitude Amplification circuits defined in `qibo/models/algorithms/qaa.py`."""
 
 import math
 import random

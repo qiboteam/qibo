@@ -1,4 +1,4 @@
-"""Tests for quantum signal processing in `qibo/models/qsp.py`."""
+"""Tests for quantum signal processing in `qibo/models/algorithms/qsp.py`."""
 
 import math
 
@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 
 from qibo import Circuit, gates
 from qibo.backends import Backend
-from qibo.models.qsp import (
+from qibo.models.algorithms.qsp import (
     _fourier_qsp_analytic_extension_coefficients,
     _fourier_qsp_bounded_error_coefficients,
     _qsp_hamiltonian_simulation_phases,

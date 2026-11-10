@@ -1,7 +1,7 @@
 from qibo import gates
 from qibo.config import raise_error
+from qibo.models.algorithms.qae import QAE
 from qibo.models.circuit import Circuit
-from qibo.models.qae import QAE
 
 
 def Counting(
@@ -11,7 +11,7 @@ def Counting(
 
     Given a Boolean function :math:`\\chi` over the :math:`N = 2^{n}` computational basis states
     of :math:`n` qubits, the circuit estimates the number :math:`M` of states that
-    :math:`\\chi` marks with :math:`1`. It is the :func:`qibo.models.qae.QAE` of the uniform
+    :math:`\\chi` marks with :math:`1`. It is the :func:`qibo.models.QAE` of the uniform
     superposition of the :math:`N` states, *i.e.* with Hadamard gates on every qubit as the
     circuit that prepares the state, in which the probability of measuring a marked state is
     :math:`M / N = \\sin^{2}(\\theta)`. The circuit acts on :math:`t + n` qubits, with :math:`t`

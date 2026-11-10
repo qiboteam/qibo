@@ -45,7 +45,7 @@ class DoubleBracketIteration:
 
             from qibo.backends import NumpyBackend
             from qibo.hamiltonians import TFIM
-            from qibo.models.double_bracket import DoubleBracketIteration
+            from qibo.models import DoubleBracketIteration
 
             backend = NumpyBackend()
 

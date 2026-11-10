@@ -1,4 +1,4 @@
-"""Tests for the Quantum Phase Estimation circuits defined in `qibo/models/qpe.py`."""
+"""Tests for the Quantum Phase Estimation circuits defined in `qibo/models/algorithms/qpe.py`."""
 
 import math
 

@@ -1,4 +1,4 @@
-"""Tests for the Maximum Likelihood Quantum Amplitude Estimation in `qibo/models/mlqae.py`."""
+"""Tests for the Maximum Likelihood Quantum Amplitude Estimation in `qibo/models/algorithms/mlqae.py`."""
 
 import math
 
