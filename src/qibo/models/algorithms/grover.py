@@ -125,7 +125,7 @@ class Grover:
         circuit.add(gates.H(self.nqubits - 1))
         if self.initial_state_circuit:
             circuit.add(
-                self.initial_state_circuit.invert().on_qubits(
+                self.initial_state_circuit.on_qubits(
                     *range(self.initial_state_circuit.nqubits)
                 )
             )
