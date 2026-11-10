@@ -629,7 +629,7 @@ def QSearch(
     oracle: Circuit,
     check: Callable[[str], bool],
     growth: float = 6 / 5,
-    max_rounds: int = 30,
+    max_rounds: int = 60,
     seed: int | np.random.Generator | None = None,
     backend: Backend = None,
 ) -> tuple[str | None, int]:

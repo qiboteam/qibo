@@ -42,6 +42,7 @@ def QFT(nqubits: int, with_swaps: bool = True, accelerators=None, **kwargs) -> C
 
             from qibo.backends import NumpyBackend
             from qibo.models import QFT
+            from qibo.quantum_info import random_statevector
 
             backend = NumpyBackend()
 
