@@ -4,7 +4,6 @@ from qibo.transpiler.decompositions.multicontrolled_decompositions import (
 from qibo.transpiler.decompositions.unitary_decompositions import (
     quantum_shannon_decomposition,
 )
-from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import (
     BarrierBeforeFinalMeasurements,
@@ -50,7 +49,6 @@ __all__ = [
     "Dense",
     "FilterGates",
     "FixedPoint",
-    "HardwareModel",
     "InverseCancellation",
     "NativeGates",
     "NoRouting",
