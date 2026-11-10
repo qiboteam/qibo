@@ -1768,7 +1768,7 @@ class iSWAP(Gate):
         return "iswap"
 
     def _dagger(self) -> Gate:
-        return fSim(*self.target_qubits, np.pi / 2, 0.0)
+        return fSim(*self.target_qubits, math.pi / 2, 0.0, trainable=False)
 
 
 class SiSWAP(Gate):
