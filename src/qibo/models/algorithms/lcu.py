@@ -22,8 +22,8 @@ def lcu_circuit(
     the auxiliary qubits start and end in :math:`|0\\rangle` is :math:`A / \\alpha`. The
     circuit is :math:`\\mathrm{PREPARE}_{L}^{\\dagger} \\, \\mathrm{SELECT} \\,
     \\mathrm{PREPARE}_{R}`, where :math:`\\mathrm{PREPARE}_{L}` and
-    :math:`\\mathrm{PREPARE}_{R}` are created with :func:`qibo.models.lcu.lcu_prepare`, and
-    :math:`\\mathrm{SELECT}` is created with :func:`qibo.models.lcu.lcu_select`.
+    :math:`\\mathrm{PREPARE}_{R}` are created with :func:`qibo.models.lcu_prepare`, and
+    :math:`\\mathrm{SELECT}` is created with :func:`qibo.models.lcu_select`.
 
     Args:
         unitaries (list[:class:`qibo.models.circuit.Circuit`]): circuits
@@ -38,7 +38,7 @@ def lcu_circuit(
     Returns:
         tuple: the circuit, with the auxiliary qubits at the first qubits, the
         normalization :math:`\\alpha`, and the number :math:`a` of auxiliary qubits. The
-        last two are the arguments of :func:`qibo.models.qsvt.qsvt_circuit` for which
+        last two are the arguments of :func:`qibo.models.qsvt_circuit` for which
         the circuit is a block encoding of :math:`A / \\alpha`.
 
     Example:
@@ -49,7 +49,7 @@ def lcu_circuit(
         .. testcode::
 
             from qibo import Circuit, gates, get_backend
-            from qibo.models.lcu import lcu_circuit
+            from qibo.models import lcu_circuit
 
             backend = get_backend()
 
@@ -130,7 +130,7 @@ def lcu_prepare(
     zero. For real and non-negative coefficients, they are the same oracle. The oracles
     are built with :func:`qibo.models.encodings.binary_encoder`, with the Mottonen
     parametrization, since the resulting circuits have an exact inverse. Together with
-    :func:`qibo.models.lcu.lcu_select`, they build the block encoding
+    :func:`qibo.models.lcu_select`, they build the block encoding
     :math:`\\mathrm{PREPARE}_{L}^{\\dagger} \\, \\mathrm{SELECT} \\, \\mathrm{PREPARE}_{R}`
     of :math:`\\sum_{i} c_{i} U_{i} / \\alpha`.
 
@@ -153,7 +153,7 @@ def lcu_prepare(
         .. testcode::
 
             from qibo import get_backend
-            from qibo.models.lcu import lcu_prepare
+            from qibo.models import lcu_prepare
 
             backend = get_backend()
 
@@ -255,7 +255,7 @@ def lcu_select(
         .. testcode::
 
             from qibo import Circuit, gates, get_backend
-            from qibo.models.lcu import lcu_select
+            from qibo.models import lcu_select
 
             backend = get_backend()
 

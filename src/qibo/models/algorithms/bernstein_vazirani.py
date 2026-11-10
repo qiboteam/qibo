@@ -1,5 +1,5 @@
+from qibo.models.algorithms.deutsch_jozsa import DeutschJozsa
 from qibo.models.circuit import Circuit
-from qibo.models.deutsch_jozsa import DeutschJozsa
 
 
 def BernsteinVazirani(oracle: Circuit, measure: bool = True, **kwargs) -> Circuit:
@@ -12,7 +12,7 @@ def BernsteinVazirani(oracle: Circuit, measure: bool = True, **kwargs) -> Circui
     :math:`U_{f} \\ket{x} \\ket{y} = \\ket{x} \\ket{y \\oplus f(x)}`, where :math:`\\oplus` is the
     sum modulo :math:`2`. The circuit acts on :math:`n + 1` qubits,
     with the first :math:`n` being the input qubits and the last one the output qubit of the
-    oracle. It is the same circuit as the one of :func:`qibo.models.deutsch_jozsa.DeutschJozsa`:
+    oracle. It is the same circuit as the one of :func:`qibo.models.DeutschJozsa`:
     the output qubit is in the state :math:`\\ket{-}`, so that the oracle multiplies
     :math:`\\ket{x}` by :math:`(-1)^{s \\cdot x}`, which is undone by the Hadamard gates on the
     input qubits, that are left in the state :math:`\\ket{s}`. If ``measure=True``, the qubit

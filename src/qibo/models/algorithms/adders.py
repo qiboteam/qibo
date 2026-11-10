@@ -2,8 +2,8 @@ import math
 
 from qibo import gates
 from qibo.config import raise_error
+from qibo.models.algorithms.qft import QFT
 from qibo.models.circuit import Circuit
-from qibo.models.qft import QFT
 
 
 def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
@@ -21,17 +21,17 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
     every register, the least significant bit comes first. The adders differ in the number of
     auxiliary qubits and of gates:
 
-    * ``"Cuccaro"``: :func:`qibo.models.adders.Cuccaro`, ripple-carry adder with one auxiliary
+    * ``"Cuccaro"``: :func:`qibo.models.Cuccaro`, ripple-carry adder with one auxiliary
       qubit;
-    * ``"DKRS"``: :func:`qibo.models.adders.DKRS`, carry-lookahead adder with logarithmic depth
+    * ``"DKRS"``: :func:`qibo.models.DKRS`, carry-lookahead adder with logarithmic depth
       and a linear number of auxiliary qubits;
-    * ``"Draper"``: :func:`qibo.models.adders.Draper`, adder in the Fourier basis, without
+    * ``"Draper"``: :func:`qibo.models.Draper`, adder in the Fourier basis, without
       auxiliary qubits;
-    * ``"Gidney"``: :func:`qibo.models.adders.Gidney`, ripple-carry adder that uses measurements
+    * ``"Gidney"``: :func:`qibo.models.Gidney`, ripple-carry adder that uses measurements
       to uncompute the carries, with :math:`n - 1` auxiliary qubits;
-    * ``"TTK"``: :func:`qibo.models.adders.TTK`, ripple-carry adder of
+    * ``"TTK"``: :func:`qibo.models.TTK`, ripple-carry adder of
       :class:`qibo.gates.TOFFOLI` and :class:`qibo.gates.CNOT` gates, without auxiliary qubits;
-    * ``"VBE"``: :func:`qibo.models.adders.VBE`, ripple-carry adder with :math:`n` auxiliary
+    * ``"VBE"``: :func:`qibo.models.VBE`, ripple-carry adder with :math:`n` auxiliary
       qubits.
 
     Example:
@@ -395,10 +395,10 @@ def Draper(nbits: int, **kwargs) -> Circuit:
     In every register, the :math:`k`-th qubit holds the bit :math:`2^{k}`, *i.e.* the least
     significant bit comes first. The circuit is composed of the following steps:
 
-    1. the :class:`qibo.models.qft.QFT` on the register of :math:`b`, without swaps;
+    1. the :class:`qibo.models.QFT` on the register of :math:`b`, without swaps;
     2. :class:`qibo.gates.CU1` gates, controlled by the qubits of :math:`a`, which add :math:`a`
        to :math:`b` in the Fourier basis, by rotating the phases of the qubits of :math:`b`;
-    3. the inverse :class:`qibo.models.qft.QFT` on the register of :math:`b`, without swaps.
+    3. the inverse :class:`qibo.models.QFT` on the register of :math:`b`, without swaps.
 
     The smallest rotation angle is :math:`2 \\pi / 2^{n + 1}`.
 
