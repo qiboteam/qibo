@@ -1770,6 +1770,7 @@ class iSWAP(Gate):
     def _dagger(self) -> Gate:
         return fSim(*self.target_qubits, np.pi / 2, 0.0)
 
+
 class SiSWAP(Gate):
     """The :math:`\\sqrt{\\text{iSWAP}}` gate.
 
