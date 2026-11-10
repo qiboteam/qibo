@@ -686,9 +686,9 @@ def QSearch(
             algorithm = Circuit(nqubits)
             algorithm.add(gates.H(qubit) for qubit in range(nqubits))
             oracle = Circuit(nqubits)
-            oracle.add(gates.X(2))
+            oracle.add(gates.X(1))
             oracle.add(gates.Z(3).controlled_by(0, 1, 2))
-            oracle.add(gates.X(2))
+            oracle.add(gates.X(1))
 
             bitstring, napplications = QSearch(
                 algorithm, oracle, check=lambda bitstring: bitstring == "1011", seed=0
