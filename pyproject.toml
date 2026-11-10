@@ -62,8 +62,8 @@ cuda11 = [
   "qibojit",
 ]
 cuda12 = [
-  "cupy-cuda12x>=13.1.0,<14.0.0",
-  "cuquantum-python-cu12>=24.1.0,<25.0.0",
+  "cupy-cuda12x>=14.2.0,<15.0.0",
+  "cuquantum-python-cu12>=26.9.0,<27.0.0",
   "qibojit",
 ]
 
