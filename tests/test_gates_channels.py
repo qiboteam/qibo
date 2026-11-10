@@ -336,6 +336,24 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
     backend.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.parametrize("excpop", [0.0, 0.4])
+@pytest.mark.parametrize("t_1,t_2", [(0.8, 0.5), (0.5, 0.8), (0.5, 1.0)])
+def test_thermal_relaxation_channel_kraus(backend, t_1, t_2, excpop):
+    """Check that the Kraus operators of ``gates.ThermalRelaxationChannel`` are
+    complete and reproduce the action of the channel on a random density matrix."""
+    gate = gates.ThermalRelaxationChannel(0, [t_1, t_2, 1.0, excpop])
+    operators = [backend.cast(op.matrix(backend)) for op in gate.gates]
+
+    completeness = sum(backend.dagger(op) @ op for op in operators)
+    backend.assert_allclose(completeness, backend.identity(2), atol=1e-8)
+
+    initial_state = random_density_matrix(2, backend=backend)
+    final_state = gate.apply(backend, backend.copy(initial_state), 1)
+    target_state = sum(op @ initial_state @ backend.dagger(op) for op in operators)
+
+    backend.assert_allclose(final_state, target_state, atol=1e-8)
+
+
 @pytest.mark.parametrize(
     "params",
     [
