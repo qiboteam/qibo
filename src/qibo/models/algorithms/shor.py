@@ -159,6 +159,7 @@ class Shor:
             else self.seed
         )
 
+        factors = None
         for _ in range(ntrials):
             integer = (
                 self.base
@@ -168,7 +169,8 @@ class Shor:
 
             divisor = math.gcd(integer, nvalue)
             if divisor > 1:
-                return tuple(sorted((divisor, nvalue // divisor)))
+                factors = tuple(sorted((divisor, nvalue // divisor)))
+                break
 
             circuit = Circuit(self.ncounting + self.nbits)
             circuit.add(gates.H(qubit) for qubit in range(self.ncounting))
@@ -215,13 +217,17 @@ class Shor:
 
             if order % 2 == 0 and pow(integer, order // 2, nvalue) != nvalue - 1:
                 divisor = math.gcd(pow(integer, order // 2, nvalue) - 1, nvalue)
-                return tuple(sorted((divisor, nvalue // divisor)))
+                factors = tuple(sorted((divisor, nvalue // divisor)))
+                break
 
-        raise_error(
-            RuntimeError,
-            f"No factor of {nvalue} was found in {ntrials} trials. "
-            + "Is it a prime number? Otherwise, increase ntrials.",
-        )
+        if factors is None:
+            raise_error(
+                RuntimeError,
+                f"No factor of {nvalue} was found in {ntrials} trials. "
+                + "Is it a prime number? Otherwise, increase ntrials.",
+            )
+
+        return factors
 
 
 def _modular_exponentiation(
