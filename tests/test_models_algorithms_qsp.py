@@ -205,6 +205,15 @@ def test_qsp_circuit_errors():
         qsp_circuit(walk, [[0.0] * 3], method="gqsp")
     with pytest.raises(ValueError):
         qsp_circuit(walk, [[0.0] * 2] * 3, method="gqsp")
+    for negative_degree in (-1, 3, 1.5, True):
+        with pytest.raises(ValueError):
+            qsp_circuit(
+                walk, [[0.0] * 3] * 3, method="gqsp", negative_degree=negative_degree
+            )
+    with pytest.raises(ValueError):
+        qsp_circuit(walk, [[0.0] * 3] * 3, negative_degree=1)
+    with pytest.raises(ValueError):
+        qsp_circuit(walk, [[0.0] * 4] * 3, method="fourier", negative_degree=1)
     with pytest.raises(ValueError):
         qsp_circuit(walk, [0.1, 0.2], method="unknown")
 
@@ -274,6 +283,53 @@ def test_qsp_circuit_gqsp_jacobi_anger(backend, nterms):
     backend.assert_allclose(
         blocks[0, :, 0, :], _polynomial_of(unitary, coefficients, backend), atol=1e-10
     )
+
+
+@pytest.mark.parametrize(
+    "degree,negative_degree", [(1, 1), (3, 0), (3, 2), (6, 1), (6, 6)]
+)
+def test_qsp_circuit_gqsp_negative_degree(backend, degree, negative_degree):
+    """Theorem 6: the last queries of the inverse multiply the polynomial by a power."""
+    coefficients = _polynomial(degree, seed=degree + 7, backend=backend)
+
+    unitary = Circuit(2)
+    unitary.add(gates.Unitary(random_unitary(4, seed=6, backend=backend), 0, 1))
+
+    phases = qsp_phases(coefficients, method="gqsp", backend=backend)
+    circuit = qsp_circuit(
+        unitary, phases, method="gqsp", negative_degree=negative_degree
+    )
+    blocks = backend.reshape(circuit.unitary(backend), (2, 4, 2, 4))
+
+    target = _polynomial_of(unitary, coefficients, backend)
+    for _ in range(negative_degree):
+        target = backend.matmul(backend.dagger(unitary.unitary(backend)), target)
+
+    # the number of queries is the same, and the inverse ones are not conjugated by X
+    assert circuit.gate_types[gates.Unitary] == 2 * degree + 1
+    assert circuit.gate_types[gates.X] == 2 * (degree - negative_degree)
+    backend.assert_allclose(blocks[0, :, 0, :], target, atol=1e-10)
+
+
+def test_qsp_circuit_gqsp_negative_degree_jacobi_anger(backend):
+    """The series with powers from ``-N`` to ``N`` is the exponential of the cosine."""
+    nterms, time = 16, 3.0
+    coefficients = backend.cast(
+        [0.9 * 1j**order * jv(order, time) for order in range(-nterms, nterms + 1)],
+        dtype="complex128",
+    )
+
+    unitary = Circuit(2)
+    unitary.add(gates.Unitary(random_unitary(4, seed=8, backend=backend), 0, 1))
+    matrix = unitary.unitary(backend)
+
+    phases = qsp_phases(coefficients, method="gqsp", backend=backend)
+    circuit = qsp_circuit(unitary, phases, method="gqsp", negative_degree=nterms)
+    blocks = backend.reshape(circuit.unitary(backend), (2, 4, 2, 4))
+
+    # exp(i t cos(theta)) of the eigenphases theta of the unitary, up to the truncation
+    target = 0.9 * backend.expm(1j * time * (matrix + backend.dagger(matrix)) / 2)
+    backend.assert_allclose(blocks[0, :, 0, :], target, atol=1e-9)
 
 
 def test_qsp_circuit_gqsp_normalization(backend):
