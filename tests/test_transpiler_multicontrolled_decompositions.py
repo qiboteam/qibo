@@ -435,13 +435,19 @@ def test_minimize_toffolis_with_clean_qubits(backend, nctrl, nancillas):
 @pytest.mark.parametrize("nancillas", [1, 2])
 @pytest.mark.parametrize("is_clean", [True, False])
 def test_minimize_toffolis_counts_up_to_many_controls(backend, nancillas, is_clean):
-    """Number of Toffoli gates of Ref. [4]: ``2k - 3`` (clean) or ``4k - 8`` (dirty)."""
+    """Number of Toffoli gates of Ref. [4]: ``2k - 3`` (clean) or ``4k - 8`` (dirty).
+
+    Two dirty qubits need ``4k - 8 + 4m - 6`` gates from 20 controls, where ``m`` is the number
+    of controls that are left to be combined, which is 4 up to 36 controls and 5 up to 69.
+    """
     for nctrl in range(3, 41):
         ancillas = tuple(range(nctrl + 1, nctrl + 1 + nancillas))
         decomposition, _ = _mcx_with_ancillas(
             backend, nctrl, **({"clean": ancillas} if is_clean else {"free": ancillas})
         )
         expected = 2 * nctrl - 3 if is_clean else 4 * nctrl - 8
+        if not is_clean and nancillas == 2 and nctrl >= 20:
+            expected += 10 if nctrl < 37 else 14
         assert sum(isinstance(g, gates.TOFFOLI) for g in decomposition) == expected
         assert {type(g) for g in decomposition} <= {gates.TOFFOLI, gates.X}
 
@@ -451,7 +457,7 @@ TOFFOLI_MINIMIZING_DEPTHS = {
     ("clean", 1): [43, 91, 187],
     ("clean", 2): [23, 29, 39],
     ("dirty", 1): [84, 180, 372],
-    ("dirty", 2): [44, 56, 76],
+    ("dirty", 2): [44, 76, 100],
 }
 
 
@@ -469,6 +475,37 @@ def test_minimize_toffolis_depth(backend, kind, nancillas):
         depths.append(_depth(decomposition, nqubits))
 
     assert depths == TOFFOLI_MINIMIZING_DEPTHS[(kind, nancillas)]
+
+
+@pytest.mark.parametrize("nctrl", [3, 10, 19, 20, 21, 36, 37, 64])
+@pytest.mark.parametrize("option", ["minimize_toffolis", "minimize_depth"])
+def test_two_dirty_qubits_many_controls(backend, nctrl, option):
+    """The gates are classical, so the exact action on any state is checked.
+
+    The decomposition has to be exact for every state of the dirty qubits, which was not
+    the case from 20 controls, when the controls that are left to be combined are
+    too many for the second dirty qubit to be used as a clean one.
+    """
+    controls, target, free = tuple(range(nctrl)), nctrl, (nctrl + 1, nctrl + 2)
+    decomposition = multi_controlled_decomposition(
+        backend.matrices.X, controls, target, free, backend=backend, **{option: True}
+    )
+    assert {type(g) for g in decomposition} <= {gates.TOFFOLI, gates.X}
+
+    generator = random.Random(nctrl)
+    for _ in range(200):
+        bits = [generator.getrandbits(1) for _ in range(nctrl + 3)]
+        if generator.random() < 0.5:
+            bits[:nctrl] = [1] * nctrl
+
+        expected = list(bits)
+        expected[target] ^= int(all(bits[:nctrl]))
+
+        for gate in decomposition:
+            if all(bits[qubit] for qubit in gate.control_qubits):
+                bits[gate.target_qubits[0]] ^= 1
+
+        assert bits == expected
 
 
 def test_minimize_toffolis_two_qubits_are_much_shallower_than_one(backend):

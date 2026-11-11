@@ -51,7 +51,8 @@ def multi_controlled_decomposition(
     least one auxiliary qubit is decomposed following Ref. [4] instead. This uses
     :math:`2k - 3` Toffoli gates for :math:`k` controls with clean qubits, and
     :math:`4k - 8` with dirty qubits, which is the lowest count, but not necessarily the
-    lowest number of CNOTs. Two auxiliary qubits make the depth logarithmic in
+    lowest number of CNOTs. Two dirty qubits need :math:`4k + O(\\log k)` gates for
+    more than :math:`20` controls. Two auxiliary qubits make the depth logarithmic in
     :math:`k`, and one makes it linear. Clean qubits are preferred over dirty ones.
 
     If ``minimize_depth`` is ``True``, a multi-controlled :math:`X` gate with at least
@@ -752,7 +753,10 @@ def _mcx_gidney_log_depth(
     """Decomposes a multi-controlled :math:`X` gate with two auxiliary qubits in logarithmic depth.
 
     This is Fig. 4 of Ref. [1] if the ancillae are clean, with :math:`2k - 3` Toffoli
-    gates for :math:`k` controls, and Fig. 6 if they are dirty, with :math:`4k - 8`.
+    gates for :math:`k` controls, and Fig. 6 if they are dirty, with :math:`4k - 8`. For
+    :math:`k \\geq 20` dirty qubits, the :math:`m \\geq 4` controls that are left after the ladders
+    are combined with a multi-controlled :math:`X` gate that can no longer use the second
+    auxiliary qubit as a clean one, and the count is :math:`4k + 4m - 14`.
 
     Args:
         controls (tuple[int, ...]): Ids of the control qubits. At least three are needed.
@@ -780,7 +784,10 @@ def _mcx_gidney_log_depth(
             middle = [gates.TOFFOLI(ancillas[0], final_controls[0], target)]
         else:
             middle = _mcx_gidney_linear_depth(
-                (ancillas[0], *final_controls), target, ancillas[1], True
+                (ancillas[0], *final_controls),
+                target,
+                ancillas[1],
+                clean or len(final_controls) < 4,
             )
         body.extend(ladder)
         body.extend(middle)
