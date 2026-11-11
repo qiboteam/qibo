@@ -25,37 +25,37 @@ def QRS(
     """Creates a circuit that implements Quantum Rejection Sampling.
 
     Let the circuit :math:`\\mathcal{A}` prepare the state
-    :math:`|\\pi\\rangle = \\sum_{k} \\sqrt{p_{k}} \\, |\\xi_{k}\\rangle |k\\rangle` from the
-    all-zero state, where :math:`|k\\rangle` is the basis state of the index ``qubits``,
-    :math:`p_{k}` is its source probability, and :math:`|\\xi_{k}\\rangle` are states of the
+    :math:`\\ket{\\pi} = \\sum_{k} \\sqrt{p_{k}} \\, \\ket{\\xi_{k}} \\ket{k}` from the
+    all-zero state, where :math:`\\ket{k}` is the basis state of the index ``qubits``,
+    :math:`p_{k}` is its source probability, and :math:`\\ket{\\xi_{k}}` are states of the
     other qubits that can be unknown. Given a target probability :math:`q_{k}`, the circuit
-    prepares a state :math:`|\\tilde{\\sigma}\\rangle` whose squared overlap with
-    :math:`|\\sigma\\rangle = \\sum_{k} \\sqrt{q_{k}} \\, |\\xi_{k}\\rangle |k\\rangle` is at
+    prepares a state :math:`\\ket{\\tilde{\\sigma}}` whose squared overlap with
+    :math:`\\ket{\\sigma} = \\sum_{k} \\sqrt{q_{k}} \\, \\ket{\\xi_{k}} \\ket{k}` is at
     least ``probability``, which is :math:`1` by default, in which case
-    :math:`|\\tilde{\\sigma}\\rangle = |\\sigma\\rangle`. It acts on :math:`n + 1` qubits, where
+    :math:`\\ket{\\tilde{\\sigma}} = \\ket{\\sigma}`. It acts on :math:`n + 1` qubits, where
     :math:`n` is the number of qubits of :math:`\\mathcal{A}`, and it is composed of the
     following steps:
 
     1. :math:`\\mathcal{A}`, and a rotation :math:`R_{y}` of the last qubit, the flag, which
-       is controlled by the state :math:`|k\\rangle` of the index qubits and takes the flag
-       from :math:`|0\\rangle` to :math:`\\sqrt{1 - \\sin^{2}\\theta_{k}} \\, |0\\rangle +
-       \\sin\\theta_{k} \\, |1\\rangle`, with
+       is controlled by the state :math:`\\ket{k}` of the index qubits and takes the flag
+       from :math:`\\ket{0}` to :math:`\\sqrt{1 - \\sin^{2}\\theta_{k}} \\, \\ket{0} +
+       \\sin\\theta_{k} \\, \\ket{1}`, with
        :math:`\\sin\\theta_{k} = \\epsilon_{k} / \\sqrt{p_{k}}`.
        The amplitudes :math:`\\epsilon_{k} = \\min\\{\\sqrt{p_{k}}, \\gamma \\sqrt{q_{k}}\\}` fill
        the "tanks" of height :math:`\\sqrt{p_{k}}` up to a "water level" :math:`\\gamma`, which
-       is chosen such that the squared overlap of :math:`\\sum_{k} \\epsilon_{k} |\\xi_{k}\\rangle
-       |k\\rangle` with :math:`|\\sigma\\rangle` is ``probability``. For ``probability=1``,
+       is chosen such that the squared overlap of :math:`\\sum_{k} \\epsilon_{k} \\ket{\\xi_{k}}
+       \\ket{k}` with :math:`\\ket{\\sigma}` is ``probability``. For ``probability=1``,
        :math:`\\epsilon_{k} \\propto \\sqrt{q_{k}}` with :math:`\\gamma = \\min_{k} \\sqrt{p_{k} /
-       q_{k}}`. The probability of the flag being in the state :math:`|1\\rangle` is then
+       q_{k}}`. The probability of the flag being in the state :math:`\\ket{1}` is then
        :math:`\\sum_{k} \\epsilon_{k}^{2}`, and the state of the other qubits is
-       :math:`|\\tilde{\\sigma}\\rangle`;
-    2. the amplification of the flag being in the state :math:`|1\\rangle` with
+       :math:`\\ket{\\tilde{\\sigma}}`;
+    2. the amplification of the flag being in the state :math:`\\ket{1}` with
        :func:`qibo.models.QAA`, which, if ``exact=True``, is done with certainty, by scaling
        all of :math:`\\epsilon_{k}` by the same factor, so that :math:`\\mathcal{A}` and its
        inverse are used :math:`O(1 / \\|\\epsilon\\|_{2})` times.
 
-    Hence, the other qubits are in the state :math:`|\\tilde{\\sigma}\\rangle` if the flag is in
-    the state :math:`|1\\rangle`, which has probability :math:`1` if ``exact=True``. The rotations
+    Hence, the other qubits are in the state :math:`\\ket{\\tilde{\\sigma}}` if the flag is in
+    the state :math:`\\ket{1}`, which has probability :math:`1` if ``exact=True``. The rotations
     are controlled by each of the :math:`2^{|\\mathrm{qubits}|}` basis states of the index
     qubits, so the circuit is only efficient for a small number of them.
 
@@ -92,11 +92,11 @@ def QRS(
             being the most significant bit of :math:`k`. If ``None``, they are all of the
             qubits of ``algorithm``. Defaults to ``None``.
         probability (float, optional): minimum squared overlap of the prepared state with
-            :math:`|\\sigma\\rangle`, which is in the interval :math:`(0, 1]`. A lower value
+            :math:`\\ket{\\sigma}`, which is in the interval :math:`(0, 1]`. A lower value
             needs fewer applications of :math:`\\mathcal{A}`. It cannot be larger than
             :math:`\\sum_{k: p_{k} > 0} q_{k}`, which is :math:`1` if :math:`q_{k}` is zero
             wherever :math:`p_{k}` is zero. Defaults to :math:`1`.
-        exact (bool, optional): If ``True``, the flag is found in the state :math:`|1\\rangle`
+        exact (bool, optional): If ``True``, the flag is found in the state :math:`\\ket{1}`
             with certainty. Defaults to ``False``.
         measure (bool, optional): If ``True``, adds a measurement of the qubits of
             ``algorithm`` and of the flag at the end of the circuit. Defaults to ``True``.
