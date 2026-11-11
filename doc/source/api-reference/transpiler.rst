@@ -330,6 +330,14 @@ Dense
     :member-order: bysource
 
 
+Noise-aware dense
+^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.placer.NoiseAwareDense
+    :members:
+    :member-order: bysource
+
+
 Random
 ^^^^^^
 

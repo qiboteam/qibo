@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import networkx as nx
 import numpy as np
 
@@ -8,6 +10,9 @@ from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Placer, Router
 from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.router import _find_connected_qubit
+
+if TYPE_CHECKING:
+    from qibo.transpiler.hardware import HardwareModel
 
 
 def _find_gates_qubits_pairs(circuit: Circuit) -> list[list[int]]:
@@ -103,7 +108,9 @@ class Dense(Placer):
         # qubits with more two-qubit gates first, then in the order of the circuit
         active = sorted(weights, key=lambda qubit: (-weights[qubit], qubit))
         nodes = list(self.connectivity.nodes)
-        best_region, best_edges = None, -1
+        node_cost, edge_cost = self._costs(circuit, active)
+
+        best_region, best_score = None, None
         for start in nodes:
             region = [start]
             while len(region) < len(active):
@@ -112,19 +119,29 @@ class Dense(Placer):
                 } - set(region)
                 if not frontier:
                     break
-                # the first node, in the order of the connectivity, among the ties
+                connections = {
+                    node: sum(member in region for member in self.connectivity[node])
+                    for node in nodes
+                    if node in frontier
+                }
+                # among the nodes with more connections to the region, the one that costs
+                # less, and the first in the order of the connectivity among the ties
+                most = max(connections.values())
                 region.append(
-                    max(
-                        (node for node in nodes if node in frontier),
-                        key=lambda node: sum(
-                            member in region for member in self.connectivity[node]
+                    min(
+                        (node for node in connections if connections[node] == most),
+                        key=lambda node: self._cost(
+                            [*region, node], node_cost, edge_cost
                         ),
                     )
                 )
             if len(region) == len(active):
-                edges = self.connectivity.subgraph(region).number_of_edges()
-                if edges > best_edges:
-                    best_region, best_edges = region, edges
+                score = (
+                    self.connectivity.subgraph(region).number_of_edges(),
+                    -self._cost(region, node_cost, edge_cost),
+                )
+                if best_score is None or score > best_score:
+                    best_region, best_score = region, score
 
         if best_region is None:
             raise_error(
@@ -138,6 +155,7 @@ class Dense(Placer):
             best_region,
             key=lambda node: (
                 -len(members.intersection(self.connectivity[node])),
+                node_cost.get(node, 0),
                 position[node],
             ),
         )
@@ -148,6 +166,168 @@ class Dense(Placer):
         ]
         placement.update(zip(remaining_qubits, remaining_nodes))
         circuit.wire_names = [placement[qubit] for qubit in range(circuit.nqubits)]
+
+    def _cost(self, region: list, node_cost: dict, edge_cost: dict) -> float:
+        """Mean cost of the qubits and of the connections of a region.
+
+        Args:
+            region (list): Nodes of the region.
+            node_cost (dict): Cost of each node, see ``_costs``.
+            edge_cost (dict): Cost of each connection, in both directions.
+
+        Returns:
+            float: Mean cost of the nodes plus mean cost of the connections between them,
+            or :math:`0` if there are no costs.
+        """
+        if not node_cost and not edge_cost:
+            return 0
+        edges = list(self.connectivity.subgraph(region).edges)
+        return sum(node_cost[node] for node in region) / len(region) + sum(
+            edge_cost[edge] for edge in edges
+        ) / max(len(edges), 1)
+
+    def _costs(self, circuit: Circuit, active: list[int]) -> tuple[dict, dict]:
+        """Costs of the qubits and of the connections for the operations of the circuit,
+        which are zero, so only the connections decide."""
+        return {}, {}
+
+
+class NoiseAwareDense(Dense):
+    """Places the qubits on the most connected region of the hardware that has less noise.
+
+    It works as :class:`qibo.transpiler.placer.Dense`, which has the details, and it uses
+    the noise of a :class:`qibo.transpiler.hardware.HardwareModel` to choose between the
+    regions. The regions with the largest number of connections are still the first choice,
+    so that the circuit needs few SWAP gates. Among them, the region with the lowest cost
+    is taken, which is
+
+    .. math::
+        c(R) = \\frac{1}{\\vert R \\vert} \\sum_{q \\in R} \\left( n_{1} \\, w_{q}^{\\text{gate}}
+        + n_{m} \\, w_{q}^{\\text{readout}} \\right) + \\frac{n_{2}}{\\vert E_{R} \\vert}
+        \\sum_{(a, b) \\in E_{R}} w_{ab} \\, ,
+
+    where :math:`R` is the region, :math:`E_{R}` its connections, :math:`n_{1}`,
+    :math:`n_{2}` and :math:`n_{m}` are the numbers of single-qubit gates, two-qubit gates
+    and measurements of the circuit on the qubits that take part in two-qubit gates, and
+    the weights :math:`w` come from
+    :meth:`qibo.transpiler.hardware.HardwareModel.weighted_connectivity`. The cost is
+    the expected weight of the operations of the circuit if they were spread evenly over the
+    region, which does not favor the regions with more connections just because they have
+    more errors. The weights of the two directions of a coupling are averaged. The cost also
+    decides the ties when the region grows, and the order of the qubits of the region, after
+    their connections. The qubits without two-qubit gates are placed as in
+    :class:`qibo.transpiler.placer.Dense`.
+
+    A hardware model without errors has no cost, so this placer then does what
+    :class:`qibo.transpiler.placer.Dense` does. The errors that are missing are completed
+    by the hardware model, which warns about them when the placer is created.
+
+    This placer chooses the region, not which qubit goes to which coupling, which depends on
+    how the circuit uses them.
+
+    Example:
+        The three qubits of a triangle of CNOT gates are placed on the triangle of the
+        connectivity that has less error, while :class:`qibo.transpiler.placer.Dense` takes
+        the first one.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Dense, HardwareModel, NoiseAwareDense
+
+            couplings = [(0, 1), (1, 2), (0, 2), (2, 3), (3, 4), (3, 5), (4, 5)]
+            errors = {(0, 1): 0.03, (1, 2): 0.03, (0, 2): 0.03}
+            hardware = HardwareModel(
+                tuple(range(6)),
+                couplings,
+                errors={
+                    "1q": {qubit: 0.001 for qubit in range(6)},
+                    "2q": {pair: errors.get(pair, 0.005) for pair in couplings},
+                    "readout": {qubit: 0.02 for qubit in range(6)},
+                },
+            )
+
+            circuit = Circuit(6)
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(1, 2))
+            circuit.add(gates.CNOT(0, 2))
+
+            dense = circuit.copy()
+            Dense(hardware.connectivity)(dense)
+            print(dense.wire_names)
+
+            NoiseAwareDense(hardware)(circuit)
+            print(circuit.wire_names)
+
+        .. testoutput::
+
+            [0, 1, 2, 3, 4, 5]
+            [3, 4, 5, 0, 1, 2]
+
+    Args:
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`): Hardware model. Its
+            connectivity is the one of the placer, until
+            :class:`qibo.transpiler.pipeline.Passes` sets another one, *e.g.* the one that
+            ``on_qubits`` restricts, which must be a subgraph of it.
+
+    Raises:
+        PlacementError: If no connected region of the hardware has as many qubits as the
+            circuit has qubits in two-qubit gates.
+        ConnectivityError: If the connectivity of the placer is not a subgraph of the
+            connectivity of the hardware model.
+    """
+
+    def __init__(self, hardware: "HardwareModel"):
+        super().__init__(hardware.connectivity)
+        self.hardware = hardware
+        self._weights = hardware.weighted_connectivity()
+
+    def _costs(self, circuit: Circuit, active: list[int]) -> tuple[dict, dict]:
+        """Costs of the qubits and of the connections for the operations of the circuit."""
+        weights = self._weights
+        if not set(self.connectivity.nodes) <= set(weights.nodes) or any(
+            not (weights.has_edge(*edge) or weights.has_edge(*edge[::-1]))
+            for edge in self.connectivity.edges
+        ):
+            raise_error(
+                ConnectivityError,
+                "The connectivity must be a subgraph of the one of the hardware model.",
+            )
+
+        qubits = set(active)
+        singles = sum(
+            len(gate.qubits) == 1 and gate.qubits[0] in qubits
+            for gate in circuit.queue
+            if not isinstance(gate, (gates.Barrier, gates.M))
+        )
+        measured = sum(
+            len(qubits.intersection(gate.qubits))
+            for gate in circuit.queue
+            if isinstance(gate, gates.M)
+        )
+        pairs = len(_find_gates_qubits_pairs(circuit))
+
+        node_cost = {
+            node: sum(
+                count * weights.nodes[node][name]
+                for count, name in ((singles, "gate"), (measured, "readout"))
+                if count
+            )
+            for node in self.connectivity.nodes
+        }
+
+        edge_cost = {}
+        for edge in self.connectivity.edges:
+            values = [
+                weights.edges[pair]["weight"]
+                for pair in (edge, edge[::-1])
+                if weights.has_edge(*pair)
+            ]
+            edge_cost[edge] = edge_cost[edge[::-1]] = pairs * sum(values) / len(values)
+
+        return node_cost, edge_cost
 
 
 class StarConnectivityPlacer(Placer):
