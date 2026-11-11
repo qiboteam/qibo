@@ -50,7 +50,7 @@ class Shor:
 
             from qibo.models import Shor
 
-            print(Shor(15).execute())
+            print(Shor(15, seed=9).execute())
 
         .. testoutput::
 
