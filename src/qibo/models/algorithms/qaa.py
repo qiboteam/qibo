@@ -662,7 +662,7 @@ def QSearch(
         growth (float, optional): factor :math:`c` by which the maximum number of iterations
             grows in each round, which has to be in the interval :math:`(1, 2)`. Defaults to
             :math:`6 / 5`.
-        max_rounds (int, optional): maximum number of rounds. Defaults to :math:`30`.
+        max_rounds (int, optional): maximum number of rounds. Defaults to :math:`60`.
         seed (int or :class:`numpy.random.Generator`, optional): seed or generator used to draw
             :math:`j`. The measurements are sampled by the backend, so they are reproducible only
             if the seed of the backend is set, *e.g.* with
