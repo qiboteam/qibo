@@ -131,6 +131,14 @@ Iterative Quantum Amplitude Estimation (IQAE)
     :member-order: bysource
 
 
+Quantum Monte Carlo
+^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.models.QMC
+    :members:
+    :member-order: bysource
+
+
 Oracle algorithms
 -----------------
 
