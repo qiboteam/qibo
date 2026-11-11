@@ -492,10 +492,14 @@ def test_two_dirty_qubits_many_controls(backend, nctrl, option):
     )
     assert {type(g) for g in decomposition} <= {gates.TOFFOLI, gates.X}
 
-    generator = random.Random(nctrl)
-    for _ in range(200):
-        bits = [generator.getrandbits(1) for _ in range(nctrl + 3)]
-        if generator.random() < 0.5:
+    # random states of all of the qubits, and, for half of them, with all of the controls on
+    backend.set_seed(nctrl)
+    states = backend.to_numpy(
+        backend.random_integers(2, size=(200, nctrl + 3))
+    ).tolist()
+    controls_on = backend.to_numpy(backend.random_sample(200)).tolist()
+    for bits, uniform in zip(states, controls_on):
+        if uniform < 0.5:
             bits[:nctrl] = [1] * nctrl
 
         expected = list(bits)
