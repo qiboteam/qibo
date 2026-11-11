@@ -11,14 +11,8 @@ from qibo.models.algorithms.qft import QFT
 from qibo.models.circuit import Circuit
 
 
-def Shor(
-    nvalue: int,
-    base: int | None = None,
-    ntrials: int = 10,
-    seed: int | np.random.Generator | None = None,
-    backend: Backend | None = None,
-) -> tuple[int, int]:
-    """Factors an integer with Shor's algorithm.
+class Shor:
+    """Shor's algorithm to factor an integer.
 
     Even numbers and prime powers are factored classically, as in Ref. [1]. Otherwise, a base
     :math:`x` is chosen at random, which factors :math:`n` if it shares a divisor with it, and
@@ -47,12 +41,16 @@ def Shor(
     is exact, but its size grows exponentially with the number of bits of :math:`n`, and it is
     only meant for small numbers.
 
+    The circuit of the last trial is stored in the attribute ``circuit``, which is ``None``
+    before :meth:`execute`, and if no circuit was needed. The first register has ``ncounting``
+    qubits, and the second one has ``nbits`` qubits, which are also stored as attributes.
+
     Example:
         .. testcode::
 
             from qibo.models import Shor
 
-            print(Shor(15))
+            print(Shor(15).execute())
 
         .. testoutput::
 
@@ -63,121 +61,167 @@ def Shor(
             no factor is found otherwise.
         base (int, optional): base :math:`x`, with :math:`1 < x < n`, used in all of the trials.
             If ``None``, a random base is drawn in each trial. Defaults to ``None``.
-        ntrials (int, optional): maximum number of trials, each of which runs the circuit once.
-            Defaults to :math:`10`.
         seed (int or :class:`numpy.random.Generator`, optional): seed or generator used to draw the
-            bases. The measurements are sampled by the backend, so they are reproducible only if
-            the seed of the backend is set, *e.g.* with
+            bases, with the ``default_rng`` of the backend in :meth:`execute`. An integer gives the
+            same bases in each execution. The measurements are sampled by the backend, so they are
+            reproducible only if the seed of the backend is set, *e.g.* with
             :meth:`qibo.backends.abstract.Backend.set_seed`. Defaults to ``None``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
-            execution of the circuits. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        tuple: two integers :math:`p \\leq p'`, with :math:`p p' = n` and :math:`1 < p`.
 
     References:
         1. P. W. Shor, *Polynomial-time algorithms for prime factorization and discrete
         logarithms on a quantum computer*, `SIAM J. Comput. 26, 1484 (1997)
         <https://doi.org/10.1137/S0097539795293172>`_.
     """
-    backend = _check_backend(backend)
 
-    if isinstance(nvalue, bool) or not isinstance(nvalue, Integral) or nvalue < 4:
-        raise_error(
-            ValueError, f"nvalue must be an integer of at least 4, but it is {nvalue}."
-        )
-
-    if base is not None and (
-        isinstance(base, bool)
-        or not isinstance(base, Integral)
-        or not 1 < base < nvalue
+    def __init__(
+        self,
+        nvalue: int,
+        base: int | None = None,
+        seed: int | np.random.Generator | None = None,
     ):
-        raise_error(
-            ValueError, f"base must be an integer in (1, {nvalue}), but it is {base}."
-        )
-
-    if isinstance(ntrials, bool) or not isinstance(ntrials, Integral) or ntrials < 1:
-        raise_error(
-            ValueError, f"ntrials must be a positive integer, but it is {ntrials}."
-        )
-
-    nvalue = int(nvalue)
-
-    # even numbers and prime powers
-    if nvalue % 2 == 0:
-        return 2, nvalue // 2
-
-    for exponent in range(2, nvalue.bit_length()):
-        root = round(nvalue ** (1 / exponent))
-        for candidate in (root - 1, root, root + 1):
-            if candidate > 1 and candidate**exponent == nvalue:
-                return candidate, nvalue // candidate
-
-    generator = backend.default_rng(seed)
-
-    # the first register has the qubits of q = 2^ncounting, and the second one has the
-    # qubits of the values between 0 and n - 1
-    ncounting = (nvalue**2 - 1).bit_length()
-    nbits = (nvalue - 1).bit_length()
-    modulus = 2**ncounting
-
-    for _ in range(ntrials):
-        integer = (
-            base
-            if base is not None
-            else int(backend.random_integers(2, nvalue - 1, size=1, seed=generator))
-        )
-
-        divisor = math.gcd(integer, nvalue)  # greatest common denominator
-        if divisor > 1:
-            return tuple(sorted((divisor, nvalue // divisor)))
-
-        circuit = Circuit(ncounting + nbits)
-        circuit.add(gates.H(qubit) for qubit in range(ncounting))
-        circuit.add(_modular_exponentiation(integer, nvalue, nbits, ncounting))
-        circuit.add(QFT(ncounting).on_qubits(*range(ncounting)))
-        circuit.add(gates.M(*range(ncounting)))
-
-        frequencies = backend.execute_circuit(circuit, nshots=1).frequencies(
-            binary=True
-        )
-        outcome = int(next(iter(frequencies)), 2)
-
-        # fractions close to the outcome, with denominators smaller than n, and their multiples
-        order = None
-        for shift in (0, 1, -1, 2, -2):
-            measured = (outcome + shift) % modulus
-            denominator = (
-                Fraction(measured, modulus).limit_denominator(nvalue - 1).denominator
+        if isinstance(nvalue, bool) or not isinstance(nvalue, Integral) or nvalue < 4:
+            raise_error(
+                ValueError,
+                f"``nvalue`` must be an integer of at least 4, but it is {nvalue}.",
             )
-            for multiple in range(1, nbits + 2):
-                if pow(integer, multiple * denominator, nvalue) == 1:
-                    order = multiple * denominator
+
+        if base is not None and (
+            isinstance(base, bool)
+            or not isinstance(base, Integral)
+            or not 1 < base < nvalue
+        ):
+            raise_error(
+                ValueError,
+                f"``base`` must be an integer in (1, {nvalue}), but it is {base}.",
+            )
+
+        self.nvalue = int(nvalue)
+        self.base = None if base is None else int(base)
+        self.seed = seed
+        self.circuit = None
+
+        # the first register has the qubits of q = 2^ncounting, and the second one has the
+        # qubits of the values between 0 and n - 1
+        self.ncounting = (self.nvalue**2 - 1).bit_length()
+        self.nbits = (self.nvalue - 1).bit_length()
+
+    def execute(
+        self, ntrials: int = 10, backend: Backend | None = None
+    ) -> tuple[int, int]:
+        """Executes Shor's algorithm.
+
+        Each of the at most ``ntrials`` trials runs the circuit once, and the attribute
+        ``circuit`` is the one of the last trial. A ``RuntimeError`` is raised if no factor is
+        found, *e.g.* if the number is prime.
+
+        Args:
+            ntrials (int, optional): maximum number of trials, each of which runs the circuit
+                once. Defaults to :math:`10`.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in
+                the execution of the circuits. If ``None``, it uses the current backend.
+                Defaults to ``None``.
+
+        Returns:
+            tuple: Two integers :math:`p \\leq p'`, with :math:`p p' = n` and :math:`1 < p`.
+        """
+        backend = _check_backend(backend)
+
+        if (
+            isinstance(ntrials, bool)
+            or not isinstance(ntrials, Integral)
+            or ntrials < 1
+        ):
+            raise_error(
+                ValueError,
+                f"``ntrials`` must be a positive integer, but it is {ntrials}.",
+            )
+
+        nvalue = self.nvalue
+        self.circuit = None
+
+        # even numbers and prime powers
+        if nvalue % 2 == 0:
+            return 2, nvalue // 2
+
+        for exponent in range(2, nvalue.bit_length()):
+            root = round(nvalue ** (1 / exponent))
+            for candidate in (root - 1, root, root + 1):
+                if candidate > 1 and candidate**exponent == nvalue:
+                    return candidate, nvalue // candidate
+
+        modulus = 2**self.ncounting
+
+        # an integer seed starts the same sequence of bases in each execution, and a generator
+        # continues its own
+        generator = (
+            backend.default_rng(self.seed)
+            if self.seed is None or isinstance(self.seed, int)
+            else self.seed
+        )
+
+        for _ in range(ntrials):
+            integer = (
+                self.base
+                if self.base is not None
+                else int(generator.integers(2, nvalue - 1))
+            )
+
+            divisor = math.gcd(integer, nvalue)
+            if divisor > 1:
+                return tuple(sorted((divisor, nvalue // divisor)))
+
+            circuit = Circuit(self.ncounting + self.nbits)
+            circuit.add(gates.H(qubit) for qubit in range(self.ncounting))
+            circuit.add(
+                _modular_exponentiation(integer, nvalue, self.nbits, self.ncounting)
+            )
+            circuit.add(QFT(self.ncounting).on_qubits(*range(self.ncounting)))
+            circuit.add(gates.M(*range(self.ncounting)))
+            self.circuit = circuit
+
+            frequencies = backend.execute_circuit(circuit, nshots=1).frequencies(
+                binary=True
+            )
+            outcome = int(next(iter(frequencies)), 2)
+
+            # fractions close to the outcome, with denominators smaller than n, and their
+            # multiples
+            order = None
+            for shift in (0, 1, -1, 2, -2):
+                measured = (outcome + shift) % modulus
+                denominator = (
+                    Fraction(measured, modulus)
+                    .limit_denominator(nvalue - 1)
+                    .denominator
+                )
+                for multiple in range(1, self.nbits + 2):
+                    if pow(integer, multiple * denominator, nvalue) == 1:
+                        order = multiple * denominator
+                        break
+
+                if order is not None:
                     break
 
-            if order is not None:
-                break
+            if order is None:
+                continue
 
-        if order is None:
-            continue
+            # the multiple of the order is replaced by the smallest divisor with the same
+            # property
+            order = min(
+                divisor
+                for divisor in range(1, order + 1)
+                if order % divisor == 0 and pow(integer, divisor, nvalue) == 1
+            )
 
-        # the multiple of the order is replaced by the smallest divisor with the same property
-        order = min(
-            divisor
-            for divisor in range(1, order + 1)
-            if order % divisor == 0 and pow(integer, divisor, nvalue) == 1
+            if order % 2 == 0 and pow(integer, order // 2, nvalue) != nvalue - 1:
+                divisor = math.gcd(pow(integer, order // 2, nvalue) - 1, nvalue)
+                return tuple(sorted((divisor, nvalue // divisor)))
+
+        raise_error(
+            RuntimeError,
+            f"No factor of {nvalue} was found in {ntrials} trials. "
+            + "Is it a prime number? Otherwise, increase ntrials.",
         )
-
-        if order % 2 == 0 and pow(integer, order // 2, nvalue) != nvalue - 1:
-            divisor = math.gcd(pow(integer, order // 2, nvalue) - 1, nvalue)
-            return tuple(sorted((divisor, nvalue // divisor)))
-
-    raise_error(
-        RuntimeError,
-        f"No factor of {nvalue} was found in {ntrials} trials. "
-        + "Is it a prime number? Otherwise, increase ntrials.",
-    )
 
 
 def _modular_exponentiation(
