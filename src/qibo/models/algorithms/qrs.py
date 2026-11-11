@@ -201,6 +201,11 @@ def QRS(
     # probability of the flag being in the state 1, and its amplification, which is exact if
     # all of the amplitudes are scaled to make it a number of iterations
     acceptance = sum(e**2 for e in epsilon)
+    # the arcsine is very sensitive near 1, where a rounding error of the sum of the
+    # amplitudes would add an iteration, but all of the source is already accepted
+    if acceptance > 1 - 1e-12:
+        acceptance = 1.0
+
     niterations = None
     if exact:
         theta = float(backend.arcsin(backend.sqrt(min(acceptance, 1.0))))

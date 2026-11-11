@@ -156,6 +156,35 @@ def test_rejection_sampling_probability_limits(backend):
     backend.assert_allclose(distribution, source, atol=1e-8)
 
 
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_rejection_sampling_single_application(backend, nqubits):
+    # if the probability is not above the smallest overlap, the source is copied with the flag
+    # in the state 1, and the algorithm is not amplified, whatever the rounding errors of the
+    # sum of the amplitudes, which is 1, are
+    for seed in range(40):
+        source = _distribution(backend, nqubits, seed)
+        target = _distribution(backend, nqubits, seed + 100)
+        algorithm = _source_circuit(backend, source)
+
+        circuits = [
+            QRS(
+                algorithm,
+                target,
+                probability=1e-6,
+                exact=exact,
+                measure=False,
+                backend=backend,
+            )
+            for exact in (False, True)
+        ]
+        assert circuits[1].ngates == circuits[0].ngates
+        assert circuits[1].gate_types[gates.Z] == 0
+
+        flag, distribution = _flagged(backend, circuits[1], nqubits)
+        backend.assert_allclose(flag, 1.0, atol=1e-8)
+        backend.assert_allclose(distribution, source, atol=1e-8)
+
+
 @pytest.mark.parametrize("exact", [False, True])
 def test_rejection_sampling_index_qubits(backend, exact):
     # the state is sqrt(p_0) |0>|0> + sqrt(p_1) |1>|+>, and the second qubit is not an index
