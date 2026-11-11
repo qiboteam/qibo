@@ -399,6 +399,104 @@ class HardwareModel:
 
         return replace(hardware, errors=errors, coherence=coherence)
 
+    def weighted_connectivity(self) -> nx.Graph:
+        """Connectivity with the errors of the qubits and the couplings as weights.
+
+        The weights are meant for the noise-aware placers, which prefer the qubits and the
+        couplings with less error. The weight of an error :math:`e` is
+        :math:`-\\ln(1 - e)`, *i.e.* minus the logarithm of the fidelity of the operation, so
+        the weights of independent operations add up as their errors multiply. An error of
+        :math:`0` has no weight, and an error of :math:`1` has an infinite weight.
+
+        Each qubit has three attributes. ``"gate"`` is the weight of the error of its
+        single-qubit gates, and ``"readout"`` is the weight of its readout error. ``"weight"``
+        is their sum,
+
+        .. math::
+            w_{q} = w_{q}^{\\text{gate}} + w_{q}^{\\text{readout}} \\, ,
+
+        which is minus the logarithm of the fidelity of a single-qubit gate followed by a
+        measurement on the qubit :math:`q`. The two components are kept, so that a placer can
+        weigh them with the operations of its circuit, instead of with the fixed one gate and
+        one measurement of ``"weight"``. For example, a qubit with :math:`n` single-qubit gates
+        and :math:`m` measurements has :math:`n \\, w_{q}^{\\text{gate}} + m \\,
+        w_{q}^{\\text{readout}}`. The average of the errors of all the operations of the qubit
+        is not used, because it would depend on how many virtual gates the device lists,
+        which have no error. Each coupling has one attribute, ``"weight"``, which is the
+        weight of the error of its two-qubit gate.
+
+        Some errors can be missing, *e.g.* for a qubit that was not benchmarked. If an error is
+        known for some of the qubits, or the couplings, but not for all of them, the missing
+        ones take the mean of the known errors, and a warning lists them, so that the
+        qubits without calibration do not look better than the others. If it is known for
+        none of them, all their weights are :math:`0`. There is then nothing to prefer, so the
+        placers act as they do without weights.
+
+        Example:
+            .. testcode::
+
+                from qibo.transpiler import HardwareModel
+
+                hardware = HardwareModel(
+                    (0, 1, 2),
+                    [(0, 1), (1, 2)],
+                    errors={
+                        "1q": {0: 0.001, 1: 0.002, 2: 0.001},
+                        "2q": {(0, 1): 0.01, (1, 2): 0.02},
+                        "readout": {0: 0.04, 1: 0.03, 2: 0.05},
+                    },
+                )
+                graph = hardware.weighted_connectivity()
+
+                # a gate and a measurement on qubit 0, and the coupling of qubits 0 and 1
+                qubit_weight = graph.nodes[0]["weight"]
+                coupling_weight = graph.edges[0, 1]["weight"]
+
+                # weight of qubit 0 for a circuit with 10 single-qubit gates and 1 measurement
+                circuit_weight = 10 * graph.nodes[0]["gate"] + graph.nodes[0]["readout"]
+
+        Returns:
+            :class:`networkx.Graph`: Copy of ``connectivity``, which is directed if it is, with
+            the attributes ``"gate"``, ``"readout"`` and ``"weight"`` on the qubits and
+            ``"weight"`` on the couplings. The model is not changed.
+        """
+        graph = self.connectivity.copy()
+        components = {
+            "gate": {qubit: self.error((qubit,)) for qubit in self.qubits},
+            "readout": {
+                qubit: self.errors.get("readout", {}).get(qubit)
+                for qubit in self.qubits
+            },
+            "coupling": {edge: self.error(edge) for edge in graph.edges},
+        }
+
+        weights = {}
+        for name, values in components.items():
+            known = [error for error in values.values() if error is not None]
+            mean = sum(known) / len(known) if known else 0.0
+            if known and len(known) < len(values):
+                missing = [key for key, error in values.items() if error is None]
+                log.warning(
+                    f"The {name} error of {missing} is missing, "
+                    + "so the mean of the known errors is used."
+                )
+            weights[name] = {
+                key: -math.log1p(-error) if error < 1 else math.inf
+                for key, error in (
+                    (key, mean if error is None else error)
+                    for key, error in values.items()
+                )
+            }
+
+        for qubit in self.qubits:
+            gate, readout = weights["gate"][qubit], weights["readout"][qubit]
+            graph.nodes[qubit].update(gate=gate, readout=readout, weight=gate + readout)
+
+        for edge in graph.edges:
+            graph.edges[edge]["weight"] = weights["coupling"][edge]
+
+        return graph
+
     def _build_noise_model(self) -> NoiseModel:
         """Noise model that follows from the errors, the durations and the coherence times."""
         coherence = {}
