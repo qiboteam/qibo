@@ -13,39 +13,28 @@ def qsvt_circuit(block_encoding: Circuit, phases: ArrayLike, nancillas: int) -> 
     """Creates a quantum singular value transformation (QSVT) circuit.
 
     Let :math:`U` be the unitary of ``block_encoding``, which acts on :math:`a`
-    ancilla qubits and :math:`n` system qubits, and let :math:`A = (\\langle 0|^{\\otimes a}
-    \\otimes \\mathbb{1}) \\, U \\, (|0\\rangle^{\\otimes a} \\otimes \\mathbb{1})` be the
+    auxiliary qubits and :math:`n` system qubits, and let :math:`A = (\\bra{0}^{\\otimes a}
+    \\otimes \\mathbb{1}) \\, U \\, (\\ket{0}^{\\otimes a} \\otimes \\mathbb{1})` be the
     matrix that it encodes, with singular value decomposition :math:`A = \\sum_{i}
-    \\varsigma_{i} |w_{i}\\rangle\\langle v_{i}|`. The block of the circuit unitary in
-    which the signal qubit and the ancillas start and end in :math:`|0\\rangle`
+    \\varsigma_{i} \\ket{w_{i}}\\!\\bra{v_{i}}`. The block of the circuit unitary in
+    which the signal qubit and the auxiliary qubits start and end in :math:`\\ket{0}`
     applies a polynomial :math:`P` of degree :math:`d` to the singular values,
 
     .. math::
         P^{(SV)}(A) = \\begin{cases} \\sum_{i} P(\\varsigma_{i}) \\,
-        |w_{i}\\rangle\\langle v_{i}| & d \\text{ odd,} \\\\ \\sum_{i} P(\\varsigma_{i}) \\,
-        |v_{i}\\rangle\\langle v_{i}| & d \\text{ even.} \\end{cases}
+        \\ket{w_{i}}\\!\\bra{v_{i}} & d \\text{ odd,} \\\\ \\sum_{i} P(\\varsigma_{i}) \\,
+        \\ket{v_{i}}\\!\\bra{v_{i}} & d \\text{ even.} \\end{cases}
 
     The circuit queries :math:`U` and :math:`U^{\\dagger}` alternately :math:`d` times
     (Theorem 2 of Ref. [1]) and uses a single extra qubit, the signal qubit, which
     controls the sign of the phases of the rotations that are controlled by the
-    projector on the ancillas in :math:`|0\\rangle`.
-
-    Args:
-        block_encoding (:class:`qibo.models.circuit.Circuit`): circuit that
-            implements :math:`U`. Its first ``nancillas`` qubits are the ancillas.
-        phases (ArrayLike): phases of the polynomial, e.g. the output of
-            :func:`qibo.models.qsvt_phases`.
-        nancillas (int): number :math:`a` of ancilla qubits of ``block_encoding``.
-
-    Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit with the signal qubit at position
-        :math:`0`, followed by the qubits of ``block_encoding`` in the same order.
+    projector on the auxiliary qubits in :math:`|0\\rangle`.
 
     Example:
         Apply the cubic Chebyshev polynomial :math:`T_{3}(x) = 4 x^{3} - 3 x` to the
-        singular value :math:`1/2` of a block-encoding of :math:`|+\\rangle / 2`.
+        singular value :math:`1/2` of a block-encoding of :math:`\\ket{+} / 2`.
         Since :math:`T_{3}(1/2) = -1`, the amplitudes with the signal qubit and the
-        ancilla in :math:`|0\\rangle` are those of :math:`-|+\\rangle`.
+        auxiliary qubit in :math:`\\ket{0}` are those of :math:`-\\ket{+}`.
 
         .. testcode::
 
@@ -56,7 +45,7 @@ def qsvt_circuit(block_encoding: Circuit, phases: ArrayLike, nancillas: int) -> 
 
             backend = get_backend()
 
-            # prepares |+> with amplitude 1/2 when the ancilla is in |0>
+            # prepares |+> with amplitude 1/2 when the auxiliary qubit is in |0>
             block_encoding = Circuit(2)
             block_encoding.add(gates.RY(0, 2 * math.pi / 3))
             block_encoding.add(gates.H(1))
@@ -74,6 +63,17 @@ def qsvt_circuit(block_encoding: Circuit, phases: ArrayLike, nancillas: int) -> 
         .. testoutput::
 
             True
+
+    Args:
+        block_encoding (:class:`qibo.models.circuit.Circuit`): circuit that
+            implements :math:`U`. Its first ``nancillas`` qubits are the auxiliary qubits.
+        phases (ArrayLike): phases of the polynomial, *e.g.* the output of
+            :func:`qibo.models.qsvt_phases`.
+        nancillas (int): number :math:`a` of auxiliary qubits of ``block_encoding``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit with the signal qubit at position
+        :math:`0`, followed by the qubits of ``block_encoding`` in the same order.
 
     References:
         1. A. Gilyén, Y. Su, G. H. Low, and N. Wiebe, *Quantum singular value

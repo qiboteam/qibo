@@ -19,12 +19,12 @@ def qsp_circuit(
 ) -> Circuit:
     """Creates a quantum signal processing (QSP) circuit.
 
-    The circuit interleaves queries to ``oracle`` with rotations of an ancilla
+    The circuit interleaves queries to ``oracle`` with rotations of an auxiliary
     qubit, placed at qubit :math:`0`. The remaining qubits are those of ``oracle``.
 
     - ``method=None``: QSP of Ref. [1]. ``oracle`` implements a unitary
       :math:`W`, which is queried :math:`N` times. The block of the circuit unitary
-      with the ancilla starting and ending in :math:`|0\\rangle` applies
+      with the auxiliary qubit starting and ending in :math:`|0\\rangle` applies
       :math:`A(\\theta) + i C(\\theta)` to each eigenphase :math:`\\theta` of
       :math:`W`, where :math:`A` and :math:`C` are the trigonometric polynomials
       encoded in ``phases``.
@@ -34,23 +34,9 @@ def qsp_circuit(
       unitary is :math:`\\tilde{g}(H t)`, where :math:`\\tilde{g}` is the Fourier
       series encoded in ``phases``.
 
-    Args:
-        oracle (:class:`qibo.models.circuit.Circuit`): circuit on :math:`n` qubits
-            that implements :math:`W` or :math:`e^{-i t H}`, depending on
-            ``method``. It has to be exact, including its global phase, since it
-            is applied under control.
-        phases (ArrayLike): output of :func:`qibo.models.qsp_phases` for the
-            same ``method``.
-        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
-            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
-        with the ancilla at qubit :math:`0`.
-
     Example:
         Apply :math:`(1 + W) / 2`, with :math:`W = X`, to :math:`|0\\rangle`. The
-        amplitudes with the ancilla in :math:`|0\\rangle` are those of
+        amplitudes with the auxiliary qubit in :math:`|0\\rangle` are those of
         :math:`|+\\rangle / \\sqrt{2}`.
 
         .. testcode::
@@ -78,7 +64,7 @@ def qsp_circuit(
             True
 
         Invert a rotation with the Fourier series :math:`\\tilde{g}(x) = e^{i x}`.
-        The amplitudes with the ancilla in :math:`|0\\rangle` are those of the
+        The amplitudes with the auxiliary qubit in :math:`|0\\rangle` are those of the
         inverse rotation applied to :math:`|0\\rangle`.
 
         .. testcode::
@@ -104,6 +90,20 @@ def qsp_circuit(
         .. testoutput::
 
             True
+
+    Args:
+        oracle (:class:`qibo.models.circuit.Circuit`): circuit on :math:`n` qubits
+            that implements :math:`W` or :math:`e^{-i t H}`, depending on
+            ``method``. It has to be exact, including its global phase, since it
+            is applied under control.
+        phases (ArrayLike): output of :func:`qibo.models.qsp_phases` for the
+            same ``method``.
+        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
+            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
+        with the auxiliary qubit at qubit :math:`0`.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
@@ -146,6 +146,14 @@ def qsp_phases(
       :math:`q`, it finds the angles of :math:`q + 1` single-qubit gates whose
       product has :math:`\\tilde{g}(x)` as its upper-left matrix element. The series
       is divided by :math:`\\max_{x} |\\tilde{g}(x)|` if it is larger than one.
+
+    The complementary series is computed numerically, which requires the target to be strictly
+    bounded by one. Hence, the accuracy of the circuit is limited. If ``method="fourier"``, the
+    block of the circuit matches :math:`\\tilde{g}` to machine precision if
+    :math:`\\max_{x} |\\tilde{g}(x)| \\leq 0.99`, but the error can reach :math:`10^{-2}` for values
+    closer to one, which includes the series that are divided by :math:`\\max_{x} |\\tilde{g}(x)|`.
+    If ``method=None``, the error can be of the order of :math:`10^{-6}`, because
+    :math:`|A + i C| = 1` at :math:`\\theta = 0`.
 
     Args:
         coefficients (ArrayLike): if ``method=None``, cosine coefficients
@@ -421,7 +429,7 @@ def _fourier_qsp_circuit(evolution: Circuit, phases: ArrayLike) -> Circuit:
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
-        with the ancilla at qubit :math:`0`.
+        with the auxiliary qubit at qubit :math:`0`.
 
     References:
         1. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
@@ -610,7 +618,7 @@ def _qsp_circuit(walk: Circuit, phases: ArrayLike) -> Circuit:
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
-        with the ancilla at qubit :math:`0`.
+        with the auxiliary qubit at qubit :math:`0`.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum

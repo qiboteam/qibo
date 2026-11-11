@@ -134,8 +134,13 @@ def Cuccaro(nbits: int, **kwargs) -> Circuit:
     significant bit comes first. The circuit is composed of :math:`n` majority (MAJ) blocks,
     which compute the carries in place, a :class:`qibo.gates.CNOT` that copies the last carry
     into the overflow qubit, and :math:`n` unmajority-and-add (UMA) blocks, which uncompute the
-    carries and write the sum bits, in reverse order. It has :math:`2n`
-    :class:`qibo.gates.TOFFOLI` gates and :math:`4n + 1` :class:`qibo.gates.CNOT` gates.
+    carries and write the sum bits, in reverse order. The MAJ and UMA blocks are the ones of
+    Ref. [1], with the version of UMA that has two :class:`qibo.gates.CNOT` gates, and the
+    circuit is the simple adder of that reference, in which the blocks are applied in
+    sequence. It has :math:`2n` :class:`qibo.gates.TOFFOLI` gates and :math:`4n + 1`
+    :class:`qibo.gates.CNOT` gates. The depth-optimized circuit of Ref. [1], with
+    :math:`2n - 1` :class:`qibo.gates.TOFFOLI` gates, :math:`5n - 3` :class:`qibo.gates.CNOT`
+    gates, and depth :math:`2n + 4`, is not implemented.
 
     Example:
         .. testcode::
@@ -238,7 +243,13 @@ def DKRS(nbits: int, **kwargs) -> Circuit:
     :class:`qibo.gates.TOFFOLI` gates, so that the depth of the circuit is logarithmic in
     :math:`n`. The sum is first written in the auxiliary qubits by an out-of-place adder. Then,
     the inverse of the same adder, applied to the complement of the sum, erases :math:`b`, and
-    the registers are swapped.
+    the registers are swapped. Each out-of-place adder is the one of Section 4.1 of Ref. [1],
+    with :math:`5n - 3 w(n) - 3 \\lfloor \\log_{2} n \\rfloor - 1` :class:`qibo.gates.TOFFOLI`
+    gates, so the circuit has twice as many, and, for :math:`n \\geq 4`, its Toffoli depth is
+    :math:`2 (\\lfloor \\log_{2} n \\rfloor + \\lfloor \\log_{2} (n / 3) \\rfloor + 4)`. This is not
+    the in-place construction of Section 4.2 of Ref. [1], which erases only the carries: it
+    needs two more auxiliary qubits than the
+    :math:`2n - w(n) - \\lfloor \\log_{2} n \\rfloor - 1` of that construction.
 
     Example:
         .. testcode::
@@ -491,7 +502,9 @@ def Gidney(nbits: int, **kwargs) -> Circuit:
     applied with a :class:`qibo.gates.CU1` conditioned on the outcome, fixes the phase. Hence,
     the circuit has :math:`4n` of these gates, and :math:`n - 1` measurements with ``collapse``
     set to ``True``. Because of them, each shot has to be simulated separately, and the circuit
-    cannot be inverted.
+    cannot be inverted. Ref. [1] presents the adder without the carry out, which has
+    :math:`n - 1` temporary logical-ANDs and :math:`4n - 4` of these gates. Here, the carry out
+    takes one more temporary logical-AND.
 
     Example:
         .. testcode::
@@ -620,7 +633,8 @@ def TTK(nbits: int, **kwargs) -> Circuit:
     :class:`qibo.gates.CNOT` gates. The carries are computed in place, using the qubits of
     :math:`a`, and then uncomputed while the sum bits are written in :math:`b`. For
     :math:`n \\geq 2`, it has :math:`2n - 1` :class:`qibo.gates.TOFFOLI` gates and :math:`5n - 5`
-    :class:`qibo.gates.CNOT` gates. For :math:`n = 1`, it is a half adder, with one of each.
+    :class:`qibo.gates.CNOT` gates, which is the size :math:`7n - 6` of Ref. [1]. For
+    :math:`n = 1`, it is a half adder, with one of each.
 
     Example:
         .. testcode::
@@ -723,7 +737,9 @@ def VBE(nbits: int, **kwargs) -> Circuit:
     significant bit comes first. The circuit is composed of :math:`n` blocks that compute the
     carries, followed by blocks that compute the sum bits while the carries are uncomputed, in
     reverse order. It has :math:`4n - 2` :class:`qibo.gates.TOFFOLI` gates and :math:`4n`
-    :class:`qibo.gates.CNOT` gates.
+    :class:`qibo.gates.CNOT` gates. The carries :math:`c_{0}, \\dots, c_{n - 1}` are stored in the
+    auxiliary qubits, with :math:`c_{0} = 0`, and the carry :math:`c_{n}` in the overflow
+    qubit.
 
     Example:
         .. testcode::

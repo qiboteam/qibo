@@ -1,5 +1,7 @@
 """Test Grover model defined in `qibo/models/algorithms/grover.py`."""
 
+import math
+
 import numpy as np
 import pytest
 
@@ -129,3 +131,77 @@ def test_grover_execute(backend, num_sol):
         assert iterations == 4
     else:
         assert solution == "11111"
+
+
+@pytest.mark.parametrize("nbits,nsol", [(4, 9), (8, 39)])
+def test_grover_iterations(backend, nbits, nsol):
+    # the number of iterations is floor(pi / (4 theta)), with sin^2(theta) = t / N,
+    # for which the probability of failure is at most t / N
+    nstates = 2**nbits
+    marked = set(range(nsol))
+    grover = Grover(
+        _oracle(marked, nbits), superposition_qubits=nbits, number_solutions=nsol
+    )
+    _solution, iterations = grover(backend=backend)
+    theta = math.asin(math.sqrt(nsol / nstates))
+    assert iterations == math.floor(math.pi / (4 * theta))
+
+    circuit = grover.initialize()
+    for _ in range(iterations):
+        circuit += grover.step()
+    probabilities = backend.execute_circuit(circuit).probabilities(list(range(nbits)))
+    success = sum(float(probabilities[state]) for state in marked)
+    assert success >= 1 - nsol / nstates
+
+
+def test_grover_iterative_first_round(backend):
+    # in the first round m = 1, hence j = 0 and the initial state is measured and checked
+    oracle = Circuit(5 + 1)
+    oracle.add(gates.X(5).controlled_by(*range(5)))
+    grover = Grover(
+        oracle, superposition_qubits=5, check=lambda _bitstring: True, iterative=True
+    )
+    solution, iterations = grover(backend=backend)
+    assert iterations == 0
+    assert len(solution) == 5
+
+
+def test_grover_iterative_rounds(backend, monkeypatch):
+    # in the round s, j is drawn among the non-negative integers smaller than
+    # m = min(lambda^s, sqrt(N)), and the circuit is measured in every round
+    iterations_per_round = []
+    circuit = Grover.circuit
+
+    def circuit_recorder(self, iterations):
+        iterations_per_round.append(iterations)
+        return circuit(self, iterations)
+
+    monkeypatch.setattr(Grover, "circuit", circuit_recorder)
+    oracle = Circuit(5 + 1)
+    oracle.add(gates.X(5).controlled_by(*range(5)))
+    grover = Grover(
+        oracle, superposition_qubits=5, check=lambda _bitstring: False, iterative=True
+    )
+    rng_state = np.random.get_state()
+    try:
+        np.random.seed(0)
+        grover(backend=backend)
+    finally:
+        np.random.set_state(rng_state)
+
+    assert iterations_per_round[0] == 0
+    for round_, iterations in enumerate(iterations_per_round):
+        assert iterations < math.ceil(min(1.2**round_, math.sqrt(32)))
+    assert sum(iterations_per_round) > 9 / 4 * math.sqrt(32)
+
+
+def _oracle(marked, nbits):
+    # oracle that flips the last qubit when the first ones are in a marked state
+    dim = 2**nbits
+    matrix = np.zeros((2 * dim, 2 * dim))
+    for state in range(dim):
+        for target in range(2):
+            matrix[2 * state + (target ^ (state in marked)), 2 * state + target] = 1
+    oracle = Circuit(nbits + 1)
+    oracle.add(gates.Unitary(matrix, *range(nbits + 1)))
+    return oracle

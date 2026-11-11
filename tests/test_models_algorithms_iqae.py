@@ -1,5 +1,9 @@
 """Test IQAE model defined in `qibo/models/algorithms/iqae.py`."""
 
+import math
+from collections import Counter
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -68,6 +72,39 @@ def test_iqae_execution(backend):
     # Check that the result lies in the expected interval
     assert results.estimation > true_result - 2 * results.epsilon_estimated
     assert results.estimation < true_result + 2 * results.epsilon_estimated
+
+
+class _Probe(IQAE):
+    """IQAE whose "circuits" are just the number of applications of Q."""
+
+    def construct_qae_circuit(self, k):
+        return k
+
+
+class _Sampler:
+    """Backend that draws the shots of Q^k A|0> with probability sin^2((2k + 1) theta_a)."""
+
+    def __init__(self, probability, seed):
+        self.theta = math.asin(math.sqrt(probability))
+        self.generator = np.random.default_rng(seed)
+
+    def execute_circuit(self, k, nshots):
+        probability = math.sin((2 * k + 1) * self.theta) ** 2
+        ones = int(self.generator.binomial(nshots, probability))
+        return SimpleNamespace(
+            frequencies=lambda binary: Counter({"1": ones, "0": nshots - ones})
+        )
+
+
+def test_iqae_interval_on_turn_border():
+    # the intervals of theta can end exactly on a multiple of 2 pi / K, where a rounding
+    # error must not move them to the previous turn and exclude the true probability
+    probability = 0.25
+    for seed in range(30):
+        iqae = _Probe(Circuit(1), Circuit(1), alpha=0.05, epsilon=0.01, n_shots=100)
+        result = iqae.execute(backend=_Sampler(probability, seed))
+        lower, upper = result.estimate_intervals[-1]
+        assert lower - 1e-12 <= probability <= upper + 1e-12
 
 
 def reflect_qibo(qc, qx, qx_measure, qx_ancilla, nbit, b_max):

@@ -19,32 +19,24 @@ def lcu_circuit(
     \\log_{2} L \\rceil)` auxiliary qubits, followed by the qubits of the unitaries,
     and block-encodes the operator :math:`A / \\alpha`, with
     :math:`A = \\sum_{i} c_{i} U_{i}`. That is, the block of the circuit unitary in which
-    the auxiliary qubits start and end in :math:`|0\\rangle` is :math:`A / \\alpha`. The
+    the auxiliary qubits start and end in :math:`\\ket{0}` is :math:`A / \\alpha`. The
     circuit is :math:`\\mathrm{PREPARE}_{L}^{\\dagger} \\, \\mathrm{SELECT} \\,
     \\mathrm{PREPARE}_{R}`, where :math:`\\mathrm{PREPARE}_{L}` and
     :math:`\\mathrm{PREPARE}_{R}` are created with :func:`qibo.models.lcu_prepare`, and
     :math:`\\mathrm{SELECT}` is created with :func:`qibo.models.lcu_select`.
 
-    Args:
-        unitaries (list[:class:`qibo.models.circuit.Circuit`]): circuits
-            on the same number of qubits that implement :math:`U_{i}`. They have to be
-            exact, including their global phase, since they are applied under control.
-        coefficients (ArrayLike): one-dimensional array of the (complex) coefficients
-            :math:`c_{i}`, with at least one non-zero element.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
-            used in the calculation. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        tuple: the circuit, with the auxiliary qubits at the first qubits, the
-        normalization :math:`\\alpha`, and the number :math:`a` of auxiliary qubits. The
-        last two are the arguments of :func:`qibo.models.qsvt_circuit` for which
-        the circuit is a block encoding of :math:`A / \\alpha`.
+    This is the block encoding of Lemma 29 of Ref. [2], with
+    :math:`(\\mathrm{PREPARE}_{L}, \\mathrm{PREPARE}_{R})` a state-preparation pair
+    (Definition 28 of Ref. [2]). For :math:`L = 2` and the coefficients :math:`(\\kappa, 1)`,
+    it is the circuit of Lemma 2 of Ref. [1], which fails, *i.e.* the auxiliary qubit is not
+    in :math:`\\ket{0}`, with probability
+    :math:`\\kappa \\| (U_{1} - U_{0}) \\ket{\\psi} \\|^{2} / (\\kappa + 1)^{2}` for the input
+    state :math:`\\ket{\\psi}`.
 
     Example:
-        Apply :math:`(X + Z) / 2` to :math:`|0\\rangle`, where :math:`X` and :math:`Z`
-        are Pauli matrices. The amplitudes with the auxiliary qubit in :math:`|0\\rangle`
-        are those of :math:`|+\\rangle / \\sqrt{2}`.
+        Apply :math:`(X + Z) / 2` to :math:`\\ket{0}`, where :math:`X` and :math:`Z`
+        are Pauli matrices. The amplitudes with the auxiliary qubit in :math:`\\ket{0}`
+        are those of :math:`\\ket{+} / \\sqrt{2}`.
 
         .. testcode::
 
@@ -73,10 +65,31 @@ def lcu_circuit(
 
             True 1.0 1
 
+    Args:
+        unitaries (list[:class:`qibo.models.circuit.Circuit`]): circuits
+            on the same number of qubits that implement :math:`U_{i}`. They have to be
+            exact, including their global phase, since they are applied under control.
+        coefficients (ArrayLike): one-dimensional array of the (complex) coefficients
+            :math:`c_{i}`, with at least one non-zero element.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the calculation. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        tuple: the circuit, with the auxiliary qubits at the first qubits, the
+        normalization :math:`\\alpha`, and the number :math:`a` of auxiliary qubits. The
+        last two are the arguments of :func:`qibo.models.qsvt_circuit` for which
+        the circuit is a block encoding of :math:`A / \\alpha`.
+
     References:
         1. A. M. Childs and N. Wiebe, *Hamiltonian simulation using linear
         combinations of unitary operations*, `Quantum Information & Computation 12,
         901-924 (2012) <https://doi.org/10.26421/QIC12.11-12-1>`_.
+        2. A. Gilyén, Y. Su, G. H. Low, and N. Wiebe, *Quantum singular value
+        transformation and beyond: exponential improvements for quantum matrix
+        arithmetics*, `Proceedings of the 51st Annual ACM SIGACT Symposium on Theory
+        of Computing (STOC '19), 193-204 (2019)
+        <https://doi.org/10.1145/3313276.3316366>`_.
     """
     backend = _check_backend(backend)
 
@@ -117,34 +130,23 @@ def lcu_prepare(
     Let :math:`c_{i}` be the :math:`i`-th (complex) element of ``coefficients``, with
     :math:`i = 0, \\dots, L - 1`, and let :math:`\\alpha = \\sum_{i} |c_{i}|`. The oracles
     act on :math:`a = \\max(1, \\lceil \\log_{2} L \\rceil)` auxiliary qubits. When applied
-    to :math:`|0\\rangle`, :math:`\\mathrm{PREPARE}_{L}` and :math:`\\mathrm{PREPARE}_{R}`
+    to :math:`\\ket{0}`, :math:`\\mathrm{PREPARE}_{L}` and :math:`\\mathrm{PREPARE}_{R}`
     load the amplitudes
 
     .. math::
-        \\mathrm{PREPARE}_{L} |0\\rangle = \\sum_{i} \\sqrt{\\frac{|c_{i}|}{\\alpha}}
-        \\, |i\\rangle \\quad \\text{and} \\quad
-        \\mathrm{PREPARE}_{R} |0\\rangle = \\sum_{i} \\sqrt{\\frac{|c_{i}|}{\\alpha}}
-        \\, \\frac{c_{i}}{|c_{i}|} \\, |i\\rangle \\, ,
+        \\mathrm{PREPARE}_{L} \\ket{0} = \\sum_{i} \\sqrt{\\frac{|c_{i}|}{\\alpha}}
+        \\, \\ket{i} \\quad \\text{and} \\quad
+        \\mathrm{PREPARE}_{R} \\ket{0} = \\sum_{i} \\sqrt{\\frac{|c_{i}|}{\\alpha}}
+        \\, \\frac{c_{i}}{|c_{i}|} \\, \\ket{i} \\, ,
 
-    respectively, with the amplitudes of :math:`|i\\rangle`, for :math:`i \\geq L`, set to
+    respectively, with the amplitudes of :math:`\\ket{i}`, for :math:`i \\geq L`, set to
     zero. For real and non-negative coefficients, they are the same oracle. The oracles
     are built with :func:`qibo.models.encodings.binary_encoder`, with the Mottonen
     parametrization, since the resulting circuits have an exact inverse. Together with
     :func:`qibo.models.lcu_select`, they build the block encoding
     :math:`\\mathrm{PREPARE}_{L}^{\\dagger} \\, \\mathrm{SELECT} \\, \\mathrm{PREPARE}_{R}`
-    of :math:`\\sum_{i} c_{i} U_{i} / \\alpha`.
-
-    Args:
-        coefficients (ArrayLike): one-dimensional array of the (complex) coefficients
-            :math:`c_{i}`, with at least one non-zero element.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
-            used in the calculation. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        tuple: the circuits of :math:`\\mathrm{PREPARE}_{L}` and
-        :math:`\\mathrm{PREPARE}_{R}`, both on :math:`a` qubits, the normalization
-        :math:`\\alpha`, and the number :math:`a` of auxiliary qubits.
+    of :math:`\\sum_{i} c_{i} U_{i} / \\alpha`. They are a state-preparation pair in the sense
+    of Definition 28 of Ref. [2].
 
     Example:
         Prepare the amplitudes of the coefficients :math:`3` and :math:`-1`, for which
@@ -173,10 +175,27 @@ def lcu_prepare(
 
             True True 4.0 1
 
+    Args:
+        coefficients (ArrayLike): one-dimensional array of the (complex) coefficients
+            :math:`c_{i}`, with at least one non-zero element.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the calculation. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        tuple: the circuits of :math:`\\mathrm{PREPARE}_{L}` and
+        :math:`\\mathrm{PREPARE}_{R}`, both on :math:`a` qubits, the normalization
+        :math:`\\alpha`, and the number :math:`a` of auxiliary qubits.
+
     References:
         1. A. M. Childs and N. Wiebe, *Hamiltonian simulation using linear
         combinations of unitary operations*, `Quantum Information & Computation 12,
         901-924 (2012) <https://doi.org/10.26421/QIC12.11-12-1>`_.
+        2. A. Gilyén, Y. Su, G. H. Low, and N. Wiebe, *Quantum singular value
+        transformation and beyond: exponential improvements for quantum matrix
+        arithmetics*, `Proceedings of the 51st Annual ACM SIGACT Symposium on Theory
+        of Computing (STOC '19), 193-204 (2019)
+        <https://doi.org/10.1145/3313276.3316366>`_.
     """
     backend = _check_backend(backend)
 
@@ -221,36 +240,21 @@ def lcu_select(
     Let :math:`U_{i}` be the unitary of the :math:`i`-th circuit of ``unitaries``, with
     :math:`i = 0, \\dots, L - 1`. The oracle acts on :math:`a` auxiliary qubits, followed by
     the qubits of the unitaries, and applies :math:`U_{i}` to the latter when the auxiliary
-    qubits are in the computational basis state :math:`|i\\rangle`,
+    qubits are in the computational basis state :math:`\\ket{i}`,
 
     .. math::
-        \\mathrm{SELECT} = \\sum_{i = 0}^{L - 1} |i\\rangle\\langle i| \\otimes U_{i}
-        + \\sum_{i = L}^{2^{a} - 1} |i\\rangle\\langle i| \\otimes I \\, .
+        \\mathrm{SELECT} = \\sum_{i = 0}^{L - 1} \\ket{i}\\!\\bra{i} \\otimes U_{i}
+        + \\sum_{i = L}^{2^{a} - 1} \\ket{i}\\!\\bra{i} \\otimes I \\, .
 
     Each unitary is applied under the control of all the auxiliary qubits, with :math:`X`
-    gates that map :math:`|i\\rangle` into :math:`|1 \\dots 1\\rangle`. Gates that are
+    gates that map :math:`\\ket{i}` into :math:`\\ket{1 \\dots 1}`. Gates that are
     already controlled are supported. A unitary with no gates is the identity, and is
-    skipped.
-
-    Args:
-        unitaries (list[:class:`qibo.models.circuit.Circuit`]): circuits
-            on the same number of qubits that implement :math:`U_{i}`. They have to be
-            exact, including their global phase, since they are applied under control.
-        nauxiliary (int, optional): number :math:`a` of auxiliary qubits. It has to satisfy
-            :math:`2^{a} \\geq L`. If ``None``, it is :math:`\\max(1, \\lceil \\log_{2} L
-            \\rceil)`. Defaults to ``None``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
-            used in the calculation. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit of :math:`\\mathrm{SELECT}`, with the
-        auxiliary qubits at the first qubits.
+    skipped. It is the unitary :math:`W` of Lemma 29 of Ref. [2].
 
     Example:
-        Apply the Pauli matrices :math:`X` and :math:`Z` to :math:`|0\\rangle`, selected
-        by an auxiliary qubit in :math:`|+\\rangle`. The state is
-        :math:`(|0\\rangle|1\\rangle + |1\\rangle|0\\rangle) / \\sqrt{2}`.
+        Apply the Pauli matrices :math:`X` and :math:`Z` to :math:`\\ket{0}`, selected
+        by an auxiliary qubit in :math:`\\ket{+}`. The state is
+        :math:`(\\ket{0}\\ket{1} + \\ket{1}\\ket{0}) / \\sqrt{2}`.
 
         .. testcode::
 
@@ -277,10 +281,30 @@ def lcu_select(
 
             True
 
+    Args:
+        unitaries (list[:class:`qibo.models.circuit.Circuit`]): circuits
+            on the same number of qubits that implement :math:`U_{i}`. They have to be
+            exact, including their global phase, since they are applied under control.
+        nauxiliary (int, optional): number :math:`a` of auxiliary qubits. It has to satisfy
+            :math:`2^{a} \\geq L`. If ``None``, it is :math:`\\max(1, \\lceil \\log_{2} L
+            \\rceil)`. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the calculation. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit of :math:`\\mathrm{SELECT}`, with the
+        auxiliary qubits at the first qubits.
+
     References:
         1. A. M. Childs and N. Wiebe, *Hamiltonian simulation using linear
         combinations of unitary operations*, `Quantum Information & Computation 12,
         901-924 (2012) <https://doi.org/10.26421/QIC12.11-12-1>`_.
+        2. A. Gilyén, Y. Su, G. H. Low, and N. Wiebe, *Quantum singular value
+        transformation and beyond: exponential improvements for quantum matrix
+        arithmetics*, `Proceedings of the 51st Annual ACM SIGACT Symposium on Theory
+        of Computing (STOC '19), 193-204 (2019)
+        <https://doi.org/10.1145/3313276.3316366>`_.
     """
     backend = _check_backend(backend)
 

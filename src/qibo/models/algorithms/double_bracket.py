@@ -59,9 +59,8 @@ class DoubleBracketIteration:
             True
 
     References:
-        1.  M. Gluza, *Double-bracket quantum algorithms for diagonalization*,
-        `Quantum (2024) <https://doi.org/10.22331/q-2024-04-08-1316>`_,
-        `arXiv:2206.11772 <https://arxiv.org/abs/2206.11772>`_.
+        1. M. Gluza, *Double-bracket quantum algorithms for diagonalization*,
+        `Quantum 8, 1316 (2024) <https://doi.org/10.22331/q-2024-04-09-1316>`_.
     """
 
     def __init__(
