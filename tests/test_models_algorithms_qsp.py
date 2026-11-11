@@ -4,6 +4,7 @@ import math
 
 import pytest
 from numpy.typing import ArrayLike
+from scipy.special import jv
 
 from qibo import Circuit, gates
 from qibo.backends import Backend
@@ -14,6 +15,7 @@ from qibo.models.algorithms.qsp import (
     qsp_circuit,
     qsp_phases,
 )
+from qibo.quantum_info import random_unitary
 
 
 @pytest.mark.parametrize(
@@ -200,6 +202,19 @@ def test_qsp_circuit_errors():
     with pytest.raises(ValueError):
         qsp_circuit(walk, [[0.0] * 3] * 3, method="fourier")
     with pytest.raises(ValueError):
+        qsp_circuit(walk, [[0.0] * 3], method="gqsp")
+    with pytest.raises(ValueError):
+        qsp_circuit(walk, [[0.0] * 2] * 3, method="gqsp")
+    for negative_degree in (-1, 3, 1.5, True):
+        with pytest.raises(ValueError):
+            qsp_circuit(
+                walk, [[0.0] * 3] * 3, method="gqsp", negative_degree=negative_degree
+            )
+    with pytest.raises(ValueError):
+        qsp_circuit(walk, [[0.0] * 3] * 3, negative_degree=1)
+    with pytest.raises(ValueError):
+        qsp_circuit(walk, [[0.0] * 4] * 3, method="fourier", negative_degree=1)
+    with pytest.raises(ValueError):
         qsp_circuit(walk, [0.1, 0.2], method="unknown")
 
 
@@ -227,6 +242,122 @@ def test_qsp_circuit_fourier(backend, degree):
 
     assert circuit.nqubits == 3
     assert backend.matrix_norm(unitary[0, :, 0, :] - target, order=2) < 1e-8
+
+
+@pytest.mark.parametrize("degree", [1, 2, 5, 12, 30, 80])
+def test_qsp_circuit_gqsp(backend, degree):
+    """Theorem 3: the ancilla block is the polynomial of the unitary."""
+    coefficients = _polynomial(degree, seed=degree, backend=backend)
+
+    unitary = Circuit(2)
+    unitary.add(gates.Unitary(random_unitary(4, seed=1, backend=backend), 0, 1))
+
+    phases = qsp_phases(coefficients, method="gqsp", backend=backend)
+    circuit = qsp_circuit(unitary, phases, method="gqsp")
+    blocks = backend.reshape(circuit.unitary(backend), (2, 4, 2, 4))
+
+    assert phases.shape == (degree + 1, 3)
+    assert circuit.nqubits == 3
+    # one query to the unitary and one rotation per degree, and a rotation at the start
+    assert circuit.gate_types[gates.Unitary] == 2 * degree + 1
+    backend.assert_allclose(
+        blocks[0, :, 0, :], _polynomial_of(unitary, coefficients, backend), atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("nterms", [6, 16, 32])
+def test_qsp_circuit_gqsp_jacobi_anger(backend, nterms):
+    """The leading coefficients of the series are too small to determine the angles."""
+    coefficients = backend.cast(
+        [0.9 * 1j**order * jv(order, 3.0) for order in range(-nterms, nterms + 1)],
+        dtype="complex128",
+    )
+
+    unitary = Circuit(1)
+    unitary.add(gates.Unitary(random_unitary(2, seed=2, backend=backend), 0))
+
+    phases = qsp_phases(coefficients, method="gqsp", backend=backend)
+    circuit = qsp_circuit(unitary, phases, method="gqsp")
+    blocks = backend.reshape(circuit.unitary(backend), (2, 2, 2, 2))
+
+    backend.assert_allclose(
+        blocks[0, :, 0, :], _polynomial_of(unitary, coefficients, backend), atol=1e-10
+    )
+
+
+@pytest.mark.parametrize(
+    "degree,negative_degree", [(1, 1), (3, 0), (3, 2), (6, 1), (6, 6)]
+)
+def test_qsp_circuit_gqsp_negative_degree(backend, degree, negative_degree):
+    """Theorem 6: the last queries of the inverse multiply the polynomial by a power."""
+    coefficients = _polynomial(degree, seed=degree + 7, backend=backend)
+
+    unitary = Circuit(2)
+    unitary.add(gates.Unitary(random_unitary(4, seed=6, backend=backend), 0, 1))
+
+    phases = qsp_phases(coefficients, method="gqsp", backend=backend)
+    circuit = qsp_circuit(
+        unitary, phases, method="gqsp", negative_degree=negative_degree
+    )
+    blocks = backend.reshape(circuit.unitary(backend), (2, 4, 2, 4))
+
+    target = _polynomial_of(unitary, coefficients, backend)
+    for _ in range(negative_degree):
+        target = backend.matmul(backend.dagger(unitary.unitary(backend)), target)
+
+    # the number of queries is the same, and the inverse ones are not conjugated by X
+    assert circuit.gate_types[gates.Unitary] == 2 * degree + 1
+    assert circuit.gate_types[gates.X] == 2 * (degree - negative_degree)
+    backend.assert_allclose(blocks[0, :, 0, :], target, atol=1e-10)
+
+
+def test_qsp_circuit_gqsp_negative_degree_jacobi_anger(backend):
+    """The series with powers from ``-N`` to ``N`` is the exponential of the cosine."""
+    nterms, time = 16, 3.0
+    coefficients = backend.cast(
+        [0.9 * 1j**order * jv(order, time) for order in range(-nterms, nterms + 1)],
+        dtype="complex128",
+    )
+
+    unitary = Circuit(2)
+    unitary.add(gates.Unitary(random_unitary(4, seed=8, backend=backend), 0, 1))
+    matrix = unitary.unitary(backend)
+
+    phases = qsp_phases(coefficients, method="gqsp", backend=backend)
+    circuit = qsp_circuit(unitary, phases, method="gqsp", negative_degree=nterms)
+    blocks = backend.reshape(circuit.unitary(backend), (2, 4, 2, 4))
+
+    # exp(i t cos(theta)) of the eigenphases theta of the unitary, up to the truncation
+    target = 0.9 * backend.expm(1j * time * (matrix + backend.dagger(matrix)) / 2)
+    backend.assert_allclose(blocks[0, :, 0, :], target, atol=1e-9)
+
+
+def test_qsp_circuit_gqsp_normalization(backend):
+    """A polynomial with a maximum modulus larger than one is divided by it."""
+    coefficients = 1.5 * _polynomial(6, seed=3, backend=backend) / 0.9
+
+    unitary = Circuit(1)
+    unitary.add(gates.Unitary(random_unitary(2, seed=3, backend=backend), 0))
+
+    phases = qsp_phases(coefficients, method="gqsp", backend=backend)
+    circuit = qsp_circuit(unitary, phases, method="gqsp")
+    blocks = backend.reshape(circuit.unitary(backend), (2, 2, 2, 2))
+
+    # the complementary polynomial of the series with modulus one is approximate
+    target = _polynomial_of(unitary, coefficients / 1.5, backend)
+    backend.assert_allclose(blocks[0, :, 0, :], target, atol=1e-2)
+
+
+def test_qsp_circuit_gqsp_unimodular(backend):
+    """The polynomial ``z`` has unit modulus for all ``z``, so that the block is the unitary."""
+    unitary = Circuit(1)
+    unitary.add(gates.Unitary(random_unitary(2, seed=4, backend=backend), 0))
+
+    phases = qsp_phases([0.0, 1.0], method="gqsp", backend=backend)
+    circuit = qsp_circuit(unitary, phases, method="gqsp")
+    blocks = backend.reshape(circuit.unitary(backend), (2, 2, 2, 2))
+
+    backend.assert_allclose(blocks[0, :, 0, :], unitary.unitary(backend), atol=1e-6)
 
 
 @pytest.mark.parametrize("epsilon", [1e-4, 1e-8])
@@ -307,6 +438,10 @@ def test_qsp_phases_errors(backend):
         qsp_phases([1.0], method="fourier", backend=backend)
     with pytest.raises(ValueError):
         qsp_phases([0.1, 0.5, 0.1, 0.2], method="fourier", backend=backend)
+    with pytest.raises(ValueError):
+        qsp_phases([0.1, 0.5], [0.1], method="gqsp", backend=backend)
+    with pytest.raises(ValueError):
+        qsp_phases([1.0], method="gqsp", backend=backend)
 
 
 @pytest.mark.parametrize("degree", [2, 4, 10, 30, 200])
@@ -429,6 +564,41 @@ def _hamiltonian(nqubits: int, seed: int, norm: float, backend: Backend) -> Arra
     hamiltonian = (hamiltonian + backend.dagger(hamiltonian)) / 2
 
     return norm * hamiltonian / backend.matrix_norm(hamiltonian, order=2)
+
+
+def _polynomial(degree: int, seed: int, backend: Backend) -> ArrayLike:
+    """Random coefficients of a polynomial with maximum modulus ``0.9`` on the unit circle."""
+    coefficients = backend.random_normal(
+        0.0, 1.0, size=degree + 1, seed=seed, dtype="float64"
+    ) + 1j * backend.random_normal(
+        0.0, 1.0, size=degree + 1, seed=seed + 100, dtype="float64"
+    )
+    xs = 2 * math.pi * backend.arange(2000) / 2000
+    modulus = backend.max(
+        backend.abs(
+            backend.matmul(
+                backend.exp(1j * backend.outer(xs, backend.arange(degree + 1))),
+                coefficients,
+            )
+        )
+    )
+
+    return 0.9 * coefficients / modulus
+
+
+def _polynomial_of(
+    unitary: Circuit, coefficients: ArrayLike, backend: Backend
+) -> ArrayLike:
+    """Polynomial of the unitary matrix of a circuit with the given coefficients."""
+    matrix = unitary.unitary(backend)
+
+    power = backend.identity(len(matrix), dtype="complex128")
+    target = backend.zeros((len(matrix), len(matrix)), dtype="complex128")
+    for coefficient in coefficients:
+        target = target + coefficient * power
+        power = backend.matmul(power, matrix)
+
+    return target
 
 
 def _plus_amplitude(phases: ArrayLike, theta: float, backend: Backend) -> complex:
