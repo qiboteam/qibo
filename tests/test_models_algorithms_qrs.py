@@ -1,4 +1,4 @@
-"""Tests for the Quantum Rejection Sampling in `qibo/models/algorithms/rejection_sampling.py`."""
+"""Tests for the Quantum Rejection Sampling in `qibo/models/algorithms/qrs.py`."""
 
 import math
 
@@ -32,9 +32,7 @@ def test_rejection_sampling(backend, nqubits):
     target = _distribution(backend, nqubits, seed=2)
     algorithm = _source_circuit(backend, source)
 
-    circuit = QRS(
-        algorithm, target, source, measure=False, backend=backend
-    )
+    circuit = QRS(algorithm, target, source, measure=False, backend=backend)
     assert circuit.nqubits == nqubits + 1
 
     # the amplified probability of the flag, and the target distribution if it is 1
@@ -55,9 +53,7 @@ def test_rejection_sampling_exact(backend, nqubits):
     algorithm = _source_circuit(backend, source)
 
     # without the source, which is calculated, and with an unnormalized target
-    circuit = QRS(
-        algorithm, 5 * target, exact=True, measure=False, backend=backend
-    )
+    circuit = QRS(algorithm, 5 * target, exact=True, measure=False, backend=backend)
     assert circuit.nqubits == nqubits + 1
 
     probability, distribution = _flagged(backend, circuit, nqubits)
@@ -71,9 +67,7 @@ def test_rejection_sampling_zeros(backend):
     target = backend.cast([0.1, 0.0, 0.0, 0.9], dtype=backend.float64)
     algorithm = _source_circuit(backend, source)
 
-    circuit = QRS(
-        algorithm, target, exact=True, measure=False, backend=backend
-    )
+    circuit = QRS(algorithm, target, exact=True, measure=False, backend=backend)
 
     probability, distribution = _flagged(backend, circuit, 2)
     backend.assert_allclose(probability, 1.0, atol=1e-8)
@@ -210,15 +204,11 @@ def test_rejection_sampling_errors(backend):
 
     # the target has to be zero where the source is zero
     with pytest.raises(ValueError):
-        QRS(
-            algorithm, uniform, source=[0.0, 1.0, 1.0, 1.0], backend=backend
-        )
+        QRS(algorithm, uniform, source=[0.0, 1.0, 1.0, 1.0], backend=backend)
 
     for probability in (0, -0.5, 1.5):
         with pytest.raises(ValueError):
-            QRS(
-                algorithm, uniform, probability=probability, backend=backend
-            )
+            QRS(algorithm, uniform, probability=probability, backend=backend)
 
     for qubits in ([], [0, 0], [0, 2], [-1], [0.5]):
         with pytest.raises(ValueError):
