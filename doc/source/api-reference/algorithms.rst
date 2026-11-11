@@ -86,6 +86,12 @@ what is known about :math:`a`, the following can be used:
 .. autofunction:: qibo.models.QSearch
 
 
+Quantum Rejection Sampling
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.QRS
+
+
 Amplitude estimation
 --------------------
 
