@@ -175,7 +175,9 @@ Factoring
 Shor's Algorithm
 ^^^^^^^^^^^^^^^^
 
-.. autofunction:: qibo.models.Shor
+.. autoclass:: qibo.models.Shor
+    :members:
+    :member-order: bysource
 
 
 Block encodings and signal processing
