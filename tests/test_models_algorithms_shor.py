@@ -1,5 +1,6 @@
 """Tests for Shor's algorithm in `qibo/models/algorithms/shor.py`."""
 
+import numpy as np
 import pytest
 
 from qibo import Circuit, gates
@@ -140,3 +141,11 @@ def test_shor_seed(backend):
     assert shor.seed == 3
     assert shor.execute(ntrials=40, backend=backend) == (3, 7)
     assert shor.execute(ntrials=40, backend=backend) == (3, 7)
+
+
+def test_shor_numpy_integer_seed(backend):
+    # an integer of numpy is a seed, and not a generator
+    backend.set_seed(35)
+    factors = Shor(35, seed=np.int64(3)).execute(ntrials=40, backend=backend)
+
+    assert factors == (5, 7)

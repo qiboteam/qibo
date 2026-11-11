@@ -155,7 +155,7 @@ class Shor:
         # continues its own
         generator = (
             backend.default_rng(self.seed)
-            if self.seed is None or isinstance(self.seed, int)
+            if self.seed is None or isinstance(self.seed, Integral)
             else self.seed
         )
 
