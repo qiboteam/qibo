@@ -12,6 +12,7 @@ from qibo.models.algorithms.bernstein_vazirani import BernsteinVazirani
 from qibo.models.algorithms.block_encoding import block_encoding_circuit
 from qibo.models.algorithms.counting import Counting
 from qibo.models.algorithms.deutsch_jozsa import DeutschJozsa
+from qibo.models.algorithms.dh import DH
 from qibo.models.algorithms.double_bracket import DoubleBracketIteration
 from qibo.models.algorithms.grover import Grover
 from qibo.models.algorithms.iqae import IQAE, IterativeAmplitudeEstimationResult
@@ -32,6 +33,7 @@ from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
 
 __all__ = [
+    "DH",
     "DKRS",
     "FPQAA",
     "IQAE",

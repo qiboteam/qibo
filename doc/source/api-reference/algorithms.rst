@@ -92,6 +92,12 @@ Quantum Rejection Sampling
 .. autofunction:: qibo.models.QRS
 
 
+Quantum Minimum Finding
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.DH
+
+
 Amplitude estimation
 --------------------
 
