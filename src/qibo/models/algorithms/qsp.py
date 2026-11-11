@@ -2,6 +2,7 @@ import cmath
 import math
 import sys
 from collections.abc import Callable
+from numbers import Integral
 
 from numpy.polynomial import Chebyshev, Polynomial
 from numpy.typing import ArrayLike
@@ -16,7 +17,10 @@ from qibo.models.circuit import Circuit
 
 
 def qsp_circuit(
-    oracle: Circuit, phases: ArrayLike, method: str | None = None
+    oracle: Circuit,
+    phases: ArrayLike,
+    method: str | None = None,
+    negative_degree: int = 0,
 ) -> Circuit:
     """Creates a quantum signal processing (QSP) circuit.
 
@@ -35,10 +39,14 @@ def qsp_circuit(
       unitary is :math:`\\tilde{g}(H t)`, where :math:`\\tilde{g}` is the Fourier
       series encoded in ``phases``.
     - ``method="gqsp"``: generalized QSP of Ref. [3]. ``oracle`` implements a unitary
-      :math:`U`, which is queried :math:`d` times under control of the auxiliary qubit
-      being in :math:`\\ket{0}`. The same block of the circuit unitary is
-      :math:`P(U) = \\sum_{k = 0}^{d} a_{k} U^{k}`, where :math:`a_{k}` are the
-      coefficients of the polynomial encoded in ``phases``.
+      :math:`U`, which is queried :math:`d` times under control of the auxiliary qubit.
+      The first :math:`d - m` queries, where :math:`m` is ``negative_degree``, are of
+      :math:`U` and controlled by the auxiliary qubit being in :math:`\\ket{0}`, and the last
+      :math:`m` are of :math:`U^{\\dagger}` and controlled by it being in :math:`\\ket{1}`.
+      The same block of the circuit unitary is
+      :math:`U^{-m} P(U) = \\sum_{k = 0}^{d} a_{k} U^{k - m}`, where :math:`a_{k}` are the
+      coefficients of the polynomial encoded in ``phases``. Hence, the powers of :math:`U`
+      are :math:`-m, \\dots, d - m`, with the same number of queries as the polynomial.
 
     Example:
         Apply :math:`(1 + W) / 2`, with :math:`W = X`, to :math:`\\ket{0}`. The
@@ -125,6 +133,31 @@ def qsp_circuit(
 
             True
 
+        With ``negative_degree=1``, the same phases give
+        :math:`U^{-1} P(U) = 0.3 \\, U^{-1} + 0.6`, which is :math:`0.3 \\, e^{0.4 i} + 0.6`.
+
+        .. testcode::
+
+            import cmath
+
+            from qibo import Circuit, gates, get_backend
+            from qibo.models import qsp_circuit, qsp_phases
+
+            backend = get_backend()
+
+            unitary = Circuit(1)
+            unitary.add(gates.RZ(0, 0.8))
+
+            phases = qsp_phases([0.3, 0.6], method="gqsp")
+            circuit = qsp_circuit(unitary, phases, method="gqsp", negative_degree=1)
+
+            target = 0.3 * cmath.exp(0.4j) + 0.6
+            print(backend.allclose(circuit().state()[0], target, atol=1e-8))
+
+        .. testoutput::
+
+            True
+
     Args:
         oracle (:class:`qibo.models.circuit.Circuit`): circuit on :math:`n` qubits
             that implements :math:`W`, :math:`e^{-i t H}` or :math:`U`, depending on
@@ -135,6 +168,10 @@ def qsp_circuit(
         method (str, optional): ``None`` for QSP of Ref. [1], ``"fourier"`` for
             Fourier-based QSP of Ref. [2], or ``"gqsp"`` for generalized QSP of
             Ref. [3]. Defaults to ``None``.
+        negative_degree (int, optional): number :math:`m` of the queries of
+            :math:`U^{\\dagger}` if ``method="gqsp"``, which is between :math:`0` and the
+            number :math:`d` of queries. It has to be :math:`0` for the other methods.
+            Defaults to :math:`0`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
@@ -155,11 +192,16 @@ def qsp_circuit(
             f"Unknown ``method`` {method}. Use None, 'fourier' or 'gqsp'.",
         )
 
+    if negative_degree != 0 and method != "gqsp":
+        raise_error(
+            ValueError, "``negative_degree`` is only used if ``method='gqsp'``."
+        )
+
     if method == "fourier":
         return _fourier_qsp_circuit(oracle, phases)
 
     if method == "gqsp":
-        return _gqsp_circuit(oracle, phases)
+        return _gqsp_circuit(oracle, phases, negative_degree)
 
     return _qsp_circuit(oracle, phases)
 
@@ -195,7 +237,10 @@ def qsp_phases(
       :math:`(\\theta_{j}, \\phi_{j}, \\lambda_{j})` of :math:`d + 1` single-qubit gates, such
       that the block of the circuit unitary in which the auxiliary qubit starts and ends in
       :math:`\\ket{0}` is :math:`P(U)`, for any unitary :math:`U`. The polynomial is divided by
-      :math:`\\max_{|z| = 1} |P(z)|` if it is larger than one.
+      :math:`\\max_{|z| = 1} |P(z)|` if it is larger than one. The same angles encode
+      :math:`U^{-m} P(U)`, for any :math:`m \\leq d`, with the ``negative_degree`` of
+      :func:`qibo.models.qsp_circuit`, so that the coefficient :math:`a_{k}` is that of
+      :math:`U^{k - m}`.
 
     The complementary series is computed numerically, which requires the target to be strictly
     bounded by one. Hence, the accuracy of the circuit is limited. If ``method="fourier"``, the
@@ -674,7 +719,9 @@ def _fourier_qsp_phases(coefficients: ArrayLike, backend: Backend = None) -> Arr
     return angles
 
 
-def _gqsp_circuit(unitary: Circuit, phases: ArrayLike) -> Circuit:
+def _gqsp_circuit(
+    unitary: Circuit, phases: ArrayLike, negative_degree: int = 0
+) -> Circuit:
     """Creates the generalized QSP circuit of Ref. [1].
 
     Args:
@@ -682,6 +729,8 @@ def _gqsp_circuit(unitary: Circuit, phases: ArrayLike) -> Circuit:
             unitary :math:`U` on :math:`n` qubits.
         phases (ArrayLike): array of shape :math:`(d + 1, 3)`, with :math:`d \\geq 1`, of
             angles :math:`(\\theta_{j}, \\phi_{j}, \\lambda_{j})`.
+        negative_degree (int, optional): number of the last queries that are of
+            :math:`U^{\\dagger}`, between :math:`0` and :math:`d`. Defaults to :math:`0`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
@@ -700,15 +749,32 @@ def _gqsp_circuit(unitary: Circuit, phases: ArrayLike) -> Circuit:
             + f"but has {len(phases)} rows.",
         )
 
+    nqueries = len(phases) - 1
+    if (
+        isinstance(negative_degree, bool)
+        or not isinstance(negative_degree, Integral)
+        or not 0 <= negative_degree <= nqueries
+    ):
+        raise_error(
+            ValueError,
+            f"``negative_degree`` must be an integer between 0 and {nqueries}, "
+            + f"but it is {negative_degree}.",
+        )
+
     qubits = list(range(1, unitary.nqubits + 1))
+    inverse = unitary.invert()
 
     circuit = Circuit(unitary.nqubits + 1)
     for index, (theta, phi, lam) in enumerate(phases):
-        # The signal operator applies the unitary if the auxiliary qubit is in |0>.
-        if index > 0:
+        if 0 < index <= nqueries - negative_degree:
+            # The signal operator applies the unitary if the auxiliary qubit is in |0>.
             circuit.add(gates.X(0))
             circuit.add(unitary.on_qubits(*qubits).controlled_by(0))
             circuit.add(gates.X(0))
+        elif index > 0:
+            # The other signal operator applies the inverse if the auxiliary qubit is in |1>,
+            # which multiplies the polynomial by a negative power of the unitary.
+            circuit.add(inverse.on_qubits(*qubits).controlled_by(0))
 
         # General single-qubit rotation R(theta, phi, lambda) of Ref. [1].
         rotation = [
