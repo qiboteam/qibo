@@ -285,22 +285,25 @@ qreg q[3];
 cx q[0],q[2];
 x q[1];
 swap q[0],q[1];
+iswap q[1],q[2];
 cx q[1],q[0];
 ccx q[1],q[2],q[0];"""
     circuit = Circuit.from_qasm(target)
     assert circuit.nqubits == 3
-    assert circuit.depth == 4
-    assert circuit.ngates == 5
+    assert circuit.depth == 5
+    assert circuit.ngates == 6
     assert isinstance(circuit.queue[0], gates.CNOT)
     assert circuit.queue[0].qubits == (0, 2)
     assert isinstance(circuit.queue[1], gates.X)
     assert circuit.queue[1].qubits == (1,)
     assert isinstance(circuit.queue[2], gates.SWAP)
     assert circuit.queue[2].qubits == (0, 1)
-    assert isinstance(circuit.queue[3], gates.CNOT)
-    assert circuit.queue[3].qubits == (1, 0)
-    assert isinstance(circuit.queue[4], gates.TOFFOLI)
-    assert circuit.queue[4].qubits == (1, 2, 0)
+    assert isinstance(circuit.queue[3], gates.iSWAP)
+    assert circuit.queue[3].qubits == (1, 2)
+    assert isinstance(circuit.queue[4], gates.CNOT)
+    assert circuit.queue[4].qubits == (1, 0)
+    assert isinstance(circuit.queue[5], gates.TOFFOLI)
+    assert circuit.queue[5].qubits == (1, 2, 0)
 
 
 def test_from_qasm_singlequbit_gates():

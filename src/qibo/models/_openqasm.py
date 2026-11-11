@@ -126,6 +126,8 @@ def _qibo_gate_name(gate):
     if gate in ("u", "U"):
         # `u` for QASM 2.0, `U` for QASM 3.0
         return "U3"
+    if gate.lower() == "iswap":
+        return "iSWAP"
 
     return gate.upper()
 
