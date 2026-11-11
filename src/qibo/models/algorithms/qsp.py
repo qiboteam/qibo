@@ -1,3 +1,4 @@
+import cmath
 import math
 import sys
 from collections.abc import Callable
@@ -24,7 +25,7 @@ def qsp_circuit(
 
     - ``method=None``: QSP of Ref. [1]. ``oracle`` implements a unitary
       :math:`W`, which is queried :math:`N` times. The block of the circuit unitary
-      with the auxiliary qubit starting and ending in :math:`|0\\rangle` applies
+      with the auxiliary qubit starting and ending in :math:`\\ket{0}` applies
       :math:`A(\\theta) + i C(\\theta)` to each eigenphase :math:`\\theta` of
       :math:`W`, where :math:`A` and :math:`C` are the trigonometric polynomials
       encoded in ``phases``.
@@ -33,11 +34,16 @@ def qsp_circuit(
       and is queried :math:`q` times under control. The same block of the circuit
       unitary is :math:`\\tilde{g}(H t)`, where :math:`\\tilde{g}` is the Fourier
       series encoded in ``phases``.
+    - ``method="gqsp"``: generalized QSP of Ref. [3]. ``oracle`` implements a unitary
+      :math:`U`, which is queried :math:`d` times under control of the auxiliary qubit
+      being in :math:`\\ket{0}`. The same block of the circuit unitary is
+      :math:`P(U) = \\sum_{k = 0}^{d} a_{k} U^{k}`, where :math:`a_{k}` are the
+      coefficients of the polynomial encoded in ``phases``.
 
     Example:
-        Apply :math:`(1 + W) / 2`, with :math:`W = X`, to :math:`|0\\rangle`. The
-        amplitudes with the auxiliary qubit in :math:`|0\\rangle` are those of
-        :math:`|+\\rangle / \\sqrt{2}`.
+        Apply :math:`(1 + W) / 2`, with :math:`W = X`, to :math:`\\ket{0}`. The
+        amplitudes with the auxiliary qubit in :math:`\\ket{0}` are those of
+        :math:`\\ket{+} / \\sqrt{2}`.
 
         .. testcode::
 
@@ -64,8 +70,8 @@ def qsp_circuit(
             True
 
         Invert a rotation with the Fourier series :math:`\\tilde{g}(x) = e^{i x}`.
-        The amplitudes with the auxiliary qubit in :math:`|0\\rangle` are those of the
-        inverse rotation applied to :math:`|0\\rangle`.
+        The amplitudes with the auxiliary qubit in :math:`\\ket{0}` are those of the
+        inverse rotation applied to :math:`\\ket{0}`.
 
         .. testcode::
 
@@ -91,15 +97,44 @@ def qsp_circuit(
 
             True
 
+        Apply :math:`P(U) = 0.3 + 0.6 \\, U` to :math:`\\ket{0}`, where :math:`U` is a
+        rotation about the :math:`z` axis, whose eigenvalue for :math:`\\ket{0}` is
+        :math:`e^{-0.4 i}`. The amplitude with the auxiliary qubit in :math:`\\ket{0}` is
+        :math:`P(e^{-0.4 i})`.
+
+        .. testcode::
+
+            import cmath
+
+            from qibo import Circuit, gates, get_backend
+            from qibo.models import qsp_circuit, qsp_phases
+
+            backend = get_backend()
+
+            unitary = Circuit(1)
+            unitary.add(gates.RZ(0, 0.8))
+
+            # coefficients of 0.3 + 0.6 z
+            phases = qsp_phases([0.3, 0.6], method="gqsp")
+            circuit = qsp_circuit(unitary, phases, method="gqsp")
+
+            target = 0.3 + 0.6 * cmath.exp(-0.4j)
+            print(backend.allclose(circuit().state()[0], target, atol=1e-8))
+
+        .. testoutput::
+
+            True
+
     Args:
         oracle (:class:`qibo.models.circuit.Circuit`): circuit on :math:`n` qubits
-            that implements :math:`W` or :math:`e^{-i t H}`, depending on
+            that implements :math:`W`, :math:`e^{-i t H}` or :math:`U`, depending on
             ``method``. It has to be exact, including its global phase, since it
             is applied under control.
         phases (ArrayLike): output of :func:`qibo.models.qsp_phases` for the
             same ``method``.
-        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
-            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
+        method (str, optional): ``None`` for QSP of Ref. [1], ``"fourier"`` for
+            Fourier-based QSP of Ref. [2], or ``"gqsp"`` for generalized QSP of
+            Ref. [3]. Defaults to ``None``.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
@@ -111,12 +146,20 @@ def qsp_circuit(
         <https://doi.org/10.1103/PhysRevLett.118.010501>`_.
         2. T. L. Silva, L. Borges, and L. Aolita, *Fourier-based quantum signal
         processing*, `arXiv:2206.02826 <https://arxiv.org/abs/2206.02826>`_.
+        3. D. Motlagh and N. Wiebe, *Generalized Quantum Signal Processing*,
+        `PRX Quantum 5, 020368 (2024) <https://doi.org/10.1103/PRXQuantum.5.020368>`_.
     """
-    if method not in (None, "fourier"):
-        raise_error(ValueError, f"Unknown ``method`` {method}. Use None or 'fourier'.")
+    if method not in (None, "fourier", "gqsp"):
+        raise_error(
+            ValueError,
+            f"Unknown ``method`` {method}. Use None, 'fourier' or 'gqsp'.",
+        )
 
     if method == "fourier":
         return _fourier_qsp_circuit(oracle, phases)
+
+    if method == "gqsp":
+        return _gqsp_circuit(oracle, phases)
 
     return _qsp_circuit(oracle, phases)
 
@@ -134,10 +177,10 @@ def qsp_phases(
       :math:`A(\\theta) = \\sum_{k = 0}^{N/2} a_{k} \\cos(k \\theta)` and
       :math:`C(\\theta) = \\sum_{k = 1}^{N/2} c_{k} \\sin(k \\theta)`, with even
       :math:`N`, it finds :math:`N` phases such that
-      :math:`\\langle + | V(\\theta) | + \\rangle = A(\\theta) + i C(\\theta)`. Here,
+      :math:`\\bra{+} V(\\theta) \\ket{+} = A(\\theta) + i C(\\theta)`. Here,
       :math:`V(\\theta)` is the product of the :math:`N` single-qubit rotations of
       angle :math:`\\theta` about the axes of the :math:`xy`-plane given by the
-      phases, and :math:`|+\\rangle` is the :math:`+1` eigenstate of the Pauli-
+      phases, and :math:`\\ket{+}` is the :math:`+1` eigenstate of the Pauli-
       :math:`X` operator. Since :math:`V(0)` is the identity, the target has to
       satisfy :math:`A(0) = 1`. It is rescaled if :math:`|A + i C| > 1`.
     - ``method="fourier"``: Fourier-based QSP of Ref. [2]. Given the coefficients
@@ -146,24 +189,35 @@ def qsp_phases(
       :math:`q`, it finds the angles of :math:`q + 1` single-qubit gates whose
       product has :math:`\\tilde{g}(x)` as its upper-left matrix element. The series
       is divided by :math:`\\max_{x} |\\tilde{g}(x)|` if it is larger than one.
+    - ``method="gqsp"``: generalized QSP of Ref. [4]. Given the coefficients
+      :math:`(a_{0}, \\dots, a_{d})` of the polynomial
+      :math:`P(z) = \\sum_{k = 0}^{d} a_{k} z^{k}`, it finds the angles
+      :math:`(\\theta_{j}, \\phi_{j}, \\lambda_{j})` of :math:`d + 1` single-qubit gates, such
+      that the block of the circuit unitary in which the auxiliary qubit starts and ends in
+      :math:`\\ket{0}` is :math:`P(U)`, for any unitary :math:`U`. The polynomial is divided by
+      :math:`\\max_{|z| = 1} |P(z)|` if it is larger than one.
 
     The complementary series is computed numerically, which requires the target to be strictly
     bounded by one. Hence, the accuracy of the circuit is limited. If ``method="fourier"``, the
     block of the circuit matches :math:`\\tilde{g}` to machine precision if
     :math:`\\max_{x} |\\tilde{g}(x)| \\leq 0.99`, but the error can reach :math:`10^{-2}` for values
     closer to one, which includes the series that are divided by :math:`\\max_{x} |\\tilde{g}(x)|`.
-    If ``method=None``, the error can be of the order of :math:`10^{-6}`, because
+    The same holds for ``method="gqsp"``, with :math:`\\max_{|z| = 1} |P(z)|`, and the
+    complementary polynomial has the same degree as :math:`P`. If ``method=None``, the
+    error can be of the order of :math:`10^{-6}`, because
     :math:`|A + i C| = 1` at :math:`\\theta = 0`.
 
     Args:
         coefficients (ArrayLike): if ``method=None``, cosine coefficients
             :math:`(a_{0}, \\dots, a_{N/2})`. If ``method="fourier"``, Fourier
-            coefficients :math:`(c_{-q/2}, \\dots, c_{q/2})`.
+            coefficients :math:`(c_{-q/2}, \\dots, c_{q/2})`. If ``method="gqsp"``,
+            coefficients :math:`(a_{0}, \\dots, a_{d})`, with :math:`d \\geq 1`.
         sine_coefficients (ArrayLike, optional): sine coefficients
             :math:`(c_{1}, \\dots, c_{N/2})`. Required if ``method=None`` and not
             used otherwise. Defaults to ``None``.
-        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
-            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
+        method (str, optional): ``None`` for QSP of Ref. [1], ``"fourier"`` for
+            Fourier-based QSP of Ref. [2], or ``"gqsp"`` for generalized QSP of
+            Ref. [4]. Defaults to ``None``.
         extraction (str, optional): how the phases are extracted if
             ``method=None``. ``"phase_sums"`` follows Ref. [3] and loses precision
             for :math:`N \\gtrsim 30`, while ``"layer_stripping"`` removes one
@@ -175,8 +229,11 @@ def qsp_phases(
 
     Returns:
         ArrayLike: phases for :func:`qibo.models.qsp_circuit` with the same
-        ``method``. An array of length :math:`N` if ``method=None``, or an array
-        of shape :math:`(q + 1, 4)` if ``method="fourier"``.
+        ``method``. An array of length :math:`N` if ``method=None``, an array
+        of shape :math:`(q + 1, 4)` if ``method="fourier"``, or an array of shape
+        :math:`(d + 1, 3)`, whose :math:`j`-th row has
+        :math:`(\\theta_{j}, \\phi_{j}, \\lambda_{j})`, if ``method="gqsp"``, where
+        :math:`\\lambda_{j} = 0` for :math:`j > 0`.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
@@ -187,17 +244,26 @@ def qsp_phases(
         3. G. H. Low, T. J. Yoder, and I. L. Chuang, *The methodology of resonant
         equiangular composite quantum gates*, `Phys. Rev. X 6, 041067 (2016)
         <https://doi.org/10.1103/PhysRevX.6.041067>`_.
+        4. D. Motlagh and N. Wiebe, *Generalized Quantum Signal Processing*,
+        `PRX Quantum 5, 020368 (2024) <https://doi.org/10.1103/PRXQuantum.5.020368>`_.
     """
     backend = _check_backend(backend)
 
-    if method not in (None, "fourier"):
-        raise_error(ValueError, f"Unknown ``method`` {method}. Use None or 'fourier'.")
+    if method not in (None, "fourier", "gqsp"):
+        raise_error(
+            ValueError,
+            f"Unknown ``method`` {method}. Use None, 'fourier' or 'gqsp'.",
+        )
 
-    if method == "fourier":
+    if method in ("fourier", "gqsp"):
         if sine_coefficients is not None:
             raise_error(
-                ValueError, "``sine_coefficients`` is not used if ``method='fourier'``."
+                ValueError,
+                f"``sine_coefficients`` is not used if ``method='{method}'``.",
             )
+
+        if method == "gqsp":
+            return _gqsp_phases(coefficients, backend=backend)
 
         return _fourier_qsp_phases(coefficients, backend=backend)
 
@@ -604,6 +670,156 @@ def _fourier_qsp_phases(coefficients: ArrayLike, backend: Backend = None) -> Arr
         ],
         dtype="float64",
     )
+
+    return angles
+
+
+def _gqsp_circuit(unitary: Circuit, phases: ArrayLike) -> Circuit:
+    """Creates the generalized QSP circuit of Ref. [1].
+
+    Args:
+        unitary (:class:`qibo.models.circuit.Circuit`): circuit that implements the
+            unitary :math:`U` on :math:`n` qubits.
+        phases (ArrayLike): array of shape :math:`(d + 1, 3)`, with :math:`d \\geq 1`, of
+            angles :math:`(\\theta_{j}, \\phi_{j}, \\lambda_{j})`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
+        with the auxiliary qubit at qubit :math:`0`.
+
+    References:
+        1. D. Motlagh and N. Wiebe, *Generalized Quantum Signal Processing*,
+        `PRX Quantum 5, 020368 (2024) <https://doi.org/10.1103/PRXQuantum.5.020368>`_.
+    """
+    phases = [[float(angle) for angle in row] for row in phases]
+
+    if any(len(row) != 3 for row in phases) or len(phases) < 2:
+        raise_error(
+            ValueError,
+            "``phases`` must have shape (d + 1, 3) with d >= 1, "
+            + f"but has {len(phases)} rows.",
+        )
+
+    qubits = list(range(1, unitary.nqubits + 1))
+
+    circuit = Circuit(unitary.nqubits + 1)
+    for index, (theta, phi, lam) in enumerate(phases):
+        # The signal operator applies the unitary if the auxiliary qubit is in |0>.
+        if index > 0:
+            circuit.add(gates.X(0))
+            circuit.add(unitary.on_qubits(*qubits).controlled_by(0))
+            circuit.add(gates.X(0))
+
+        # General single-qubit rotation R(theta, phi, lambda) of Ref. [1].
+        rotation = [
+            [
+                cmath.exp(1j * (lam + phi)) * math.cos(theta),
+                cmath.exp(1j * phi) * math.sin(theta),
+            ],
+            [cmath.exp(1j * lam) * math.sin(theta), -math.cos(theta)],
+        ]
+        circuit.add(gates.Unitary(rotation, 0))
+
+    return circuit
+
+
+def _gqsp_phases(coefficients: ArrayLike, backend: Backend = None) -> ArrayLike:
+    """Computes the angles of the generalized QSP circuit of Ref. [1].
+
+    The complementary polynomial :math:`Q`, with :math:`|P|^{2} + |Q|^{2} = 1` on the
+    unit circle, is the spectral factor of :math:`1 - |P|^{2}`, which is computed with
+    the cepstrum. Then, the gates are removed one at a time from the pair
+    :math:`(P, Q)`, by choosing the angles that cancel the highest degree of the second
+    polynomial.
+
+    Args:
+        coefficients (ArrayLike): coefficients :math:`(a_{0}, \\dots, a_{d})` of
+            :math:`P`, with :math:`d \\geq 1`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the calculation. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        ArrayLike: array of shape :math:`(d + 1, 3)` whose :math:`j`-th row contains
+        the angles :math:`(\\theta_{j}, \\phi_{j}, \\lambda_{j})`.
+
+    References:
+        1. D. Motlagh and N. Wiebe, *Generalized Quantum Signal Processing*,
+        `PRX Quantum 5, 020368 (2024) <https://doi.org/10.1103/PRXQuantum.5.020368>`_.
+    """
+    backend = _check_backend(backend)
+
+    coefficients = backend.cast(coefficients, dtype="complex128")
+
+    degree = len(coefficients) - 1  # d in the paper
+    if degree < 1:
+        raise_error(
+            ValueError,
+            "``coefficients`` must have length d + 1 with d >= 1, "
+            + f"but has length {len(coefficients)}.",
+        )
+
+    # The polynomial is evaluated on a dense grid of the unit circle, z = e^{ix}, and
+    # normalized so that its modulus is bounded by one.
+    nsamples = 2 ** max(12, int(backend.ceil(backend.log2(128 * (degree + 1)))))
+    spectrum = backend.zeros(nsamples, dtype="complex128")
+    spectrum[: degree + 1] = coefficients
+    modulus = float(backend.max(backend.abs(backend.ifft(spectrum) * nsamples)))
+    coefficients = coefficients / max(modulus, 1.0)
+
+    # Complementary polynomial, with a margin, which is increased until the cepstrum
+    # decays fast, that keeps 1 - |P|^2 away from zero when |P| touches one.
+    for margin in 10.0 ** backend.arange(-14, -1):
+        spectrum[: degree + 1] = coefficients * (1 - margin)
+        residual = 1 - backend.abs(backend.ifft(spectrum) * nsamples) ** 2
+        complement, converged = _spectral_factor(residual, degree, backend)
+        if converged:
+            break
+    else:  # pragma: no cover
+        raise_error(RuntimeError, "Complementary polynomial not found.")
+
+    # The rows of the matrix are the coefficients of P and Q.
+    matrix = backend.cast([coefficients * (1 - margin), complement], dtype="complex128")
+
+    angles = backend.zeros((degree + 1, 3), dtype="float64")
+    for step in range(degree, 0, -1):
+        # The angles cancel the term of degree ``step`` of the second polynomial after
+        # applying the inverse of the rotation, and the first polynomial is then divided
+        # by z, which is the inverse of the signal operator. The same angles cancel the
+        # term of degree 0 of the first polynomial before the division. They are obtained
+        # from the end of the polynomials with the largest coefficients, since the
+        # coefficients of the other end can be too small to determine them, which makes
+        # the extraction unstable, *e.g.* for Jacobi-Anger series.
+        top, bottom = matrix[0, step], matrix[1, step]
+        first, second = matrix[0, 0], matrix[1, 0]
+        if backend.abs(first) ** 2 + backend.abs(second) ** 2 > (
+            backend.abs(top) ** 2 + backend.abs(bottom) ** 2
+        ):
+            theta = backend.arctan2(backend.abs(first), backend.abs(second))
+            phi = backend.angle(first) - backend.angle(second) + math.pi
+        else:
+            theta = backend.arctan2(backend.abs(bottom), backend.abs(top))
+            phi = backend.angle(top) - backend.angle(bottom)
+        angles[step, 0], angles[step, 1] = theta, phi
+
+        inverse = backend.cast(
+            [
+                [backend.exp(-1j * phi) * backend.cos(theta), backend.sin(theta)],
+                [backend.exp(-1j * phi) * backend.sin(theta), -backend.cos(theta)],
+            ],
+            dtype="complex128",
+        )
+        matrix = backend.matmul(inverse, matrix[:, : step + 1])
+        matrix = backend.cast(
+            [matrix[0, 1 : step + 1], matrix[1, :step]], dtype="complex128"
+        )
+
+    # The constants that remain satisfy |a|^2 + |b|^2 = 1, with
+    # a = e^{i (lambda + phi)} cos(theta) and b = e^{i lambda} sin(theta).
+    top, bottom = matrix[0, 0], matrix[1, 0]
+    angles[0, 0] = backend.arctan2(backend.abs(bottom), backend.abs(top))
+    angles[0, 2] = backend.angle(bottom)
+    angles[0, 1] = backend.angle(top) - angles[0, 2]
 
     return angles
 
