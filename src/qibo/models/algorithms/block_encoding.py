@@ -18,9 +18,10 @@ def block_encoding_circuit(
     Let :math:`A` be ``matrix``, a square matrix that is padded with zeros up to
     dimension :math:`2^{n}` if needed, with :math:`n \\ge 1`. The circuit acts on
     :math:`a` auxiliary qubits, followed by :math:`n` system qubits, and the block of
-    its unitary in which the auxiliary qubits start and end in :math:`|0\\rangle` is
-    :math:`A / \\alpha`, where :math:`\\alpha` is a normalization. Both methods
-    have a cost that grows exponentially with :math:`n`.
+    its unitary in which the auxiliary qubits start and end in :math:`\\ket{0}` is
+    :math:`A / \\alpha`, where :math:`\\alpha` is a normalization. This is a block encoding as in
+    Definition 24 of Ref. [1], with zero error, and the zero padding is the embedding of
+    that reference. Both methods have a cost that grows exponentially with :math:`n`.
 
     - ``method="dense"``: :math:`a = 1`. With :math:`B = A / \\alpha`, whose singular
       values are at most one, the circuit is a single gate for the unitary dilation
@@ -31,36 +32,19 @@ def block_encoding_circuit(
 
       where :math:`\\mathbb{1}` is the identity and :math:`B^{\\dagger}` the conjugate
       transpose of :math:`B`. The matrix square roots are computed from the singular
-      value decomposition of :math:`B`.
+      value decomposition of :math:`B`. In the basis of the singular vectors, :math:`U` is made of
+      the :math:`2 \\times 2` blocks of Eq. (4) of Ref. [1].
     - ``method="lcu"``: the matrix is decomposed as a sum of Pauli strings,
       :math:`A = \\sum_{i} c_{i} P_{i}`, with complex coefficients :math:`c_{i}`, and
       the circuit is the one of :func:`qibo.models.lcu_circuit`. The normalization
       is :math:`\\alpha = \\sum_{i} |c_{i}|`, and :math:`a = \\max(1, \\lceil \\log_{2} L
-      \\rceil)`, with :math:`L` the number of non-zero coefficients.
-
-    Args:
-        matrix (ArrayLike): square matrix :math:`A`.
-        method (str, optional): ``"dense"`` for the unitary dilation or ``"lcu"`` for the
-            linear combination of unitaries of the Pauli strings. Defaults to ``"dense"``.
-        alpha (float, optional): normalization :math:`\\alpha` if ``method="dense"``,
-            which has to be at least the spectral norm of ``matrix``. If ``None``, it is
-            the spectral norm if this is larger than one, and one otherwise. It is not
-            used by ``method="lcu"``, for which it has to be ``None``. Defaults to
-            ``None``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
-            used in the calculation. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        tuple: circuit on :math:`a + n` qubits, with the auxiliary qubits at the first
-        qubits, the normalization :math:`\\alpha`, and the number :math:`a` of auxiliary
-        qubits. The circuit and the number of auxiliary qubits are the arguments of
-        :func:`qibo.models.qsvt_circuit`.
+      \\rceil)`, with :math:`L` the number of non-zero coefficients. Pauli strings are trivial
+      block encodings of themselves, so this is Lemma 29 of Ref. [1].
 
     Example:
         Encode :math:`X / 2`, with :math:`X` the Pauli-:math:`X` matrix. The
-        amplitudes with the auxiliary qubits in :math:`|0\\rangle` are those of
-        :math:`|1\\rangle / 2` for the dense method, and those of :math:`|1\\rangle`
+        amplitudes with the auxiliary qubits in :math:`\\ket{0}` are those of
+        :math:`\\ket{1} / 2` for the dense method, and those of :math:`\\ket{1}`
         for the LCU method, whose normalization is :math:`1 / 2`.
 
         .. testcode::
@@ -84,6 +68,25 @@ def block_encoding_circuit(
 
             True 1.0 1
             True 0.5 1
+
+    Args:
+        matrix (ArrayLike): square matrix :math:`A`.
+        method (str, optional): ``"dense"`` for the unitary dilation or ``"lcu"`` for the
+            linear combination of unitaries of the Pauli strings. Defaults to ``"dense"``.
+        alpha (float, optional): normalization :math:`\\alpha` if ``method="dense"``,
+            which has to be at least the spectral norm of ``matrix``. If ``None``, it is
+            the spectral norm if this is larger than one, and one otherwise. It is not
+            used by ``method="lcu"``, for which it has to be ``None``. Defaults to
+            ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the calculation. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        tuple: circuit on :math:`a + n` qubits, with the auxiliary qubits at the first
+        qubits, the normalization :math:`\\alpha`, and the number :math:`a` of auxiliary
+        qubits. The circuit and the number of auxiliary qubits are the arguments of
+        :func:`qibo.models.qsvt_circuit`.
 
     References:
         1. A. Gilyén, Y. Su, G. H. Low, and N. Wiebe, *Quantum singular value
