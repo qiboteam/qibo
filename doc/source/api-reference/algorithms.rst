@@ -156,6 +156,8 @@ Quantum Adders
 
 .. autofunction:: qibo.models.Gidney
 
+.. autofunction:: qibo.models.RV
+
 .. autofunction:: qibo.models.TTK
 
 .. autofunction:: qibo.models.VBE
