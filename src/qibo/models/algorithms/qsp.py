@@ -34,20 +34,6 @@ def qsp_circuit(
       unitary is :math:`\\tilde{g}(H t)`, where :math:`\\tilde{g}` is the Fourier
       series encoded in ``phases``.
 
-    Args:
-        oracle (:class:`qibo.models.circuit.Circuit`): circuit on :math:`n` qubits
-            that implements :math:`W` or :math:`e^{-i t H}`, depending on
-            ``method``. It has to be exact, including its global phase, since it
-            is applied under control.
-        phases (ArrayLike): output of :func:`qibo.models.qsp_phases` for the
-            same ``method``.
-        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
-            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
-        with the auxiliary qubit at qubit :math:`0`.
-
     Example:
         Apply :math:`(1 + W) / 2`, with :math:`W = X`, to :math:`|0\\rangle`. The
         amplitudes with the auxiliary qubit in :math:`|0\\rangle` are those of
@@ -104,6 +90,20 @@ def qsp_circuit(
         .. testoutput::
 
             True
+
+    Args:
+        oracle (:class:`qibo.models.circuit.Circuit`): circuit on :math:`n` qubits
+            that implements :math:`W` or :math:`e^{-i t H}`, depending on
+            ``method``. It has to be exact, including its global phase, since it
+            is applied under control.
+        phases (ArrayLike): output of :func:`qibo.models.qsp_phases` for the
+            same ``method``.
+        method (str, optional): ``None`` for QSP of Ref. [1] or ``"fourier"`` for
+            Fourier-based QSP of Ref. [2]. Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit on :math:`n + 1` qubits,
+        with the auxiliary qubit at qubit :math:`0`.
 
     References:
         1. G. H. Low and I. L. Chuang, *Optimal Hamiltonian Simulation by Quantum
