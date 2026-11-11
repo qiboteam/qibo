@@ -1,6 +1,7 @@
 import math
 
 from qibo import gates
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.models.algorithms.qft import QFT
 from qibo.models.circuit import Circuit
@@ -29,6 +30,8 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
       auxiliary qubits;
     * ``"Gidney"``: :func:`qibo.models.Gidney`, ripple-carry adder that uses measurements
       to uncompute the carries, with :math:`n - 1` auxiliary qubits;
+    * ``"RV"``: :func:`qibo.models.RV`, ripple-carry adder without auxiliary qubits and with
+      a depth that is polylogarithmic in :math:`n`, but a larger number of gates;
     * ``"TTK"``: :func:`qibo.models.TTK`, ripple-carry adder of
       :class:`qibo.gates.TOFFOLI` and :class:`qibo.gates.CNOT` gates, without auxiliary qubits;
     * ``"VBE"``: :func:`qibo.models.VBE`, ripple-carry adder with :math:`n` auxiliary
@@ -64,7 +67,7 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
     Args:
         nbits (int): number of bits :math:`n` of each of the integers to be added.
         method (str, optional): adder to be used. Either ``"Cuccaro"``, ``"DKRS"``,
-            ``"Draper"``, ``"Gidney"``, ``"TTK"`` or ``"VBE"``. Defaults to ``"Cuccaro"``.
+            ``"Draper"``, ``"Gidney"``, ``"RV"``, ``"TTK"`` or ``"VBE"``. Defaults to ``"Cuccaro"``.
         kwargs (dict, optional): Additional arguments used to initialize
             :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
             see the documentation of :class:`qibo.models.circuit.Circuit`.
@@ -87,10 +90,13 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
         4. C. Gidney, *Halving the cost of quantum addition*,
         `Quantum 2, 74 (2018) <https://doi.org/10.22331/q-2018-06-18-74>`_.
 
-        5. Y. Takahashi, S. Tani, and N. Kunihiro, *Quantum addition circuits and unbounded
+        5. M. Remaud and V. Vandaele, *Ancilla-free quantum adder with sublinear depth*,
+        `arXiv:2501.16802 <https://arxiv.org/abs/2501.16802>`_.
+
+        6. Y. Takahashi, S. Tani, and N. Kunihiro, *Quantum addition circuits and unbounded
         fan-out*, `Quantum Inf. Comput. 10, 872 (2010) <https://doi.org/10.26421/QIC10.9-10-12>`_.
 
-        6. V. Vedral, A. Barenco, and A. Ekert, *Quantum networks for elementary arithmetic
+        7. V. Vedral, A. Barenco, and A. Ekert, *Quantum networks for elementary arithmetic
         operations*, `Phys. Rev. A 54, 147 (1996) <https://doi.org/10.1103/PhysRevA.54.147>`_.
     """
     methods = {
@@ -98,6 +104,7 @@ def Adder(nbits: int, method: str = "Cuccaro", **kwargs) -> Circuit:
         "DKRS": DKRS,
         "Draper": Draper,
         "Gidney": Gidney,
+        "RV": RV,
         "TTK": TTK,
         "VBE": VBE,
     }
@@ -613,6 +620,142 @@ def Gidney(nbits: int, **kwargs) -> Circuit:
     return circuit
 
 
+def RV(nbits: int, **kwargs) -> Circuit:
+    """Creates a circuit that implements the Remaud-Vandaele (RV) ancilla-free adder.
+
+    Given two :math:`n`-bit non-negative integers :math:`a` and :math:`b`, where :math:`n` is
+    ``nbits``, the circuit performs
+
+    .. math::
+        \\ket{a} \\, \\ket{b} \\mapsto \\ket{a} \\, \\ket{a + b \\bmod 2^{n + 1}} \\, .
+
+    It acts on :math:`2n + 1` qubits, and it does not need auxiliary qubits. The first :math:`n`
+    qubits hold :math:`a`, which is left unchanged, and the last :math:`n + 1` qubits hold
+    :math:`b`, which is replaced by :math:`a + b`. The last qubit of the second register is the
+    overflow bit, which is in the state :math:`\\ket{0}` at the beginning if :math:`b < 2^{n}`,
+    so that the sum is exact.
+
+    In every register, the :math:`k`-th qubit holds the bit :math:`2^{k}`, *i.e.* the least
+    significant bit comes first. The circuit is the ripple-carry adder of
+    :func:`qibo.models.TTK`, in which the ladders of :class:`qibo.gates.CNOT` gates and of
+    :class:`qibo.gates.TOFFOLI` gates, which have a linear depth, are replaced by circuits of
+    lower depth. A ladder of CNOT gates on :math:`m` qubits becomes
+    :math:`\\lfloor \\log_{2} m \\rfloor + \\lfloor \\log_{2} (2m / 3) \\rfloor` layers of parallel
+    CNOT gates, which is a depth that is logarithmic in :math:`m`. Likewise, a ladder of
+    :math:`m - 1` Toffoli gates becomes the same number of layers of parallel multi-controlled
+    :math:`X` gates, which are decomposed into :class:`qibo.gates.TOFFOLI` and
+    :class:`qibo.gates.X` gates with logarithmic depth by
+    :func:`qibo.transpiler.multi_controlled_decomposition`. They use two qubits that the gates
+    of the same layer do not act on, which can be in any state, as auxiliary qubits. Hence, the
+    circuit only has :class:`qibo.gates.X`, :class:`qibo.gates.CNOT` and
+    :class:`qibo.gates.TOFFOLI` gates, :math:`O(n \\log n)` of them, and its depth is
+    :math:`O(\\log^{2} n)`. This is lower than the linear depth of the ripple-carry adders only
+    for large :math:`n`, because of the larger number of gates: from about :math:`170` bits,
+    the depth is lower than the one of :func:`qibo.models.TTK`, with about :math:`9` times more
+    gates.
+
+    Example:
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.models import RV
+
+            nbits = 2
+            adder = RV(nbits)
+
+            # a = 3 in the qubits 0 and 1, and b = 1 in the qubits 2, 3 and 4
+            circuit = Circuit(adder.nqubits)
+            circuit.add(gates.X(0))
+            circuit.add(gates.X(1))
+            circuit.add(gates.X(2))
+            circuit.add(adder)
+            circuit.add(gates.M(*range(nbits, 2 * nbits + 1)))
+
+            result = circuit(nshots=1)
+            bitstring = next(iter(result.frequencies(binary=True)))
+
+            # the least significant bit comes first
+            print(int(bitstring[::-1], 2))
+
+        .. testoutput::
+
+            4
+
+    Args:
+        nbits (int): number of bits :math:`n` of each of the integers to be added.
+        kwargs (dict, optional): Additional arguments used to initialize
+            :class:`qibo.models.circuit.Circuit`, *e.g.* ``density_matrix=True``. For details,
+            see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: implementation of the RV adder.
+
+    References:
+        1. M. Remaud and V. Vandaele, *Ancilla-free quantum adder with sublinear depth*,
+        `arXiv:2501.16802 <https://arxiv.org/abs/2501.16802>`_.
+
+        2. Y. Takahashi, S. Tani, and N. Kunihiro, *Quantum addition circuits and unbounded
+        fan-out*, `Quantum Inf. Comput. 10, 872 (2010) <https://doi.org/10.26421/QIC10.9-10-12>`_.
+
+        3. T. Khattar and C. Gidney, *Rise of conditionally clean ancillae for efficient
+        quantum circuit constructions*, `Quantum 9, 1752 (2025)
+        <https://doi.org/10.22331/q-2025-05-21-1752>`_.
+    """
+    nbits = _check_nbits(nbits)
+    backend = _check_backend(None)
+
+    register_a = list(range(nbits))
+    register_b = list(range(nbits, 2 * nbits))
+    overflow = 2 * nbits
+    nqubits = 2 * nbits + 1
+
+    # the qubits are a_0, b_0, a_1, b_1, ..., a_{n - 1}, b_{n - 1}, and the overflow qubit
+    chain = [qubit for pair in zip(register_a, register_b) for qubit in pair] + [
+        overflow
+    ]
+
+    # ladders of CNOT gates: the qubit k is the target of a gate with the qubit k - 1 as control
+    cnot_ladder = _mcx_ladder([*register_a[1:], overflow], list(range(1, nbits)))
+    uncompute_cnot_ladder = _mcx_ladder(register_a[1:], list(range(1, nbits - 1)))
+
+    # ladders of Toffoli gates: the gate k has the qubits 2k - 2 and 2k - 1 of the chain as
+    # controls and the qubit 2k as target
+    toffoli_ladder = _mcx_ladder(chain, list(range(2, 2 * nbits + 1, 2)))
+    carry_ladder = _mcx_ladder(chain[:-2], list(range(2, 2 * nbits - 1, 2)))
+
+    circuit = Circuit(nqubits, **kwargs)
+
+    # slice 1
+    circuit.add(gates.CNOT(register_a[k], register_b[k]) for k in range(1, nbits))
+
+    # slice 2
+    for layer in cnot_ladder:
+        circuit.add(_mcx_gates(layer, nqubits, backend))
+
+    # slice 3, the inverse of the ladder, which has gates that are their own inverse
+    for layer in toffoli_ladder[::-1]:
+        circuit.add(_mcx_gates(layer, nqubits, backend))
+
+    # slice 4
+    circuit.add(gates.CNOT(register_a[k], register_b[k]) for k in range(1, nbits))
+
+    # slice 5
+    circuit.add(gates.X(register_b[k]) for k in range(1, nbits - 1))
+    for layer in carry_ladder:
+        circuit.add(_mcx_gates(layer, nqubits, backend))
+
+    circuit.add(gates.X(register_b[k]) for k in range(1, nbits - 1))
+
+    # slice 6, the inverse of the ladder of CNOT gates
+    for layer in uncompute_cnot_ladder[::-1]:
+        circuit.add(_mcx_gates(layer, nqubits, backend))
+
+    # slice 7
+    circuit.add(gates.CNOT(register_a[k], register_b[k]) for k in range(nbits))
+
+    return circuit
+
+
 def TTK(nbits: int, **kwargs) -> Circuit:
     """Creates a circuit that implements the Takahashi-Tani-Kunihiro (TTK) adder.
 
@@ -838,3 +981,106 @@ def _check_nbits(nbits: int) -> int:
         raise_error(ValueError, f"nbits must be a positive integer, but it is {nbits}.")
 
     return int(nbits)
+
+
+def _mcx_gates(
+    layer: list[tuple[tuple[int, ...], int]], nqubits: int, backend: Backend
+) -> list[gates.Gate]:
+    """Creates the gates of a layer of multi-controlled :math:`X` gates on different qubits.
+
+    The gates with at least three controls are decomposed in logarithmic depth with two
+    auxiliary qubits that can be in any state. They are qubits that the gates of the layer do
+    not act on, which are different for each gate if there are enough of them.
+
+    Args:
+        layer (list[tuple[tuple[int, ...], int]]): controls and target of each gate.
+        nqubits (int): number of qubits of the circuit.
+        backend (:class:`qibo.backends.abstract.Backend`): backend that has the matrix of
+            the :math:`X` gate.
+
+    Returns:
+        list[:class:`qibo.gates.abstract.Gate`]: gates of the layer.
+    """
+    from qibo.transpiler import multi_controlled_decomposition  # circular import
+
+    acting = {qubit for controls, target in layer for qubit in (*controls, target)}
+    spare = [qubit for qubit in range(nqubits) if qubit not in acting]
+
+    decomposition = []
+    for controls, target in layer:
+        if len(controls) == 1:
+            decomposition.append(gates.CNOT(*controls, target))
+        elif len(controls) == 2:
+            decomposition.append(gates.TOFFOLI(*controls, target))
+        else:
+            # if the spare qubits run out, the ones of the other gates are used
+            others = [
+                qubit for qubit in range(nqubits) if qubit not in (*controls, target)
+            ]
+            free = tuple((spare if len(spare) >= 2 else others)[:2])
+            spare = spare[2:]
+            decomposition.extend(
+                multi_controlled_decomposition(
+                    backend.matrices.X,
+                    controls,
+                    target,
+                    free=free,
+                    minimize_depth=True,
+                    backend=backend,
+                )
+            )
+
+    return decomposition
+
+
+def _mcx_ladder(
+    qubits: list[int], positions: list[int]
+) -> list[list[tuple[tuple[int, ...], int]]]:
+    """Creates a ladder of multi-controlled :math:`X` gates as layers of parallel gates.
+
+    The ``i``-th gate of the ladder has ``qubits[positions[i]]`` as target, and the qubits from
+    ``qubits[positions[i - 1]]`` to the one before the target as controls, with the values
+    that they have before the ladder. The controls of the first gate start at ``qubits[0]``.
+    The number of layers is :math:`\\lfloor \\log_{2} k \\rfloor + \\lfloor \\log_{2} (2k / 3)
+    \\rfloor`, where :math:`k` is the number of gates plus one, and it is logarithmic in it. A
+    ladder of CNOT gates has ``positions = [1, 2, ...]``.
+
+    Args:
+        qubits (list[int]): ids of the qubits of the ladder.
+        positions (list[int]): increasing positions in ``qubits`` of the targets.
+
+    Returns:
+        list[list[tuple[tuple[int, ...], int]]]: controls and target of each gate of each layer.
+
+    References:
+        1. M. Remaud and V. Vandaele, *Ancilla-free quantum adder with sublinear depth*,
+        `arXiv:2501.16802 <https://arxiv.org/abs/2501.16802>`_.
+    """
+    # k is the number of gates plus one, as in Algorithm 2 of Ref. [1]
+    k = len(positions) + 1
+
+    def gate(first: int, last: int) -> tuple[tuple[int, ...], int]:
+        return tuple(qubits[first:last]), qubits[last]
+
+    if k == 1:
+        return []
+
+    if k == 2:
+        return [[gate(0, positions[0])]]
+
+    # the first and last gates are applied at the extremes, and the qubits that they do not
+    # use are the ones of a ladder with about half of the gates
+    inner, inner_positions = [qubits[positions[0]]], []
+    left, right = [gate(positions[-2], positions[-1])], [gate(0, positions[0])]
+    for i in range(1, (k + 1) // 2 - 1):
+        left.append(gate(positions[2 * i - 2], positions[2 * i - 1]))
+        right.append(gate(positions[2 * i - 1], positions[2 * i]))
+        inner.extend(qubits[positions[2 * i - 2] + 1 : positions[2 * i - 1]])
+        inner.extend(qubits[positions[2 * i - 1] + 1 : positions[2 * i] + 1])
+        inner_positions.append(positions[2 * i] - positions[0] - i)
+
+    if k % 2 == 0:
+        inner.extend(qubits[positions[k - 4] + 1 : positions[k - 3] + 1])
+        inner_positions.append(positions[k - 3] - positions[0] - k // 2 + 2)
+
+    return [left, *_mcx_ladder(inner, inner_positions), right]

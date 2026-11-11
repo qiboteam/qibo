@@ -1,4 +1,13 @@
-from qibo.models.algorithms.adders import DKRS, TTK, VBE, Adder, Cuccaro, Draper, Gidney
+from qibo.models.algorithms.adders import (
+    DKRS,
+    RV,
+    TTK,
+    VBE,
+    Adder,
+    Cuccaro,
+    Draper,
+    Gidney,
+)
 from qibo.models.algorithms.bernstein_vazirani import BernsteinVazirani
 from qibo.models.algorithms.block_encoding import block_encoding_circuit
 from qibo.models.algorithms.counting import Counting
@@ -34,6 +43,7 @@ __all__ = [
     "QFT",
     "QPE",
     "QRS",
+    "RV",
     "TTK",
     "VBE",
     "Adder",
