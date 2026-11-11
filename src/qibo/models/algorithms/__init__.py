@@ -18,6 +18,7 @@ from qibo.models.algorithms.qaa import (
 from qibo.models.algorithms.qae import QAE
 from qibo.models.algorithms.qft import QFT
 from qibo.models.algorithms.qpe import IQPE, QPE
+from qibo.models.algorithms.qrs import QRS
 from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
 
@@ -32,6 +33,7 @@ __all__ = [
     "QAE",
     "QFT",
     "QPE",
+    "QRS",
     "TTK",
     "VBE",
     "Adder",
