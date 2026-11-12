@@ -206,6 +206,12 @@ Swap Test
 Hamiltonian simulation
 ----------------------
 
+Trotter
+^^^^^^^
+
+.. autofunction:: qibo.models.Trotter
+
+
 qDRIFT
 ^^^^^^
 

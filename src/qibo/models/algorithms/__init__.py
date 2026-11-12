@@ -36,6 +36,7 @@ from qibo.models.algorithms.qrs import QRS
 from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
 from qibo.models.algorithms.shor import Shor
+from qibo.models.algorithms.trotter import Trotter
 
 __all__ = [
     "DH",
@@ -67,6 +68,7 @@ __all__ = [
     "IterativeAmplitudeEstimationResult",
     "QSearch",
     "Shor",
+    "Trotter",
     "amplification_operator",
     "block_encoding_circuit",
     "hadamard_test",

@@ -227,7 +227,7 @@ def hadamard_test(
 
     terms = None
     if observable is not None and not isinstance(observable, Circuit):
-        terms = _pauli_terms(observable, nqubits, "observable", backend)
+        terms = _pauli_terms(observable, nqubits, "observable", backend=backend)
 
     operators, weights, phases, nauxiliary = [observable], [1.0], [0.0], 0
     if terms is not None:

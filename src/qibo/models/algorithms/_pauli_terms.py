@@ -12,6 +12,7 @@ def _pauli_terms(
     ),
     nqubits: int | None,
     label: str = "operator",
+    real: bool = False,
     backend: Backend | None = None,
 ) -> list[tuple[str, complex]]:
     """Writes an operator as a sum of Pauli strings, :math:`\\sum_{k} c_{k} P_{k}`.
@@ -30,7 +31,10 @@ def _pauli_terms(
             ``operator``.
         label (str, optional): name of the argument of the caller that is ``operator``, which is
             used in the error messages. Defaults to ``"operator"``.
-        backend (:class:`qibo.backends.abstract.Backend`): backend to be used in the calculation.
+        real (bool, optional): If ``True``, the coefficients must be real numbers, which are
+            returned as floats. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
+            calculation. If ``None``, it uses the current backend. Defaults to ``None``.
 
     Returns:
         list: tuples ``(pauli, coefficient)`` of the Pauli strings and their coefficients, with at
@@ -119,5 +123,23 @@ def _pauli_terms(
             ValueError,
             f"{label} must have at least one Pauli string with a non-zero coefficient.",
         )
+
+    if real:
+        coefficients = backend.cast(
+            [coefficient for _, coefficient in terms], dtype=backend.complex128
+        )
+
+        if backend.any(
+            backend.abs(backend.imag(coefficients))
+            > 1e-12 * backend.max(backend.abs(coefficients))
+        ):
+            raise_error(
+                ValueError, f"the coefficients of {label} must be real numbers."
+            )
+
+        terms = [
+            (pauli, float(coefficient))
+            for (pauli, _), coefficient in zip(terms, backend.real(coefficients))
+        ]
 
     return terms

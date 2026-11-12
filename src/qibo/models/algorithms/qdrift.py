@@ -1,12 +1,11 @@
-import itertools
 from numbers import Integral
 
 import numpy as np
 
-from qibo import gates
 from qibo.backends import Backend, _check_backend_and_local_state
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.models.algorithms._pauli_rotation import _pauli_rotation
 from qibo.models.algorithms._pauli_terms import _pauli_terms
 from qibo.models.circuit import Circuit
 
@@ -131,22 +130,12 @@ def qdrift(
             ValueError, f"nsteps must be a positive integer, but it is {nsteps}."
         )
 
-    terms = _pauli_terms(hamiltonian, None, "hamiltonian", backend)
+    terms = _pauli_terms(hamiltonian, None, "hamiltonian", True, backend)
     nqubits = len(terms[0][0])
 
     coefficients = backend.cast(
-        [coefficient for _, coefficient in terms], dtype=backend.complex128
+        [coefficient for _, coefficient in terms], dtype=backend.float64
     )
-
-    if backend.any(
-        backend.abs(backend.imag(coefficients))
-        > 1e-12 * backend.max(backend.abs(coefficients))
-    ):
-        raise_error(
-            ValueError, "the coefficients of the Pauli strings must be real numbers."
-        )
-
-    coefficients = backend.real(coefficients)
     weights = backend.abs(coefficients)
     signs = backend.sign(coefficients)
     norm = backend.sum(weights)
@@ -166,31 +155,6 @@ def qdrift(
     circuit = Circuit(nqubits, **kwargs)
     for index in indices:
         index = int(index)
-        pauli = terms[index][0]
-        angle = float(2 * tau * signs[index])
-        targets = [qubit for qubit, letter in enumerate(pauli) if letter != "I"]
-
-        # the identity is a global phase
-        if len(targets) == 0:
-            circuit.add(gates.GlobalPhase(-angle / 2))
-            continue
-
-        # basis change that maps the Pauli string to Z in each of the targets, and a ladder
-        # of CNOTs that writes its parity in the last target
-        before, after = [], []
-        for qubit in targets:
-            if pauli[qubit] == "X":
-                before.append(gates.H(qubit))
-                after.append(gates.H(qubit))
-            elif pauli[qubit] == "Y":
-                before.extend([gates.SDG(qubit), gates.H(qubit)])
-                after.extend([gates.H(qubit), gates.S(qubit)])
-        ladder = [gates.CNOT(*pair) for pair in itertools.pairwise(targets)]
-
-        circuit.add(before)
-        circuit.add(ladder)
-        circuit.add(gates.RZ(targets[-1], theta=angle))
-        circuit.add(ladder[::-1])
-        circuit.add(after)
+        circuit.add(_pauli_rotation(terms[index][0], float(2 * tau * signs[index])))
 
     return circuit
