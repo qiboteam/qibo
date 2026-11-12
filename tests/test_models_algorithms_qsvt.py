@@ -1,12 +1,14 @@
 """Tests for quantum singular value transformation in `qibo/models/algorithms/qsvt.py`."""
 
 import math
+import warnings
 
 import pytest
 from numpy.typing import ArrayLike
 
 from qibo import Circuit, gates, models
 from qibo.backends import Backend
+from qibo.models.algorithms import qsvt as qsvt_module
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
 from qibo.quantum_info.random_ensembles import random_unitary
 
@@ -121,6 +123,53 @@ def test_qsvt_phases_errors(backend):
     # mixed parity
     with pytest.raises(ValueError):
         qsvt_phases([0.0, 0.3, 0.2], backend=backend)
+
+
+def test_qsvt_phases_interior_maximum(backend):
+    """A polynomial that touches one away from the endpoints does not give warnings."""
+    # odd polynomial that approximates the inverse, with a maximum above two inside of [-1, 1]
+    degree = 23
+    coefficients = _interpolate(lambda x: (1 - (1 - x**2) ** 12) / x, degree, backend)
+    xs = backend.cast(-1.0 + 2.0 * backend.arange(20001) / 20000, dtype="float64")
+    maximum = backend.max(backend.abs(_chebyshev(coefficients, xs, backend)))
+
+    # the maximum is estimated on a coarser grid than the one of the factorization, which
+    # can exceed it between the nodes, and then 1 - P^2 is negative for the smallest margins
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        phases = qsvt_phases(coefficients, backend=backend)
+
+    assert maximum > 2.0
+    backend.assert_allclose(
+        _polynomial(phases, xs, backend),
+        _chebyshev(coefficients, xs, backend) / maximum,
+        atol=1e-5,
+        rtol=0.0,
+    )
+
+
+def test_qsvt_phases_margin(backend, monkeypatch):
+    """The margin is increased if the factorization has not converged."""
+    calls = []
+    factorize = qsvt_module._spectral_factor
+
+    def not_converged(residual, degree, backend=None):
+        factor, converged = factorize(residual, degree, backend)
+        calls.append(converged)
+
+        # the first factorization is rejected
+        return factor, converged and len(calls) > 1
+
+    monkeypatch.setattr(qsvt_module, "_spectral_factor", not_converged)
+
+    # T_3 touches one at the endpoints, and its first factorization converges
+    phases = qsvt_phases([0.0, 0.0, 0.0, 1.0], backend=backend)
+
+    xs = backend.cast(-1.0 + 2.0 * backend.arange(2001) / 2000, dtype="float64")
+    assert calls == [True, True]
+    backend.assert_allclose(
+        _polynomial(phases, xs, backend), 4 * xs**3 - 3 * xs, atol=1e-6, rtol=0.0
+    )
 
 
 @pytest.mark.parametrize("parity", [0, 1])
