@@ -131,7 +131,7 @@ def qdrift(
             ValueError, f"nsteps must be a positive integer, but it is {nsteps}."
         )
 
-    terms = _pauli_terms(hamiltonian, None, backend)
+    terms = _pauli_terms(hamiltonian, None, "hamiltonian", backend)
     nqubits = len(terms[0][0])
 
     coefficients = backend.cast(

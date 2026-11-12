@@ -190,15 +190,15 @@ def test_qdrift_errors(backend):
     for nsteps in (0, -2, 2.5, True):
         with pytest.raises(ValueError):
             qdrift(terms, 1.0, nsteps=nsteps, backend=backend)
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="hamiltonian must be a list"):
         qdrift("ZI", 1.0, nsteps=2, backend=backend)
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="the elements of hamiltonian"):
         qdrift([("ZI",)], 1.0, nsteps=2, backend=backend)
     with pytest.raises(ValueError):
         qdrift([("ZI", 1.0), ("X", 0.5)], 1.0, nsteps=2, backend=backend)
     with pytest.raises(ValueError):
         qdrift([("ZA", 1.0)], 1.0, nsteps=2, backend=backend)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="hamiltonian must have at least one"):
         qdrift([("ZI", 0.0)], 1.0, nsteps=2, backend=backend)
     with pytest.raises(ValueError):
         qdrift([("ZI", 1.0), ("IX", 0.5j)], 1.0, nsteps=2, backend=backend)
