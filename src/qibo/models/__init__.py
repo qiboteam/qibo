@@ -1,5 +1,6 @@
 from qibo.models import hep
 from qibo.models.algorithms import (
+    DH,
     DKRS,
     FPQAA,
     IQAE,
@@ -64,6 +65,7 @@ from qibo.models.variational import AAVQE, FALQON, QAOA, VQE
 __all__ = [
     "AAVQE",
     "CDR",
+    "DH",
     "DKRS",
     "FALQON",
     "FPQAA",
