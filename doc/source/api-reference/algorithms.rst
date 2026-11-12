@@ -188,6 +188,21 @@ Shor's Algorithm
     :member-order: bysource
 
 
+Hadamard and swap tests
+-----------------------
+
+Hadamard Test
+^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.hadamard_test
+
+
+Swap Test
+^^^^^^^^^
+
+.. autofunction:: qibo.models.swap_test
+
+
 Block encodings and signal processing
 -------------------------------------
 

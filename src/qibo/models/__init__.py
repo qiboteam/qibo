@@ -30,6 +30,7 @@ from qibo.models.algorithms import (
     Shor,
     amplification_operator,
     block_encoding_circuit,
+    hadamard_test,
     lcu_circuit,
     lcu_prepare,
     lcu_select,
@@ -37,6 +38,7 @@ from qibo.models.algorithms import (
     qsp_phases,
     qsvt_circuit,
     qsvt_phases,
+    swap_test,
 )
 from qibo.models.circuit import Circuit
 from qibo.models.encodings import (
@@ -114,6 +116,7 @@ __all__ = [
     "ghz_state",
     "graph_state",
     "grover_rudolph",
+    "hadamard_test",
     "hamming_weight_encoder",
     "hep",
     "ladder_synthesis",
@@ -129,6 +132,7 @@ __all__ = [
     "qsvt_phases",
     "sparse_encoder",
     "spin_s_encoder",
+    "swap_test",
     "unary_encoder",
     "unary_encoder_random_gaussian",
     "up_to_k_hamming_weight_encoder",
