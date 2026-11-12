@@ -15,6 +15,7 @@ from qibo.models.algorithms.deutsch_jozsa import DeutschJozsa
 from qibo.models.algorithms.dh import DH
 from qibo.models.algorithms.double_bracket import DoubleBracketIteration
 from qibo.models.algorithms.grover import Grover
+from qibo.models.algorithms.interference_tests import hadamard_test, swap_test
 from qibo.models.algorithms.iqae import IQAE, IterativeAmplitudeEstimationResult
 from qibo.models.algorithms.lcu import lcu_circuit, lcu_prepare, lcu_select
 from qibo.models.algorithms.mlqae import MLQAE
@@ -65,6 +66,7 @@ __all__ = [
     "Shor",
     "amplification_operator",
     "block_encoding_circuit",
+    "hadamard_test",
     "lcu_circuit",
     "lcu_prepare",
     "lcu_select",
@@ -72,4 +74,5 @@ __all__ = [
     "qsp_phases",
     "qsvt_circuit",
     "qsvt_phases",
+    "swap_test",
 ]
