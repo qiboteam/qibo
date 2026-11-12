@@ -177,8 +177,9 @@ def hadamard_test(
         measure (bool, optional): If ``True``, adds a measurement of the first qubit at the end
             of each circuit. Defaults to ``True``.
         method (str, optional): either ``"block_encoding"``, with one circuit, or ``"per_pauli"``,
-            with one circuit for each Pauli string. It only changes the output if ``observable``
-            is a circuit or ``None``, for which ``"per_pauli"`` returns one circuit.
+            with one circuit for each Pauli string. It changes the number of circuits only if
+            ``observable`` is a sum of Pauli strings. For a circuit or ``None``, both methods
+            use one circuit, but the type of the output is different, see ``Returns``.
             Defaults to ``"block_encoding"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
@@ -290,8 +291,11 @@ def hadamard_test(
             ]
         ]
 
-    if terms is not None and len(terms) == 0:
-        raise_error(ValueError, "observable must have at least one Pauli string.")
+    if terms is not None and not any(coefficient != 0 for _, coefficient in terms):
+        raise_error(
+            ValueError,
+            "observable must have at least one Pauli string with a non-zero coefficient.",
+        )
 
     operators, weights, phases, nauxiliary = [observable], [1.0], [0.0], 0
     if terms is not None:

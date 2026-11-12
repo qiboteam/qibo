@@ -197,11 +197,24 @@ def test_hadamard_test_pauli_terms_type_errors(backend, observable):
         hadamard_test(Circuit(1), Circuit(1), observable, backend=backend)
 
 
-@pytest.mark.parametrize("observable", [[("XX", 1.0)], [("A", 1.0)], [("x", 1.0)], []])
-def test_hadamard_test_pauli_terms_value_errors(backend, observable):
-    """The Pauli strings must have one letter of IXYZ per qubit, and there must be terms."""
+@pytest.mark.parametrize("method", ["block_encoding", "per_pauli"])
+@pytest.mark.parametrize(
+    "observable",
+    [
+        [("XX", 1.0)],
+        [("A", 1.0)],
+        [("x", 1.0)],
+        [],
+        [("X", 0.0)],
+        [("X", 0), ("Z", 0j)],
+    ],
+)
+def test_hadamard_test_pauli_terms_value_errors(backend, observable, method):
+    """The Pauli strings must have one letter of IXYZ per qubit and a non-zero coefficient."""
     with pytest.raises(ValueError):
-        hadamard_test(Circuit(1), Circuit(1), observable, backend=backend)
+        hadamard_test(
+            Circuit(1), Circuit(1), observable, method=method, backend=backend
+        )
 
 
 @pytest.mark.parametrize("measure", [True, False])

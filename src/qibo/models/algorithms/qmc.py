@@ -44,7 +44,8 @@ class QMC:
     - **bounded relative variance** (Algorithm 4): if :math:`v(x) \\geq 0` and
       :math:`\\mathrm{Var}(v) / \\mathbb{E}[v]^{2} \\leq B`, the mean :math:`\\tilde{m}` of
       :math:`\\lceil 32 B \\rceil` samples is used to apply Algorithm 2 to :math:`v /
-      \\tilde{m}`. The relative error is :math:`\\epsilon` with probability :math:`3 / 4`.
+      \\tilde{m}`. The relative error is :math:`\\epsilon` with probability :math:`3 / 4`. It
+      assumes :math:`\\mathbb{E}[v] > 0`, and the estimate is zero if all of the samples are zero.
 
     The circuit of the last amplitude estimation is stored in the attribute ``circuit``, which
     is ``None`` before :meth:`execute`. The rotations are controlled by each of the
