@@ -169,6 +169,17 @@ Quantum Adders
 .. autofunction:: qibo.models.VBE
 
 
+Factoring
+---------
+
+Shor's Algorithm
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.models.Shor
+    :members:
+    :member-order: bysource
+
+
 Block encodings and signal processing
 -------------------------------------
 

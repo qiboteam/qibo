@@ -31,6 +31,7 @@ from qibo.models.algorithms.qpe import IQPE, QPE
 from qibo.models.algorithms.qrs import QRS
 from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
+from qibo.models.algorithms.shor import Shor
 
 __all__ = [
     "DH",
@@ -59,6 +60,7 @@ __all__ = [
     "Grover",
     "IterativeAmplitudeEstimationResult",
     "QSearch",
+    "Shor",
     "amplification_operator",
     "block_encoding_circuit",
     "lcu_circuit",
