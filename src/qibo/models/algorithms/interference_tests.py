@@ -215,11 +215,19 @@ def hadamard_test(
     circuits = {"state_1": state_1, "state_2": state_2}
     if isinstance(observable, Circuit):
         circuits["observable"] = observable
+    elif observable is not None and not isinstance(
+        observable, (list, tuple, Hamiltonian, SymbolicHamiltonian)
+    ):
+        raise_error(
+            TypeError,
+            "observable must be a Circuit, a list, a tuple, a Hamiltonian or a "
+            + f"SymbolicHamiltonian, but it is type {type(observable)}.",
+        )
     nqubits = _check_circuits(**circuits)
 
     terms = None
     if observable is not None and not isinstance(observable, Circuit):
-        terms = _pauli_terms(observable, nqubits, backend)
+        terms = _pauli_terms(observable, nqubits, "observable", backend)
 
     operators, weights, phases, nauxiliary = [observable], [1.0], [0.0], 0
     if terms is not None:
