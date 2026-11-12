@@ -22,13 +22,14 @@ def _random_circuit(nqubits, seed, backend):
     return circuit
 
 
+@pytest.mark.parametrize("method", ["block_encoding", "per_pauli"])
 @pytest.mark.parametrize("measure", [True, False])
 @pytest.mark.parametrize(
     "kind", ["none", "circuit", "dense", "tfim", "symbolic", "list", "tuple"]
 )
 @pytest.mark.parametrize("imaginary", [False, True])
 @pytest.mark.parametrize("nqubits", [2, 3])
-def test_hadamard_test(backend, nqubits, imaginary, kind, measure, caplog):
+def test_hadamard_test(backend, nqubits, imaginary, kind, measure, method, caplog):
     """The probability of the first qubit gives the part of the amplitude."""
     state_1 = _random_circuit(nqubits, 1, backend)
     state_2 = _random_circuit(nqubits, 2, backend)
@@ -73,9 +74,16 @@ def test_hadamard_test(backend, nqubits, imaginary, kind, measure, caplog):
             observable = tuple(observable)
 
     with caplog.at_level(logging.WARNING):
-        circuit, alpha = hadamard_test(
-            state_1, state_2, observable, imaginary, measure, backend=backend
+        output = hadamard_test(
+            state_1,
+            state_2,
+            observable,
+            imaginary,
+            measure,
+            method,
+            backend=backend,
         )
+    circuits, weights = output if method == "per_pauli" else ([output[0]], [output[1]])
 
     ket = backend.execute_circuit(state_1).state()
     if matrix is not None:
@@ -85,14 +93,19 @@ def test_hadamard_test(backend, nqubits, imaginary, kind, measure, caplog):
     )
     target = float(amplitude.imag if imaginary else amplitude.real)
 
-    probability = backend.execute_circuit(circuit).probabilities(qubits=[0])[0]
+    estimate = sum(
+        weight
+        * (2 * float(backend.execute_circuit(circuit).probabilities(qubits=[0])[0]) - 1)
+        for circuit, weight in zip(circuits, weights)
+    )
 
     pauli_sum = kind not in ("none", "circuit")
-    assert (circuit.nqubits > nqubits + 1) == pauli_sum
-    assert (alpha != 1.0) == pauli_sum
-    assert len(circuit.measurements) == int(measure)
+    nauxiliary = pauli_sum and method == "block_encoding"
+    assert (len(circuits) > 1) == (pauli_sum and method == "per_pauli")
+    assert all((circuit.nqubits > nqubits + 1) == nauxiliary for circuit in circuits)
+    assert all(len(circuit.measurements) == int(measure) for circuit in circuits)
     assert ("inefficient" in caplog.text) == (kind == "dense")
-    backend.assert_allclose(alpha * (2 * float(probability) - 1), target, atol=1e-10)
+    backend.assert_allclose(estimate, target, atol=1e-10)
 
 
 def test_hadamard_test_controlled_gates(backend):
@@ -173,6 +186,8 @@ def test_hadamard_test_errors(backend):
         hadamard_test(circuit, circuit, Circuit(2), backend=backend)
     with pytest.raises(ValueError):
         hadamard_test(circuit, circuit, hamiltonian, backend=backend)
+    with pytest.raises(ValueError):
+        hadamard_test(circuit, circuit, method="sum", backend=backend)
 
 
 @pytest.mark.parametrize("observable", [["X"], [("X", 1.0, 2.0)], [(1, 1.0)], [None]])

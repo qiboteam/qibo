@@ -1,8 +1,10 @@
+import cmath
+import math
+
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
-from qibo.models.algorithms.block_encoding import block_encoding_circuit
 from qibo.models.algorithms.lcu import lcu_circuit, lcu_select
 from qibo.models.algorithms.qaa import _check_circuits
 from qibo.models.circuit import Circuit
@@ -21,20 +23,21 @@ def hadamard_test(
     ) = None,
     imaginary: bool = False,
     measure: bool = True,
+    method: str = "block_encoding",
     backend: Backend = None,
     **kwargs,
-) -> tuple[Circuit, float]:
-    """Creates a circuit that implements the Hadamard test of a transition amplitude.
+) -> tuple[Circuit, float] | tuple[list[Circuit], list[float]]:
+    """Creates the circuits that implement the Hadamard test of a transition amplitude.
 
     Let :math:`\\ket{\\psi_{1}}` and :math:`\\ket{\\psi_{2}}` be the states of :math:`n` qubits
-    that ``state_1`` and ``state_2`` prepare from the all-zero state. The circuit estimates the
+    that ``state_1`` and ``state_2`` prepare from the all-zero state. The circuits estimate the
     real or the imaginary part of :math:`\\bra{\\psi_{2}} O \\ket{\\psi_{1}}`, which for
     ``observable=None`` is the overlap of the states, *i.e.* :math:`O` is the identity. The
     operator :math:`O` is given by ``observable``, which is either
 
     - a circuit that implements a unitary :math:`O`;
     - a list or a tuple of tuples ``(pauli, coefficient)``, with the Pauli string ``pauli`` and
-      its complex coefficient :math:`c_{i}`, so that :math:`O = \\sum_{i} c_{i} P_{i}`. The
+      its complex coefficient :math:`c_{k}`, so that :math:`O = \\sum_{k} c_{k} P_{k}`. The
       string has :math:`n` letters from ``"IXYZ"``, and its :math:`j`-th letter is the Pauli
       matrix applied to the :math:`j`-th qubit of the states, *e.g.* ``"XIZ"`` is
       :math:`X_{0} Z_{2}`;
@@ -45,35 +48,49 @@ def hadamard_test(
       :func:`qibo.quantum_info.pauli_basis`, which is inefficient in the number of qubits, and a
       warning is logged.
 
-    A sum of Pauli strings is block-encoded as :math:`O / \\alpha`, with
-    :math:`\\alpha = \\sum_{i} |c_{i}|`, with :func:`qibo.models.lcu_circuit`.
+    A sum of Pauli strings is estimated with one of the following ``method``:
 
-    The circuit acts on one qubit for the test, followed by the auxiliary qubits of the block
+    - ``"block_encoding"``: one circuit block-encodes :math:`O / \\alpha`, with
+      :math:`\\alpha = \\sum_{k} |c_{k}|`, with :func:`qibo.models.lcu_circuit`, using auxiliary
+      qubits. It is the unitary of the Hadamard test.
+    - ``"per_pauli"``: one circuit for each Pauli string, which is the unitary of its Hadamard
+      test, with no auxiliary qubits. The phase of :math:`c_{k}` is absorbed in the circuit.
+
+    Each circuit acts on one qubit for the test, followed by the auxiliary qubits of the block
     encoding, if there are any, and the :math:`n` qubits of the states. It is composed of the
     following steps:
 
     1. a Hadamard gate on the first qubit;
-    2. the oracle of :func:`qibo.models.lcu_select`, which applies :math:`O` after ``state_1``
-       if the first qubit is in :math:`\\ket{0}`, and ``state_2`` if it is in :math:`\\ket{1}`;
-    3. a :class:`qibo.gates.S` gate on the first qubit, if ``imaginary=True``;
+    2. the oracle of :func:`qibo.models.lcu_select`, which applies the unitary :math:`U` after
+       ``state_1`` if the first qubit is in :math:`\\ket{0}`, and ``state_2`` if it is in
+       :math:`\\ket{1}`. It is the circuit of ``observable`` if it is a circuit, the block
+       encoding for ``"block_encoding"``, and the Pauli string :math:`P_{k}` for ``"per_pauli"``;
+    3. a :class:`qibo.gates.U1` gate on the first qubit, with the angle
+       :math:`\\theta = \\pi / 2 - \\arg c_{k}` if ``imaginary=True``, and
+       :math:`\\theta = - \\arg c_{k}` otherwise, where :math:`\\arg c_{k}` is the phase of the
+       coefficient of the string, which is zero if there is no coefficient or the method is
+       ``"block_encoding"``. It is skipped if :math:`\\theta = 0`;
     4. a Hadamard gate on the first qubit;
     5. the measurement of the first qubit, if ``measure=True``.
 
     This is the :func:`qibo.models.lcu_circuit` of the sum of the two unitaries, with the
     Hadamard gates as the :math:`\\mathrm{PREPARE}` oracles. Therefore, the probability of
-    measuring the first qubit in :math:`\\ket{0}` is
+    measuring the first qubit in :math:`\\ket{0}` of the :math:`k`-th circuit is
 
     .. math::
-        P(0) = \\frac{1}{2} \\left( 1 + \\frac{x}{\\alpha} \\right), \\quad x =
+        P_{k}(0) = \\frac{1}{2} \\left( 1 + \\frac{x_{k}}{w_{k}} \\right), \\quad x_{k} =
         \\begin{cases}
-        \\mathrm{Re} \\, \\bra{\\psi_{2}} O \\ket{\\psi_{1}} & \\text{if }
+        \\mathrm{Re} \\, \\bra{\\psi_{2}} O_{k} \\ket{\\psi_{1}} & \\text{if }
         \\texttt{imaginary=False} \\\\
-        \\mathrm{Im} \\, \\bra{\\psi_{2}} O \\ket{\\psi_{1}} & \\text{if }
+        \\mathrm{Im} \\, \\bra{\\psi_{2}} O_{k} \\ket{\\psi_{1}} & \\text{if }
         \\texttt{imaginary=True}
         \\end{cases}
 
-    and :math:`x = \\alpha (2 P(0) - 1)`, where :math:`\\alpha = 1` unless ``observable`` is a sum
-    of Pauli strings. Both parts are obtained with two circuits.
+    where :math:`O_{k} = O` and :math:`w_{k} = 1` for a circuit or ``None``,
+    :math:`O_{k} = O` and :math:`w_{k} = \\alpha` for ``"block_encoding"``, and
+    :math:`O_{k} = c_{k} P_{k}` and :math:`w_{k} = |c_{k}|` for ``"per_pauli"``. The estimate is
+    recombined from the outcomes as :math:`x = \\sum_{k} w_{k} (2 P_{k}(0) - 1)`. Both parts
+    are obtained with two sets of circuits.
 
     Example:
         Estimate the overlap of :math:`\\ket{\\psi_{1}} = \\ket{+}` and
@@ -126,6 +143,21 @@ def hadamard_test(
             2.00
             2.00
 
+        The same, with one circuit for each Pauli string.
+
+        .. testcode::
+
+            circuits, weights = hadamard_test(
+                state_1, state_1, [("X", 2.0), ("Z", 1.0)], method="per_pauli"
+            )
+            probabilities = [circuit().probabilities(qubits=[0])[0] for circuit in circuits]
+
+            print(f"{sum(w * (2 * p - 1) for w, p in zip(weights, probabilities)):.2f}")
+
+        .. testoutput::
+
+            2.00
+
     Args:
         state_1 (:class:`qibo.models.circuit.Circuit`): circuit that prepares
             :math:`\\ket{\\psi_{1}}`. It cannot contain measurements.
@@ -143,7 +175,11 @@ def hadamard_test(
             :math:`\\bra{\\psi_{2}} O \\ket{\\psi_{1}}`, and the real part otherwise. Defaults to
             ``False``.
         measure (bool, optional): If ``True``, adds a measurement of the first qubit at the end
-            of the circuit. Defaults to ``True``.
+            of each circuit. Defaults to ``True``.
+        method (str, optional): either ``"block_encoding"``, with one circuit, or ``"per_pauli"``,
+            with one circuit for each Pauli string. It only changes the output if ``observable``
+            is a circuit or ``None``, for which ``"per_pauli"`` returns one circuit.
+            Defaults to ``"block_encoding"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the calculation. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -152,8 +188,11 @@ def hadamard_test(
             see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        tuple: circuit of the Hadamard test, and the normalization :math:`\\alpha`, which is
-        :math:`1` if ``observable`` is not a sum of Pauli strings.
+        tuple: for ``"block_encoding"``, the circuit of the Hadamard test and the weight
+        :math:`w`, which is :math:`\\alpha`, or :math:`1` if ``observable`` is a circuit or
+        ``None``. For ``"per_pauli"``, the list of circuits and the list of their weights
+        :math:`w_{k}`, which are the :math:`|c_{k}|`, or :math:`[1]` if ``observable`` is a
+        circuit or ``None``.
 
     References:
         1. D. Aharonov, V. Jones, and Z. Landau, *A polynomial quantum algorithm for
@@ -164,6 +203,12 @@ def hadamard_test(
         `Proc. R. Soc. Lond. A 454, 339 (1998) <https://doi.org/10.1098/rspa.1998.0164>`_.
     """
     backend = _check_backend(backend)
+
+    if method not in ("block_encoding", "per_pauli"):
+        raise_error(
+            ValueError,
+            f"``method`` must be 'block_encoding' or 'per_pauli', but it is '{method}'.",
+        )
 
     circuits = {"state_1": state_1, "state_2": state_2}
     is_hamiltonian = isinstance(observable, (Hamiltonian, SymbolicHamiltonian))
@@ -204,7 +249,7 @@ def hadamard_test(
                     f"the Pauli string '{term[0]}' must have {nqubits} letters "
                     + "among 'I', 'X', 'Y' and 'Z'.",
                 )
-        terms = observable
+        terms = list(observable)
     elif isinstance(observable, SymbolicHamiltonian) and all(
         set(name) <= set("XYZ") for name in observable.simple_terms[1]
     ):
@@ -217,8 +262,38 @@ def hadamard_test(
             terms.append(("".join(pauli), coefficient))
         if observable.constant != 0.0:
             terms.append(("I" * nqubits, observable.constant))
+    elif is_hamiltonian:
+        from qibo.quantum_info import pauli_basis  # circular import
 
-    alpha, nauxiliary = 1.0, 0
+        log.warning(
+            "Calculating the Pauli decomposition of the matrix of a Hamiltonian. "
+            "This operation is inefficient in the number of qubits."
+        )
+        # coefficients of the Pauli strings, whose index in base four has the Pauli
+        # matrix I, X, Y, Z of the first qubit as its most significant digit
+        basis = pauli_basis(nqubits, vectorize=True, order="row", backend=backend)
+        matrix = backend.cast(observable.matrix, dtype="complex128")
+        coefficients = backend.matmul(
+            backend.conj(basis), backend.reshape(matrix, (-1,))
+        ) / (2**nqubits)
+        magnitudes = backend.abs(coefficients)
+        terms = [
+            (
+                "".join(
+                    "IXYZ"[(int(index) // 4 ** (nqubits - 1 - qubit)) % 4]
+                    for qubit in range(nqubits)
+                ),
+                complex(coefficients[index]),
+            )
+            for index in backend.nonzero(magnitudes > 1e-12 * backend.max(magnitudes))[
+                0
+            ]
+        ]
+
+    if terms is not None and len(terms) == 0:
+        raise_error(ValueError, "observable must have at least one Pauli string.")
+
+    operators, weights, phases, nauxiliary = [observable], [1.0], [0.0], 0
     if terms is not None:
         unitaries = []
         for pauli, _ in terms:
@@ -229,41 +304,46 @@ def hadamard_test(
                 if letter != "I"
             )
             unitaries.append(unitary)
-        block, alpha, nauxiliary = lcu_circuit(
-            unitaries, [coefficient for _, coefficient in terms], backend=backend
-        )
-    elif is_hamiltonian:
-        log.warning(
-            "Calculating the Pauli decomposition of the matrix of a Hamiltonian. "
-            "This operation is inefficient in the number of qubits."
-        )
-        block, alpha, nauxiliary = block_encoding_circuit(
-            observable.matrix, method="lcu", backend=backend
-        )
+
+        if method == "block_encoding":
+            block, alpha, nauxiliary = lcu_circuit(
+                unitaries, [coefficient for _, coefficient in terms], backend=backend
+            )
+            operators, weights = [block], [float(alpha)]
+        else:
+            coefficients = [complex(coefficient) for _, coefficient in terms]
+            operators = unitaries
+            weights = [abs(coefficient) for coefficient in coefficients]
+            phases = [-cmath.phase(coefficient) for coefficient in coefficients]
 
     system = range(nauxiliary, nauxiliary + nqubits)
+    circuits = []
+    for operator, phase in zip(operators, phases):
+        first = Circuit(nauxiliary + nqubits)
+        first.add(state_1.on_qubits(*system))
+        if operator is not None:
+            first.add(operator.on_qubits(*range(nauxiliary + nqubits)))
+        second = Circuit(nauxiliary + nqubits)
+        second.add(state_2.on_qubits(*system))
+        select = lcu_select([first, second], 1, backend=backend)
 
-    first = Circuit(nauxiliary + nqubits)
-    first.add(state_1.on_qubits(*system))
-    if isinstance(observable, Circuit):
-        first.add(observable.on_qubits(*system))
-    elif terms is not None or is_hamiltonian:
-        first.add(block)
-    second = Circuit(nauxiliary + nqubits)
-    second.add(state_2.on_qubits(*system))
-    select = lcu_select([first, second], 1, backend=backend)
+        circuit = Circuit(nauxiliary + nqubits + 1, **kwargs)
+        circuit.add(gates.H(0))
+        circuit.add(select.on_qubits(*range(circuit.nqubits)))
+        phase += math.pi / 2 * int(imaginary)
+        if phase != 0.0:
+            circuit.add(gates.U1(0, phase))
+        circuit.add(gates.H(0))
 
-    circuit = Circuit(nauxiliary + nqubits + 1, **kwargs)
-    circuit.add(gates.H(0))
-    circuit.add(select.on_qubits(*range(circuit.nqubits)))
-    if imaginary:
-        circuit.add(gates.S(0))
-    circuit.add(gates.H(0))
+        if measure:
+            circuit.add(gates.M(0))
 
-    if measure:
-        circuit.add(gates.M(0))
+        circuits.append(circuit)
 
-    return circuit, float(alpha)
+    if method == "block_encoding":
+        return circuits[0], weights[0]
+
+    return circuits, weights
 
 
 def swap_test(
