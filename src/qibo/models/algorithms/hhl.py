@@ -66,13 +66,13 @@ def HHL(
 
             import numpy as np
 
-            from qibo.models import hhl
+            from qibo.models import HHL
 
             matrix = np.array([[1.0, -1 / 3], [-1 / 3, 1.0]])
             vector = np.array([0.0, 1.0])
 
             nclock = 6
-            circuit, constant = hhl(matrix, vector, nclock)
+            circuit, constant = HHL(matrix, vector, nclock)
 
             # the flag is the first qubit, and the clock register is the second one
             state = circuit().state().reshape(2, 2**nclock, 2)
@@ -107,7 +107,7 @@ def HHL(
             see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        tuple: circuit of the algorithm, and the constant :math:`C`.
+        tuple: Circuit of the algorithm, and the constant :math:`C`.
 
     References:
         1. A. W. Harrow, A. Hassidim, and S. Lloyd, *Quantum algorithm for linear systems of
