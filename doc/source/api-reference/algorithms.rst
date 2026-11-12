@@ -203,6 +203,15 @@ Swap Test
 .. autofunction:: qibo.models.swap_test
 
 
+Hamiltonian simulation
+----------------------
+
+qDRIFT
+^^^^^^
+
+.. autofunction:: qibo.models.qdrift
+
+
 Block encodings and signal processing
 -------------------------------------
 
