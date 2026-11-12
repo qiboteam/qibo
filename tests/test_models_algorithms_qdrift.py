@@ -8,24 +8,20 @@ import pytest
 
 from qibo import Circuit, hamiltonians
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians._models import _multikron
 from qibo.models import qdrift
 from qibo.symbols import X, Z
 
 
-def _pauli_matrix(string, backend):
+def _exponential(string, coefficient, backend):
+    # Pauli matrices square to the identity
     paulis = {
         "I": backend.matrices.I(2),
         "X": backend.matrices.X,
         "Y": backend.matrices.Y,
         "Z": backend.matrices.Z,
     }
-
-    return reduce(backend.kron, [paulis[letter] for letter in string])
-
-
-def _exponential(string, coefficient, backend):
-    # Pauli matrices square to the identity
-    matrix = _pauli_matrix(string, backend)
+    matrix = _multikron([paulis[letter] for letter in string], backend)
     identity = backend.matrices.I(2 ** len(string))
 
     return backend.cos(coefficient) * identity - 1j * backend.sin(coefficient) * matrix
@@ -51,7 +47,7 @@ def test_qdrift_single_pauli(backend, nqubits, coefficient):
 def test_qdrift_hamiltonians(backend, kind, caplog):
     """The Hamiltonians are written as Pauli strings, with a warning if it is not direct."""
     time, coefficient = 0.9, -0.6
-    matrix = coefficient * _pauli_matrix("XZ", backend)
+    matrix = coefficient * _multikron([backend.matrices.X, backend.matrices.Z], backend)
 
     hamiltonian = {
         "list": [("XZ", coefficient)],

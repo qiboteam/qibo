@@ -1,5 +1,4 @@
 import itertools
-import math
 from numbers import Integral
 
 import numpy as np
@@ -135,33 +134,40 @@ def qdrift(
     terms = _pauli_terms(hamiltonian, None, backend)
     nqubits = len(terms[0][0])
 
-    coefficients = [complex(coefficient) for _, coefficient in terms]
-    weights = [abs(coefficient) for coefficient in coefficients]
+    coefficients = backend.cast(
+        [coefficient for _, coefficient in terms], dtype=backend.complex128
+    )
 
-    if any(abs(c.imag) > 1e-12 * max(weights) for c in coefficients):
+    if backend.any(
+        backend.abs(backend.imag(coefficients))
+        > 1e-12 * backend.max(backend.abs(coefficients))
+    ):
         raise_error(
             ValueError, "the coefficients of the Pauli strings must be real numbers."
         )
 
-    weights = [abs(coefficient.real) for coefficient in coefficients]
-    norm = sum(weights)
+    coefficients = backend.real(coefficients)
+    weights = backend.abs(coefficients)
+    signs = backend.sign(coefficients)
+    norm = backend.sum(weights)
 
     if nsteps is None:
-        nsteps = max(1, math.ceil(2 * (norm * time) ** 2 / epsilon))
+        nsteps = max(1, int(backend.ceil(2 * (norm * time) ** 2 / epsilon)))
     tau = norm * time / nsteps
 
     indices = backend.random_choice(
         len(terms),
         size=nsteps,
-        p=backend.cast([weight / norm for weight in weights], dtype=backend.float64),
+        p=weights / norm,
         seed=local_state,
         dtype=backend.int64,
     )
 
     circuit = Circuit(nqubits, **kwargs)
     for index in indices:
-        pauli = terms[int(index)][0]
-        angle = 2 * tau * (1 if coefficients[int(index)].real > 0 else -1)
+        index = int(index)
+        pauli = terms[index][0]
+        angle = float(2 * tau * signs[index])
         targets = [qubit for qubit, letter in enumerate(pauli) if letter != "I"]
 
         # the identity is a global phase
