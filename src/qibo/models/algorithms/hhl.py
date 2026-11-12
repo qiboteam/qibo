@@ -41,7 +41,8 @@ def HHL(
     3. the inverse :func:`qibo.models.QFT` of the clock register, which then has the estimate
        :math:`\\tilde{\\lambda}_{k} = 2 \\pi k / t_{0}` of an eigenvalue of :math:`A`, where the
        integer :math:`k` is in two's complement, so that the eigenvalues can be negative;
-    4. the rotation of the flag controlled by the clock register,
+    4. the rotation of the flag controlled by the clock register, which is a single
+       :class:`qibo.gates.Multiplexor` gate,
        :math:`\\ket{0} \\mapsto \\sqrt{1 - C^{2} / \\tilde{\\lambda}_{k}^{2}} \\ket{0} +
        (C / \\tilde{\\lambda}_{k}) \\ket{1}`, where :math:`C = \\lVert A \\rVert / \\kappa`, and
        :math:`\\kappa` is the condition number of :math:`A`. The amplitude is at most one, and
@@ -207,27 +208,22 @@ def HHL(
     estimation.add(QFT(nclock).invert().on_qubits(*clock))
 
     # rotation of the flag, controlled by the integer k of the clock register
-    rotation = Circuit(nqubits + nclock + 1)
+    angles = []
     for state in range(nstates):
         eigenvalue = 2 * math.pi * (state - nstates * (state >= nstates // 2)) / time
         if eigenvalue == 0 or abs(eigenvalue) < constant - resolution:
+            angles.append(0.0)
             continue
 
         ratio = min(1.0, constant / abs(eigenvalue)) * (1 if eigenvalue > 0 else -1)
-        angle = 2 * float(backend.arcsin(ratio))
-        flipped = [
-            qubit
-            for qubit, bit in zip(clock, format(state, f"0{nclock}b"))
-            if bit == "0"
-        ]
-        rotation.add(gates.X(qubit) for qubit in flipped)
-        rotation.add(gates.RY(flag, theta=angle).controlled_by(*clock))
-        rotation.add(gates.X(qubit) for qubit in flipped)
+        angles.append(2 * float(backend.arcsin(ratio)))
 
     circuit = Circuit(nqubits + nclock + 1, **kwargs)
     circuit.add(loading.on_qubits(*system))
     circuit.add(estimation.on_qubits(*range(nqubits + nclock + 1)))
-    circuit.add(rotation.on_qubits(*range(nqubits + nclock + 1)))
+    circuit.add(
+        gates.Multiplexor(clock, flag, backend.cast(angles, dtype=backend.float64))
+    )
     circuit.add(estimation.invert().on_qubits(*range(nqubits + nclock + 1)))
 
     return circuit, constant

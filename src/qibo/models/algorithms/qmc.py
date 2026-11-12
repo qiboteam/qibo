@@ -295,18 +295,16 @@ class QMC:
         flag = nqubits
 
         # rotation of the flag, controlled by the measured qubits, with amplitude sqrt(f(x))
+        angles = [
+            2 * float(backend.arcsin(backend.sqrt(min(value, 1.0)))) for value in values
+        ]
         circuit = Circuit(nqubits + 1)
         circuit.add(self.algorithm.on_qubits(*range(nqubits)))
-        for state, value in enumerate(values):
-            if value == 0:
-                continue
-
-            bits = format(state, f"0{len(self.qubits)}b")
-            flipped = [qubit for qubit, bit in zip(self.qubits, bits) if bit == "0"]
-            angle = 2 * float(backend.arcsin(backend.sqrt(min(value, 1.0))))
-            circuit.add(gates.X(qubit) for qubit in flipped)
-            circuit.add(gates.RY(flag, theta=angle).controlled_by(*self.qubits))
-            circuit.add(gates.X(qubit) for qubit in flipped)
+        circuit.add(
+            gates.Multiplexor(
+                self.qubits, flag, backend.cast(angles, dtype=backend.float64)
+            )
+        )
 
         # the flag in the state 1 is the good state
         oracle = Circuit(nqubits + 1)

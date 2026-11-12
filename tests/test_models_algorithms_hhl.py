@@ -59,6 +59,8 @@ def test_hhl(backend, nqubits, kind):
     norm = constant**2 * backend.sum(backend.abs(exact) ** 2)
 
     assert circuit.nqubits == 1 + nclock + nqubits
+    # the rotation of the flag is a single multiplexed rotation
+    assert sum(gate.name == "multiplexor" for gate in circuit.queue) == 1
     assert fidelity > 0.99
     backend.assert_allclose(probability, norm, rtol=0.1)
 
