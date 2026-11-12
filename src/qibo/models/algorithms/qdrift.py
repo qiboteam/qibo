@@ -5,8 +5,7 @@ import numpy as np
 from qibo.backends import Backend, _check_backend_and_local_state
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
-from qibo.models.algorithms._pauli_rotation import _pauli_rotation
-from qibo.models.algorithms._pauli_terms import _pauli_terms
+from qibo.models.algorithms._pauli_helpers import _pauli_rotation, _pauli_terms
 from qibo.models.circuit import Circuit
 
 

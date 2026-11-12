@@ -5,7 +5,7 @@ from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
-from qibo.models.algorithms._pauli_terms import _pauli_terms
+from qibo.models.algorithms._pauli_helpers import _pauli_terms
 from qibo.models.algorithms.lcu import lcu_circuit, lcu_select
 from qibo.models.algorithms.qaa import _check_circuits
 from qibo.models.circuit import Circuit
