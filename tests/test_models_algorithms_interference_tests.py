@@ -1,6 +1,7 @@
 """Tests for the Hadamard and swap tests in `qibo/models/algorithms/interference_tests.py`."""
 
 import logging
+from functools import reduce
 
 import pytest
 
@@ -22,10 +23,12 @@ def _random_circuit(nqubits, seed, backend):
 
 
 @pytest.mark.parametrize("measure", [True, False])
-@pytest.mark.parametrize("kind", ["none", "circuit", "dense", "tfim", "symbolic"])
-@pytest.mark.parametrize("part", ["real", "imag"])
+@pytest.mark.parametrize(
+    "kind", ["none", "circuit", "dense", "tfim", "symbolic", "list", "tuple"]
+)
+@pytest.mark.parametrize("imaginary", [False, True])
 @pytest.mark.parametrize("nqubits", [2, 3])
-def test_hadamard_test(backend, nqubits, part, kind, measure, caplog):
+def test_hadamard_test(backend, nqubits, imaginary, kind, measure, caplog):
     """The probability of the first qubit gives the part of the amplitude."""
     state_1 = _random_circuit(nqubits, 1, backend)
     state_2 = _random_circuit(nqubits, 2, backend)
@@ -49,10 +52,29 @@ def test_hadamard_test(backend, nqubits, part, kind, measure, caplog):
         )
         observable = SymbolicHamiltonian(form, nqubits, backend=backend)
         matrix = observable.matrix
+    elif kind in ("list", "tuple"):
+        observable = [
+            ("X" + "I" * (nqubits - 1), 0.5),
+            ("Z" * nqubits, -0.3),
+            ("I" * nqubits, 0.25),
+            ("Y" + "Z" * (nqubits - 1), 0.4j),
+        ]
+        paulis = {
+            "I": backend.matrices.I(2),
+            "X": backend.matrices.X,
+            "Y": backend.matrices.Y,
+            "Z": backend.matrices.Z,
+        }
+        matrix = sum(
+            coefficient * reduce(backend.kron, [paulis[letter] for letter in string])
+            for string, coefficient in observable
+        )
+        if kind == "tuple":
+            observable = tuple(observable)
 
     with caplog.at_level(logging.WARNING):
         circuit, alpha = hadamard_test(
-            state_1, state_2, observable, part, measure, backend=backend
+            state_1, state_2, observable, imaginary, measure, backend=backend
         )
 
     ket = backend.execute_circuit(state_1).state()
@@ -61,12 +83,13 @@ def test_hadamard_test(backend, nqubits, part, kind, measure, caplog):
     amplitude = backend.sum(
         backend.conj(backend.execute_circuit(state_2).state()) * ket
     )
-    target = float(amplitude.real if part == "real" else amplitude.imag)
+    target = float(amplitude.imag if imaginary else amplitude.real)
 
     probability = backend.execute_circuit(circuit).probabilities(qubits=[0])[0]
 
-    assert (circuit.nqubits > nqubits + 1) == (kind in ("dense", "tfim", "symbolic"))
-    assert (alpha != 1.0) == (kind in ("dense", "tfim", "symbolic"))
+    pauli_sum = kind not in ("none", "circuit")
+    assert (circuit.nqubits > nqubits + 1) == pauli_sum
+    assert (alpha != 1.0) == pauli_sum
     assert len(circuit.measurements) == int(measure)
     assert ("inefficient" in caplog.text) == (kind == "dense")
     backend.assert_allclose(alpha * (2 * float(probability) - 1), target, atol=1e-10)
@@ -150,8 +173,20 @@ def test_hadamard_test_errors(backend):
         hadamard_test(circuit, circuit, Circuit(2), backend=backend)
     with pytest.raises(ValueError):
         hadamard_test(circuit, circuit, hamiltonian, backend=backend)
+
+
+@pytest.mark.parametrize("observable", [["X"], [("X", 1.0, 2.0)], [(1, 1.0)], [None]])
+def test_hadamard_test_pauli_terms_type_errors(backend, observable):
+    """The elements of a list of Pauli strings must be tuples of a string and a number."""
+    with pytest.raises(TypeError):
+        hadamard_test(Circuit(1), Circuit(1), observable, backend=backend)
+
+
+@pytest.mark.parametrize("observable", [[("XX", 1.0)], [("A", 1.0)], [("x", 1.0)], []])
+def test_hadamard_test_pauli_terms_value_errors(backend, observable):
+    """The Pauli strings must have one letter of IXYZ per qubit, and there must be terms."""
     with pytest.raises(ValueError):
-        hadamard_test(circuit, circuit, part="abs", backend=backend)
+        hadamard_test(Circuit(1), Circuit(1), observable, backend=backend)
 
 
 @pytest.mark.parametrize("measure", [True, False])

@@ -11,8 +11,15 @@ from qibo.models.circuit import Circuit
 def hadamard_test(
     state_1: Circuit,
     state_2: Circuit,
-    observable: Circuit | Hamiltonian | SymbolicHamiltonian | None = None,
-    part: str = "real",
+    observable: (
+        Circuit
+        | Hamiltonian
+        | SymbolicHamiltonian
+        | list[tuple[str, complex]]
+        | tuple[tuple[str, complex], ...]
+        | None
+    ) = None,
+    imaginary: bool = False,
     measure: bool = True,
     backend: Backend = None,
     **kwargs,
@@ -26,13 +33,20 @@ def hadamard_test(
     operator :math:`O` is given by ``observable``, which is either
 
     - a circuit that implements a unitary :math:`O`;
+    - a list or a tuple of tuples ``(pauli, coefficient)``, with the Pauli string ``pauli`` and
+      its complex coefficient :math:`c_{i}`, so that :math:`O = \\sum_{i} c_{i} P_{i}`. The
+      string has :math:`n` letters from ``"IXYZ"``, and its :math:`j`-th letter is the Pauli
+      matrix applied to the :math:`j`-th qubit of the states, *e.g.* ``"XIZ"`` is
+      :math:`X_{0} Z_{2}`;
     - a :class:`qibo.hamiltonians.Hamiltonian` or a
-      :class:`qibo.hamiltonians.SymbolicHamiltonian`, which is written as a sum of Pauli strings,
-      :math:`O = \\sum_{i} c_{i} P_{i}`. A symbolic Hamiltonian made of Pauli symbols gives its
-      strings directly. Otherwise, they are computed from the matrix of the Hamiltonian with
+      :class:`qibo.hamiltonians.SymbolicHamiltonian`, which is also written as a sum of Pauli
+      strings. A symbolic Hamiltonian made of Pauli symbols gives its strings directly.
+      Otherwise, they are computed from the matrix of the Hamiltonian with
       :func:`qibo.quantum_info.pauli_basis`, which is inefficient in the number of qubits, and a
-      warning is logged. The circuit block-encodes :math:`O / \\alpha`, with
-      :math:`\\alpha = \\sum_{i} |c_{i}|`, with :func:`qibo.models.lcu_circuit`.
+      warning is logged.
+
+    A sum of Pauli strings is block-encoded as :math:`O / \\alpha`, with
+    :math:`\\alpha = \\sum_{i} |c_{i}|`, with :func:`qibo.models.lcu_circuit`.
 
     The circuit acts on one qubit for the test, followed by the auxiliary qubits of the block
     encoding, if there are any, and the :math:`n` qubits of the states. It is composed of the
@@ -41,7 +55,7 @@ def hadamard_test(
     1. a Hadamard gate on the first qubit;
     2. the oracle of :func:`qibo.models.lcu_select`, which applies :math:`O` after ``state_1``
        if the first qubit is in :math:`\\ket{0}`, and ``state_2`` if it is in :math:`\\ket{1}`;
-    3. a :class:`qibo.gates.S` gate on the first qubit, if ``part="imag"``;
+    3. a :class:`qibo.gates.S` gate on the first qubit, if ``imaginary=True``;
     4. a Hadamard gate on the first qubit;
     5. the measurement of the first qubit, if ``measure=True``.
 
@@ -52,13 +66,14 @@ def hadamard_test(
     .. math::
         P(0) = \\frac{1}{2} \\left( 1 + \\frac{x}{\\alpha} \\right), \\quad x =
         \\begin{cases}
-        \\mathrm{Re} \\, \\bra{\\psi_{2}} O \\ket{\\psi_{1}} & \\text{if } \\texttt{part="real"}
-        \\\\
-        \\mathrm{Im} \\, \\bra{\\psi_{2}} O \\ket{\\psi_{1}} & \\text{if } \\texttt{part="imag"}
+        \\mathrm{Re} \\, \\bra{\\psi_{2}} O \\ket{\\psi_{1}} & \\text{if }
+        \\texttt{imaginary=False} \\\\
+        \\mathrm{Im} \\, \\bra{\\psi_{2}} O \\ket{\\psi_{1}} & \\text{if }
+        \\texttt{imaginary=True}
         \\end{cases}
 
-    and :math:`x = \\alpha (2 P(0) - 1)`, where :math:`\\alpha = 1` unless ``observable`` is a
-    Hamiltonian. Both parts are obtained with two circuits.
+    and :math:`x = \\alpha (2 P(0) - 1)`, where :math:`\\alpha = 1` unless ``observable`` is a sum
+    of Pauli strings. Both parts are obtained with two circuits.
 
     Example:
         Estimate the overlap of :math:`\\ket{\\psi_{1}} = \\ket{+}` and
@@ -76,34 +91,39 @@ def hadamard_test(
             state_2.add(gates.H(0))
             state_2.add(gates.S(0))
 
-            for part in ("real", "imag"):
-                circuit, alpha = hadamard_test(state_1, state_2, part=part)
+            for imaginary in (False, True):
+                circuit, alpha = hadamard_test(state_1, state_2, imaginary=imaginary)
                 probability = circuit().probabilities(qubits=[0])[0]
 
-                print(part, f"{alpha * (2 * probability - 1):.2f}")
+                print(imaginary, f"{alpha * (2 * probability - 1):.2f}")
 
         .. testoutput::
 
-            real 0.50
-            imag -0.50
+            False 0.50
+            True -0.50
 
         Estimate the expectation value of :math:`2 X + Z` in the state :math:`\\ket{+}`, which is
-        :math:`2`.
+        :math:`2`, with a list of Pauli strings, and with a Hamiltonian.
 
         .. testcode::
 
             from qibo.hamiltonians import SymbolicHamiltonian
             from qibo.symbols import X, Z
 
-            hamiltonian = SymbolicHamiltonian(2 * X(0) + Z(0))
+            observables = [
+                [("X", 2.0), ("Z", 1.0)],
+                SymbolicHamiltonian(2 * X(0) + Z(0)),
+            ]
 
-            circuit, alpha = hadamard_test(state_1, state_1, hamiltonian)
-            probability = circuit().probabilities(qubits=[0])[0]
+            for observable in observables:
+                circuit, alpha = hadamard_test(state_1, state_1, observable)
+                probability = circuit().probabilities(qubits=[0])[0]
 
-            print(f"{alpha * (2 * probability - 1):.2f}")
+                print(f"{alpha * (2 * probability - 1):.2f}")
 
         .. testoutput::
 
+            2.00
             2.00
 
     Args:
@@ -112,14 +132,16 @@ def hadamard_test(
         state_2 (:class:`qibo.models.circuit.Circuit`): circuit that prepares
             :math:`\\ket{\\psi_{2}}`. It has the same number of qubits as ``state_1``, and it
             cannot contain measurements.
-        observable (:class:`qibo.models.circuit.Circuit` or
+        observable (:class:`qibo.models.circuit.Circuit`, list, tuple or
             :class:`qibo.hamiltonians.abstract.AbstractHamiltonian`, optional): circuit that
-            implements the unitary :math:`O`, or Hamiltonian that is :math:`O`, on the same
-            number of qubits as ``state_1``. A circuit cannot contain measurements, and it has to
-            be exact, including its global phase, since it is applied under control. If ``None``,
-            it is the identity. Defaults to ``None``.
-        part (str, optional): part of :math:`\\bra{\\psi_{2}} O \\ket{\\psi_{1}}` that is
-            estimated, either ``"real"`` or ``"imag"``. Defaults to ``"real"``.
+            implements the unitary :math:`O`, list or tuple of tuples ``(pauli, coefficient)`` of
+            its Pauli decomposition, or Hamiltonian that is :math:`O`, on the same number of
+            qubits as ``state_1``. A circuit cannot contain measurements, and it has to be exact,
+            including its global phase, since it is applied under control. If ``None``, it is the
+            identity. Defaults to ``None``.
+        imaginary (bool, optional): If ``True``, estimates the imaginary part of
+            :math:`\\bra{\\psi_{2}} O \\ket{\\psi_{1}}`, and the real part otherwise. Defaults to
+            ``False``.
         measure (bool, optional): If ``True``, adds a measurement of the first qubit at the end
             of the circuit. Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -131,7 +153,7 @@ def hadamard_test(
 
     Returns:
         tuple: circuit of the Hadamard test, and the normalization :math:`\\alpha`, which is
-        :math:`1` if ``observable`` is not a Hamiltonian.
+        :math:`1` if ``observable`` is not a sum of Pauli strings.
 
     References:
         1. D. Aharonov, V. Jones, and Z. Landau, *A polynomial quantum algorithm for
@@ -147,11 +169,13 @@ def hadamard_test(
     is_hamiltonian = isinstance(observable, (Hamiltonian, SymbolicHamiltonian))
     if isinstance(observable, Circuit):
         circuits["observable"] = observable
-    elif observable is not None and not is_hamiltonian:
+    elif observable is not None and not (
+        is_hamiltonian or isinstance(observable, (list, tuple))
+    ):
         raise_error(
             TypeError,
-            "observable must be a Circuit, a Hamiltonian or a SymbolicHamiltonian, "
-            + f"but it is type {type(observable)}.",
+            "observable must be a Circuit, a list, a tuple, a Hamiltonian or a "
+            + f"SymbolicHamiltonian, but it is type {type(observable)}.",
         )
     nqubits = _check_circuits(**circuits)
 
@@ -161,28 +185,53 @@ def hadamard_test(
             f"observable must have {nqubits} qubits, but it has {observable.nqubits}.",
         )
 
-    if part not in ("real", "imag"):
-        raise_error(
-            ValueError, f"``part`` must be 'real' or 'imag', but it is '{part}'."
-        )
-
-    alpha, nauxiliary = 1.0, 0
-    if isinstance(observable, SymbolicHamiltonian) and all(
+    terms = None
+    if isinstance(observable, (list, tuple)):
+        for term in observable:
+            if not (
+                isinstance(term, (list, tuple))
+                and len(term) == 2
+                and isinstance(term[0], str)
+            ):
+                raise_error(
+                    TypeError,
+                    "the elements of observable must be tuples of a Pauli string and "
+                    + f"a coefficient, but one is {term}.",
+                )
+            if len(term[0]) != nqubits or not set(term[0]) <= set("IXYZ"):
+                raise_error(
+                    ValueError,
+                    f"the Pauli string '{term[0]}' must have {nqubits} letters "
+                    + "among 'I', 'X', 'Y' and 'Z'.",
+                )
+        terms = observable
+    elif isinstance(observable, SymbolicHamiltonian) and all(
         set(name) <= set("XYZ") for name in observable.simple_terms[1]
     ):
         coefficients, names, qubits = observable.simple_terms
-        coefficients = list(coefficients)
+        terms = []
+        for coefficient, name, targets in zip(coefficients, names, qubits):
+            pauli = ["I"] * nqubits
+            for letter, qubit in zip(name, targets):
+                pauli[qubit] = letter
+            terms.append(("".join(pauli), coefficient))
+        if observable.constant != 0.0:
+            terms.append(("I" * nqubits, observable.constant))
+
+    alpha, nauxiliary = 1.0, 0
+    if terms is not None:
         unitaries = []
-        for name, targets in zip(names, qubits):
+        for pauli, _ in terms:
             unitary = Circuit(nqubits)
             unitary.add(
-                getattr(gates, pauli)(qubit) for pauli, qubit in zip(name, targets)
+                getattr(gates, letter)(qubit)
+                for qubit, letter in enumerate(pauli)
+                if letter != "I"
             )
             unitaries.append(unitary)
-        if observable.constant != 0.0:
-            coefficients.append(observable.constant)
-            unitaries.append(Circuit(nqubits))
-        block, alpha, nauxiliary = lcu_circuit(unitaries, coefficients, backend=backend)
+        block, alpha, nauxiliary = lcu_circuit(
+            unitaries, [coefficient for _, coefficient in terms], backend=backend
+        )
     elif is_hamiltonian:
         log.warning(
             "Calculating the Pauli decomposition of the matrix of a Hamiltonian. "
@@ -198,7 +247,7 @@ def hadamard_test(
     first.add(state_1.on_qubits(*system))
     if isinstance(observable, Circuit):
         first.add(observable.on_qubits(*system))
-    elif is_hamiltonian:
+    elif terms is not None or is_hamiltonian:
         first.add(block)
     second = Circuit(nauxiliary + nqubits)
     second.add(state_2.on_qubits(*system))
@@ -207,7 +256,7 @@ def hadamard_test(
     circuit = Circuit(nauxiliary + nqubits + 1, **kwargs)
     circuit.add(gates.H(0))
     circuit.add(select.on_qubits(*range(circuit.nqubits)))
-    if part == "imag":
+    if imaginary:
         circuit.add(gates.S(0))
     circuit.add(gates.H(0))
 
