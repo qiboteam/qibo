@@ -14,6 +14,7 @@ SPECTRA = {
     "indefinite": [-1.0, 0.5, 0.8, -0.6],
     "cutoff": [1.0, 0.0, 0.5, 0.05],
     "singular": [1.0, 0.0, 0.5, 0.0],
+    "suppressed": [1.0, 0.0, 0.5, 0.005],
 }
 OPTIONS = {"original": {"nclock": 8}, "qsvt": {"method": "qsvt", "epsilon": 0.05}}
 
@@ -32,9 +33,11 @@ def _matrix(values, dimension, backend):
         ("original", "indefinite"),
         ("original", "cutoff"),
         ("original", "singular"),
+        ("original", "suppressed"),
         ("qsvt", "positive"),
         ("qsvt", "indefinite"),
         ("qsvt", "singular"),
+        ("qsvt", "suppressed"),
     ],
 )
 @pytest.mark.parametrize("nqubits", [1, 2])
@@ -43,7 +46,7 @@ def test_hhl(backend, nqubits, method, kind):
     dimension = 2**nqubits
     matrix = _matrix(SPECTRA[kind], dimension, backend)
     vector = random_statevector(dimension, seed=2, backend=backend)
-    singular = kind in ("cutoff", "singular")
+    singular = kind in ("cutoff", "singular", "suppressed")
 
     circuit, constant = HHL(
         matrix,
@@ -53,11 +56,13 @@ def test_hhl(backend, nqubits, method, kind):
         **OPTIONS[method],
     )
 
-    # the eigenvalues that are smaller than the constant are not inverted by the original method
+    # the eigenvalues that are smaller than the bound of the condition number are discarded by the
+    # original method, and suppressed by the QSVT one, which needs them to be well below it
     eigenvalues, eigenvectors = backend.eigh(matrix)
     coefficients = backend.matmul(backend.conj(backend.transpose(eigenvectors)), vector)
-    cutoff = constant * (1 - 1e-9) if method == "original" else 1e-9
-    inverted = backend.abs(eigenvalues) >= cutoff
+    magnitudes = backend.abs(eigenvalues)
+    bound = backend.max(magnitudes) / 2.0 if singular else backend.min(magnitudes)
+    inverted = magnitudes >= bound * (1 - 1e-9)
     inverse = backend.where(
         inverted, 1 / backend.where(inverted, eigenvalues, 1.0), 0.0
     )
@@ -89,6 +94,29 @@ def test_hhl(backend, nqubits, method, kind):
     )
     assert fidelity > 0.99
     backend.assert_allclose(probability, norm, rtol=0.1)
+
+
+def test_hhl_qsvt_condition_number(backend):
+    """The polynomial of a large condition number has a degree of more than one hundred."""
+    matrix = _matrix([1.0, 0.1], 2, backend)
+    vector = random_statevector(2, seed=2, backend=backend)
+
+    circuit, constant = HHL(matrix, vector, method="qsvt", epsilon=0.1, backend=backend)
+
+    eigenvalues, eigenvectors = backend.eigh(matrix)
+    coefficients = backend.matmul(backend.conj(backend.transpose(eigenvectors)), vector)
+    exact = backend.matmul(eigenvectors, coefficients / eigenvalues)
+
+    state = backend.execute_circuit(circuit).state()
+    solution = backend.reshape(state, (2, 2, 2))[0, 0]
+
+    fidelity = backend.abs(backend.sum(backend.conj(exact) * solution)) ** 2 / (
+        backend.sum(backend.abs(exact) ** 2) * backend.sum(backend.abs(solution) ** 2)
+    )
+    norm = constant**2 * backend.sum(backend.abs(exact) ** 2)
+
+    assert fidelity > 0.99
+    backend.assert_allclose(backend.sum(backend.abs(solution) ** 2), norm, rtol=0.1)
 
 
 @pytest.mark.parametrize("epsilon", [0.1, 0.45])

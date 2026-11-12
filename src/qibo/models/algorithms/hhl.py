@@ -410,13 +410,12 @@ def _hhl_qsvt(
     )
     degree = 2 * cutoff + 1
 
+    # the sum of the binomial coefficients above the center, which loses one term at each step
     coefficients = [0.0] * (degree + 1)
+    tail = (4**exponent - math.comb(2 * exponent, exponent)) // 2
     for index in range(cutoff + 1):
-        tail = sum(
-            math.comb(2 * exponent, exponent + i)
-            for i in range(index + 1, exponent + 1)
-        )
         coefficients[2 * index + 1] = 4 * (-1) ** index * tail / 4**exponent
+        tail -= math.comb(2 * exponent, exponent + index + 1)
     coefficients = backend.cast(coefficients, dtype=backend.float64)
 
     # the polynomial is divided by its maximum to be bounded by one
