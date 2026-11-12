@@ -92,6 +92,12 @@ Quantum Rejection Sampling
 .. autofunction:: qibo.models.QRS
 
 
+Quantum Minimum Finding
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.DH
+
+
 Amplitude estimation
 --------------------
 
@@ -121,6 +127,14 @@ Iterative Quantum Amplitude Estimation (IQAE)
     :member-order: bysource
 
 .. autoclass:: qibo.models.IterativeAmplitudeEstimationResult
+    :members:
+    :member-order: bysource
+
+
+Quantum Monte Carlo
+^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.models.QMC
     :members:
     :member-order: bysource
 
@@ -156,9 +170,22 @@ Quantum Adders
 
 .. autofunction:: qibo.models.Gidney
 
+.. autofunction:: qibo.models.RV
+
 .. autofunction:: qibo.models.TTK
 
 .. autofunction:: qibo.models.VBE
+
+
+Factoring
+---------
+
+Shor's Algorithm
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.models.Shor
+    :members:
+    :member-order: bysource
 
 
 Block encodings and signal processing

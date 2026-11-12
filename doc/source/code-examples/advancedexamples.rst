@@ -2908,7 +2908,8 @@ it cheaper:
 When Toffoli gates are expensive, for example in fault-tolerant
 quantum computing, the keyword argument ``minimize_toffolis`` selects a decomposition
 that uses the lowest possible number of Toffoli gates, :math:`2k - 3` with clean qubits and
-:math:`4k - 8` with dirty qubits, instead of minimizing the number of two-qubit gates:
+:math:`4k - 8` with dirty qubits, or :math:`4k + O(\log k)` with two dirty qubits from
+20 controls, instead of minimizing the number of two-qubit gates:
 
 .. testcode:: multicontrolled
 
@@ -2976,7 +2977,7 @@ two qubits. With a single auxiliary qubit, clean or dirty, a different construct
 
     controls | default | one free | one clean | two free
           16 |     734 |      981 |       599 |      272
-          64 |    3422 |     2041 |      1129 |      474
+          64 |    3422 |     2041 |      1129 |      622
 
 The depth is the one of the unrolled circuit. With a single dirty qubit the decomposition
 is shallower than the default only for tens of controls or more, because it uses about twice as
@@ -3064,7 +3065,8 @@ Summary of the options
         logarithmic with two.
     * - ``minimize_toffolis=True``
       - one or two, clean or dirty (:math:`X` only)
-      - :math:`2k - 3` Toffoli gates with clean qubits, :math:`4k - 8` with dirty qubits.
+      - :math:`2k - 3` Toffoli gates with clean qubits, :math:`4k - 8` with dirty qubits,
+        or :math:`4k + O(\log k)` with two of them from 20 controls.
         Logarithmic depth with two qubits, linear with one.
     * - ``minimize_depth=True``
       - one or two, clean or dirty (:math:`X` only)
