@@ -129,6 +129,28 @@ def test_qmc_qubits(backend):
     assert abs(estimate - mean) <= epsilon * (math.sqrt(second) + 1) ** 2
 
 
+def test_qmc_bounded_qubits(backend):
+    # the rotation of the flag follows the order of the qubits, with the first one as the most
+    # significant, and the amplitude estimation is accurate enough to tell the orders apart
+    algorithm = Circuit(3)
+    algorithm.add(gates.RY(0, theta=0.7))
+    algorithm.add(gates.RY(1, theta=1.9))
+    algorithm.add(gates.CNOT(1, 2))
+    values = [0.0, 0.25, 0.75, 1.0]
+
+    qubits = [2, 0]
+    probabilities = backend.execute_circuit(algorithm).probabilities(qubits)
+    mean, _ = _moments([float(p) for p in probabilities], values)
+
+    backend.set_seed(5)
+    estimate = QMC(algorithm, values, qubits=qubits)._bounded(
+        values, nuses=63, delta=0.1, nruns=1, backend=backend
+    )[0]
+
+    # the reversed order of the qubits has a mean that is 0.27 smaller
+    assert abs(estimate - mean) < 0.1
+
+
 def test_qmc_sample_qubits(backend):
     # the outcomes follow the order of the qubits, with the first one as the most significant
     algorithm = Circuit(3)
