@@ -27,6 +27,7 @@ from qibo.models.algorithms.qaa import (
     amplification_operator,
 )
 from qibo.models.algorithms.qae import QAE
+from qibo.models.algorithms.qdrift import qdrift
 from qibo.models.algorithms.qft import QFT
 from qibo.models.algorithms.qmc import QMC
 from qibo.models.algorithms.qpe import IQPE, QPE
@@ -70,6 +71,7 @@ __all__ = [
     "lcu_circuit",
     "lcu_prepare",
     "lcu_select",
+    "qdrift",
     "qsp_circuit",
     "qsp_phases",
     "qsvt_circuit",

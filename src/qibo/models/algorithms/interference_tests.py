@@ -3,8 +3,9 @@ import math
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.models.algorithms._pauli_terms import _pauli_terms
 from qibo.models.algorithms.lcu import lcu_circuit, lcu_select
 from qibo.models.algorithms.qaa import _check_circuits
 from qibo.models.circuit import Circuit
@@ -212,11 +213,10 @@ def hadamard_test(
         )
 
     circuits = {"state_1": state_1, "state_2": state_2}
-    is_hamiltonian = isinstance(observable, (Hamiltonian, SymbolicHamiltonian))
     if isinstance(observable, Circuit):
         circuits["observable"] = observable
-    elif observable is not None and not (
-        is_hamiltonian or isinstance(observable, (list, tuple))
+    elif observable is not None and not isinstance(
+        observable, (list, tuple, Hamiltonian, SymbolicHamiltonian)
     ):
         raise_error(
             TypeError,
@@ -225,77 +225,9 @@ def hadamard_test(
         )
     nqubits = _check_circuits(**circuits)
 
-    if is_hamiltonian and observable.nqubits != nqubits:
-        raise_error(
-            ValueError,
-            f"observable must have {nqubits} qubits, but it has {observable.nqubits}.",
-        )
-
     terms = None
-    if isinstance(observable, (list, tuple)):
-        for term in observable:
-            if not (
-                isinstance(term, (list, tuple))
-                and len(term) == 2
-                and isinstance(term[0], str)
-            ):
-                raise_error(
-                    TypeError,
-                    "the elements of observable must be tuples of a Pauli string and "
-                    + f"a coefficient, but one is {term}.",
-                )
-            if len(term[0]) != nqubits or not set(term[0]) <= set("IXYZ"):
-                raise_error(
-                    ValueError,
-                    f"the Pauli string '{term[0]}' must have {nqubits} letters "
-                    + "among 'I', 'X', 'Y' and 'Z'.",
-                )
-        terms = list(observable)
-    elif isinstance(observable, SymbolicHamiltonian) and all(
-        set(name) <= set("XYZ") for name in observable.simple_terms[1]
-    ):
-        coefficients, names, qubits = observable.simple_terms
-        terms = []
-        for coefficient, name, targets in zip(coefficients, names, qubits):
-            pauli = ["I"] * nqubits
-            for letter, qubit in zip(name, targets):
-                pauli[qubit] = letter
-            terms.append(("".join(pauli), coefficient))
-        if observable.constant != 0.0:
-            terms.append(("I" * nqubits, observable.constant))
-    elif is_hamiltonian:
-        from qibo.quantum_info import pauli_basis  # circular import
-
-        log.warning(
-            "Calculating the Pauli decomposition of the matrix of a Hamiltonian. "
-            "This operation is inefficient in the number of qubits."
-        )
-        # coefficients of the Pauli strings, whose index in base four has the Pauli
-        # matrix I, X, Y, Z of the first qubit as its most significant digit
-        basis = pauli_basis(nqubits, vectorize=True, order="row", backend=backend)
-        matrix = backend.cast(observable.matrix, dtype="complex128")
-        coefficients = backend.matmul(
-            backend.conj(basis), backend.reshape(matrix, (-1,))
-        ) / (2**nqubits)
-        magnitudes = backend.abs(coefficients)
-        terms = [
-            (
-                "".join(
-                    "IXYZ"[(int(index) // 4 ** (nqubits - 1 - qubit)) % 4]
-                    for qubit in range(nqubits)
-                ),
-                complex(coefficients[index]),
-            )
-            for index in backend.nonzero(magnitudes > 1e-12 * backend.max(magnitudes))[
-                0
-            ]
-        ]
-
-    if terms is not None and not any(coefficient != 0 for _, coefficient in terms):
-        raise_error(
-            ValueError,
-            "observable must have at least one Pauli string with a non-zero coefficient.",
-        )
+    if observable is not None and not isinstance(observable, Circuit):
+        terms = _pauli_terms(observable, nqubits, "observable", backend)
 
     operators, weights, phases, nauxiliary = [observable], [1.0], [0.0], 0
     if terms is not None:
