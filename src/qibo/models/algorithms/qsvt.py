@@ -219,7 +219,12 @@ def qsvt_phases(coefficients: ArrayLike, backend: Backend = None) -> ArrayLike:
             continue
 
         values = scale * (1 - margin) * evaluate(nsamples)
-        factor, converged = _spectral_factor(1 - values**2, degree, backend)
+        residual = 1 - values**2
+        # the maximum is estimated on a coarser grid, and the polynomial can exceed it between
+        # the nodes of that one, where 1 - P^2 is negative and has no factor
+        if backend.min(residual) <= 0:
+            continue
+        factor, converged = _spectral_factor(residual, degree, backend)
         if converged:
             break
     else:  # pragma: no cover
