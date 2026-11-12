@@ -188,8 +188,8 @@ Shor's Algorithm
     :member-order: bysource
 
 
-Hadamard and swap tests
------------------------
+Interference tests
+------------------
 
 Hadamard Test
 ^^^^^^^^^^^^^
