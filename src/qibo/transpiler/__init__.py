@@ -30,7 +30,7 @@ from qibo.transpiler.optimizer import (
 from qibo.transpiler.pipeline import Passes, generate_preset_passes, transpile
 from qibo.transpiler.placer import (
     Dense,
-    NoiseAwareDense,
+    NoiseAwarePlacer,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
@@ -55,7 +55,7 @@ __all__ = [
     "InverseCancellation",
     "NativeGates",
     "NoRouting",
-    "NoiseAwareDense",
+    "NoiseAwarePlacer",
     "Optimize1qGatesDecomposition",
     "Optimize1qGatesSimpleCommutation",
     "OptimizeSwapBeforeMeasure",

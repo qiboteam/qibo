@@ -330,10 +330,10 @@ Dense
     :member-order: bysource
 
 
-Noise-aware dense
-^^^^^^^^^^^^^^^^^
+Noise-aware placer
+^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.transpiler.placer.NoiseAwareDense
+.. autoclass:: qibo.transpiler.placer.NoiseAwarePlacer
     :members:
     :member-order: bysource
 
