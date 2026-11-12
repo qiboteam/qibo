@@ -176,7 +176,7 @@ def test_hadamard_test_errors(backend):
 
     with pytest.raises(TypeError):
         hadamard_test(circuit, "state", backend=backend)
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="observable must be a Circuit"):
         hadamard_test(circuit, circuit, "observable", backend=backend)
     with pytest.raises(ValueError):
         hadamard_test(circuit, measured, backend=backend)
@@ -184,8 +184,10 @@ def test_hadamard_test_errors(backend):
         hadamard_test(circuit, Circuit(2), backend=backend)
     with pytest.raises(ValueError):
         hadamard_test(circuit, circuit, Circuit(2), backend=backend)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="observable must have 1 qubits"):
         hadamard_test(circuit, circuit, hamiltonian, backend=backend)
+    with pytest.raises(ValueError, match="observable must have at least one"):
+        hadamard_test(circuit, circuit, [("X", 0.0)], backend=backend)
     with pytest.raises(ValueError):
         hadamard_test(circuit, circuit, method="sum", backend=backend)
 

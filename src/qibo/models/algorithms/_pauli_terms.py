@@ -1,4 +1,4 @@
-from qibo.backends import Backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 
@@ -11,7 +11,8 @@ def _pauli_terms(
         | tuple[tuple[str, complex], ...]
     ),
     nqubits: int | None,
-    backend: Backend,
+    label: str = "operator",
+    backend: Backend | None = None,
 ) -> list[tuple[str, complex]]:
     """Writes an operator as a sum of Pauli strings, :math:`\\sum_{k} c_{k} P_{k}`.
 
@@ -27,16 +28,20 @@ def _pauli_terms(
             the Pauli matrix applied to the :math:`j`-th qubit.
         nqubits (int, optional): number of qubits of ``operator``. If ``None``, it is taken from
             ``operator``.
+        label (str, optional): name of the argument of the caller that is ``operator``, which is
+            used in the error messages. Defaults to ``"operator"``.
         backend (:class:`qibo.backends.abstract.Backend`): backend to be used in the calculation.
 
     Returns:
         list: tuples ``(pauli, coefficient)`` of the Pauli strings and their coefficients, with at
         least one non-zero coefficient.
     """
+    backend = _check_backend(backend)
+
     if not isinstance(operator, (list, tuple, Hamiltonian, SymbolicHamiltonian)):
         raise_error(
             TypeError,
-            "operator must be a list, a tuple, a Hamiltonian or a SymbolicHamiltonian, "
+            f"{label} must be a list, a tuple, a Hamiltonian or a SymbolicHamiltonian, "
             + f"but it is type {type(operator)}.",
         )
 
@@ -49,7 +54,7 @@ def _pauli_terms(
             ):
                 raise_error(
                     TypeError,
-                    "the elements of operator must be tuples of a Pauli string and "
+                    f"the elements of {label} must be tuples of a Pauli string and "
                     + f"a coefficient, but one is {term}.",
                 )
             if nqubits is None:
@@ -65,7 +70,7 @@ def _pauli_terms(
         if nqubits is not None and operator.nqubits != nqubits:
             raise_error(
                 ValueError,
-                f"operator must have {nqubits} qubits, but it has {operator.nqubits}.",
+                f"{label} must have {nqubits} qubits, but it has {operator.nqubits}.",
             )
         nqubits = operator.nqubits
 
@@ -112,7 +117,7 @@ def _pauli_terms(
     if not any(coefficient != 0 for _, coefficient in terms):
         raise_error(
             ValueError,
-            "operator must have at least one Pauli string with a non-zero coefficient.",
+            f"{label} must have at least one Pauli string with a non-zero coefficient.",
         )
 
     return terms
