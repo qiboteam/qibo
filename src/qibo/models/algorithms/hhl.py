@@ -9,7 +9,7 @@ from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.models.algorithms.qaa import _check_circuits
 from qibo.models.algorithms.qft import QFT
-from qibo.models.algorithms.qsvt_function import _hermitian_matrix, qsvt_function
+from qibo.models.algorithms.qsvt import _hermitian_matrix, qsvt_function
 from qibo.models.circuit import Circuit
 from qibo.models.encodings import binary_encoder
 
