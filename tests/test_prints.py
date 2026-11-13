@@ -104,7 +104,7 @@ def test_codetext_class(text, contains_print):
         CodeText(text).check_exists("print")
 
 
-@pytest.mark.parametrize("filename", python_files())
+@pytest.mark.parametrize("filename", list(python_files()))
 def test_qibo_code(filename):
     text = CodeText.from_file(filename)
     text.check_exists("print")
