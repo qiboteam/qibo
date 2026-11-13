@@ -122,6 +122,17 @@ Quantum Shannon decomposition
 .. autofunction:: qibo.transpiler.quantum_shannon_decomposition
 
 
+Hardware
+--------
+
+Hardware model
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.hardware.HardwareModel
+    :members:
+    :member-order: bysource
+
+
 Optimizer
 ---------
 
@@ -315,6 +326,14 @@ Dense
 ^^^^^
 
 .. autoclass:: qibo.transpiler.placer.Dense
+    :members:
+    :member-order: bysource
+
+
+Noise-aware placer
+^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.placer.NoiseAwarePlacer
     :members:
     :member-order: bysource
 
