@@ -21,6 +21,9 @@ The user can set the backend using the :func:`qibo.set_backend` function.
     # Switch to the numpy backend
     qibo.set_backend("numpy")
 
+    # Reset the backend and transpiler to the default
+    qibo.set_backend()
+
 
 If no backend is specified, the default backend is used.
 The default backend is selected in the following order: ``qibojit``, ``numpy``, and ``qiboml``.

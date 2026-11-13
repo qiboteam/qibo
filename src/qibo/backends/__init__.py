@@ -123,10 +123,25 @@ class _Global:
         return backend
 
     @classmethod
-    def set_backend(cls, backend, **kwargs):
+    def set_backend(cls, backend=None, **kwargs):
+        if backend is None:
+            if kwargs:
+                raise_error(
+                    ValueError,
+                    "Cannot specify additional arguments when resetting backend.",
+                )
+            cls._backend = None
+            cls._transpiler = None
+            return
+
         cls._backend = construct_backend(backend, **kwargs)
         cls._transpiler = None
         log.info(f"Using {cls._backend} backend on {cls._backend.device}")
+
+    @classmethod
+    def reset(cls):
+        """Reset global backend and transpiler to None."""
+        cls.set_backend()
 
     @classmethod
     def transpiler(cls):
@@ -138,7 +153,7 @@ class _Global:
         return cls._transpiler
 
     @classmethod
-    def set_transpiler(cls, transpiler):
+    def set_transpiler(cls, transpiler=None):
         cls._transpiler = transpiler
         # TODO: check if transpiler is valid on the backend
 
@@ -215,11 +230,12 @@ def get_backend():
     return _Global.backend()
 
 
-def set_backend(backend, **kwargs):
+def set_backend(backend=None, **kwargs):
     """Set the current backend.
 
     Args:
-        backend (str): Name of the backend to use.
+        backend (str, optional): Name of the backend to use.
+            If ``None``, resets the backend and transpiler to default. Defaults to ``None``.
         kwargs (dict): Additional arguments for the backend.
     """
     _Global.set_backend(backend, **kwargs)
@@ -235,11 +251,12 @@ def get_transpiler_name():
     return str(_Global.transpiler())
 
 
-def set_transpiler(transpiler):
+def set_transpiler(transpiler=None):
     """Set the current transpiler.
 
     Args:
-        transpiler (Passes): The transpiler to use.
+        transpiler (Passes, optional): The transpiler to use.
+            If ``None``, resets the transpiler to default. Defaults to ``None``.
     """
     _Global.set_transpiler(transpiler)
 
