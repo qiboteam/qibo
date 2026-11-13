@@ -1,11 +1,20 @@
-from qibo.transpiler.multicontrolled_decompositions import (
+from qibo.transpiler.decompositions.multicontrolled_decompositions import (
     multi_controlled_decomposition,
 )
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    quantum_shannon_decomposition,
+)
+from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import (
+    BarrierBeforeFinalMeasurements,
+    CommutativeCancellation,
     ConsolidateBlocks,
+    FilterGates,
     FixedPoint,
     InverseCancellation,
     Optimize1qGatesDecomposition,
+    Optimize1qGatesSimpleCommutation,
+    OptimizeSwapBeforeMeasure,
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
@@ -15,23 +24,37 @@ from qibo.transpiler.optimizer import (
     RemoveResetInZeroState,
     ResetAfterMeasureSimplification,
     TGateRules,
+    Validation,
 )
-from qibo.transpiler.pipeline import Passes, generate_preset_passes
+from qibo.transpiler.pipeline import Passes, generate_preset_passes, transpile
 from qibo.transpiler.placer import (
+    Dense,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
     Subgraph,
 )
-from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
+from qibo.transpiler.router import (
+    NoRouting,
+    Sabre,
+    ShortestPaths,
+    StarConnectivityRouter,
+)
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 __all__ = [
+    "BarrierBeforeFinalMeasurements",
+    "CommutativeCancellation",
     "ConsolidateBlocks",
+    "Dense",
+    "FilterGates",
     "FixedPoint",
     "InverseCancellation",
     "NativeGates",
+    "NoRouting",
     "Optimize1qGatesDecomposition",
+    "Optimize1qGatesSimpleCommutation",
+    "OptimizeSwapBeforeMeasure",
     "ParametrizedGateFusion",
     "Passes",
     "Preprocessing",
@@ -49,7 +72,11 @@ __all__ = [
     "StarConnectivityRouter",
     "Subgraph",
     "TGateRules",
+    "TranspileLayout",
     "Unroller",
+    "Validation",
     "generate_preset_passes",
     "multi_controlled_decomposition",
+    "quantum_shannon_decomposition",
+    "transpile",
 ]

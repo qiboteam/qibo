@@ -1,18 +1,31 @@
 import math
+import random
 
+import networkx as nx
 import numpy as np
 import pytest
 import sympy
 
 from qibo import Circuit, gates
 from qibo.gates.special import Barrier
-from qibo.transpiler._exceptions import PlacementError
+from qibo.transpiler._exceptions import (
+    ConnectivityError,
+    DecompositionError,
+    PlacementError,
+)
 from qibo.transpiler.abstract import Optimizer
+from qibo.transpiler.decompositions.direction_decompositions import direction_dec
 from qibo.transpiler.optimizer import (
+    BarrierBeforeFinalMeasurements,
+    CommutativeCancellation,
     ConsolidateBlocks,
+    FilterGates,
     FixedPoint,
+    GateDirection,
     InverseCancellation,
     Optimize1qGatesDecomposition,
+    Optimize1qGatesSimpleCommutation,
+    OptimizeSwapBeforeMeasure,
     ParametrizedGateFusion,
     Preprocessing,
     Rearrange,
@@ -22,14 +35,19 @@ from qibo.transpiler.optimizer import (
     RemoveResetInZeroState,
     ResetAfterMeasureSimplification,
     TGateRules,
+    Validation,
 )
-from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.pipeline import Passes, generate_preset_passes
+from qibo.transpiler.router import Sabre
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 def test_preprocessing_error(star_connectivity):
     circ = Circuit(7)
     preprocesser = Preprocessing(connectivity=star_connectivity())
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
         preprocesser(circuit=circ)
 
     wire_names = [0, 1, 2, "q3", "q4"]
@@ -45,7 +63,9 @@ def test_preprocessing_too_many_logical_qubits(star_connectivity):
     """
     circ = Circuit(6, wire_names=[0, 1, 2, 0, 1, 2])
     preprocesser = Preprocessing(connectivity=star_connectivity())
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
         preprocesser(circuit=circ)
 
 
@@ -66,6 +86,17 @@ def test_preprocessing_add(star_connectivity):
     assert new_circuit.nqubits == 5
 
 
+def test_preprocessing_wire_names_not_in_connectivity(star_connectivity):
+    """``wire_names`` outside the connectivity are replaced by its first nodes."""
+    circ = Circuit(2, wire_names=["a", "b"])
+    circ.add(gates.CNOT(0, 1))
+    preprocesser = Preprocessing(connectivity=star_connectivity())
+    new_circuit = preprocesser(circuit=circ)
+    assert new_circuit.wire_names == [0, 1, 2, 3, 4]
+    assert new_circuit.nqubits == 5
+    assert new_circuit.queue[0].qubits == (0, 1)
+
+
 def test_preprocessing_initial_layout(star_connectivity):
     circ = Circuit(3, wire_names=[0, 1, 2])
     circ.add(gates.CNOT(0, 1))
@@ -78,6 +109,61 @@ def test_preprocessing_initial_layout(star_connectivity):
     assert new_circuit.nqubits == 5
     assert new_circuit.ngates == 1
     assert new_circuit.queue[0].qubits == (0, 1)
+
+
+@pytest.mark.parametrize(
+    "initial_layout, wire_names",
+    [
+        # a complete dictionary is the same as a list
+        ({0: 4, 1: 2, 2: 0}, [4, 2, 0, 1, 3]),
+        ({2: 0, 0: 4, 1: 2}, [4, 2, 0, 1, 3]),
+        # the missing qubits take the free nodes, in the order of the connectivity
+        ({1: 3}, [0, 3, 1, 2, 4]),
+        ({0: 1, 2: 0}, [1, 2, 0, 3, 4]),
+        ({2: 0}, [1, 2, 0, 3, 4]),
+        ({}, [0, 1, 2, 3, 4]),
+    ],
+)
+def test_preprocessing_initial_layout_dict(
+    star_connectivity, initial_layout, wire_names
+):
+    circ = Circuit(3)
+    circ.add(gates.CNOT(0, 1))
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout=initial_layout
+    )
+    new_circuit = preprocesser(circuit=circ)
+    assert new_circuit.wire_names == wire_names
+    assert new_circuit.nqubits == 5
+    assert new_circuit.queue[0].qubits == (0, 1)
+
+
+@pytest.mark.parametrize(
+    "initial_layout, match",
+    [
+        ({3: 0}, "keys"),
+        ({-1: 0}, "keys"),
+        ({0: 1, 1: 1}, "distinct node"),
+        ({0: 9}, "distinct node"),
+    ],
+)
+def test_preprocessing_initial_layout_dict_error(
+    star_connectivity, initial_layout, match
+):
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout=initial_layout
+    )
+    with pytest.raises(PlacementError, match=match):
+        preprocesser(circuit=Circuit(3))
+
+
+def test_preprocessing_initial_layout_dict_not_enough_free_nodes(star_connectivity):
+    """Placing a qubit leaves too few nodes for the qubits that are not in the layout."""
+    preprocesser = Preprocessing(
+        connectivity=star_connectivity(), initial_layout={0: 4}
+    )
+    with pytest.raises(PlacementError, match="distinct node"):
+        preprocesser(circuit=Circuit(6))
 
 
 def test_preprocessing_initial_layout_all_qubits(star_connectivity):
@@ -308,6 +394,607 @@ def test_inverse_cancellation_pipeline(backend, star_connectivity):
     pipeline = Passes([InverseCancellation()], connectivity=star_connectivity())
     transpiled, _ = pipeline(circuit, backend=backend)
     assert [gate.name for gate in transpiled.queue] == ["cx"]
+
+
+@pytest.mark.parametrize(
+    "queue, expected",
+    [
+        ([gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4)], ["rz", "cx"]),
+        ([gates.RZ(0, 0.3), gates.CZ(0, 1), gates.RZ(0, 0.4)], ["rz", "cz"]),
+        ([gates.RZ(1, 0.3), gates.CZ(0, 1), gates.RZ(1, 0.4)], ["rz", "cz"]),
+        ([gates.RX(1, 0.3), gates.CNOT(0, 1), gates.RX(1, 0.4)], ["rx", "cx"]),
+        ([gates.RY(1, 0.3), gates.CY(0, 1), gates.RY(1, 0.4)], ["ry", "cy"]),
+    ],
+)
+@pytest.mark.parametrize("up_to_global_phase", [True, False])
+def test_commutative_cancellation_merges_through_commuting_gates(
+    backend, queue, expected, up_to_global_phase
+):
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = CommutativeCancellation(up_to_global_phase=up_to_global_phase)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in optimized.queue] == expected
+    backend.assert_allclose(optimized.queue[0].parameters[0], 0.7)
+    backend.assert_allclose(
+        optimized.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        [gates.RZ(0, 0.3), gates.CNOT(1, 0), gates.RZ(0, 0.4)],
+        [gates.RX(0, 0.3), gates.CNOT(0, 1), gates.RX(0, 0.4)],
+        [gates.RZ(0, 0.3), gates.H(0), gates.RZ(0, 0.4)],
+        [gates.RZ(0, 0.3), gates.RX(0, 0.2), gates.RZ(0, 0.4)],
+    ],
+)
+def test_commutative_cancellation_stops_at_non_commuting_gates(backend, queue):
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == [gate.name for gate in queue]
+
+
+@pytest.mark.parametrize(
+    "queue, expected",
+    [
+        ([gates.T(0), gates.T(0)], [("rz", math.pi / 2)]),
+        ([gates.T(0), gates.TDG(0)], []),
+        ([gates.S(0), gates.Z(0), gates.SDG(0)], [("rz", math.pi)]),
+        ([gates.X(0), gates.RX(0, 0.3)], [("rx", math.pi + 0.3)]),
+        ([gates.SX(0), gates.SX(0)], [("rx", math.pi)]),
+        ([gates.Y(0), gates.RY(0, 0.3), gates.Y(0)], [("ry", 0.3)]),
+        ([gates.RZ(0, 3), gates.RZ(0, 3)], [("rz", 6 - 2 * math.pi)]),
+        ([gates.RZ(0, math.pi), gates.RZ(0, math.pi)], []),
+    ],
+)
+def test_commutative_cancellation_merges_gate_families(backend, queue, expected):
+    circuit = Circuit(1)
+    circuit.add(queue)
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == [name for name, _ in expected]
+    for gate, (_, angle) in zip(optimized.queue, expected):
+        # the angle of a rotation is defined up to a global phase, that is, modulo 2 pi
+        difference = math.remainder(float(gate.parameters[0]) - angle, 2 * math.pi)
+        backend.assert_allclose(difference, 0.0, atol=1e-8)
+    # the circuits are equal up to a global phase if the overlap of their unitaries is one
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+def test_commutative_cancellation_removes_identity(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, -0.3))
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["cx"]
+
+
+@pytest.mark.parametrize(
+    "queue, expected",
+    [
+        ([gates.RZ(0, 0.3), gates.RZ(0, 0.4)], ["rz"]),
+        ([gates.Z(0), gates.Z(0)], []),
+        ([gates.X(0), gates.X(0)], []),
+        ([gates.RZ(0, math.pi), gates.RZ(0, math.pi)], ["rz"]),
+        ([gates.T(0), gates.T(0)], ["t", "t"]),
+        ([gates.Z(0), gates.RZ(0, 0.3)], ["z", "rz"]),
+        ([gates.RZ(0, 0.3), gates.T(0), gates.RZ(0, 0.4)], ["rz", "t"]),
+    ],
+)
+def test_commutative_cancellation_exact_global_phase(backend, queue, expected):
+    circuit = Circuit(1)
+    circuit.add(queue)
+    optimized = CommutativeCancellation(up_to_global_phase=False)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in optimized.queue] == expected
+    backend.assert_allclose(
+        optimized.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
+def test_commutative_cancellation_cancels_pairs_through_commuting_gates(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.CNOT(0, 1))
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["rz"]
+
+    circuit = Circuit(2)
+    circuit.add(gates.RZ(0, 0.1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, 0.2))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, 0.3))
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["rz"]
+    backend.assert_allclose(optimized.queue[0].parameters[0], 0.6)
+
+
+def test_commutative_cancellation_uncancellable_gates(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.Align(0))
+    circuit.add(gates.RZ(0, 0.4))
+    assert CommutativeCancellation()(circuit, backend=backend).ngates == 3
+
+    circuit = Circuit(2)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.M(0))
+    circuit.add(gates.RZ(0, 0.4))
+    assert CommutativeCancellation()(circuit, backend=backend).ngates == 3
+
+    circuit = Circuit(3)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(Barrier(0, 1))
+    circuit.add(gates.RZ(0, 0.4))
+    assert CommutativeCancellation()(circuit, backend=backend).ngates == 3
+
+    # the gates on other qubits do not stop the merge
+    circuit = Circuit(3)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(Barrier(1, 2))
+    circuit.add(gates.RZ(0, 0.4))
+    assert CommutativeCancellation()(circuit, backend=backend).ngates == 2
+
+    circuit = Circuit(1, density_matrix=True)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.DepolarizingChannel((0,), 0.1))
+    circuit.add(gates.RZ(0, 0.4))
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert optimized.ngates == 3
+    assert optimized.density_matrix
+
+
+def test_commutative_cancellation_not_rotations(backend):
+    queue = [
+        gates.U3(0, 0.1, 0.2, 0.3),
+        gates.U3(0, 0.1, 0.2, 0.3),
+        gates.RZ(0, 0.0),
+        gates.RZ(1, 0.3).controlled_by(0),
+        gates.RZ(1, 0.3).controlled_by(0),
+        gates.RX(1, 0.2),
+    ]
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == [gate.name for gate in queue]
+
+
+def test_commutative_cancellation_symbolic(backend):
+    x, y = sympy.Symbol("x"), sympy.Symbol("y")
+
+    # the gates with symbols commute with the rotations around the same axis
+    circuit = Circuit(1)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.RZ(0, x))
+    circuit.add(gates.RZ(0, 0.4))
+    optimized = CommutativeCancellation()(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == ["rz", "rz"]
+    backend.assert_allclose(optimized.queue[0].parameters[0], 0.7)
+    assert optimized.queue[1].symbolic_parameters
+
+    # but they are not merged
+    circuit = Circuit(1)
+    circuit.add(gates.RZ(0, x))
+    circuit.add(gates.RZ(0, y))
+    assert CommutativeCancellation()(circuit, backend=backend).ngates == 2
+
+    # and the ones that cannot be evaluated stop the merge
+    circuit = Circuit(1)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.RX(0, sympy.sqrt(-x)))
+    circuit.add(gates.RZ(0, 0.4))
+    assert CommutativeCancellation()(circuit, backend=backend).ngates == 3
+
+
+def test_commutative_cancellation_atol(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.RZ(0, -0.3 + 1e-9))
+    assert CommutativeCancellation()(circuit, backend=backend).ngates == 1
+    assert CommutativeCancellation(atol=1e-6)(circuit, backend=backend).ngates == 0
+
+
+def test_commutative_cancellation_negative_atol():
+    with pytest.raises(ValueError, match="atol"):
+        CommutativeCancellation(atol=-1.0)
+
+
+@pytest.mark.parametrize("up_to_global_phase", [True, False])
+@pytest.mark.parametrize("seed", range(10))
+def test_commutative_cancellation_random_circuits(backend, seed, up_to_global_phase):
+    generator = random.Random(seed)
+    angles = [0.3, -0.3, 0.7, math.pi / 2, math.pi]
+    one_qubit = [
+        lambda qubit: gates.RZ(qubit, generator.choice(angles)),
+        lambda qubit: gates.RX(qubit, generator.choice(angles)),
+        lambda qubit: gates.RY(qubit, generator.choice(angles)),
+        gates.T,
+        gates.TDG,
+        gates.S,
+        gates.Z,
+        gates.X,
+        gates.Y,
+        gates.SX,
+        gates.H,
+    ]
+    two_qubit = [gates.CNOT, gates.CZ, gates.CY, gates.SWAP]
+    circuit = Circuit(3)
+    for _ in range(14):
+        if generator.random() < 0.6:
+            circuit.add(generator.choice(one_qubit)(generator.randrange(3)))
+        else:
+            circuit.add(generator.choice(two_qubit)(*generator.sample(range(3), 2)))
+
+    optimized = CommutativeCancellation(up_to_global_phase=up_to_global_phase)(
+        circuit, backend=backend
+    )
+
+    assert optimized.ngates <= circuit.ngates
+    if up_to_global_phase:
+        # the circuits are equal up to a global phase if the overlap of their unitaries is one
+        first = circuit.unitary(backend)
+        second = optimized.unitary(backend)
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+    else:
+        backend.assert_allclose(
+            optimized.unitary(backend), circuit.unitary(backend), atol=1e-8
+        )
+
+
+def test_commutative_cancellation_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.RZ(0, 0.4))
+    pipeline = Passes([CommutativeCancellation()], connectivity=star_connectivity())
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert [gate.name for gate in transpiled.queue] == ["rz", "cx"]
+
+
+def _random_swap_circuit(seed):
+    generator = random.Random(seed)
+    circuit = Circuit(4)
+    for _ in range(8):
+        qubit = generator.randrange(4)
+        circuit.add(generator.choice([gates.RX, gates.RY])(qubit, generator.random()))
+        circuit.add(gates.CNOT(*generator.sample(range(4), 2)))
+    for _ in range(4):
+        circuit.add(gates.SWAP(*generator.sample(range(4), 2)))
+    circuit.add(gates.M(0, 1, 2, 3))
+    return circuit
+
+
+@pytest.mark.parametrize(
+    "queue, expected",
+    [
+        ([gates.SWAP(0, 1), gates.M(0, 1)], [("measure", (1, 0))]),
+        (
+            [gates.SWAP(0, 1), gates.SWAP(1, 2), gates.M(0, 1, 2)],
+            [("measure", (1, 2, 0))],
+        ),
+        (
+            [
+                gates.SWAP(0, 1),
+                gates.M(0, register_name="a"),
+                gates.M(1, register_name="b"),
+            ],
+            [("measure", (1,)), ("measure", (0,))],
+        ),
+        ([gates.SWAP(0, 1), gates.M(1)], [("measure", (0,))]),
+        (
+            [gates.SWAP(0, 1), gates.M(0, 2), gates.X(2)],
+            [("measure", (1, 2)), ("x", (2,))],
+        ),
+        (
+            [gates.SWAP(1, 2), gates.M(0, 1), gates.M(2, register_name="b")],
+            [("measure", (0, 2)), ("measure", (1,))],
+        ),
+    ],
+)
+def test_optimize_swap_before_measure(backend, queue, expected):
+    circuit = Circuit(3)
+    circuit.add(gates.RY(0, 0.3))
+    circuit.add(gates.RY(1, 1.1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(queue)
+
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+
+    assert [(gate.name, gate.qubits) for gate in optimized.queue[3:]] == expected
+    for measurement, new_measurement in zip(
+        circuit.measurements, optimized.measurements
+    ):
+        assert measurement.register_name == new_measurement.register_name
+        backend.assert_allclose(
+            backend.execute_circuit(optimized).probabilities(
+                qubits=new_measurement.target_qubits
+            ),
+            backend.execute_circuit(circuit).probabilities(
+                qubits=measurement.target_qubits
+            ),
+            atol=1e-10,
+        )
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        [gates.SWAP(0, 1), gates.H(1), gates.M(0, 1)],
+        [gates.SWAP(0, 1), gates.CNOT(0, 2), gates.M(0, 1)],
+        [gates.SWAP(0, 1), gates.Align(0), gates.M(0, 1)],
+        [gates.SWAP(0, 1)],
+        [gates.SWAP(0, 1), gates.H(2)],
+        [gates.M(0, 1), gates.SWAP(0, 1)],
+        [gates.SWAP(0, 1).controlled_by(2), gates.M(0, 1)],
+        [gates.SWAP(0, 2), gates.M(0, 1), gates.H(2)],
+        [gates.FSWAP(0, 1), gates.M(0, 1)],
+    ],
+)
+def test_optimize_swap_before_measure_keeps_the_swap(backend, queue):
+    circuit = Circuit(3)
+    circuit.add(queue)
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+
+def test_optimize_swap_before_measure_basis_and_collapse(backend):
+    # the measurements in other bases are preceded by gates that change the basis
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.M(0, basis=gates.X))
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+    circuit = Circuit(2)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.M(0, collapse=True))
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [("measure", (1,))]
+    assert optimized.queue[0].collapse
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_optimize_swap_before_measure_random_circuits(backend, seed):
+    circuit = _random_swap_circuit(seed)
+    optimized = OptimizeSwapBeforeMeasure()(circuit)
+
+    assert optimized.ngates < circuit.ngates
+    assert not any(isinstance(gate, gates.SWAP) for gate in optimized.queue[-3:])
+    (measurement,) = circuit.measurements
+    (new_measurement,) = optimized.measurements
+    backend.assert_allclose(
+        backend.execute_circuit(optimized).probabilities(
+            qubits=new_measurement.target_qubits
+        ),
+        backend.execute_circuit(circuit).probabilities(
+            qubits=measurement.target_qubits
+        ),
+        atol=1e-10,
+    )
+
+
+def test_optimize_swap_before_measure_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.X(0))
+    circuit.add(gates.SWAP(0, 2))
+    circuit.add(gates.M(0, 2))
+    pipeline = Passes([OptimizeSwapBeforeMeasure()], connectivity=star_connectivity())
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in transpiled.queue] == [
+        ("x", (0,)),
+        ("measure", (2, 0)),
+    ]
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4), gates.H(0)],
+        [gates.H(0), gates.RZ(0, 0.3), gates.CZ(0, 1), gates.RZ(0, 0.4), gates.H(0)],
+        [
+            gates.H(1),
+            gates.RZ(1, 0.3),
+            gates.RZZ(0, 1, 0.5),
+            gates.RZ(1, 0.4),
+            gates.H(1),
+        ],
+        [
+            gates.RY(1, 0.5),
+            gates.RX(1, 0.3),
+            gates.CNOT(0, 1),
+            gates.RX(1, 0.4),
+            gates.RY(1, 0.2),
+        ],
+        [
+            gates.RZ(0, 0.1),
+            gates.CNOT(0, 1),
+            gates.RZ(0, 0.2),
+            gates.CNOT(0, 1),
+            gates.RZ(0, 0.3),
+        ],
+    ],
+)
+def test_optimize_1q_gates_simple_commutation(backend, queue):
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = Optimize1qGatesSimpleCommutation()(circuit, backend=backend)
+
+    assert optimized.ngates == 3
+    # the circuits are equal up to a global phase if the overlap of their unitaries is one
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        # the gates do not commute with the blocker
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(1, 0), gates.RZ(0, 0.4), gates.H(0)],
+        # the blockers are not unitaries, or have symbols
+        [gates.H(0), gates.RZ(0, 0.3), gates.M(0), gates.RZ(0, 0.4), gates.H(0)],
+        [gates.H(0), gates.RZ(0, 0.3), gates.Align(0), gates.RZ(0, 0.4), gates.H(0)],
+        [
+            gates.H(0),
+            gates.RZ(0, 0.3),
+            gates.RZZ(0, 1, sympy.Symbol("x")),
+            gates.RZ(0, 0.4),
+        ],
+        [
+            gates.RZ(0, 0.3),
+            gates.RZ(0, sympy.Symbol("x")),
+            gates.RZ(0, 0.4),
+            gates.H(0),
+        ],
+        # there is no run to move the gates into
+        [
+            gates.RZ(0, 0.3),
+            gates.CNOT(0, 1),
+            gates.CNOT(0, 1),
+            gates.H(0),
+            gates.RZ(0, 0.1),
+        ],
+        [gates.CNOT(0, 1), gates.RZ(0, 0.3), gates.CNOT(0, 1)],
+    ],
+)
+def test_optimize_1q_gates_simple_commutation_keeps_the_circuit(backend, queue):
+    circuit = Circuit(2)
+    circuit.add(queue)
+    optimized = Optimize1qGatesSimpleCommutation()(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+
+def test_optimize_1q_gates_simple_commutation_basis(backend):
+    # the circuit is rewritten with the gates of the basis, even if it has more gates
+    basis = ["rz", "sx", "cx"]
+    for queue in (
+        [gates.H(0), gates.CNOT(0, 1), gates.RZ(0, 0.4)],
+        [gates.H(0), gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4), gates.H(0)],
+    ):
+        circuit = Circuit(2)
+        circuit.add(queue)
+        optimized = Optimize1qGatesSimpleCommutation(basis=basis)(
+            circuit, backend=backend
+        )
+        assert {gate.name for gate in optimized.queue} <= set(basis)
+        first = circuit.unitary(backend)
+        second = optimized.unitary(backend)
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+
+    # the gates do not move if the number of gates, which are in the basis, does not decrease
+    circuit = Circuit(2)
+    circuit.add([gates.SX(0), gates.CNOT(0, 1), gates.RZ(0, 0.4)])
+    optimized = Optimize1qGatesSimpleCommutation(basis=basis)(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        (gate.name, gate.qubits) for gate in circuit.queue
+    ]
+
+
+@pytest.mark.parametrize("up_to_global_phase", [True, False])
+def test_optimize_1q_gates_simple_commutation_global_phase(backend, up_to_global_phase):
+    circuit = Circuit(2)
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.GlobalPhase(0.2))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RZ(0, 0.4))
+    optimized = Optimize1qGatesSimpleCommutation(up_to_global_phase=up_to_global_phase)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in optimized.queue][:2] == ["global_phase", "cx"]
+    assert optimized.ngates == 3
+
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    if up_to_global_phase:
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+    else:
+        backend.assert_allclose(second, first, atol=1e-8)
+
+
+def test_optimize_1q_gates_simple_commutation_negative_atol():
+    with pytest.raises(ValueError, match="atol"):
+        Optimize1qGatesSimpleCommutation(atol=-1.0)
+
+
+@pytest.mark.parametrize("up_to_global_phase", [True, False])
+@pytest.mark.parametrize("seed", range(10))
+def test_optimize_1q_gates_simple_commutation_random_circuits(
+    backend, seed, up_to_global_phase
+):
+    generator = random.Random(seed)
+    one_qubit = [
+        lambda qubit: gates.RZ(qubit, generator.random()),
+        lambda qubit: gates.RX(qubit, generator.random()),
+        lambda qubit: gates.RY(qubit, generator.random()),
+        lambda qubit: gates.U3(qubit, *(generator.random() for _ in range(3))),
+        gates.H,
+        gates.T,
+        gates.S,
+        gates.X,
+        gates.SX,
+    ]
+    two_qubit = [gates.CNOT, gates.CZ, gates.CY, gates.SWAP]
+    circuit = Circuit(3)
+    for _ in range(18):
+        if generator.random() < 0.65:
+            circuit.add(generator.choice(one_qubit)(generator.randrange(3)))
+        else:
+            circuit.add(generator.choice(two_qubit)(*generator.sample(range(3), 2)))
+
+    optimized = Optimize1qGatesSimpleCommutation(up_to_global_phase=up_to_global_phase)(
+        circuit, backend=backend
+    )
+
+    assert optimized.ngates <= circuit.ngates
+    first = circuit.unitary(backend)
+    second = optimized.unitary(backend)
+    if up_to_global_phase:
+        overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(
+            first
+        )
+        backend.assert_allclose(overlap, 1.0, atol=1e-8)
+    else:
+        backend.assert_allclose(second, first, atol=1e-8)
+
+
+def test_optimize_1q_gates_simple_commutation_pipeline(backend, star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    circuit.add(gates.RZ(0, 0.3))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.RZ(0, 0.4))
+    circuit.add(gates.H(0))
+    pipeline = Passes(
+        [Optimize1qGatesSimpleCommutation()], connectivity=star_connectivity()
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    assert transpiled.ngates == 3
 
 
 @pytest.mark.parametrize("power", range(20))
@@ -783,6 +1470,16 @@ def test_remove_identity_equivalent(backend):
     assert reduced.nqubits == circuit.nqubits
 
 
+def test_remove_identity_equivalent_keeps_global_phase(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.I(0))
+    circuit.add(gates.GlobalPhase(0.1234))
+    circuit.add(gates.RZ(1, 2 * np.pi))
+    reduced = RemoveIdentityEquivalent()(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["global_phase"]
+    assert reduced.global_phase == 0.1234
+
+
 def test_remove_identity_equivalent_approximation_degree(backend):
     circuit = Circuit(1)
     circuit.add(gates.RX(0, 1e-3))
@@ -1032,6 +1729,7 @@ BASES = {
     "XYX": ["rx", "ry", "cx"],
     "ZSX": ["rz", "sx", "cx"],
     "ZSXX": ["rz", "sx", "x", "cx"],
+    "ZGPI2": ["rz", "gpi2", "cx"],
 }
 
 
@@ -1078,6 +1776,9 @@ def test_optimize_1q_gates_decomposition_random(backend, basis):
         ("ZSX", 0.7, ["rz", "sx", "rz", "sx", "rz"]),
         ("ZSXX", np.pi, ["rz", "x", "rz"]),
         ("ZSXX", 0.7, ["rz", "sx", "rz", "sx", "rz"]),
+        ("ZGPI2", 0.0, ["rz"]),
+        ("ZGPI2", np.pi / 2, ["rz", "gpi2", "rz"]),
+        ("ZGPI2", 0.7, ["rz", "gpi2", "rz", "gpi2", "rz"]),
         ("U321", 0.0, ["u1"]),
         ("U321", np.pi / 2, ["u2"]),
         ("U321", 0.7, ["u3"]),
@@ -1091,6 +1792,39 @@ def test_optimize_1q_gates_decomposition_special_angles(backend, basis, theta, n
         [name for name in BASES[basis] if name != "cx"]
     )(circuit, backend=backend)
     assert [gate.name for gate in optimized.queue] == names
+
+
+def test_optimize_1q_gates_decomposition_gpi2_has_angle_zero(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.U3(0, 0.7, 0.4, 0.9))
+    optimized = Optimize1qGatesDecomposition(["rz", "gpi2"])(circuit, backend=backend)
+    gpi2 = [gate for gate in optimized.queue if gate.name == "gpi2"]
+    assert len(gpi2) == 2
+    assert all(gate.parameters == (0.0,) for gate in gpi2)
+
+
+def test_optimize_1q_gates_decomposition_native_gates(backend):
+    """The runs after the unroller are rewritten with the native gates."""
+    natives = NativeGates.default()
+    basis = ["id", "z", "rz", "gpi2", "cz"]
+    generator = np.random.default_rng(0)
+    circuit = Circuit(2)
+    for _ in range(3):
+        for qubit in (0, 1):
+            circuit.add(gates.U3(qubit, *generator.uniform(-3, 3, 3)))
+            circuit.add(gates.RX(qubit, generator.uniform(-3, 3)))
+            circuit.add(gates.H(qubit))
+        circuit.add(gates.CZ(0, 1))
+    unrolled = Unroller(natives, backend=backend)(circuit)
+
+    optimized = Optimize1qGatesDecomposition(basis)(unrolled, backend=backend)
+
+    assert {gate.name for gate in optimized.queue} <= {*basis, "global_phase"}
+    assert optimized.ngates < unrolled.ngates
+    first = unrolled.unitary(backend)
+    second = optimized.unitary(backend)
+    overlap = backend.abs(backend.trace(backend.dagger(first) @ second)) / len(first)
+    backend.assert_allclose(overlap, 1.0, atol=1e-8)
 
 
 def test_optimize_1q_gates_decomposition_identity(backend):
@@ -1637,3 +2371,316 @@ def test_consolidate_blocks_weight(backend):
     backend.assert_allclose(
         consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
     )
+
+
+def assert_unitaries_equal_up_to_phase(backend, circuit, other):
+    unitary, target = circuit.unitary(backend), other.unitary(backend)
+    phase = backend.dot(backend.ravel(backend.conj(target)), backend.ravel(unitary))
+    backend.assert_allclose(
+        unitary * backend.conj(phase / abs(phase)), target, atol=1e-12
+    )
+
+
+@pytest.mark.parametrize(
+    "gate_class", list(direction_dec), ids=lambda gate: gate.__name__
+)
+def test_gate_direction_reverses_non_symmetric_gates(backend, gate_class):
+    circuit = Circuit(2)
+    circuit.add(gate_class(0, 1))
+    reversed_circuit = GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+    two_qubit_gates = [g for g in reversed_circuit.queue if len(g.qubits) == 2]
+    assert [(g.__class__, g.qubits) for g in two_qubit_gates] == [(gate_class, (1, 0))]
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.CZ(0, 1),
+        gates.iSWAP(0, 1),
+        gates.SWAP(0, 1),
+        gates.FSWAP(0, 1),
+        gates.SiSWAP(0, 1),
+        gates.SiSWAPDG(0, 1),
+        gates.SYC(0, 1),
+        gates.RZZ(0, 1, 0.3),
+    ],
+    ids=lambda gate: gate.name,
+)
+def test_gate_direction_swaps_the_qubits_of_symmetric_gates(backend, gate):
+    circuit = Circuit(2)
+    circuit.add(gate)
+    reversed_circuit = GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+    assert [(g.__class__, g.qubits) for g in reversed_circuit.queue] == [
+        (gate.__class__, (1, 0))
+    ]
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+def test_gate_direction_keeps_gates(backend):
+    connectivity = nx.DiGraph([(0, 1), (1, 2), (2, 1), (3, 4)])
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))  # in the direction of the edge
+    circuit.add(gates.CNOT(2, 1))  # the edge goes in both directions
+    circuit.add(gates.Barrier(0, 1, 2))
+    circuit.add(gates.CNOT(0, 2))  # the qubits are not connected
+    circuit.add(gates.CZ(3, 4))
+    circuit.add(gates.M(0, 2))
+    reversed_circuit = GateDirection(connectivity)(circuit, backend=backend)
+    assert [(g.__class__, g.qubits) for g in reversed_circuit.queue] == [
+        (g.__class__, g.qubits) for g in circuit.queue
+    ]
+
+
+def test_gate_direction_undirected_connectivity(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(1, 0))
+    circuit.add(gates.ECR(2, 1))
+    reversed_circuit = GateDirection(nx.path_graph(3))(circuit, backend=backend)
+    assert [(g.__class__, g.qubits) for g in reversed_circuit.queue] == [
+        (gates.CNOT, (1, 0)),
+        (gates.ECR, (2, 1)),
+    ]
+
+
+def test_gate_direction_wire_names(backend):
+    circuit = Circuit(3, wire_names=["c", "a", "b"])
+    circuit.add(gates.CNOT(0, 1))  # from c to a, but only (a, c) is an edge
+    circuit.add(gates.CNOT(2, 1))
+    reversed_circuit = GateDirection(nx.DiGraph([("a", "c"), ("b", "a")]))(
+        circuit, backend=backend
+    )
+    assert reversed_circuit.wire_names == ["c", "a", "b"]
+    two_qubit_gates = [g for g in reversed_circuit.queue if isinstance(g, gates.CNOT)]
+    assert [g.qubits for g in two_qubit_gates] == [(1, 0), (2, 1)]
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+@pytest.mark.parametrize("phase", [math.pi, 0.7])
+def test_gate_direction_swaps_the_qubits_of_symmetric_controlled_gates(backend, phase):
+    # a gate that is built with ``controlled_by`` is symmetric if it is a controlled phase
+    gate = gates.Unitary(np.diag([1.0, np.exp(1j * phase)]), 1).controlled_by(0)
+    assert gate.is_controlled_by
+    circuit = Circuit(2)
+    circuit.add(gate)
+    reversed_circuit = GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+    (reversed_gate,) = reversed_circuit.queue
+    assert reversed_gate.qubits == (1, 0)
+    assert reversed_gate.control_qubits == (1,)
+    assert_unitaries_equal_up_to_phase(backend, reversed_circuit, circuit)
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.CRX(0, 1, 0.3),
+        gates.GPI2(1, 0.3).controlled_by(0),
+        gates.Unitary(np.diag([-1.0, 1.0]), 1).controlled_by(0),
+    ],
+    ids=["CRX", "controlled", "controlled-diagonal"],
+)
+def test_gate_direction_error_gates_that_cannot_be_reversed(backend, gate):
+    circuit = Circuit(2)
+    circuit.add(gate)
+    with pytest.raises(ConnectivityError, match="cannot be reversed"):
+        GateDirection(nx.DiGraph([(1, 0)]))(circuit, backend=backend)
+
+
+def test_gate_direction_error_without_connectivity():
+    with pytest.raises(ValueError, match="Connectivity graph is not provided"):
+        GateDirection()(Circuit(2))
+
+
+def test_gate_direction_in_passes(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 1))
+    passes = Passes([GateDirection()], connectivity=nx.DiGraph([(1, 0), (1, 2)]))
+    reversed_circuit, _ = passes(circuit, backend=backend)
+    assert [g.qubits for g in reversed_circuit.queue if isinstance(g, gates.CNOT)] == [
+        (1, 0)
+    ]
+
+
+def test_barrier_before_final_measurements():
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0))
+    circuit.add(gates.X(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Barrier(1))
+    circuit.add(gates.M(1))
+    circuit.add(gates.M(2))
+    new = BarrierBeforeFinalMeasurements()(circuit)
+    assert [gate.name for gate in new.queue] == [
+        "h",
+        "measure",
+        "x",
+        "cx",
+        "barrier",
+        "barrier",
+        "measure",
+        "measure",
+    ]
+    assert new.queue[4].qubits == (0, 1, 2)
+    assert new.queue[5].qubits == (1,)
+    assert [gate.qubits for gate in new.queue[-2:]] == [(1,), (2,)]
+    assert new.nqubits == circuit.nqubits
+    assert len(new.measurements) == len(circuit.measurements)
+
+
+def test_barrier_before_final_measurements_without_final_measurements():
+    circuit = Circuit(2)
+    circuit.add(gates.M(0))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    assert BarrierBeforeFinalMeasurements()(circuit) is circuit
+
+    circuit = Circuit(2)
+    assert BarrierBeforeFinalMeasurements()(circuit) is circuit
+
+
+def test_barrier_before_final_measurements_circuit_kwargs():
+    circuit = Circuit(2, wire_names=["a", "b"], density_matrix=True)
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(1))
+    new = BarrierBeforeFinalMeasurements()(circuit)
+    assert new.wire_names == ["a", "b"]
+    assert new.density_matrix
+    assert [gate.name for gate in new.queue] == ["h", "barrier", "measure"]
+
+
+def test_filter_gates(backend):
+    circuit = Circuit(2, wire_names=["a", "b"])
+    circuit.add(gates.H(0))
+    circuit.add(gates.Barrier(0, 1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.X(1))
+    new = FilterGates(lambda gate: not isinstance(gate, gates.Barrier))(circuit)
+    assert [gate.name for gate in new.queue] == ["h", "cx", "x"]
+    assert new.wire_names == ["a", "b"]
+    assert [gate.name for gate in circuit.queue][1] == "barrier"
+    backend.assert_allclose(
+        backend.execute_circuit(new).state(),
+        backend.execute_circuit(circuit).state(),
+    )
+
+    assert FilterGates(lambda gate: False)(circuit).ngates == 0
+    assert FilterGates(lambda gate: True)(circuit).ngates == circuit.ngates
+
+
+def test_barrier_before_final_measurements_in_pipeline(backend):
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.M(0, 1, 2, 3))
+    pipeline = Passes(
+        [
+            Preprocessing(),
+            BarrierBeforeFinalMeasurements(),
+            Sabre(seed=1),
+            FilterGates(lambda gate: not isinstance(gate, gates.Barrier)),
+        ],
+        connectivity=nx.path_graph(4),
+    )
+    transpiled, _ = pipeline(circuit, backend=backend)
+    names = [gate.name for gate in transpiled.queue]
+    assert "barrier" not in names
+    assert names[-1] == "measure"
+    assert names.count("measure") == 1
+
+
+@pytest.mark.parametrize("with_connectivity", [False, True])
+def test_validation_keeps_valid_circuit(with_connectivity, star_connectivity):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.ResetChannel(1, [0.0, 1.0]))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(0, 1))
+    connectivity = star_connectivity() if with_connectivity else None
+    assert Validation(connectivity)(circuit) is circuit
+    assert [gate.name for gate in circuit.queue] == [
+        "h",
+        "ResetChannel",
+        "cx",
+        "measure",
+    ]
+
+
+def test_validation_noise_channel_error():
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+    with pytest.raises(DecompositionError, match="PauliNoiseChannel"):
+        Validation()(circuit)
+
+
+def test_validation_too_many_qubits_error(star_connectivity):
+    validation = Validation(connectivity=star_connectivity())
+    assert validation(Circuit(5)).nqubits == 5
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
+        validation(Circuit(6))
+    # without connectivity there is no limit
+    assert Validation()(Circuit(6)).nqubits == 6
+
+
+@pytest.mark.parametrize("with_connectivity", [False, True])
+def test_validation_stops_the_pipeline_before_the_other_passes(with_connectivity):
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+    counts = []
+    pipeline = generate_preset_passes(
+        nx.path_graph(3) if with_connectivity else None,
+        callback=lambda **kwargs: counts.append(kwargs["count"]),
+    )
+    with pytest.raises(DecompositionError, match="PauliNoiseChannel"):
+        pipeline(circuit)
+    # no pass has run, so the unrollers and the router have not spent time on it
+    assert counts == []
+
+
+@pytest.mark.parametrize("initial_layout", [[0, 1], [0, 0, 1], [0, 1, 9]])
+def test_validation_initial_layout_error(star_connectivity, initial_layout):
+    validation = Validation(star_connectivity(), initial_layout=initial_layout)
+    with pytest.raises(PlacementError, match="distinct node"):
+        validation(Circuit(3))
+
+
+def test_validation_initial_layout_keeps_circuit(star_connectivity):
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 1))
+    validation = Validation(star_connectivity(), initial_layout=[4, 2, 0])
+    assert validation(circuit) is circuit
+    # neither the number of qubits nor the wire names of the circuit change
+    assert circuit.nqubits == 3
+    assert circuit.wire_names == [0, 1, 2]
+    # without connectivity there is nothing to check the layout against
+    assert Validation(initial_layout=[0, 0, 9])(circuit) is circuit
+
+
+def test_validation_initial_layout_too_many_qubits(star_connectivity):
+    validation = Validation(star_connectivity(), initial_layout=[0, 1, 2])
+    with pytest.raises(
+        ValueError, match="can't be greater than the number of physical"
+    ):
+        validation(Circuit(6))
+
+
+def test_validation_stops_the_pipeline_for_initial_layout():
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    counts = []
+    pipeline = generate_preset_passes(
+        nx.path_graph(5),
+        initial_layout=[0, 0, 1],
+        callback=lambda **kwargs: counts.append(kwargs["count"]),
+    )
+    with pytest.raises(PlacementError, match="distinct node"):
+        pipeline(circuit)
+    # the unroller has not decomposed the Toffoli gate
+    assert counts == []

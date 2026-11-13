@@ -111,11 +111,11 @@ class X(Gate):
                 This precision defaults to :math:`\\epsilon = 10^{-16}`.
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
-                ``mpmmath_dps`` defaults to :math:`256`.
+                ``mpmath_dps`` defaults to :math:`256`.
                 For gates controlled by more than two qubits and ``method = "standard"``,
                 the keyword arguments ``clean``, ``minimize_toffolis`` and
                 ``minimize_depth`` are passed to
-                :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+                :func:`qibo.transpiler.multi_controlled_decomposition`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Set of one-qubit, :class:`qibo.gates.CNOT`,
@@ -134,7 +134,7 @@ class X(Gate):
         if len(controls) < 3:
             return [self.__class__(target).controlled_by(*controls)]
 
-        from qibo.transpiler.multicontrolled_decompositions import (
+        from qibo.transpiler.decompositions.multicontrolled_decompositions import (
             multi_controlled_decomposition,
         )
 
@@ -555,6 +555,75 @@ class Align(ParametrizedGate):
         self.target_qubits = (q,)
         self._parameters = (delay,)
         self.nparams = 1
+
+
+class GlobalPhase(ParametrizedGate):
+    """The global phase gate.
+
+    Acts on no qubits and multiplies the state of the whole system by the phase
+    :math:`e^{i \\theta}`.
+
+    .. note::
+        A global phase has no observable effect on its own. It becomes relevant when the
+        gate is controlled, in which case it is a relative phase between the states of
+        the control qubits, or when the unitary matrix of a circuit is required.
+
+    Args:
+        theta (float): the phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, theta: float, trainable: bool = True):
+        super().__init__(trainable)
+        self.name = "global_phase"
+        self.draw_label = "GP"
+        self.unitary = True
+
+        self.parameters = theta
+        self.init_args = []
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def apply(self, backend, state: ArrayLike, nqubits: int) -> ArrayLike:
+        # density matrices are invariant under a global phase, which in turn
+        # is a simple scalar multiplication for state vectors
+        if len(state.shape) == 2:
+            return state
+
+        phase = backend.exp(1j * self.parameters[0])
+        return backend.cast(phase, dtype=state.dtype) * state
+
+    @Gate.check_controls
+    def controlled_by(self, *q: int) -> Gate:
+        """Fall back to a phase gate acting on the control qubits.
+
+        A global phase controlled by some qubits is a phase applied only when all of them
+        are in the state :math:`|1\\rangle`. Therefore, a :class:`qibo.gates.U1` gate
+        acting on the last control qubit is returned, which is itself controlled by the
+        remaining control qubits, if any (*i.e.*, one control yields a
+        :class:`qibo.gates.U1` gate and two controls yield a :class:`qibo.gates.CU1` gate).
+        If no control is given, the gate itself is returned.
+
+        Args:
+            *q (int): ids of the control qubits.
+
+        Returns:
+            :class:`qibo.gates.abstract.Gate`: equivalent phase gate acting on the control qubits.
+        """
+        if not q:
+            return self
+
+        return U1(q[-1], self.parameters[0], trainable=self.trainable).controlled_by(
+            *q[:-1]
+        )
+
+    @property
+    def hamming_weight(self) -> bool:
+        return True
+
+    def _dagger(self) -> Gate:
+        return self.__class__(-self.parameters[0], trainable=self.trainable)
 
 
 class _Rn_(ParametrizedGate):
@@ -1698,6 +1767,9 @@ class iSWAP(Gate):
     def qasm_label(self) -> str:
         return "iswap"
 
+    def _dagger(self) -> Gate:
+        return fSim(*self.target_qubits, math.pi / 2, 0.0, trainable=False)
+
 
 class SiSWAP(Gate):
     """The :math:`\\sqrt{\\text{iSWAP}}` gate.
@@ -2389,7 +2461,7 @@ class RBS(ParametrizedGate):
                 This precision defaults to :math:`\\epsilon = 10^{-16}`.
                 Another possible keyword argument is ``mpmath_dps``, which defines the
                 number of decimal places used by the ``mpmath`` package.
-                ``mpmmath_dps`` defaults to :math:`256`.
+                ``mpmath_dps`` defaults to :math:`256`.
 
         References:
             1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
@@ -2609,6 +2681,10 @@ class DEUTSCH(ParametrizedGate):
     @property
     def hamming_weight(self) -> bool:
         return _is_hamming_weight_given_angle(self.parameters[0], np.pi)
+
+    def _dagger(self) -> Gate:
+        theta = math.pi - self.parameters[0]
+        return self.__class__(*self.init_args, theta, trainable=self.trainable)
 
 
 class FanOut(Gate):
@@ -2930,6 +3006,26 @@ def _is_clifford_given_angle(angle: float, precision_tol: float = 1e-8):
     return isinstance(angle, (float, int)) and bool(
         angle % (math.pi / 2) < precision_tol
     )
+
+
+def is_nonzero_phase(phase: float, atol: float = 1e-12) -> bool:
+    """Whether a phase is not a multiple of :math:`2 \\pi`.
+
+    Symbolic phases, *i.e.* the ones that depend on symbols, are always nonzero.
+
+    Args:
+        phase (float or :class:`sympy.Expr`): Phase, in radians.
+        atol (float, optional): Absolute tolerance, in radians. Defaults to :math:`10^{-12}`.
+
+    Returns:
+        bool: ``True`` if the phase is not a multiple of :math:`2 \\pi`.
+    """
+    import sympy
+
+    if isinstance(phase, sympy.Expr) and phase.free_symbols:
+        return True
+
+    return abs(math.remainder(float(phase), 2 * math.pi)) > atol
 
 
 def _is_hamming_weight_given_angle(angle: float, target: float = 2 * np.pi):

@@ -1,4 +1,5 @@
 import itertools
+import math
 import random
 from collections.abc import Sequence
 from copy import deepcopy
@@ -8,9 +9,10 @@ import numpy as np
 
 from qibo import Circuit, gates
 from qibo.config import raise_error
+from qibo.gates.gates import is_nonzero_phase
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
-from qibo.transpiler.asserts import assert_placement
+from qibo.transpiler.asserts import assert_connectivity, assert_placement
 from qibo.transpiler.blocks import Block, CircuitBlocks
 
 
@@ -160,6 +162,7 @@ class CircuitMap:
         last_swap_block = self._routed_blocks.return_last_block()
         physical_swap = last_swap_block.qubits
         logical_swap = self._p2l[physical_swap[0]], self._p2l[physical_swap[1]]
+
         self._routed_blocks.remove_block(last_swap_block)
         self._swaps -= 1
 
@@ -191,6 +194,57 @@ class CircuitMap:
         return self._l2p[logical_qubits[0]], self._l2p[logical_qubits[1]]
 
 
+class NoRouting(Router):
+    """Leaves the circuit unchanged, and raises an error if it cannot run on the hardware.
+
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+            Defaults to ``None``.
+
+    Example:
+        The two-qubit gates of the circuit act on connected qubits, so the circuit is
+        not changed and no qubit is moved.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import NoRouting
+
+            circuit = Circuit(3)
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(1, 2))
+
+            routed_circuit, final_layout = NoRouting(nx.path_graph(3))(circuit)
+            print(final_layout)
+
+        .. testoutput::
+
+            {0: 0, 1: 1, 2: 2}
+    """
+
+    def __init__(self, connectivity: nx.Graph | None = None):
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit) -> tuple[Circuit, dict]:
+        """Check that the circuit respects the connectivity.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
+
+        Returns:
+            (:class:`qibo.models.circuit.Circuit`, dict): The same circuit and the final
+            {logical: physical} qubit mapping, which is the identity.
+
+        Raises:
+            ConnectivityError: If a gate acts on qubits that are not connected.
+        """
+        assert_placement(circuit, self.connectivity)
+        assert_connectivity(self.connectivity, circuit)
+        return circuit, {name: index for index, name in enumerate(circuit.wire_names)}
+
+
 class Sabre(Router):
     """Routing algorithm proposed in Ref [1].
 
@@ -216,6 +270,23 @@ class Sabre(Router):
             lowest number of added SWAPs is returned, and the first one among ties.
             The attempts are reproducible if ``seed`` is given, and the first one
             does not depend on ``trials``. Defaults to :math:`1`.
+        heuristic (str, optional): Cost that selects the SWAP gate to be added. It is the
+            distance between the qubits of the gates in the front layer of the circuit,
+            plus the terms below:
+
+            - ``"basic"``: no other term, so ``lookahead``, ``decay_lookahead`` and
+              ``delta`` are not used.
+            - ``"lookahead"``: the distances of the gates in the next ``lookahead`` layers,
+              weighted by ``decay_lookahead``. ``delta`` is not used.
+            - ``"decay"``: the terms of ``"lookahead"``, with the distances of the qubits
+              that were recently swapped increased by ``delta``, which favors
+              non-overlapping SWAPs.
+
+            Defaults to ``"decay"``.
+
+    Raises:
+        ValueError: If ``trials`` is not positive, or ``heuristic`` is not ``"basic"``,
+            ``"lookahead"`` or ``"decay"``.
 
     References:
         1. G. Li, Y. Ding, and Y. Xie,
@@ -232,10 +303,18 @@ class Sabre(Router):
         swap_threshold: float = 1.5,
         seed: int | None = None,
         trials: int = 1,
+        heuristic: str = "decay",
     ):
         if trials < 1:
             raise_error(ValueError, f"``trials`` must be positive, but it is {trials}.")
+        if heuristic not in ("basic", "lookahead", "decay"):
+            raise_error(
+                ValueError,
+                f"Unknown heuristic {heuristic!r}. It must be one of "
+                + "'basic', 'lookahead' or 'decay'.",
+            )
         self.connectivity = connectivity
+        self.heuristic = heuristic
         self.lookahead = lookahead
         self.decay = decay_lookahead
         self.delta = delta
@@ -261,6 +340,7 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
+        global_phase = circuit.global_phase % (2 * math.pi)
         # The connectivity is relabeled during the preprocessing, so it is restored before
         # every trial and at the end, so that the router can be used again with the same
         # ``wire_names``.
@@ -298,6 +378,8 @@ class Sabre(Router):
                     routed_circuit = self._append_final_measurements(
                         routed_circuit=routed_circuit
                     )
+                if is_nonzero_phase(global_phase):
+                    routed_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
 
                 # the first trial among the ones with the fewest swaps is kept
                 if best_trial is None or self.circuit_map._swaps < best_trial[0]:
@@ -337,9 +419,26 @@ class Sabre(Router):
         )
 
         copied_circuit = circuit.copy(deep=True)
+        # global phases act on no qubits, so they are not routed, see ``__call__``
+        copied_circuit.queue[:] = [
+            gate
+            for gate in copied_circuit.queue
+            if not isinstance(gate, gates.GlobalPhase)
+        ]
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
-        self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
+        _check_connected_components(self.circuit_map, self.connectivity)
+        # the nodes are the logical qubits after the relabeling, so the matrix is indexed
+        # by them, and not by the position of the nodes in the graph
+        self._dist_matrix = nx.floyd_warshall_numpy(
+            self.connectivity, nodelist=sorted(self.connectivity.nodes)
+        )
+        # The distance between qubits in different connected components is infinite. The
+        # SWAP gates never change the components of the qubits, so a finite value that is
+        # larger than the other distances is equivalent for the cost of the candidates,
+        # and it keeps the longest path, which sets the swap threshold, finite.
+        finite = np.isfinite(self._dist_matrix)
+        self._dist_matrix[~finite] = self._dist_matrix[finite].max() + 1.0
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._memory_map = []
         self._update_dag_layers()
@@ -360,7 +459,8 @@ class Sabre(Router):
         return final_measurements[::-1]
 
     def _append_final_measurements(self, routed_circuit: Circuit) -> Circuit:
-        """Appends final measurement gates on the correct qubits conserving the measurement register.
+        """Appends final measurement gates on the correct qubits conserving
+        the measurement register.
 
         Args:
             routed_circuit (:class:`qibo.models.circuit.Circuit`): Routed circuit without
@@ -429,8 +529,9 @@ class Sabre(Router):
         ]
         best_candidate = self._rng.choice(best_candidates)
 
-        for qubit in self.circuit_map.logical_pair_to_physical(best_candidate):
-            self._delta_register[qubit] += self.delta
+        if self.heuristic == "decay":
+            for qubit in self.circuit_map.logical_pair_to_physical(best_candidate):
+                self._delta_register[qubit] += self.delta
         self.circuit_map.update(best_candidate)
         self._temp_added_swaps.append(best_candidate)
 
@@ -445,7 +546,8 @@ class Sabre(Router):
 
         tot_distance = 0.0
         weight = 1.0
-        for layer in range(self.lookahead + 1):
+        lookahead = 0 if self.heuristic == "basic" else self.lookahead
+        for layer in range(lookahead + 1):
             layer_gates = self._get_dag_layer(layer, qubits=True)
             avg_layer_distance = 0.0
             for lq_pair in layer_gates:
@@ -588,6 +690,7 @@ class ShortestPaths(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
+        global_phase = circuit.global_phase % (2 * math.pi)
         # The connectivity is relabeled during the preprocessing. It is restored at the
         # end so that the router can be used again with the same ``wire_names``.
         connectivity = self.connectivity
@@ -608,6 +711,8 @@ class ShortestPaths(Router):
                 routed_circuit = self._append_final_measurements(
                     routed_circuit=routed_circuit
                 )
+            if is_nonzero_phase(global_phase):
+                routed_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
         finally:
             self.connectivity = connectivity
 
@@ -787,8 +892,15 @@ class ShortestPaths(Router):
             self.connectivity, {v: i for i, v in enumerate(circuit.wire_names)}
         )
         copied_circuit = circuit.copy(deep=True)
+        # global phases act on no qubits, so they are not routed, see ``__call__``
+        copied_circuit.queue[:] = [
+            gate
+            for gate in copied_circuit.queue
+            if not isinstance(gate, gates.GlobalPhase)
+        ]
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit_map = CircuitMap(copied_circuit)
+        _check_connected_components(self.circuit_map, self.connectivity)
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._update_front_layer()
 
@@ -853,7 +965,8 @@ class StarConnectivityRouter(Router):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
-                Only single qubit gates and two qubits gates are supported by the router.
+                Only single qubit gates, two qubits gates and barriers are supported by
+                the router.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
@@ -875,10 +988,15 @@ class StarConnectivityRouter(Router):
                 new.add(new_gate)
                 continue
 
+            if isinstance(gate, gates.Barrier):
+                new.add(gate.on_qubits(dict(zip(gate.qubits, routed_qubits))))
+                continue
+
             if len(routed_qubits) > 2:
                 raise_error(
                     ConnectivityError,
-                    "Gates targeting more than two qubits are not supported.",
+                    "Gates targeting more than two qubits are not supported, "
+                    + "except for barriers.",
                 )
 
             if len(routed_qubits) == 2 and middle_qubit_idx not in routed_qubits:
@@ -922,6 +1040,41 @@ class StarConnectivityRouter(Router):
                 )
 
 
+def _check_connected_components(
+    circuit_map: CircuitMap, connectivity: nx.Graph
+) -> None:
+    """Check that the two-qubit gates act on qubits of the same connected component.
+
+    The SWAP gates move the qubits inside their connected component, so a gate between
+    qubits of different components can never be routed, and the routers would not stop.
+
+    Args:
+        circuit_map (:class:`qibo.transpiler.router.CircuitMap`): Circuit with the initial
+            layout.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity, with the nodes
+            relabeled as the physical qubits of ``circuit_map``.
+
+    Raises:
+        ConnectivityError: If a two-qubit gate acts on qubits of different connected
+            components of the connectivity.
+    """
+    component = {
+        node: index
+        for index, nodes in enumerate(nx.connected_components(connectivity))
+        for node in nodes
+    }
+    for block in circuit_map.circuit_blocks():
+        if block.entangled:
+            first, second = circuit_map.get_physical_qubits(block)
+            if component[first] != component[second]:
+                raise_error(
+                    ConnectivityError,
+                    f"A gate acts on the qubits {block.qubits} of the circuit, which are "
+                    + "in different connected components of the connectivity graph, so "
+                    + "it cannot be routed.",
+                )
+
+
 def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
     """Helper method for :class:`qibo.transpiler.router.Sabre`.
 
@@ -929,7 +1082,8 @@ def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
     commutativity relations.
 
     Args:
-        gates_qubits_pairs (list): List of qubits tuples where gates/blocks acts.
+        gates_qubits_pairs (list): List of qubits tuples where gates/blocks acts. The tuples
+            have two qubits, except for the ones of barriers, which can have more.
 
     Returns:
         (:class:`networkx.DiGraph`): Adjoint of the circuit.
@@ -949,7 +1103,7 @@ def _create_dag(gates_qubits_pairs: list) -> nx.DiGraph:
                 if (qubit in next_gate) and (qubit not in saturated_qubits):
                     saturated_qubits.append(qubit)
                     connectivity_list.append((idx, next_idx + idx + 1))
-            if len(saturated_qubits) >= 2:
+            if len(saturated_qubits) >= len(gate):
                 break
     dag.add_edges_from(connectivity_list)
 
@@ -967,6 +1121,8 @@ def _find_connected_qubit(
     """
     possible_qubits = {qubits[0], qubits[1]}
     for next_gate in queue:
+        if isinstance(next_gate, gates.Barrier):
+            continue
         if len(next_gate.qubits) > 2:
             raise_error(
                 error,

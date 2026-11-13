@@ -1,17 +1,17 @@
 [project]
 name = "qibo"
-version = "0.3.7"
+version = "0.3.8"
 description = "A framework for quantum computing with hardware acceleration."
 authors = [{ name = "The Qibo team" }]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.15"
 keywords = []
 classifiers = [
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
@@ -19,10 +19,7 @@ dependencies = [
   "scipy>=1.15.2,<2.0.0",
   "sympy>=1.13.1,<2.0.0",
   "networkx>=3.2.1,<4.0.0",
-  "cma>=4.0.0,<5.0.0",
   "joblib>=1.4.2,<2.0.0",
-  "optuna>=4.2.1,<5.0.0",
-  "tabulate>=0.9.0,<1.0.0",
   "openqasm3[parser]>=1.0.1,<2.0.0",
 ]
 
@@ -33,39 +30,31 @@ Documentation = "https://qibo.science/qibo/stable/"
 
 [project.optional-dependencies]
 qinfo = ["stim>=1.15.0,<2.0.0"]
-qulacs = ["qulacs>=0.6.4,<0.7.0; python_version < '3.13'"]
-cudaq = ["qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux'"]
-qir = ["qbraid[qir]>=0.10.0,<0.11.0"]
+qulacs = ["qulacs>=0.6.12,<0.7.0; python_version < '3.14'"]
+cudaq = ["qbraid[cudaq]>=0.13.0,<0.14.0; sys_platform == 'linux'"]
+qir = ["qbraid[qir]>=0.13.0,<0.14.0"]
+qiskit = ["qiskit>=2.2.3,<3.0.0"]
+gridsynth = ["pygridsynth>=2.0.0,<3.0.0"]
+cma = ["cma>=4.0.0,<5.0.0"]
+ui = ["matplotlib>=3.7.0,<3.11.0"]
 
 [dependency-groups]
-dev = [
-  "ipython>=8.34.0,<9.0.0",
-]
 analysis = ["ruff>=0.16.5,<0.17.0"]
 docs = [
   "sphinx>=6.1.3,<7.0.0",
   "furo>=2022.12.7,<2023.0.0",
   "recommonmark>=0.7.1,<0.8.0",
-  "sphinxcontrib-bibtex>=2.5.0,<3.0.0",
-  "sphinx-markdown-tables>=0.0.17,<0.0.18",
   "sphinx-copybutton>=0.5.2,<0.6.0",
   "nbsphinx>=0.8.12,<0.9.0",
-  "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
-  "seaborn>=0.13.2,<0.14.0",
   "ipykernel>=6.29.4,<7.0.0",
   "qibojit",
+  "qibo[qulacs,ui]",
 ]
 tests = [
   "pytest>=7.2.1,<10.0.0",
   "pytest-cov>=4.0.0,<5.0.0",
-  "matplotlib>=3.7.0,<3.11.0",
   "qibojit",
-  "stim>=1.15.0,<2.0.0",
-  "qulacs>=0.6.4,<0.7.0; python_version < '3.13'",
-  "qiskit>=2.2.3,<3.0.0",
-  "qbraid[qir]>=0.10.0,<0.11.0",
-  "qbraid[cudaq]>=0.10.0,<0.11.0; sys_platform == 'linux'",
-  "pygridsynth>=2.0.0,<3.0.0",
+  "qibo[qinfo,qulacs,cudaq,qir,qiskit,gridsynth,cma,ui]",
 ]
 cuda11 = [
   "cupy-cuda11x>=13.1.0,<14.0.0",
@@ -73,8 +62,8 @@ cuda11 = [
   "qibojit",
 ]
 cuda12 = [
-  "cupy-cuda12x>=13.1.0,<14.0.0",
-  "cuquantum-python-cu12>=24.1.0,<25.0.0",
+  "cupy-cuda12x>=14.2.0,<15.0.0",
+  "cuquantum-python-cu12>=26.9.0,<27.0.0",
   "qibojit",
 ]
 
@@ -99,7 +88,7 @@ docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]

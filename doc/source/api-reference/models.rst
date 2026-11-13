@@ -5,9 +5,8 @@ Models
 
 Qibo provides models for both the circuit based and the adiabatic quantum
 computation paradigms. Circuit based models include :ref:`generalpurpose` which
-allow defining arbitrary circuits and :ref:`applicationspecific` such as the
-Quantum Fourier Transform (:class:`qibo.models.QFT`) and the
-Variational Quantum Eigensolver (:class:`qibo.models.VQE`).
+allow defining arbitrary circuits and the quantum algorithms of :ref:`Algorithms`,
+such as the Quantum Fourier Transform (:class:`qibo.models.QFT`).
 Adiabatic quantum computation is simulated using the :ref:`timeevolution`
 of state vectors.
 
@@ -67,14 +66,11 @@ Gates in a circuit can be fused into a smaller number of
 :meth:`qibo.models.circuit.Circuit.fuse`. See :doc:`/concepts/circuit-fusion`
 for a detailed description of the fusion algorithm and worked examples.
 
-.. _applicationspecific:
 
-Quantum Fourier Transform (QFT)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _variational-models:
 
-.. autoclass:: qibo.models.qft.QFT
-    :members:
-    :member-order: bysource
+Variational models
+------------------
 
 Variational Quantum Eigensolver (VQE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -83,12 +79,14 @@ Variational Quantum Eigensolver (VQE)
     :members:
     :member-order: bysource
 
-Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)
+
+Adiabatically-assisted Variational Quantum Eigensolver (AAVQE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.models.variational.AAVQE
     :members:
     :member-order: bysource
+
 
 Quantum Approximate Optimization Algorithm (QAOA)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -97,70 +95,11 @@ Quantum Approximate Optimization Algorithm (QAOA)
     :members:
     :member-order: bysource
 
+
 Feedback-based Algorithm for Quantum Optimization (FALQON)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.models.variational.FALQON
-    :members:
-    :member-order: bysource
-
-
-Grover's Algorithm
-^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: qibo.models.grover.Grover
-    :members:
-    :member-order: bysource
-
-
-Double-Bracket Iterations
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: qibo.models.double_bracket.DoubleBracketIteration
-    :members:
-    :member-order: bysource
-
-
-Quantum Signal Processing
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autofunction:: qibo.models.qsp.qsp_phases
-
-.. autofunction:: qibo.models.qsp.qsp_circuit
-
-
-Quantum Singular Value Transformation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autofunction:: qibo.models.qsvt.qsvt_phases
-
-.. autofunction:: qibo.models.qsvt.qsvt_circuit
-
-
-Block Encoding
-^^^^^^^^^^^^^^
-
-.. autofunction:: qibo.models.block_encoding.block_encoding_circuit
-
-
-Linear Combination of Unitaries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autofunction:: qibo.models.lcu.lcu_circuit
-
-.. autofunction:: qibo.models.lcu.lcu_prepare
-
-.. autofunction:: qibo.models.lcu.lcu_select
-
-
-Iterative Quantum Amplitude Estimation (IQAE)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: qibo.models.iqae.IQAE
-    :members:
-    :member-order: bysource
-
-.. autoclass:: qibo.models.iqae.IterativeAmplitudeEstimationResult
     :members:
     :member-order: bysource
 
@@ -176,6 +115,7 @@ State evolution
 .. autoclass:: qibo.models.evolution.StateEvolution
     :members:
     :member-order: bysource
+
 
 Adiabatic evolution
 ^^^^^^^^^^^^^^^^^^^
@@ -277,10 +217,66 @@ Graph state
 .. autofunction:: qibo.models.encodings.graph_state
 
 
+Grover-Rudolph state preparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.encodings.grover_rudolph
+
+
 Fanout gate synthesis in log depth
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: qibo.models.encodings.fanout_synthesis
+
+
+Folded XXZ eigenstates
+^^^^^^^^^^^^^^^^^^^^^^
+
+Prepares the eigenstates of the spin-:math:`1/2` folded XXZ chain with open boundary conditions,
+a kinetically constrained integrable model whose Hilbert space is fragmented into exponentially
+many dynamically disconnected sectors. Its eigenstates contain magnons, which are delocalized,
+and static domain walls, which are displaced when a magnon crosses them. The number of gates
+grows polynomially with the number of sites and with the number of magnons.
+For instance, the following eigenstate of five sites has a single magnon and two domain walls,
+and it is a superposition of two spin configurations.
+
+.. testcode::
+
+    from qibo.models.encodings import folded_xxz_eigenstate
+
+    circuit = folded_xxz_eigenstate(nsites=5, nmagnons=1, domains=[[3, 4]], modes=[2])
+    result = circuit()
+    # the chain is encoded in the first five qubits, and the remaining ones are auxiliary
+    probabilities = result.probabilities(qubits=range(5))
+    print(*(f"{state}: {prob:.2f}" for state, prob in zip(
+        ("10110", "11001"), probabilities[[0b10110, 0b11001]]
+    )))
+
+.. testoutput::
+    :hide:
+
+    10110: 0.50 11001: 0.50
+
+The circuit can be implemented with two methods, selected with ``method``. The default
+``"sopena"`` follows the original construction. With ``"merged"``, the free fermions are prepared
+with Givens rotations, and the output is written in a single pass over the squeezed chain.
+For domain walls, ``"merged"`` needs fewer qubits and gates, and for no domain walls, it needs more.
+Both prepare the same state in the first qubits of the circuit.
+
+.. testcode::
+
+    circuit = folded_xxz_eigenstate(5, 1, [[3, 4]], [2], method="merged")
+    probabilities = circuit().probabilities(qubits=range(5))
+    print(*(f"{state}: {prob:.2f}" for state, prob in zip(
+        ("10110", "11001"), probabilities[[0b10110, 0b11001]]
+    )))
+
+.. testoutput::
+    :hide:
+
+    10110: 0.50 11001: 0.50
+
+.. autofunction:: qibo.models.encodings.folded_xxz_eigenstate
 
 
 Fixed Hamming-weight Encoder
@@ -293,6 +289,38 @@ CNOT ladder synthesis in log depth
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: qibo.models.encodings.ladder_synthesis
+
+
+Leaf-separable Encoder
+^^^^^^^^^^^^^^^^^^^^^^
+
+Prepares states of fixed Hamming weight whose qubits are split in contiguous groups (leaves),
+such that, for each distribution of the weight among the leaves, the state is a product over
+leaves. The leaves are correlated only through the weight distribution.
+The circuit follows the algorithm of Vittal *et al.* (arXiv:2511.11227): a balanced binary tree of
+generalized weight distribution blocks, as in :func:`qibo.models.encodings.dicke_state`, followed
+by Hamming weight encoders acting on the leaves. It supports real and complex amplitudes
+and needs no auxiliary qubits.
+
+For instance, the Dicke state :math:`\ket{D_{2}^{6}}` is leaf-separable, and the following
+example prepares it on :math:`6` qubits split in leaves of :math:`2` qubits.
+
+.. testsetup::
+
+    import numpy as np
+
+    from qibo.models.encodings import leaf_separable_encoder
+
+.. testcode::
+
+    nqubits, weight, leaf_size = 6, 2, 2
+
+    # amplitudes of the 15 basis states of Hamming weight 2, in ascending order
+    data = np.ones(15)
+
+    circuit = leaf_separable_encoder(nqubits, weight, leaf_size, data)
+
+.. autofunction:: qibo.models.encodings.leaf_separable_encoder
 
 
 Permutation synthesis
@@ -437,6 +465,7 @@ Unlike error correction, error mitigation does not aim to correct qubit errors,
 but rather it provides the means to estimate the noise-free expected value of
 an observable measured at the end of a noisy circuit.
 
+
 Readout Mitigation
 ^^^^^^^^^^^^^^^^^^
 
@@ -470,7 +499,6 @@ The distributions that arise after applying :math:`M_{\text{cal}}` are quasiprob
 the individual elements can be negative surpass 1, provided they sum to 1.
 It is posible to use Iterative Bayesian Unfolding (IBU) to preserve non-negativity.
 See `Nachman et al <https://arxiv.org/abs/1910.01969>`_ for more details.
-
 
 
 .. autofunction:: qibo.models.error_mitigation.get_response_matrix

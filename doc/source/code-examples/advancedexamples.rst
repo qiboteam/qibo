@@ -511,6 +511,38 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
     result = circuit()
 
 
+Joining the outcomes of several collapse measurements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The outcomes of ``collapse=True`` measurements are not merged into the result returned
+by the execution of the circuit. This is particularly inconvenient when the same qubit
+is measured more than once, for instance, in algorithms that reuse a single qubit. The
+:meth:`qibo.measurements.MeasurementResult.join` method puts the outcomes of several
+measurements together, shot by shot, in the order in which the results are given. The first
+result provides the most significant bits of each outcome:
+
+.. testcode::
+
+    from qibo import Circuit, gates
+    from qibo.measurements import MeasurementResult
+
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    first = circuit.add(gates.M(0, collapse=True))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    second = circuit.add(gates.M(0, 1, collapse=True))
+    circuit(nshots=100)
+
+    # bitstrings with three bits, where the first one is the outcome of ``first``
+    joint_result = MeasurementResult.join(first, second)
+    frequencies = joint_result.frequencies()
+
+The joined result is a :class:`qibo.measurements.MeasurementResult`, so its samples and
+frequencies can be used as usual, and it can be given to functions that process measurement
+outcomes, such as :func:`qibo.quantum_info.estimate_phase`.
+
+
 How to invert a circuit?
 ------------------------
 
@@ -2312,8 +2344,10 @@ of five trials, and decomposes it to the native gates. The ``seed`` makes the tr
 reproducible. The qubits of the circuit that a multi-controlled gate does not act on are used as
 auxiliary qubits in its decomposition, and ``qubits_initially_zero=True`` also uses as clean
 auxiliary qubits the ones that no previous gate acts on, if the circuit starts in the state
-:math:`\ket{0}`. The ``layout_method`` and ``routing_method`` arguments select other placers and
-routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
+:math:`\ket{0}`. A unitary matrix on three or more qubits is decomposed with
+:func:`qibo.transpiler.quantum_shannon_decomposition`,
+which uses no auxiliary qubits. The ``layout_method`` and ``routing_method`` arguments select other
+placers and routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
 
 .. testcode:: python
 
@@ -2338,6 +2372,112 @@ routers, see :func:`qibo.transpiler.pipeline.generate_preset_passes`.
     True
 
 
+The function :func:`qibo.transpiler.transpile` builds this pipeline and applies it to a
+circuit, or to a list of circuits, in a single call. The arguments are the ones of
+:func:`qibo.transpiler.pipeline.generate_preset_passes`, and they are shared by all the
+circuits, which are transpiled with the same pipeline and returned in the same order.
+In the following example, a quantum Fourier transform, a circuit with a multi-controlled gate
+and a star-shaped circuit are transpiled to a seven-qubit hardware with a directed
+connectivity, where :class:`qibo.gates.ECR` is the only native two-qubit gate. The circuits
+are transpiled twice, to compare two ways of placing the qubits: ``"trivial"`` keeps the
+qubits on the first nodes of the connectivity, and ``"subgraph"``
+(:class:`qibo.transpiler.placer.Subgraph`) looks for a placement that needs fewer
+:class:`qibo.gates.SWAP` gates. The circuits start in the state :math:`\ket{0}`, so the qubits
+that no previous gate acts on are used as clean auxiliary qubits to decompose the
+multi-controlled gate. Each transpiled circuit is checked against the original one, taking the
+final layout into account, and the number of :class:`qibo.gates.ECR` gates is printed.
+Finally, the transpiled star-shaped circuit is drawn, with all the gates that act on disjoint
+qubits in the same column (``parallel=True``) and without wrapping the lines
+(``line_wrap=1000``).
+
+.. testcode:: python
+
+    import networkx as nx
+
+    from qibo import Circuit, gates
+    from qibo.models import QFT
+    from qibo.transpiler import NativeGates, transpile
+    from qibo.transpiler.asserts import assert_transpiling
+
+    # Directed connectivity: an edge (a, b) is supported with its first qubit on a
+    connectivity = nx.DiGraph([(0, 1), (1, 2), (1, 3), (3, 5), (4, 5), (5, 6)])
+    natives = NativeGates.from_gatelist([gates.U3, gates.ECR, gates.M])
+
+    qft = QFT(3)
+    qft.add(gates.M(*range(3)))
+
+    multi_controlled = Circuit(4)
+    multi_controlled.add(gates.H(0))
+    multi_controlled.add(gates.H(1))
+    multi_controlled.add(gates.X(3).controlled_by(0, 1, 2))
+    multi_controlled.add(gates.M(*range(4)))
+
+    star = Circuit(4)
+    star.add(gates.H(0))
+    star.add(gates.CNOT(0, 1))
+    star.add(gates.CNOT(0, 2))
+    star.add(gates.CNOT(0, 3))
+    star.add(gates.M(*range(4)))
+
+    names = ("QFT", "multi-controlled", "star")
+    circuits = [qft, multi_controlled, star]
+
+    for layout_method in ("trivial", "subgraph"):
+        results = transpile(
+            circuits,
+            connectivity,
+            natives,
+            seed=1,
+            qubits_initially_zero=True,
+            layout_method=layout_method,
+        )
+
+        for name, circuit, (transpiled_circuit, final_layout) in zip(
+            names, circuits, results
+        ):
+            # Raises an error if the circuits are not equivalent, or if the transpiled
+            # circuit does not respect the connectivity and the native gates
+            assert_transpiling(
+                original_circuit=circuit,
+                transpiled_circuit=transpiled_circuit,
+                connectivity=connectivity,
+                final_layout=final_layout,
+                native_gates=natives,
+            )
+            ecr_count = sum(isinstance(gate, gates.ECR) for gate in transpiled_circuit.queue)
+            print(f"{layout_method} layout, {name}: {ecr_count} ECR gates")
+
+        # The last circuit is the star-shaped one
+        print(f"Star-shaped circuit with the {layout_method} layout:")
+        transpiled_circuit.draw(line_wrap=1000, parallel=True)
+
+.. testoutput:: python
+
+    trivial layout, QFT: 12 ECR gates
+    trivial layout, multi-controlled: 20 ECR gates
+    trivial layout, star: 6 ECR gates
+    Star-shaped circuit with the trivial layout:
+    0: ─U3─U3─ECR─U3──────────ECR─U3─U3─U3────ECR─U3─Z──U3─U3─U3─ECR──────────────────────────────M─
+    1: ─U3─U3─ECR─U3─U3─U3─U3─ECR─U3─U3─U3─U3─ECR─Z──U3─U3─U3────ECR─U3─U3─U3─ECR─U3────ECR───────M─
+    2: ─U3─U3─────────────────────────────────────────────────────────────────ECR─U3─U3─|─────────M─
+    3: ─U3─U3───────────────────────────────────────────────────────────────────────────ECR─U3─U3─M─
+    5: ─────────────────────────────────────────────────────────────────────────────────────────────
+    4: ─────────────────────────────────────────────────────────────────────────────────────────────
+    6: ─────────────────────────────────────────────────────────────────────────────────────────────
+    subgraph layout, QFT: 12 ECR gates
+    subgraph layout, multi-controlled: 20 ECR gates
+    subgraph layout, star: 3 ECR gates
+    Star-shaped circuit with the subgraph layout:
+    Global phase = exp(i * π/4)
+    1: ─U3─U3─U3─ECR─Z──U3─U3────ECR─U3────ECR───────M─
+    0: ─U3─U3─U3─ECR─U3─Z──U3─U3─|─────────|─────────M─
+    2: ─U3─U3────────────────────ECR─U3─U3─|─────────M─
+    3: ─U3─U3──────────────────────────────ECR─U3─U3─M─
+    5: ────────────────────────────────────────────────
+    4: ────────────────────────────────────────────────
+    6: ────────────────────────────────────────────────
+
+
 In the current Qibo version, transpiler passes require that
 ``wire_names`` match the qubit names in the given connectivity graph.
 This can be done manually or by using :class:`qibo.transpiler.optimizer.Preprocessing`
@@ -2348,13 +2488,35 @@ or the ``on_qubits`` parameter.
     - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
     - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
 
-The single-qubit native gates are not limited to :class:`qibo.gates.U3` and :class:`qibo.gates.GPI2`.
-Any combination of single-qubit gates that implements every single-qubit unitary exactly can be used, which
-holds if it has two rotations with free angles about orthogonal axes, such as :class:`qibo.gates.RX` and
-:class:`qibo.gates.RZ`. The axis of a rotation can also be changed by native gates without parameters, as
+The connectivity can also be disconnected, as long as every two-qubit gate acts on qubits of the
+same connected component. Otherwise the routers raise a
+:class:`qibo.transpiler._exceptions.ConnectivityError`.
+
+The single-qubit native gates are not limited to :class:`qibo.gates.U3` and
+:class:`qibo.gates.GPI2`. Any combination of single-qubit gates that implements every
+single-qubit unitary exactly can be used, which holds if it has two rotations with free angles
+about orthogonal axes, such as :class:`qibo.gates.RX` and :class:`qibo.gates.RZ`.
+The axis of a rotation can also be changed by native gates without parameters, as
 :class:`qibo.gates.H` does for :class:`qibo.gates.RZ`. The property
-:attr:`qibo.transpiler.unroller.NativeGates.is_universal` checks whether a set of native gates can
-implement any unitary, and :class:`qibo.transpiler.unroller.Unroller` raises an error if it cannot.
+:attr:`qibo.transpiler.unroller.NativeGates.is_universal` checks whether a set of
+native gates can implement any unitary, and :class:`qibo.transpiler.unroller.Unroller`
+raises an error if it cannot.
+
+Any gate without parameters that acts on two qubits can be native, such as
+:class:`qibo.gates.CNOT`, :class:`qibo.gates.CZ`, :class:`qibo.gates.ECR`, :class:`qibo.gates.SYC`
+or :class:`qibo.gates.iSWAP`. A native two-qubit gate is never decomposed. The other gates
+are decomposed into :class:`qibo.gates.CZ` gates, which are replaced by the lowest number
+of native gates that implement them. The :class:`qibo.gates.SWAP` gate can be native, but it
+cannot create entanglement, so it needs another entangling native gate to be universal.
+
+The connectivity can be a directed graph (:class:`networkx.DiGraph`), where an edge ``(a, b)``
+means that a two-qubit gate is only supported with its first qubit on ``a`` and its second qubit
+on ``b``. This matters for native gates that change when their qubits are swapped, such as
+:class:`qibo.gates.CNOT` or :class:`qibo.gates.ECR`. In that case,
+:func:`qibo.transpiler.pipeline.generate_preset_passes` ends the pipeline with
+:class:`qibo.transpiler.optimizer.GateDirection`, which reverses the gates that act against an
+edge, followed by an unroller for the single-qubit gates that it adds.
+The placers and routers ignore the directions.
 
 .. testcode:: python
 
@@ -2378,7 +2540,14 @@ implement any unitary, and :class:`qibo.transpiler.unroller.Unroller` raises an 
 
     True
     False
-    ['cz', 'h', 'rz']
+    ['cz', 'global_phase', 'h', 'rz']
+
+The decompositions that are equal to a gate only up to a global phase are corrected with
+a :class:`qibo.gates.GlobalPhase` gate, which is why the unrolled circuit has one. The
+unroller and :meth:`qibo.models.circuit.Circuit.decompose` merge all of them into a single
+gate at the end of the circuit, and the total phase is the
+:attr:`qibo.models.circuit.Circuit.global_phase` of the circuit, so that the unrolled
+circuit is exactly equal to the original one.
 
 The optimization passes can be combined to simplify the circuit before it is decomposed
 into native gates:
@@ -2392,7 +2561,7 @@ into native gates:
   the same two qubits with at most three CZ gates, using the KAK (Cartan) decomposition.
   It is useful after routing, where SWAP gates meet the gates of the circuit.
   Its ``weight`` argument, :math:`\sqrt{2}` by default, is described in
-  :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+  :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
 - :class:`qibo.transpiler.optimizer.FixedPoint` applies a list of optimizers repeatedly
   until the circuit stops changing, so that each optimizer can profit from the
   simplifications made by the others.
@@ -2554,7 +2723,7 @@ to most hardware. Qibo decomposes them into gates with at most two qubits.
 The decompositions are exact, and they are available through the
 :meth:`qibo.gates.abstract.Gate.decompose` and :meth:`qibo.models.circuit.Circuit.decompose`
 methods, through the :class:`qibo.transpiler.unroller.Unroller` transpiler pass, and through
-the function :func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`.
+the function :func:`qibo.transpiler.multi_controlled_decomposition`.
 
 Throughout this example we count two-qubit gates (CZ, controlled-Z) after unrolling the
 decomposition into CZ and one-qubit gates, and we compare the unitary matrix of each
@@ -2739,7 +2908,8 @@ it cheaper:
 When Toffoli gates are expensive, for example in fault-tolerant
 quantum computing, the keyword argument ``minimize_toffolis`` selects a decomposition
 that uses the lowest possible number of Toffoli gates, :math:`2k - 3` with clean qubits and
-:math:`4k - 8` with dirty qubits, instead of minimizing the number of two-qubit gates:
+:math:`4k - 8` with dirty qubits, or :math:`4k + O(\log k)` with two dirty qubits from
+20 controls, instead of minimizing the number of two-qubit gates:
 
 .. testcode:: multicontrolled
 
@@ -2807,7 +2977,7 @@ two qubits. With a single auxiliary qubit, clean or dirty, a different construct
 
     controls | default | one free | one clean | two free
           16 |     734 |      981 |       599 |      272
-          64 |    3422 |     2041 |      1129 |      474
+          64 |    3422 |     2041 |      1129 |      622
 
 The depth is the one of the unrolled circuit. With a single dirty qubit the decomposition
 is shallower than the default only for tens of controls or more, because it uses about twice as
@@ -2818,7 +2988,7 @@ Using the decomposition function directly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The methods above call the function
-:func:`qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition`, which
+:func:`qibo.transpiler.multi_controlled_decomposition`, which
 can also be used directly with the matrix of the target gate, the ids of the control qubits
 and the id of the target qubit. It returns a list of gates, like ``decompose``:
 
@@ -2895,7 +3065,8 @@ Summary of the options
         logarithmic with two.
     * - ``minimize_toffolis=True``
       - one or two, clean or dirty (:math:`X` only)
-      - :math:`2k - 3` Toffoli gates with clean qubits, :math:`4k - 8` with dirty qubits.
+      - :math:`2k - 3` Toffoli gates with clean qubits, :math:`4k - 8` with dirty qubits,
+        or :math:`4k + O(\log k)` with two of them from 20 controls.
         Logarithmic depth with two qubits, linear with one.
     * - ``minimize_depth=True``
       - one or two, clean or dirty (:math:`X` only)

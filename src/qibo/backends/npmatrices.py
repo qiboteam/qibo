@@ -71,6 +71,10 @@ class NumpyMatrices:
     def Align(self, delay, n=2):
         return self.I(n)
 
+    def GlobalPhase(self, theta):
+        phase = self.engine.exp(1j * theta)
+        return self._cast([[phase]], dtype=self.dtype)
+
     def M(self):  # pragma: no cover
         raise_error(NotImplementedError)
 

@@ -2,7 +2,7 @@
 
 import math
 from inspect import signature
-from itertools import combinations
+from itertools import accumulate, combinations
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -10,7 +10,7 @@ from scipy.special import binom
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecated,
     _add_dicke_unitary_gate,
@@ -19,8 +19,11 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _binary_encoder_hopf,
     _binary_encoder_hyperspherical,
     _binary_encoder_mottonen,
+    _dicke_tree_cuts,
     _ehrlich_algorithm,
     _fanout_parity_tree,
+    _folded_merged,
+    _folded_sopena,
     _generate_rbs_angles,
     _generate_rbs_pairs,
     _get_gate,
@@ -264,64 +267,14 @@ def dicke_state(
 
         return circuit
 
-    # We prepare disjoint sets of qubits
-    disjoint_sets = [
-        {
-            "qubits": list(range(weight * it, weight * (it + 1))),
-            "tier": weight,
-            "children": [],
-        }
-        for it in range(nqubits // weight)
-    ]
-    nmodk = nqubits % weight
-    if nmodk != 0:
-        disjoint_sets.append(
-            {
-                "qubits": list(range(nqubits - nmodk, nqubits)),
-                "tier": nmodk,
-                "children": [],
-            }
-        )
-    # reverse to have in ascending order of tier
-    disjoint_sets = list(reversed(disjoint_sets))
+    disjoint_sets, root_qubits, cuts = _dicke_tree_cuts(nqubits, weight)
 
-    trees = disjoint_sets.copy()
-    # combine lowest tier trees into one tree
-    while len(trees) > 1:
-        first_smallest = trees.pop(0)
-        second_smallest = trees.pop(0)
-        second_smallest["tier"] += first_smallest["tier"]
-        second_smallest["children"].append(first_smallest)
-        new = second_smallest
-        # put new combined tree in list mantaining ordering
-        trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
-
-    root = trees[0]
     # We initialize |0>^(n-k)|1>^k  bitstring at root qubits
-    circuit.add(gates.X(q) for q in root["qubits"][-weight:])
+    circuit.add(gates.X(q) for q in root_qubits[-weight:])
 
-    # undo the union-by-tier algorithm:
-    # split each root's (x) highest tier child y, and add WBD acting on both
-    while len(trees) < len(disjoint_sets):
-        cut_nodes = []
-        for node in trees:
-            if len(node["children"]) > 0:
-                # find highest tier child
-                y = max(node["children"], key=lambda x: x["tier"])
-                # add WBD acting on both sets of qubits
-                _add_wbd_gate(
-                    circuit,
-                    node["qubits"],
-                    y["qubits"],
-                    node["tier"],
-                    y["tier"],
-                    weight,
-                )
-                # cut tree splitting x and y
-                node["tier"] -= y["tier"]
-                node["children"].remove(y)
-                cut_nodes.append(y)
-        trees += cut_nodes
+    # add WBD acting on the sets of qubits of each cut
+    for node_qubits, child_qubits, node_tier, child_tier in cuts:
+        _add_wbd_gate(circuit, node_qubits, child_qubits, node_tier, child_tier, weight)
 
     for node in disjoint_sets:
         _add_dicke_unitary_gate(
@@ -537,6 +490,176 @@ def fanout_synthesis(
     return fanout
 
 
+def folded_xxz_eigenstate(
+    nsites: int,
+    nmagnons: int,
+    domains: list[list[int]] | None = None,
+    modes: list[int] | None = None,
+    method: str = "sopena",
+    return_toffolis: bool = False,
+    backend: Backend | None = None,
+) -> Circuit:
+    """Create circuit that prepares an eigenstate of the open-boundary folded XXZ spin chain.
+
+    Let :math:`n` be the number of sites of the chain. The folded XXZ Hamiltonian is
+
+    .. math::
+        H = -\\frac{1}{8} \\sum_{j=0}^{n-2} \\left(1 + Z_{j} Z_{j+3}\\right)
+            \\left(X_{j+1} X_{j+2} + Y_{j+1} Y_{j+2}\\right) \\, ,
+
+    where the boundary sites :math:`0` and :math:`n + 1` are frozen to :math:`\\ket{0}`.
+    These two sites are not part of the register, which holds sites :math:`1, \\ldots, n`,
+    with site :math:`1` being the first qubit. Spin-down sites are the :math:`\\ket{1}` states.
+    Its dynamics is kinetically constrained, and the Hilbert space splits into independent
+    fragments. An eigenstate :math:`\\ket{\\psi}` of a fragment contains
+
+    * :math:`M` magnons, which are isolated spin-down sites in a spin-up domain (particles) or
+      isolated spin-up sites in a spin-down domain (holes), and
+    * :math:`2 L` static domain walls, which delimit :math:`L` blocks of spin-down sites,
+      and are displaced by two sites each time a magnon crosses them.
+
+    The fragment is fixed by the number of magnons and by the blocks ``domains`` of the reference
+    configuration, in which the magnons are packed to the left at the lowest allowed positions,
+    i.e. at sites :math:`1, 3, \\ldots, 2M - 1`. The magnons have momenta
+    :math:`p_{a} = \\pi \\, m_{a} / (n_{0} + 1)`, with :math:`n_{0} = n - M + 1 - 2L` and
+    :math:`m_{1} < \\cdots < m_{M}` integers in :math:`[1, n_{0}]`, and the energy is
+    :math:`E = -\\sum_{a=1}^{M} \\cos(p_{a})`. The circuit has three stages following Ref. [1]:
+    the preparation of a Slater determinant of :math:`M` free fermions in a squeezed chain of
+    :math:`n_{0}` sites, which needs :math:`n_{0} \\geq 2M`; a network of controlled-SWAP gates that
+    enforces the hard-core repulsion between magnons; and the insertion of the domain walls.
+    These stages can be implemented with two different methods. With ``"sopena"``, the free
+    fermions are prepared with the algebraic Bethe circuit of Refs. [2, 3], which starts from a
+    dense unitary on :math:`2M` qubits and limits :math:`M` to a few. Then, the magnons are
+    shifted in place, and inserted one by one in the chain with the domain walls. With
+    ``"merged"``, the free fermions are prepared with :math:`M (n_{0} - 1) - M (M - 1) / 2` Givens
+    rotations (see Refs. [4, 5]), and the last two stages are performed at once: a single pass
+    over the squeezed chain writes the output in a separate register, and a second pass clears
+    the input from the output. For domain walls, it needs fewer qubits and gates, and for no
+    domain walls, it needs more.
+
+    The first ``nsites`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
+    qubits, which are returned to :math:`\\ket{0}`, and thus the state of the chain can be read
+    out by discarding them.
+
+    Args:
+        nsites (int): number of sites :math:`n` of the chain.
+        nmagnons (int): number of magnons :math:`M`.
+        domains (list[list[int]], optional): blocks of spin-down sites of the reference
+            configuration. Each block is a list of at least two consecutive sites, numbered
+            from :math:`1`. The first block must start at site :math:`2M + 1` or later, and
+            each following block must start at least three sites after the end of the previous
+            one. If ``None``, there are no domain walls. Defaults to ``None``.
+        modes (list[int], optional): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta
+            of the magnons. If ``None``, uses :math:`M` evenly spaced integers between :math:`2`
+            and :math:`n_{0}`, rounded to the nearest integer. Defaults to ``None``.
+        method (str, optional): implementation of the circuit, either ``"sopena"``, following
+            Ref. [1], or ``"merged"``. Defaults to ``"sopena"``.
+        return_toffolis (bool, optional): only used if ``method="merged"``. If ``True``,
+            the Toffoli gates are returned as :class:`qibo.gates.TOFFOLI` gates, which are not
+            decomposed into CNOTs and single-qubit rotations. Otherwise, they are implemented
+            up to a relative phase with CNOTs and single-qubit rotations. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that prepares the eigenstate.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. A. Sopena, M. H. Gordon, D. García-Martín, G. Sierra, and E. López, *Algebraic Bethe
+        Circuits*, `Quantum 6, 796 (2022) <https://doi.org/10.22331/q-2022-09-08-796>`_.
+
+        3. R. Ruiz, A. Sopena, M. H. Gordon, G. Sierra, and E. López, *The Bethe Ansatz as a
+        Quantum Circuit*, `Quantum 8, 1356 (2024) <https://doi.org/10.22331/q-2024-05-23-1356>`_.
+
+        4. Z. Jiang, K. J. Sung, K. Kechedzhi, V. N. Smelyanskiy, and S. Boixo, *Quantum
+        algorithms to simulate many-body physics of correlated fermions*, `Phys. Rev. Applied 9,
+        044036 (2018) <https://doi.org/10.1103/PhysRevApplied.9.044036>`_.
+
+        5. I. D. Kivlichan, J. McClean, N. Wiebe, C. Gidney, A. Aspuru-Guzik, G. K.-L. Chan, and
+        R. Babbush, *Quantum simulation of electronic structure with linear depth and
+        connectivity*, `Phys. Rev. Lett. 120, 110501 (2018)
+        <https://doi.org/10.1103/PhysRevLett.120.110501>`_.
+    """
+    backend = _check_backend(backend)
+
+    if method not in ("sopena", "merged"):
+        raise_error(
+            ValueError,
+            f"``method`` must be either ``sopena`` or ``merged``, but it is ``{method}``.",
+        )
+
+    domains = [list(domain) for domain in domains or []]
+    nwalls = 2 * len(domains)
+    nfree = nsites - nwalls  # sites of the chain that are not domain walls
+    nsqueezed = nfree - nmagnons + 1  # sites of the free-fermion chain
+
+    if nmagnons < 1:
+        raise_error(
+            ValueError,
+            f"``nmagnons`` must be a positive integer, but it is {nmagnons}.",
+        )
+
+    if nsqueezed < 2 * nmagnons:
+        raise_error(
+            ValueError,
+            f"Cannot fit {nmagnons} magnon(s) and {nwalls} domain walls in a chain of "
+            + f"{nsites} sites, because the squeezed chain needs at least 2 * ``nmagnons`` "
+            + f"sites, but it has {nsqueezed}.",
+        )
+
+    if modes is None:
+        step = (nsqueezed - 2) / (nmagnons - 1) if nmagnons > 1 else 0
+        modes = [round(2 + a * step) for a in range(nmagnons)]
+    modes = list(modes)
+
+    if (
+        len(modes) != nmagnons
+        or any(not isinstance(mode, (int, np.integer)) for mode in modes)
+        or modes != sorted(set(modes))
+        or modes[0] < 1
+        or modes[-1] > nsqueezed
+    ):
+        raise_error(
+            ValueError,
+            f"``modes`` must be {nmagnons} distinct increasing integers in [1, {nsqueezed}], "
+            + f"but it is {modes}.",
+        )
+
+    previous_end = 2 * nmagnons - 2
+    for domain in domains:
+        if (
+            len(domain) < 2
+            or domain != list(range(domain[0], domain[0] + len(domain)))
+            or domain[0] < previous_end + 3
+            or domain[-1] > nsites
+        ):
+            raise_error(
+                ValueError,
+                f"Invalid domain {domain}. Domains must consist of at least two consecutive "
+                + "sites inside the chain, the first one must start at site "
+                + f"{2 * nmagnons + 1} or later, and each following one at least three "
+                + "sites after the end of the previous one.",
+            )
+        previous_end = domain[-1]
+
+    if method == "merged":
+        return _folded_merged(
+            nsites,
+            nmagnons,
+            domains,
+            modes,
+            return_toffolis=return_toffolis,
+            backend=backend,
+        )
+
+    return _folded_sopena(nsites, nmagnons, domains, modes, backend)
+
+
 def ghz_state(nqubits: int, **kwargs) -> Circuit:
     """Generate an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
 
@@ -611,6 +734,64 @@ def graph_state(matrix: ArrayLike, backend: Backend | None = None, **kwargs) -> 
     circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
 
     return circuit
+
+
+def grover_rudolph(
+    distribution: ArrayLike,
+    parametrization: str = "hopf",
+    backend: Backend | None = None,
+    **kwargs,
+) -> Circuit:
+    """Create circuit that loads a discrete probability distribution in the amplitudes.
+
+    Given a non-negative vector :math:`\\mathbf{p} \\in \\mathbb{R}_{\\geq 0}^{d}`, with
+    :math:`d = 2^{n}`, this function generates a circuit that prepares
+
+    .. math::
+        \\sum_{j=0}^{d-1} \\, \\sqrt{\\frac{p_{j}}{\\|\\mathbf{p}\\|_{1}}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`b_{j} \\in \\{0, \\, 1\\}^{\\otimes \\, n}` is the :math:`n`-bit representation
+    of the integer :math:`j`. It is a wrapper of :func:`qibo.models.encodings.binary_encoder`.
+
+    Args:
+        distribution (ArrayLike): :math:`1`-dimensional array with non-negative entries
+            and length :math:`2^{n}`. It does not need to be normalized.
+        parametrization (str, optional): either ``hopf`` or ``mottonen``.
+            Defaults to ``hopf``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``distribution``.
+
+    References:
+        1. L. Grover and T. Rudolph, *Creating superpositions that correspond to efficiently
+        integrable probability distributions*,
+        `arXiv:quant-ph/0208112 <https://arxiv.org/abs/quant-ph/0208112>`_.
+    """
+    backend = _check_backend(backend)
+
+    if parametrization not in ("hopf", "mottonen"):
+        raise_error(ValueError, "``parametrization`` must be ``hopf`` or ``mottonen``.")
+
+    distribution = backend.cast(distribution, dtype=backend.float64)
+    dims = len(distribution)
+
+    if (dims & (dims - 1)) != 0 or backend.any(distribution < 0):
+        raise_error(
+            ValueError,
+            "``distribution`` must have non-negative entries and length a power of 2.",
+        )
+
+    return binary_encoder(
+        int(math.log2(dims)),
+        parametrization,
+        data=backend.sqrt(distribution),
+        backend=backend,
+        **kwargs,
+    )
 
 
 def hamming_weight_encoder(
@@ -790,6 +971,351 @@ def ladder_synthesis(
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(queue)
+
+    return circuit
+
+
+def leaf_separable_encoder(
+    nqubits: int,
+    weight: int,
+    leaf_size: int,
+    data: ArrayLike,
+    backend: Backend | None = None,
+    **kwargs,
+) -> Circuit:
+    """Create a circuit that encodes a leaf-separable ``data`` in the Hamming-weight-:math:`k`
+    basis of ``nqubits``.
+
+    The :math:`n` qubits are split in :math:`G = \\lceil n / s \\rceil` contiguous sets of
+    :math:`s` qubits, called leaves (the last leaf holds the remaining :math:`n \\bmod s`
+    qubits), with :math:`k \\leq s`. Given a leaf :math:`u`, let :math:`i_{u}` be the
+    Hamming weight of a bitstring restricted to it, and :math:`I = (i_{1}, \\dots, i_{G})`
+    the weight distribution of the bitstring. An :math:`n`-qubit state with Hamming weight
+    :math:`k` is leaf-separable if, for every :math:`I`, its component with weight
+    distribution :math:`I` is a product state over the leaves, *i.e.*,
+
+    .. math::
+        \\ket{\\psi} = \\sum_{I} \\, c(I) \\, \\bigotimes_{u=1}^{G} \\ket{\\psi_{i_{u}}} \\, ,
+
+    where :math:`c(I) \\in \\mathbb{C}` and :math:`\\ket{\\psi_{i_{u}}}` is a state of leaf
+    :math:`u` with Hamming weight :math:`i_{u}`. The state itself is not a product state,
+    since the leaves are correlated through :math:`c(I)`.
+
+    The circuit follows Ref. [1] and uses no auxiliary qubits. First, the leaves are placed
+    at the leaves of a balanced binary tree, built by recursively splitting the ordered list of
+    leaves in two halves, and the total weight :math:`k` is distributed among them with a
+    generalized weight distribution block (gWDB) at each internal node, from the root down.
+    A gWDB is the weight distribution block of :func:`qibo.models.encodings.dicke_state` [3],
+    with the uniform distribution of weights replaced by the one of ``data``, followed by
+    controlled phase gates that account for the phase of :math:`c(I)`. Then, on each leaf, it
+    applies a Hamming weight encoder for each weight :math:`i_{u}`
+    (see :func:`qibo.models.encodings.hamming_weight_encoder`), with all its gates controlled
+    on the whole leaf, so that it acts only on the sector of leaf weight :math:`i_{u}`.
+    The circuit has depth :math:`O(s \\, \\log\\frac{n}{s} + s \\, 2^{s})`.
+
+    .. note::
+        A gWDB only knows the weight of its own node. Hence, the tree prepares :math:`|c(I)|`
+        as a product of conditional weight distributions, one for each node, computed from
+        the marginals of ``data``, and the phase of :math:`c(I)` as a sum of phases that
+        depend only on the weights of each node. The output state is equal to ``data`` if
+        :math:`c(I)` has that form, which is always the case if there are only two leaves,
+        *i.e.*, :math:`s \\geq n / 2`, as stated in Ref. [1], and also if there are
+        three leaves, since :math:`I` is then fixed by the weights of the two nodes.
+        Phases that are sums of functions of the weight of each leaf, *e.g.*, global phases
+        of the leaf states, are always reproduced. Otherwise, correlations between the weights
+        of different leaves that are not captured by the tree are lost, and the output state is
+        an approximation of ``data``. In that case, the phase of each node is chosen by
+        alternating maximization of the overlap with ``data``, as Ref. [1] does not specify it,
+        and a warning is logged if it does not converge.
+
+    Args:
+        nqubits (int): number of qubits :math:`n`.
+        weight (int): Hamming weight :math:`k` of the state.
+        leaf_size (int): number of qubits :math:`s` in each leaf. It must satisfy
+            :math:`k \\leq s < n`.
+        data (ArrayLike): :math:`1`-dimensional array of :math:`\\binom{n}{k}` real or complex
+            amplitudes, ordered by the integer value of the corresponding computational basis
+            states, *i.e.*, as in :func:`qibo.models.encodings.hamming_weight_encoder`.
+            It is normalized internally. The state defined by ``data`` must be leaf-separable.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that prepares the leaf-separable state
+        defined by ``data``.
+
+    References:
+        1. S. Vittal, A. Wilkie, N. Rastegari, M. Atallah, and R. Herrman,
+        *Efficient circuits for leaf-separable state preparation*,
+        `arXiv:2511.11227 [quant-ph] (2025) <https://arxiv.org/abs/2511.11227>`_.
+
+        2. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+        3. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State
+        Preparation*, `IEEE International Conference on Quantum Computing & Engineering (QCE),
+        87--96 (2022) <https://doi.org/10.1109/QCE53715.2022.00027>`_.
+    """
+    backend = _check_backend(backend)
+
+    if not 0 < weight <= leaf_size < nqubits:
+        raise_error(
+            ValueError,
+            "``weight`` and ``leaf_size`` must satisfy ``0 < weight <= leaf_size < nqubits``, "
+            + f"but got weight={weight}, leaf_size={leaf_size}, and nqubits={nqubits}.",
+        )
+
+    data = backend.cast(data, dtype=backend.complex128)
+
+    if data.shape != (math.comb(nqubits, weight),):
+        raise_error(
+            ValueError,
+            f"``data`` must have shape ({math.comb(nqubits, weight)},), but got {data.shape}.",
+        )
+    data = data / backend.sqrt(backend.sum(backend.abs(data) ** 2))
+
+    # leaves, and the weight of every basis state (in ascending order) in each of them
+    sizes = [leaf_size] * (nqubits // leaf_size)
+    if nqubits % leaf_size:
+        sizes.append(nqubits % leaf_size)
+    starts = list(accumulate([0] + sizes[:-1]))
+    states = backend.sort(
+        backend.cast(
+            [
+                sum(1 << (nqubits - 1 - qubit) for qubit in combination)
+                for combination in combinations(range(nqubits), weight)
+            ],
+            dtype=backend.int64,
+        )
+    )
+    bits = backend.right_shift(states[:, None], backend.arange(nqubits - 1, -1, -1)) & 1
+    leaf_weights = backend.swapaxes(
+        backend.vstack(
+            [
+                backend.sum(bits[:, start : start + size], axis=1)
+                for start, size in zip(starts, sizes)
+            ]
+        ),
+        0,
+        1,
+    )
+
+    # leaf states: for each leaf and weight, amplitudes relative to a reference basis state
+    nonzero = backend.abs(data) > 1e-8
+    leaf_data = {}
+    for leaf, (start, size) in enumerate(zip(starts, sizes)):
+        # bits of a basis state that do not belong to the leaf
+        outside = ((1 << nqubits) - 1) ^ (((1 << size) - 1) << (nqubits - start - size))
+        for leaf_weight in range(1, min(size, weight) + 1):
+            candidates = backend.flatnonzero(
+                (leaf_weights[:, leaf] == leaf_weight) & nonzero
+            )
+            if len(candidates) == 0:
+                continue
+            reference = int(states[candidates[0]])
+            # basis states that differ from the reference only in the leaf
+            keep = (states & outside) == (reference & outside)
+            amplitudes = data[keep] / data[candidates[0]]
+            leaf_data[(leaf, leaf_weight)] = amplitudes / backend.sqrt(
+                backend.sum(backend.abs(amplitudes) ** 2)
+            )
+
+    # weight distributions, their probabilities, and the phase of their reference amplitudes
+    probabilities = backend.abs(data) ** 2
+    unique_weights, inverse = backend.unique(leaf_weights, axis=0, return_inverse=True)
+    inverse = backend.ravel(inverse)
+    group_probabilities = backend.zeros(len(unique_weights), dtype=backend.float64)
+    group_phases = backend.zeros(len(unique_weights), dtype=backend.float64)
+    for group in range(len(unique_weights)):
+        rows = inverse == group
+        group_probabilities[group] = backend.sum(probabilities[rows])
+        reference = backend.flatnonzero(rows & nonzero)
+        if len(reference) > 0:
+            group_phases[group] = backend.angle(data[reference[0]])
+
+    # check leaf-separability by reconstructing the amplitudes
+    reconstructed = backend.sqrt(group_probabilities[inverse]) * backend.exp(
+        1j * group_phases[inverse]
+    )
+    for leaf, (start, size) in enumerate(zip(starts, sizes)):
+        strings = backend.right_shift(states, nqubits - start - size) & (
+            (1 << size) - 1
+        )
+        for leaf_weight in range(1, min(size, weight) + 1):
+            if (leaf, leaf_weight) not in leaf_data:
+                continue
+            rows = leaf_weights[:, leaf] == leaf_weight
+            ordered = backend.sort(
+                backend.cast(
+                    [
+                        sum(1 << (size - 1 - qubit) for qubit in combination)
+                        for combination in combinations(range(size), leaf_weight)
+                    ],
+                    dtype=backend.int64,
+                )
+            )
+            ranks = backend.searchsorted(ordered, strings[rows])
+            reconstructed[rows] *= leaf_data[(leaf, leaf_weight)][ranks]
+    if not backend.allclose(reconstructed, data, atol=1e-8):
+        raise_error(
+            ValueError,
+            "``data`` is not leaf-separable for the given ``weight`` and ``leaf_size``.",
+        )
+
+    # internal nodes of the balanced binary tree, from the root down: leaves [first, last)
+    # are split in the leaves [first, middle) and [middle, last)
+    nodes = []
+    pending = [(0, len(sizes))]
+    while pending:
+        first, last = pending.pop()
+        if last - first > 1:
+            middle = first + (last - first) // 2
+            nodes.append((first, middle, last))
+            pending += [(middle, last), (first, middle)]
+
+    # phases of the weight distribution blocks. Each block only knows the weight of its node
+    # and the weight moved to its right child. We maximize the overlap with ``data``
+    # by alternating maximization over the phases of the blocks.
+    # Phases and overlaps below ``tolerance`` are treated as zero, and the maximization stops
+    # when the phases of all blocks change by less than ``tolerance`` or after ``max_sweeps``.
+    tolerance, max_sweeps = 1e-12, 50
+    group_node_weights = [
+        backend.sum(unique_weights[:, first:last], axis=1) for first, _, last in nodes
+    ]
+    group_right_weights = [
+        backend.sum(unique_weights[:, middle:last], axis=1) for _, middle, last in nodes
+    ]
+    node_phases = [
+        backend.zeros((weight + 1, weight + 1), dtype=backend.float64) for _ in nodes
+    ]
+    has_phases = bool(backend.any(backend.abs(group_phases) > tolerance))
+    if has_phases:
+        for _ in range(max_sweeps):
+            change = 0.0
+            for index in range(len(nodes)):
+                residual = group_phases + 0.0
+                for other in range(len(nodes)):
+                    if other != index:
+                        residual -= node_phases[other][
+                            group_node_weights[other], group_right_weights[other]
+                        ]
+                updated = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
+                for total in range(1, weight + 1):
+                    for right in range(total + 1):
+                        selected = (group_node_weights[index] == total) & (
+                            group_right_weights[index] == right
+                        )
+                        overlap = backend.sum(
+                            group_probabilities[selected]
+                            * backend.exp(1j * residual[selected])
+                        )
+                        if backend.abs(overlap) > tolerance:
+                            updated[total, right] = backend.angle(overlap)
+                change = max(
+                    change,
+                    float(
+                        backend.max(
+                            backend.abs(
+                                backend.exp(1j * updated)
+                                - backend.exp(1j * node_phases[index])
+                            )
+                        )
+                    ),
+                )
+                node_phases[index] = updated
+            if change < tolerance:
+                break
+        else:
+            log.warning(
+                "The phases of the weight distribution blocks did not converge after "
+                + f"{max_sweeps} sweeps, and might not be optimal."
+            )
+
+    # the weight of the first leaf is held in its last qubits, in unary encoding
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.X(qubit) for qubit in range(sizes[0] - weight, sizes[0]))
+
+    # weight distribution blocks with the conditional distributions given by ``data``:
+    # the weight of a node is held in its first leaf, and a part of it is moved to the first
+    # leaf of its right child
+    for index, (first, middle, last) in enumerate(nodes):
+        node_weights = backend.sum(leaf_weights[:, first:last], axis=1)
+        right_weights = backend.sum(leaf_weights[:, middle:last], axis=1)
+        conditional = backend.zeros((weight + 1, weight + 1), dtype=backend.float64)
+        conditional[:, 0] = 1.0
+        for total in range(1, weight + 1):
+            selected = node_weights == total
+            normalization = backend.sum(probabilities[selected])
+            if normalization > 0.0:
+                for right in range(weight + 1):
+                    conditional[total, right] = (
+                        backend.sum(probabilities[selected & (right_weights == right)])
+                        / normalization
+                    )
+        _add_wbd_gate(
+            circuit,
+            list(range(starts[first], starts[first] + sizes[first])),
+            list(range(starts[middle], starts[middle] + sizes[middle])),
+            sum(sizes[first:last]),
+            sum(sizes[middle:last]),
+            weight,
+            conditional,
+            node_phases[index] if has_phases else None,
+        )
+
+    # leaf encoders, fully controlled in the leaf to act only on the sector of a given weight
+    for leaf, (start, size) in enumerate(zip(starts, sizes)):
+        leaf_qubits = list(range(start, start + size))
+        for leaf_weight in range(1, min(size, weight) + 1):
+            if (leaf, leaf_weight) not in leaf_data or len(
+                leaf_data[(leaf, leaf_weight)]
+            ) == 1:
+                continue
+            amplitudes = leaf_data[(leaf, leaf_weight)]
+            complex_data = bool(
+                backend.any(backend.abs(backend.imag(amplitudes)) > tolerance)
+            )
+            encoder = hamming_weight_encoder(
+                size,
+                leaf_weight,
+                backend.cast(
+                    amplitudes if complex_data else backend.real(amplitudes),
+                    dtype=backend.complex128 if complex_data else backend.float64,
+                ),
+                full_hwp=True,
+                optimize_controls=False,
+                backend=backend,
+            )
+            encoder_gates = list(encoder.on_qubits(*leaf_qubits))
+            for index, gate in enumerate(encoder_gates):
+                if gate.name == "rbs":
+                    # the RZ gates that follow act on the same pair of bitstrings
+                    zeros = [qubit for qubit in leaf_qubits if qubit not in gate.qubits]
+                if complex_data and index == len(encoder_gates) - 1:
+                    # final phase correction: only the bitstring with the target at zero
+                    # is in the sector of the leaf weight
+                    others = [
+                        qubit for qubit in leaf_qubits if qubit not in gate.qubits
+                    ]
+                    target = gate.target_qubits[0]
+                    circuit.add(gates.X(qubit) for qubit in others + [target])
+                    circuit.add(
+                        gates.U1(target, -gate.parameters[0] / 2).controlled_by(
+                            *gate.control_qubits, *others
+                        )
+                    )
+                    circuit.add(gates.X(qubit) for qubit in others + [target])
+                    continue
+                circuit.add(gates.X(qubit) for qubit in zeros)
+                circuit.add(
+                    (gates.RBS if gate.name == "rbs" else gates.RZ)(
+                        *gate.target_qubits, *gate.parameters
+                    ).controlled_by(*gate.control_qubits, *zeros)
+                )
+                circuit.add(gates.X(qubit) for qubit in zeros)
 
     return circuit
 

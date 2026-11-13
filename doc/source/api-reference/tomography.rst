@@ -431,3 +431,56 @@ References:
     :members:
     :member-order: bysource
     :special-members: __call__
+
+
+.. _DirectFidelityEstimation:
+
+Direct Fidelity Estimation
+--------------------------
+
+Certifying that a circuit prepares a pure target state :math:`|\psi\rangle` of :math:`n` qubits
+does not need its full reconstruction. The fidelity with the state :math:`\sigma` that is actually
+prepared is
+
+.. math::
+    F = \langle \psi | \sigma | \psi \rangle = \sum_{P} \chi_{\psi}(P) \, \chi_{\sigma}(P) \, ,
+
+where the sum runs over the :math:`4^{n}` Pauli strings :math:`P`, and
+:math:`\chi_{\rho}(P) = \text{tr}(P \, \rho) / \sqrt{d}`, with :math:`d = 2^{n}`, is the
+characteristic function of :math:`\rho`. Since :math:`\chi_{\psi}(P)^{2}` is a probability
+distribution, :math:`\ell = \lceil 1 / (\epsilon^{2} \, \delta) \rceil` Pauli strings are drawn
+from it, and each one is measured :math:`m_{i}` times on the prepared state, with more shots for
+the strings with a smaller :math:`|\chi_{\psi}(P)|`. The average of the measured expectation
+values, each one divided by that of the target state, is an unbiased estimate :math:`\tilde{Y}` of
+:math:`F`, such that :math:`|F - \tilde{Y}| \leq 2 \epsilon` with probability at least
+:math:`1 - 2 \delta` [1, 2]. The number of Pauli strings does not depend on :math:`n`, and the
+expected number of shots is a factor :math:`d` smaller than that of full tomography with Pauli
+measurements. For stabilizer states, *e.g.* GHZ states, it does not depend on :math:`n` either.
+
+The target is given as a circuit, or as a state vector, and the prepared state is only sampled, so
+it can have noise channels. The target is simulated classically to draw the Pauli strings, but the
+table of the :math:`4^{n}` probabilities is never built. Writing a string as
+:math:`P \propto X^{a} Z^{b}`, the bit string :math:`a` is drawn from its marginal probability
+:math:`p(a) = \sum_{x} |\psi(x)|^{2} |\psi(x \oplus a)|^{2}`, which a fast Walsh-Hadamard
+transform gives for all :math:`a` at once. Then :math:`b` is drawn from a probability proportional
+to :math:`|\sum_{x} \psi^{*}(x \oplus a) \psi(x) (-1)^{b \cdot x}|^{2}`, which is also a
+Walsh-Hadamard transform, and its values are the expectation values needed by the estimator, up to
+the phase of the Pauli :math:`Y`. The draws are grouped by :math:`a`, so each different :math:`a`
+is processed once, however many strings share it, and only the expectation values of the drawn
+strings are kept. The memory grows as :math:`2^{n}`, like the state vector of the target. Each
+different Pauli string is measured with its own circuit.
+
+References:
+    1. S. T. Flammia and Y.-K. Liu,
+    *Direct fidelity estimation from few Pauli measurements* (2011),
+    `Physical Review Letters 106, 230501 <https://doi.org/10.1103/PhysRevLett.106.230501>`_.
+
+    2. M. P. da Silva, O. Landon-Cardinal and D. Poulin,
+    *Practical characterization of quantum devices without tomography* (2011),
+    `Physical Review Letters 107, 210404 <https://doi.org/10.1103/PhysRevLett.107.210404>`_.
+
+
+.. autoclass:: qibo.tomography.DirectFidelityEstimation
+    :members:
+    :member-order: bysource
+    :special-members: __call__

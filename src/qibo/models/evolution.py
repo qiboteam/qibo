@@ -1,5 +1,7 @@
 """Models for time evolution of state vectors."""
 
+import numpy as np
+
 from qibo import optimizers, solvers
 from qibo.callbacks import Gap
 from qibo.config import log, raise_error
@@ -234,7 +236,9 @@ class AdiabaticEvolution(StateEvolution):
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
         if self.parametrized_schedule is not None:
-            self.schedule = lambda t: self.parametrized_schedule(t, params[:-1])
+            self.schedule = lambda t: np.asarray(
+                self.parametrized_schedule(t, params[:-1])
+            ).item()
         self.hamiltonian.total_time = params[-1]
 
     def execute(self, final_time, start_time=0.0, initial_state=None):

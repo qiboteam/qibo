@@ -617,32 +617,18 @@ class ThermalRelaxationChannel(KrausChannel):
             e_t2 = exp(-time / t_2)
 
             operators = [
-                sqrt(p_0) * sqrt(p_0) * np.array([[0, 1], [0, 0]]),
+                sqrt(p_0) * np.array([[0, 1], [0, 0]]),
                 sqrt(p_1) * np.array([[0, 0], [1, 0]]),
             ]
 
-            k_term = sqrt(4 * e_t2**2 + (p_0 - p_1) ** 2)
-            kraus_coeff = sqrt(1 - (p_0 + p_1 + k_term) / 2)
-
-            operators.append(
-                kraus_coeff
-                * np.array(
-                    [
-                        [(p_0 - p_1 - k_term) / (2 * e_t2), 0],
-                        [0, 1],
-                    ]
+            diff = p_0 - p_1
+            k_term = sqrt(4 * e_t2**2 + diff**2)
+            for sign in (1, -1):
+                ratio = (diff + sign * k_term) / (2 * e_t2)
+                eigenvalue = 1 - (p_0 + p_1 - sign * k_term) / 2
+                operators.append(
+                    sqrt(eigenvalue / (1 + ratio**2)) * np.array([[ratio, 0], [0, 1]])
                 )
-            )
-
-            operators.append(
-                kraus_coeff
-                * np.array(
-                    [
-                        [(p_0 - p_1 + k_term) / (2 * e_t2), 0],
-                        [0, 1],
-                    ]
-                )
-            )
 
             super().__init__([(qubit,)] * len(operators), operators)
             self.init_kwargs["e_t2"] = e_t2

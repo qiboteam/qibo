@@ -140,8 +140,7 @@ def double_commutator(
 
     References:
         1. M. Gluza, *Double-bracket quantum algorithms for diagonalization*,
-        `Quantum (2024) <https://doi.org/10.22331/q-2024-04-08-1316>`_,
-        `arXiv:2206.11772 <https://arxiv.org/abs/2206.11772>`_.
+        `Quantum 8, 1316 (2024) <https://doi.org/10.22331/q-2024-04-09-1316>`_.
     """
     if nesting not in ("left", "right"):
         raise_error(
@@ -192,7 +191,7 @@ def group_commutator(
 
     References:
         1. M. Gluza, *Double-bracket quantum algorithms for diagonalization*,
-        `Quantum (2024) <https://doi.org/10.22331/q-2024-04-08-1316>`_,
+        `Quantum 8, 1316 (2024) <https://doi.org/10.22331/q-2024-04-09-1316>`_,
         `arXiv:2206.11772 <https://arxiv.org/abs/2206.11772>`_.
 
         2. Y.-A. Chen, A. M. Childs, M. Hafezi, Z. Jiang, H. Kim, and Y. Xu,

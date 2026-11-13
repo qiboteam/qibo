@@ -14,13 +14,13 @@ jobs:
       version: ${{ steps.classify.outputs.version}}
     steps:
       - id: classify
-        uses: qiboteam/workflows/actions/docs/version@uv
+        uses: qiboteam/workflows/actions/docs/version@v3
 
   deploy-docs:
     needs: [version]
-    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@uv
+    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v3
     with:
-      python-version: "3.11"
+      python-version: "3.12"
       trigger-label: "${{needs.version.outputs.version}}"
       project: qibo
       uv-extras: --no-dev --group docs --all-extras

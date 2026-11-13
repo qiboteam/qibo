@@ -154,27 +154,26 @@ def assert_placement(circuit: Circuit, connectivity: nx.Graph | None) -> None:
 def assert_connectivity(connectivity: nx.Graph, circuit: Circuit) -> None:
     """Assert if a circuit can be executed on Hardware.
 
-    No gates acting on more than two qubits, except for measurements.
-    All two-qubit operations can be performed on hardware. Measurements do not
-    require the qubits to be connected.
+    No gates acting on more than two qubits, except for measurements and barriers.
+    All two-qubit operations can be performed on hardware. Measurements and barriers
+    do not require the qubits to be connected.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
         connectivity (:class:`networkx.Graph`): Hardware connectivity.
     """
-    layout = circuit.wire_names
-    for gate in circuit.queue:
-        if isinstance(gate, gates.M):
-            continue
-        if len(gate.qubits) > 2:
-            raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
-        if len(gate.qubits) == 2:
-            physical_qubits = (layout[gate.qubits[0]], layout[gate.qubits[1]])
-            if physical_qubits not in connectivity.edges:
-                raise_error(
-                    ConnectivityError,
-                    f"The circuit does not respect the connectivity. {gate.name} acts on {physical_qubits} but only the following qubits are directly connected: {connectivity.edges}.",
-                )
+    gate = _find_unconnected_gate(connectivity, circuit)
+
+    if gate is not None and len(gate.qubits) > 2:
+        raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
+
+    if gate is not None:
+        layout = circuit.wire_names
+        physical_qubits = (layout[gate.qubits[0]], layout[gate.qubits[1]])
+        raise_error(
+            ConnectivityError,
+            f"The circuit does not respect the connectivity. {gate.name} acts on {physical_qubits} but only the following qubits are directly connected: {connectivity.edges}.",
+        )
 
 
 def assert_decomposition(
@@ -183,12 +182,31 @@ def assert_decomposition(
 ) -> None:
     """Checks if a circuit has been correctly decomposed into native gates.
 
+    The identity gate, the global phase gates, the measurements, the resets and the
+    directives are not checked, and :class:`qibo.gates.gates.Z` and
+    :class:`qibo.gates.gates.RZ` are also accepted if :class:`qibo.gates.gates.U3` or
+    :class:`qibo.gates.gates.GPI2` are native, because they are virtual gates that are
+    assumed to be available together with them, as in
+    :class:`qibo.transpiler.unroller.Unroller`.
+
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`): Native gates supported by the hardware.
     """
+    if native_gates & (NativeGates.U3 | NativeGates.GPI2):
+        native_gates |= NativeGates.Z | NativeGates.RZ
     for gate in circuit.queue:
-        if isinstance(gate, (gates.Align, gates.Barrier, gates.M, gates.ResetChannel)):
+        if isinstance(
+            gate,
+            (
+                gates.Align,
+                gates.Barrier,
+                gates.GlobalPhase,
+                gates.I,
+                gates.M,
+                gates.ResetChannel,
+            ),
+        ):
             continue
         if len(gate.qubits) <= 2:
             try:
@@ -207,3 +225,36 @@ def assert_decomposition(
             raise_error(
                 DecompositionError, f"{gate.name} acts on more than two qubits."
             )
+
+
+def _find_unconnected_gate(
+    connectivity: nx.Graph, circuit: Circuit
+) -> gates.Gate | None:
+    """Helper method for :func:`qibo.transpiler.asserts.assert_connectivity`.
+
+    Args:
+        connectivity (:class:`networkx.Graph`): Hardware connectivity.
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to check.
+
+    Returns:
+        (:class:`qibo.gates.abstract.Gate` or None): First gate that acts on more than two
+        qubits or on two qubits that are not connected, ignoring measurements and barriers,
+        or ``None`` if there is no such gate. It does not log an error.
+    """
+    layout = circuit.wire_names
+
+    for gate in circuit.queue:
+        if isinstance(gate, (gates.Barrier, gates.M)):
+            continue
+
+        if len(gate.qubits) > 2:
+            return gate
+
+        if (
+            len(gate.qubits) == 2
+            and (layout[gate.qubits[0]], layout[gate.qubits[1]])
+            not in connectivity.edges
+        ):
+            return gate
+
+    return None

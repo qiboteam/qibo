@@ -80,3 +80,12 @@ The final result of the circuit execution can also be saved to disk and loaded b
 .. autoclass:: qibo.result.CircuitResult
     :members:
     :member-order: bysource
+
+Measurement results
+^^^^^^^^^^^^^^^^^^^
+
+The outcomes of the ``collapse=True`` measurements of a circuit are accessible through the
+:class:`qibo.measurements.MeasurementResult` objects that are returned when the measurement gates
+are added to the circuit. Several of them can be joined into a single result.
+
+.. automethod:: qibo.measurements.MeasurementResult.join

@@ -14,18 +14,25 @@ from qibo.hamiltonians._models import _multikron
 from qibo.hamiltonians.models import (
     ANNNI,
     GPP,
+    J1J2,
     LABS,
+    LMG,
+    QUBO,
     TFIM,
     XXX,
     XXZ,
     XY,
     ClusterIsing,
     DisorderedHeisenberg,
+    DMHeisenberg,
     FermiHubbard,
     FoldedXXZ,
     Heisenberg,
     Ising,
+    LongRangeHeisenberg,
     MaxCut,
+    MaxIndependentSet,
+    NumberPartitioning,
     SpinGlass,
 )
 
@@ -1880,3 +1887,414 @@ def test_folded_xxz(backend, nqubits, dense):
     hamiltonian = FoldedXXZ(nqubits, dense=dense, backend=backend)
 
     backend.assert_allclose(hamiltonian.matrix, target)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+def test_j1j2(backend, nqubits, closed_boundary, dense):
+    """Nearest and next-nearest neighbors, including the three-qubit ring."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    j1, j2 = 1.0, 0.7
+
+    target = 0
+    for distance, strength in ((1, j1), (2, j2)):
+        nbonds = nqubits if closed_boundary else nqubits - distance
+        for qubit in range(nbonds):
+            other = (qubit + distance) % nqubits
+            target += sum(
+                strength * pauli(qubit, backend=backend) * pauli(other, backend=backend)
+                for pauli in paulis
+            )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+
+    hamiltonian = J1J2(
+        nqubits, j1, j2, dense=dense, closed_boundary=closed_boundary, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_j1j2_heisenberg(backend, closed_boundary, dense):
+    """Without next-nearest-neighbor coupling, it is the antiferromagnetic chain."""
+    kwargs = {"dense": dense, "closed_boundary": closed_boundary, "backend": backend}
+
+    hamiltonian = J1J2(5, 0.6, 0.0, **kwargs)
+    target = Heisenberg(5, -0.6, 0, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [4, 6])
+def test_j1j2_majumdar_ghosh(backend, nqubits):
+    """The Majumdar-Ghosh ground states are two degenerate products of singlets."""
+    hamiltonian = J1J2(nqubits, backend=backend)
+    eigenvalues = hamiltonian.eigenvalues()
+
+    backend.assert_allclose(eigenvalues[:2], -1.5 * nqubits, atol=1e-10)
+    assert eigenvalues[2] > eigenvalues[1] + 1e-6
+
+
+@pytest.mark.parametrize("nqubits", [0, 1, 2])
+def test_j1j2_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        J1J2(nqubits, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("nqubits", [2, 4])
+def test_lmg(backend, nqubits, dense):
+    gamma, h = 0.3, 0.7
+
+    target = sum(
+        -(
+            symbols.X(a, backend=backend) * symbols.X(b, backend=backend)
+            + gamma * symbols.Y(a, backend=backend) * symbols.Y(b, backend=backend)
+        )
+        / nqubits
+        for a, b in combinations(range(nqubits), 2)
+    )
+    target += sum(-h * symbols.Z(qubit, backend=backend) for qubit in range(nqubits))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+
+    hamiltonian = LMG(nqubits, gamma, h, dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_lmg_isotropic_magnetization(backend):
+    """For ``gamma=1``, the total magnetization along the Z axis is conserved."""
+    nqubits = 4
+    hamiltonian = LMG(nqubits, 1.0, 0.4, backend=backend).matrix
+    magnetization = sum(symbols.Z(qubit, backend=backend) for qubit in range(nqubits))
+    magnetization = SymbolicHamiltonian(
+        magnetization, nqubits=nqubits, backend=backend
+    ).matrix
+
+    commutator = hamiltonian @ magnetization - magnetization @ hamiltonian
+
+    backend.assert_allclose(commutator, backend.zeros_like(commutator), atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [0, 1])
+def test_lmg_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        LMG(nqubits, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_long_range_heisenberg(backend, closed_boundary, dense):
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    nqubits, alpha = 5, 1.5
+    couplings, fields = (1.0, -0.4, 0.3), (0.1, -0.2, 0.5)
+
+    target = 0
+    for a, b in combinations(range(nqubits), 2):
+        distance = b - a
+        if closed_boundary:
+            distance = min(distance, nqubits - distance)
+        target += sum(
+            -coupling
+            * pauli(a, backend=backend)
+            * pauli(b, backend=backend)
+            / distance**alpha
+            for coupling, pauli in zip(couplings, paulis)
+        )
+    target += sum(
+        -field * pauli(qubit, backend=backend)
+        for qubit in range(nqubits)
+        for field, pauli in zip(fields, paulis)
+    )
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+
+    hamiltonian = LongRangeHeisenberg(
+        nqubits,
+        couplings,
+        fields,
+        alpha,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_long_range_heisenberg_all_to_all(backend, dense):
+    """For ``alpha=0``, every pair of qubits is coupled with the same strength."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = LongRangeHeisenberg(4, [1.0, 0.5, 0.2], 0.3, 0.0, **kwargs)
+    target = Heisenberg(nx.complete_graph(4), [1.0, 0.5, 0.2], 0.3, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("nqubits", [0, 1])
+def test_long_range_heisenberg_value_error(backend, nqubits):
+    with pytest.raises(ValueError):
+        LongRangeHeisenberg(nqubits, 1.0, 1.0, 1.0, backend=backend)
+
+
+def _dm_target(backend, nqubits, couplings, fields, dm_vector, bonds):
+    """Heisenberg model plus the DM term on ``bonds``, built from symbols."""
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+    cross = ((symbols.Y, symbols.Z), (symbols.Z, symbols.X), (symbols.X, symbols.Y))
+
+    target = sum(
+        -weight * coupling * pauli(a, backend=backend) * pauli(b, backend=backend)
+        for a, b, weight in bonds
+        for coupling, pauli in zip(couplings, paulis)
+    )
+    target += sum(
+        -field * pauli(qubit, backend=backend)
+        for qubit in range(nqubits)
+        for field, pauli in zip(fields, paulis)
+    )
+    target += sum(
+        weight
+        * strength
+        * (
+            first(a, backend=backend) * second(b, backend=backend)
+            - second(a, backend=backend) * first(b, backend=backend)
+        )
+        for a, b, weight in bonds
+        for strength, (first, second) in zip(dm_vector, cross)
+    )
+
+    return SymbolicHamiltonian(target, nqubits=nqubits, backend=backend).matrix
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_dm_heisenberg_chain(backend, closed_boundary, dense):
+    nqubits = 4
+    couplings, fields, dm_vector = (1.0, -0.4, 0.3), (0.1, -0.2, 0.5), (0.3, -0.6, 0.8)
+
+    nbonds = nqubits if closed_boundary else nqubits - 1
+    bonds = [(qubit, (qubit + 1) % nqubits, 1) for qubit in range(nbonds)]
+    target = _dm_target(backend, nqubits, couplings, fields, dm_vector, bonds)
+
+    hamiltonian = DMHeisenberg(
+        nqubits,
+        couplings,
+        fields,
+        dm_vector,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target, atol=1e-10)
+    backend.assert_allclose(
+        hamiltonian.matrix, backend.conj(hamiltonian.matrix).T, atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_graph(backend, dense):
+    """Bonds are oriented from the lower to the higher label, and weights scale the DM."""
+    graph = nx.Graph()
+    graph.add_nodes_from(range(4))
+    graph.add_edge(0, 1, weight=2.0)
+    graph.add_edge(3, 1, weight=0.5)
+    graph.add_edge(2, 3)
+    couplings, fields, dm_vector = (1.0, 0.5, 0.2), (0.0, 0.1, 0.0), (0.3, 0.0, 0.8)
+
+    bonds = [(0, 1, 2.0), (1, 3, 0.5), (2, 3, 1)]
+    target = _dm_target(backend, 4, couplings, fields, dm_vector, bonds)
+
+    hamiltonian = DMHeisenberg(
+        graph, couplings, fields, dm_vector, dense=dense, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_scalar_strengths(backend, dense):
+    """A scalar DM strength is the same as three equal components."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DMHeisenberg(3, 1.0, 0.0, 0.4, **kwargs)
+    target = DMHeisenberg(3, 1.0, 0.0, [0.4, 0.4, 0.4], **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_no_dm(backend, dense):
+    """Without DM interaction, it is the Heisenberg model."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DMHeisenberg(4, [1.0, 0.5, 0.2], 0.3, 0.0, **kwargs)
+    target = Heisenberg(4, [1.0, 0.5, 0.2], 0.3, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_dm_heisenberg_two_qubits(backend, dense):
+    """The two bonds of a two-qubit ring have opposite orientations."""
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DMHeisenberg(2, 1.0, 0.0, [0.3, 0.5, 0.8], **kwargs)
+    target = Heisenberg(2, 1.0, 0.0, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_dm_heisenberg_value_error(backend):
+    with pytest.raises(ValueError):
+        DMHeisenberg(3, 1.0, 0.0, [0.3, 0.5], backend=backend)
+
+
+def _qubo_energies(matrix):
+    """Objective function of the QUBO problem on all bitstrings, in qibo's order."""
+    bitstrings = np.array(list(product([0, 1], repeat=len(matrix))))
+    return np.einsum("bj,jk,bk->b", bitstrings, matrix, bitstrings)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("nqubits", [1, 2, 4])
+def test_qubo(backend, nqubits, dense):
+    """The Hamiltonian is diagonal with the QUBO objective function as eigenvalues."""
+    matrix = np.random.default_rng(nqubits).normal(size=(nqubits, nqubits))
+
+    hamiltonian = QUBO(
+        backend.cast(matrix, dtype=backend.float64), dense=dense, backend=backend
+    )
+
+    assert hamiltonian.nqubits == nqubits
+    backend.assert_allclose(
+        hamiltonian.matrix, np.diag(_qubo_energies(matrix)), atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_qubo_linear(backend, dense):
+    """An integer diagonal matrix has no quadratic terms."""
+    matrix = np.diag([1, -2, 3])
+
+    hamiltonian = QUBO(matrix.tolist(), dense=dense, backend=backend)
+
+    backend.assert_allclose(
+        hamiltonian.matrix, np.diag(_qubo_energies(matrix)), atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_qubo_symmetrization(backend, dense):
+    """Only the symmetric part of the off-diagonal elements is relevant."""
+    upper = [[1.0, 2.0, -1.0], [0.0, -0.5, 3.0], [0.0, 0.0, 2.0]]
+    symmetric = [[1.0, 1.0, -0.5], [1.0, -0.5, 1.5], [-0.5, 1.5, 2.0]]
+
+    hamiltonian = QUBO(backend.cast(upper), dense=dense, backend=backend)
+    target = QUBO(backend.cast(symmetric), dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("shape", [(2, 3), (3,), (2, 2, 2)])
+def test_qubo_value_error(backend, shape):
+    with pytest.raises(ValueError):
+        QUBO(backend.ones(shape), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize(
+    "graph,size",
+    [
+        (nx.path_graph(4), 2),
+        (nx.cycle_graph(5), 2),
+        (nx.star_graph(3), 3),
+        (nx.complete_graph(4), 1),
+        (nx.empty_graph(3), 3),
+    ],
+)
+def test_max_independent_set(backend, graph, size, dense):
+    penalty = 2.5
+    matrix = -backend.identity(len(graph))
+    for node_a, node_b in graph.edges:
+        matrix[node_a, node_b] = penalty
+
+    hamiltonian = MaxIndependentSet(graph, penalty, dense=dense, backend=backend)
+
+    backend.assert_allclose(
+        hamiltonian.matrix, backend.diag(_qubo_energies(matrix)), atol=1e-10
+    )
+    # the ground state energy is minus the size of the maximum independent set
+    backend.assert_allclose(float(backend.min(hamiltonian.eigenvalues())), -size)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_max_independent_set_ground_states(backend, dense):
+    """Ground states are independent sets, *i.e.*, no edge has both ends selected."""
+    graph = nx.cycle_graph(5)
+
+    hamiltonian = MaxIndependentSet(graph, dense=dense, backend=backend)
+    energies = backend.real(backend.diag(hamiltonian.matrix))
+
+    for index in backend.flatnonzero(np.isclose(energies, energies.min())):
+        bits = [(index >> (4 - qubit)) & 1 for qubit in range(5)]
+        assert all(not (bits[a] and bits[b]) for a, b in graph.edges)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_max_independent_set_labels(backend, dense):
+    """Qubits are labeled by the order of the nodes if they are not integers."""
+    graph = nx.relabel_nodes(nx.path_graph(4), dict(enumerate("abcd")))
+
+    hamiltonian = MaxIndependentSet(graph, dense=dense, backend=backend)
+    target = MaxIndependentSet(nx.path_graph(4), dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+def test_max_independent_set_value_error(backend):
+    with pytest.raises(ValueError):
+        MaxIndependentSet(nx.path_graph(3), penalty_coeff=1.0, backend=backend)
+
+    with pytest.raises(ValueError):
+        MaxIndependentSet(nx.Graph(), backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize(
+    "numbers,minimum",
+    [([3, 1, 1, 2, 2, 1], 0), ([1, 2, 4], 1), ([0.5, 1.5, 2.0], 0)],
+)
+def test_number_partitioning(backend, numbers, minimum, dense):
+    """Eigenvalues are the squared differences between the sums of the two subsets."""
+    signs = 1 - 2 * np.array(list(product([0, 1], repeat=len(numbers))))
+    target = (signs @ np.array(numbers)) ** 2
+
+    hamiltonian = NumberPartitioning(
+        backend.cast(numbers, dtype=backend.float64), dense=dense, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, np.diag(target), atol=1e-10)
+    assert math.isclose(float(backend.min(hamiltonian.eigenvalues())), minimum)
+
+
+@pytest.mark.parametrize("numbers", [[1], [], [[1, 2], [3, 4]]])
+def test_number_partitioning_value_error(backend, numbers):
+    with pytest.raises(ValueError):
+        NumberPartitioning(numbers, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_number_partitioning_list(backend, dense):
+    """Lists are accepted, and give the same Hamiltonian as backend arrays."""
+    numbers = [3, 1, 1, 2, 2, 1]
+
+    hamiltonian = NumberPartitioning(numbers, dense=dense, backend=backend)
+    target = NumberPartitioning(
+        backend.cast(numbers, dtype=backend.float64), dense=dense, backend=backend
+    )
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)

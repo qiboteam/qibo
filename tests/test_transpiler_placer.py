@@ -2,11 +2,13 @@ import networkx as nx
 import pytest
 
 from qibo import Circuit, gates
+from qibo.models.encodings import entangling_layer
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import assert_placement, assert_transpiling
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
 from qibo.transpiler.placer import (
+    Dense,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
@@ -267,3 +269,108 @@ def test_random_zero_samples(star_connectivity):
     Random(connectivity=connectivity, samples=0)(circuit)
     assert circuit.wire_names == ["A", "B", "C", "D", "E"]
     assert_placement(circuit, connectivity)
+
+
+def test_gates_qubits_pairs_ignore_barriers():
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Barrier(0, 1, 2))
+    circuit.add(gates.Barrier(3, 4))
+    circuit.add(gates.CNOT(1, 2))
+    assert _find_gates_qubits_pairs(circuit) == [[0, 1], [1, 2]]
+
+
+@pytest.mark.parametrize("barrier_qubits", [(0, 1, 2), (0, 1, 2, 3, 4), (0, 4)])
+def test_star_connectivity_placer_barrier(barrier_qubits, star_connectivity):
+    circ = Circuit(5)
+    circ.add(gates.Barrier(*barrier_qubits))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.Barrier(*barrier_qubits))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.CZ(0, 2))
+    connectivity = star_connectivity()
+    placer = StarConnectivityPlacer(connectivity)
+    placer(circ)
+    assert_placement(circ, connectivity)
+    assert circ.wire_names == [0, 2, 1, 3, 4]
+
+
+@pytest.mark.parametrize("placer_class", [Random, Subgraph])
+def test_placers_with_barrier(placer_class, star_connectivity):
+    circ = star_circuit()
+    circ.add(gates.Barrier(0, 1, 2, 3))
+    connectivity = star_connectivity()
+    placer = placer_class(connectivity=connectivity)
+    placer(circ)
+    assert_placement(circ, connectivity)
+
+
+@pytest.mark.parametrize(
+    "placer_class",
+    [
+        Random,
+        Subgraph,
+        StarConnectivityPlacer,
+        lambda connectivity=None: ReverseTraversal(Sabre(), connectivity),
+    ],
+    ids=["Random", "Subgraph", "StarConnectivityPlacer", "ReverseTraversal"],
+)
+def test_placers_store_undirected_connectivity(placer_class, star_connectivity):
+    assert placer_class().connectivity is None
+    undirected = star_connectivity()
+    assert placer_class(undirected).connectivity is undirected
+    directed = nx.DiGraph(undirected.edges)
+    placer = placer_class(directed)
+    assert not placer.connectivity.is_directed()
+    assert set(map(frozenset, placer.connectivity.edges)) == set(
+        map(frozenset, undirected.edges)
+    )
+    assert directed.is_directed()
+
+
+def count_swaps(circuit, connectivity):
+    """Number of SWAP gates that Sabre adds to route the circuit."""
+    routed_circuit, _ = Sabre(connectivity, seed=1)(circuit.copy())
+    return sum(isinstance(gate, gates.SWAP) for gate in routed_circuit.queue)
+
+
+def test_dense_no_two_qubit_gates():
+    circuit = Circuit(4, wire_names=[3, 2, 1, 0])
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(1))
+    Dense(nx.path_graph(4))(circuit)
+    assert circuit.wire_names == [3, 2, 1, 0]
+
+
+def test_dense_error():
+    connectivity = nx.Graph([(0, 1), (2, 3)])
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    with pytest.raises(PlacementError):
+        Dense(connectivity)(circuit)
+
+
+def test_dense_multi_qubit_gate_error():
+    circuit = Circuit(4)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    with pytest.raises(ValueError):
+        Dense(nx.path_graph(4))(circuit)
+
+
+def test_reverse_traversal_trials(backend):
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(2, 4))
+    circuit = entangling_layer(8, "pyramid")
+    swaps = {}
+    for trials in (1, 10):
+        copy = circuit.copy()
+        placer = ReverseTraversal(Sabre(seed=1), connectivity, trials=trials, seed=1)
+        placer(copy, backend=backend)
+        assert_placement(copy, connectivity)
+        swaps[trials] = count_swaps(copy, connectivity)
+    assert swaps[10] < swaps[1]
+
+
+def test_reverse_traversal_trials_error():
+    with pytest.raises(ValueError):
+        ReverseTraversal(Sabre(), trials=0)

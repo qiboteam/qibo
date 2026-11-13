@@ -136,6 +136,27 @@ LABS
     :members:
     :member-order: bysource
 
+Maximum independent set
+-----------------------
+
+.. autoclass:: qibo.hamiltonians.MaxIndependentSet
+    :members:
+    :member-order: bysource
+
+Number partitioning
+-------------------
+
+.. autoclass:: qibo.hamiltonians.NumberPartitioning
+    :members:
+    :member-order: bysource
+
+QUBO
+----
+
+.. autoclass:: qibo.hamiltonians.QUBO
+    :members:
+    :member-order: bysource
+
 
 Fermi-Hubbard model
 -------------------
@@ -204,6 +225,14 @@ Heisenberg XXZ
     :member-order: bysource
 
 
+Folded XXZ model
+----------------
+
+.. autoclass:: qibo.hamiltonians.FoldedXXZ
+    :members:
+    :member-order: bysource
+
+
 Heisenberg XY model
 -------------------
 
@@ -220,10 +249,34 @@ Disordered Heisenberg model
     :member-order: bysource
 
 
-Folded XXZ model
-----------------
+Heisenberg model with Dzyaloshinskii-Moriya interaction
+-------------------------------------------------------
 
-.. autoclass:: qibo.hamiltonians.FoldedXXZ
+.. autoclass:: qibo.hamiltonians.DMHeisenberg
+    :members:
+    :member-order: bysource
+
+
+Heisenberg J1-J2 model
+----------------------
+
+.. autoclass:: qibo.hamiltonians.J1J2
+    :members:
+    :member-order: bysource
+
+
+Long-range Heisenberg model
+---------------------------
+
+.. autoclass:: qibo.hamiltonians.LongRangeHeisenberg
+    :members:
+    :member-order: bysource
+
+
+Lipkin-Meshkov-Glick model
+--------------------------
+
+.. autoclass:: qibo.hamiltonians.LMG
     :members:
     :member-order: bysource
 

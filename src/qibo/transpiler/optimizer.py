@@ -1,19 +1,30 @@
 import heapq
 import math
 import random
+from collections.abc import Callable
 from inspect import signature
 
 import networkx as nx
+from numpy.typing import ArrayLike
 
 from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
-from qibo.transpiler._exceptions import PlacementError
+from qibo.quantum_info.linalg_operations import commutator
+from qibo.transpiler._exceptions import (
+    ConnectivityError,
+    DecompositionError,
+    PlacementError,
+)
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.blocks import Block
-from qibo.transpiler.decompositions import u3_dec
-from qibo.transpiler.unitary_decompositions import _EULER_BASES, _euler_sequence
+from qibo.transpiler.decompositions.direction_decompositions import direction_dec
+from qibo.transpiler.decompositions.u3_decompositions import u3_dec
+from qibo.transpiler.decompositions.unitary_decompositions import (
+    _EULER_BASES,
+    _euler_sequence,
+)
 
 # Gates of :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement`, whose
 # matrices are diagonal in the computational basis. A gate stays diagonal when more
@@ -81,6 +92,245 @@ _T_RULES = (
 )
 
 
+class BarrierBeforeFinalMeasurements(Optimizer):
+    """Inserts a barrier before the final measurements of a circuit.
+
+    A measurement or a barrier is final if no other gate acts on its qubits after it. The
+    final measurements and barriers are placed after a new
+    :class:`qibo.gates.special.Barrier` that acts on all the qubits of the circuit, in
+    their original order, while the other gates stay before the barrier. A circuit
+    without final measurements is not changed.
+
+    The barrier keeps the tools that rearrange the gates, such as the routers, from
+    moving them across the final measurements. It can be removed afterwards with
+    :class:`qibo.transpiler.optimizer.FilterGates`.
+
+    Example:
+
+        The measurement of the first qubit is not final, because a Hadamard gate acts on
+        the qubit after it, so it stays before the barrier.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import BarrierBeforeFinalMeasurements
+
+            circuit = Circuit(2)
+            circuit.add(gates.M(0))
+            circuit.add(gates.H(0))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.M(0, 1))
+
+            new_circuit = BarrierBeforeFinalMeasurements()(circuit)
+            print([gate.name for gate in new_circuit.queue])
+
+        .. testoutput::
+
+            ['measure', 'h', 'cx', 'barrier', 'measure']
+    """
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Insert a barrier on all the qubits before the final measurements.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be processed.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the barrier before the
+            final measurements.
+        """
+        used = set()
+        kept = []
+        final = []
+        for gate in reversed(circuit.queue):
+            if isinstance(gate, (gates.M, gates.Barrier)) and not used.intersection(
+                gate.qubits
+            ):
+                final.append(gate)
+            else:
+                used.update(gate.qubits)
+                kept.append(gate)
+
+        if len(final) == 0:
+            return circuit
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(kept[::-1])
+        new.add(gates.Barrier(*range(circuit.nqubits)))
+        new.add(final[::-1])
+
+        return new
+
+
+class CommutativeCancellation(Optimizer):
+    """Merges rotations and cancels pairs of gates through the gates that commute with them.
+
+    A rotation is a single-qubit gate without control qubits that is a rotation around the
+    :math:`X`, :math:`Y` or :math:`Z` axis, up to a global phase, *e.g.*
+    :class:`qibo.gates.RZ`, :class:`qibo.gates.T`, :class:`qibo.gates.SX` or
+    :class:`qibo.gates.Y`. Two rotations around the same axis on the same qubit are merged
+    into a single :class:`qibo.gates.RX`, :class:`qibo.gates.RY` or :class:`qibo.gates.RZ`
+    gate if all the gates between them commute with the second one, where two gates
+    commute when applying them in either order gives the same matrix. The merged rotation
+    is left out if it is the identity. Then, the pairs of gates whose product is the
+    identity are cancelled through the gates that commute with them, see
+    :class:`qibo.transpiler.optimizer.InverseCancellation`.
+
+    Measurements, alignments, barriers, noise channels and fused gates are never merged
+    nor cancelled, and stop the search across them on their qubits. Gates with sympy
+    parameters are not merged, but the gates that commute with them do not stop the search.
+    The gates are compared through their matrices at their current parameter values, so a
+    merged rotation is not tracked by the returned circuit anymore. The pass is applied
+    once, use :class:`qibo.transpiler.optimizer.FixedPoint` to repeat it.
+
+    Example:
+        The two :class:`qibo.gates.RZ` gates on the first qubit merge, as the
+        controlled-NOT gate between them commutes with them.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import CommutativeCancellation
+
+            circuit = Circuit(2)
+            circuit.add(gates.RZ(0, 0.3))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.RZ(0, 0.4))
+
+            CommutativeCancellation()(circuit).draw()
+
+        .. testoutput::
+
+            0: ─RZ─o─
+            1: ────X─
+
+    Args:
+        atol (float, optional): Tolerance on the angle of a rotation to be the identity
+            and on the difference between the matrices that are compared. Defaults to
+            :math:`10^{-12}`.
+        up_to_global_phase (bool, optional): If ``False``, two rotations are merged only
+            when the new rotation has exactly the same matrix as their product, which keeps
+            the global phase of the circuit. Defaults to ``True``.
+    """
+
+    def __init__(self, atol: float = 1e-12, up_to_global_phase: bool = True):
+        if atol < 0:
+            raise_error(ValueError, f"``atol`` must be non-negative, but got {atol}.")
+        self.atol = atol
+        self.up_to_global_phase = up_to_global_phase
+
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
+        """Merge the rotations and cancel the pairs of gates through commuting gates.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
+                build the gate matrices. If ``None``, defaults to the global backend.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the merged rotations and
+            without the cancelled pairs.
+        """
+        backend = _check_backend(backend)
+
+        uncancellable = (gates.M, gates.Align, gates.Channel, SpecialGate)
+        # ``kept`` holds the surviving gates in order (removed ones are set to ``None``),
+        # ``kept_numeric`` holds the same gates with numbers instead of sympy parameters,
+        # ``rotations`` holds the axis, global phase and angle of the rotations and
+        # ``stacks`` holds, for each qubit, the positions in ``kept`` of the surviving
+        # gates acting on it. The last position is the latest gate.
+        kept = []
+        kept_numeric = []
+        rotations = []
+        stacks = {qubit: [] for qubit in range(circuit.nqubits)}
+        for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
+            rotation = None
+            if (
+                numeric is gate
+                and len(gate.qubits) == 1
+                and not isinstance(gate, uncancellable)
+            ):
+                rotation = _rotation(gate.matrix(backend), self.atol, backend)
+
+            merged = False
+            if rotation is not None:
+                axis, phase, angle = rotation
+                # The latest gates on the qubit are visited, which have to commute with
+                # ``gate`` to merge it with a rotation around the same axis.
+                for position in reversed(stacks[gate.qubits[0]]):
+                    partner = kept[position]
+                    if (
+                        rotations[position] is not None
+                        and rotations[position][0] == axis
+                    ):
+                        total_phase = phase + rotations[position][1]
+                        total_angle = angle + rotations[position][2]
+                        period = 2 * math.pi
+                        if not self.up_to_global_phase:
+                            # The rotation by an angle plus 2 pi is minus the rotation,
+                            # which compensates a global phase of pi.
+                            shift = math.remainder(total_phase, 2 * math.pi)
+                            if abs(shift) <= self.atol:
+                                period = 4 * math.pi
+                            elif abs(abs(shift) - math.pi) <= self.atol:
+                                total_angle += 2 * math.pi
+                                period = 4 * math.pi
+                            else:
+                                continue
+                        total_angle = math.remainder(total_angle, period)
+
+                        merged = True
+                        if abs(total_angle) <= self.atol:
+                            for qubit in partner.qubits:
+                                stacks[qubit].remove(position)
+                            kept[position] = None
+                            rotations[position] = None
+                        else:
+                            kept[position] = (gates.RX, gates.RY, gates.RZ)[axis](
+                                gate.qubits[0], total_angle
+                            )
+                            kept_numeric[position] = kept[position]
+                            rotations[position] = (axis, 0.0, total_angle)
+                        break
+
+                    if (
+                        isinstance(partner, uncancellable)
+                        or kept_numeric[position] is None
+                    ):
+                        break
+                    # The gates are compared on the qubits they act on, relabelled as
+                    # 0, 1, 2, and so on.
+                    relabel = {
+                        qubit: new_qubit
+                        for new_qubit, qubit in enumerate(
+                            sorted(set(gate.qubits) | set(partner.qubits))
+                        )
+                    }
+                    matrices = []
+                    for operator in (kept_numeric[position], numeric):
+                        embedded = Circuit(len(relabel))
+                        embedded.add(operator.on_qubits(relabel))
+                        matrices.append(embedded.unitary(backend))
+                    if (
+                        backend.matrix_norm(commutator(*matrices), order="fro")
+                        > self.atol
+                    ):
+                        break
+
+            if not merged:
+                kept.append(gate)
+                kept_numeric.append(numeric)
+                rotations.append(rotation)
+                for qubit in gate.qubits:
+                    stacks[qubit].append(len(kept) - 1)
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add([gate for gate in kept if gate is not None])
+
+        return InverseCancellation(self.atol, commutation=True)(new, backend)
+
+
 class ConsolidateBlocks(Optimizer):
     """Rewrites blocks of gates acting on two qubits with fewer controlled-Z (CZ) gates.
 
@@ -104,7 +354,7 @@ class ConsolidateBlocks(Optimizer):
     Args:
         weight (float, optional): Weight of the imaginary part in the matrix that is
             diagonalized to find the local gates of the decomposition, see
-            :func:`qibo.transpiler.unitary_decompositions.calculate_psi`.
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
             Defaults to :math:`\\sqrt{2}`.
 
     Example:
@@ -188,6 +438,55 @@ class ConsolidateBlocks(Optimizer):
                 if isinstance(item, Block)
                 else item
             )
+
+        return new
+
+
+class FilterGates(Optimizer):
+    """Removes the gates of a circuit that do not satisfy a condition.
+
+    Args:
+        predicate (Callable): Function that takes a :class:`qibo.gates.abstract.Gate` and
+            returns ``True`` if the gate is kept in the circuit and ``False`` if it is
+            removed.
+
+    Example:
+
+        The barrier is removed, while the other gates are kept.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import FilterGates
+
+            circuit = Circuit(2)
+            circuit.add(gates.H(0))
+            circuit.add(gates.Barrier(0, 1))
+            circuit.add(gates.CNOT(0, 1))
+
+            filter_barriers = FilterGates(lambda gate: not isinstance(gate, gates.Barrier))
+            print([gate.name for gate in filter_barriers(circuit).queue])
+
+        .. testoutput::
+
+            ['h', 'cx']
+    """
+
+    def __init__(self, predicate: Callable[[Gate], bool]):
+        self.predicate = predicate
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Remove the gates for which the predicate is ``False``.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be filtered.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the gates that satisfy the
+            predicate, in their original order.
+        """
+        new = Circuit(**circuit.init_kwargs)
+        new.add([gate for gate in circuit.queue if self.predicate(gate)])
 
         return new
 
@@ -293,6 +592,88 @@ class FixedPoint(Optimizer):
                 break
 
         return circuit
+
+
+class GateDirection(Optimizer):
+    """Reverses the two-qubit gates that act against the direction of the connectivity.
+
+    A directed edge ``(a, b)`` of the connectivity means that a two-qubit gate is only
+    supported with its first qubit on ``a`` and its second qubit on ``b``. The gates that
+    act on the opposite direction of an edge are replaced as follows:
+
+    - the gates that are symmetric, *i.e.* that do not change when their qubits are
+      swapped, such as :class:`qibo.gates.gates.CZ`, have their qubits swapped. This
+      includes the controlled gates, such as a phase gate with one control;
+    - the native gates that are not symmetric, which are :class:`qibo.gates.gates.CNOT`,
+      :class:`qibo.gates.gates.CH`, :class:`qibo.gates.gates.CSX`,
+      :class:`qibo.gates.gates.CSXDG`, :class:`qibo.gates.gates.CY` and
+      :class:`qibo.gates.gates.ECR`, are replaced by the same gate acting in the right
+      direction and single-qubit gates, see
+      :data:`qibo.transpiler.decompositions.direction_dec`.
+
+    The gates that act in the direction of an edge, or on qubits that are not connected,
+    are not changed. The added single-qubit gates are not necessarily native, so this
+    pass should be followed by an :class:`qibo.transpiler.unroller.Unroller`, and it
+    should come after the one that decomposes the gates into native gates, because that
+    one does not choose the direction of the two-qubit gates. If the connectivity is not
+    directed, the circuit is not changed.
+
+    Args:
+        connectivity (:class:`networkx.DiGraph`, optional): Hardware connectivity, whose
+            nodes are the ``wire_names`` of the circuit.
+            :class:`qibo.transpiler.pipeline.Passes` sets it. Defaults to ``None``.
+    """
+
+    def __init__(self, connectivity: nx.DiGraph | None = None):
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
+        """Reverse the two-qubit gates that act against the direction of the connectivity.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be reversed.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to get
+                the matrices of the gates that are not in the decompositions. If
+                ``None``, it uses the global backend. Defaults to ``None``.
+
+        Returns:
+            (:class:`qibo.models.circuit.Circuit`): Circuit with the gates in the
+            direction of the connectivity.
+
+        Raises:
+            ConnectivityError: If a gate acts against the direction of the connectivity
+                and it is neither symmetric nor one of the gates that are decomposed.
+        """
+        if self.connectivity is None:
+            raise_error(ValueError, "Connectivity graph is not provided.")
+        backend = _check_backend(backend)
+        edges = self.connectivity.edges
+        new = Circuit(**circuit.init_kwargs)
+        for gate in circuit.queue:
+            if len(gate.qubits) != 2 or isinstance(gate, (gates.Barrier, gates.M)):
+                new.add(gate)
+                continue
+            edge = tuple(circuit.wire_names[qubit] for qubit in gate.qubits)
+            if edge in edges or edge[::-1] not in edges:
+                new.add(gate)
+            elif gate.__class__ in direction_dec and not gate.is_controlled_by:
+                qubits = dict(enumerate(gate.qubits))
+                new.add([g.on_qubits(qubits) for g in direction_dec[gate.__class__]])
+            else:
+                # the matrix of a controlled gate is the one of its target only, so the
+                # matrix on both qubits is taken from a fused gate
+                fused_gate = gates.FusedGate(*gate.qubits)
+                fused_gate.append(gate)
+                matrix = backend.to_numpy(backend.matrix_fused(fused_gate))
+                if not backend.allclose(matrix, matrix[[0, 2, 1, 3]][:, [0, 2, 1, 3]]):
+                    raise_error(
+                        ConnectivityError,
+                        f"{gate.name} acts on {edge}, against the direction of the "
+                        + "connectivity, and it cannot be reversed. Decompose it into "
+                        + "native gates first.",
+                    )
+                new.add(gate.on_qubits(dict(zip(gate.qubits, gate.qubits[::-1]))))
+        return new
 
 
 class InverseCancellation(Optimizer):
@@ -471,21 +852,12 @@ class InverseCancellation(Optimizer):
                         sorted(set(gate.qubits) | set(partner.qubits))
                     )
                 }
-                forward = Circuit(len(relabel))
-                forward.add(
-                    [partner_numeric.on_qubits(relabel), numeric.on_qubits(relabel)]
-                )
-                backward = Circuit(len(relabel))
-                backward.add(
-                    [numeric.on_qubits(relabel), partner_numeric.on_qubits(relabel)]
-                )
-                if (
-                    backend.matrix_norm(
-                        forward.unitary(backend) - backward.unitary(backend),
-                        order="fro",
-                    )
-                    > self.atol
-                ):
+                matrices = []
+                for operator in (partner_numeric, numeric):
+                    embedded = Circuit(len(relabel))
+                    embedded.add(operator.on_qubits(relabel))
+                    matrices.append(embedded.unitary(backend))
+                if backend.matrix_norm(commutator(*matrices), order="fro") > self.atol:
                     break
 
             if index is None:
@@ -521,7 +893,9 @@ class Optimize1qGatesDecomposition(Optimizer):
     * ``"ZSX"``: :class:`qibo.gates.RZ` gates separated by :class:`qibo.gates.SX`
       gates, where SX is the square root of the Pauli X gate;
     * ``"ZSXX"``: as ``"ZSX"``, with a :class:`qibo.gates.X` gate replacing two SX
-      gates when possible.
+      gates when possible;
+    * ``"ZGPI2"``: as ``"ZSX"``, with :class:`qibo.gates.GPI2` gates of angle zero
+      replacing the SX gates, as they are equal up to a global phase.
 
     Rotations by a multiple of :math:`2 \\pi` are left out, so runs equal to the
     identity are removed. A run is replaced if it contains a gate whose name is not
@@ -709,6 +1083,329 @@ class Optimize1qGatesDecomposition(Optimizer):
             ):
                 run = best
             new.add(run)
+
+        return new
+
+
+class Optimize1qGatesSimpleCommutation(Optimizer):
+    """Rewrites runs of single-qubit gates after moving gates through commuting gates.
+
+    A run is a sequence of single-qubit gates without control qubits on one qubit with no
+    other gate on that qubit in between, as in
+    :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`. Consider three
+    consecutive runs on a qubit separated by two gates, the preceding and succeeding
+    blockers. The gates at the start of the middle run that commute with the preceding
+    blocker, up to the first one that does not, are moved to the end of the preceding run,
+    and the gates at its end that commute with the succeeding blocker are moved to the start
+    of the succeeding run. The three runs are rewritten with
+    :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`, and replaced if they
+    have fewer gates, or if they had gates that are not in ``basis``. For example, a
+    :class:`qibo.gates.RZ` gate commutes with the control of a :class:`qibo.gates.CNOT` gate.
+
+    Two gates commute when applying them in either order gives the same matrix. Gates
+    are moved only into runs that already have gates, only the runs next to a gate that
+    they commute with are rewritten, and the pass is applied once, so use
+    :class:`qibo.transpiler.optimizer.FixedPoint` to repeat it. Measurements,
+    alignments, barriers, noise channels and gates with sympy parameters are never moved
+    through nor rewritten. The input circuit is not modified.
+
+    Example:
+        The :class:`qibo.gates.RZ` gate before the controlled-NOT gate moves through its
+        control into the run after it, where it is rewritten with the other gates as a
+        single :class:`qibo.gates.U2` gate.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Optimize1qGatesSimpleCommutation
+
+            circuit = Circuit(2)
+            circuit.add(gates.H(0))
+            circuit.add(gates.RZ(0, 0.3))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.RZ(0, 0.4))
+            circuit.add(gates.H(0))
+
+            optimizer = Optimize1qGatesSimpleCommutation()
+            new_circuit = optimizer(circuit)
+            new_circuit.draw()
+
+        .. testoutput::
+
+            0: ─H─o─U2─
+            1: ───X────
+
+    Args:
+        basis (list[str], optional): Names of the gates the circuit may contain, as in
+            :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`. Defaults to
+            ``None``.
+        atol (float, optional): Tolerance to decide that two gates commute, and the
+            tolerance of :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`.
+            Defaults to :math:`10^{-12}`.
+        up_to_global_phase (bool, optional): If ``False``, a run is rewritten only
+            when the new gates have exactly the same matrix, as in
+            :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`.
+            Defaults to ``True``.
+    """
+
+    def __init__(
+        self,
+        basis: list[str] | None = None,
+        atol: float = 1e-12,
+        up_to_global_phase: bool = True,
+    ):
+        self.optimizer = Optimize1qGatesDecomposition(
+            basis=basis, atol=atol, up_to_global_phase=up_to_global_phase
+        )
+        self.basis = self.optimizer.basis
+        self.atol = atol
+        self.up_to_global_phase = up_to_global_phase
+
+    def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
+        """Rewrite the runs of single-qubit gates after moving gates through commuting gates.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
+                build the gate matrices. If ``None``, defaults to the global backend.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit with the rewritten runs.
+        """
+        backend = _check_backend(backend)
+
+        uncombinable = (gates.M, gates.Align, gates.Channel, SpecialGate)
+        # Each wire alternates runs and blockers, starting and ending with a run, which is
+        # a dictionary with the ``gates`` it holds and its index in the wire. Runs without
+        # gates are placeholders. ``items`` holds the runs with gates and the other gates,
+        # in the order of their first gate, and is used to build the new circuit.
+        wires = {qubit: [{"gates": [], "index": 0}] for qubit in range(circuit.nqubits)}
+        items = []
+        for gate in circuit.queue:
+            if (
+                len(gate.qubits) == 1
+                and not isinstance(gate, uncombinable)
+                and not gate.symbolic_parameters
+            ):
+                run = wires[gate.qubits[0]][-1]
+                if not run["gates"]:
+                    items.append(run)
+                run["gates"].append(gate)
+                continue
+
+            items.append(gate)
+            for qubit in gate.qubits:
+                wires[qubit].extend(
+                    [gate, {"gates": [], "index": len(wires[qubit]) + 1}]
+                )
+
+        for item in items:
+            if not isinstance(item, dict) or not item["gates"]:
+                continue
+
+            wire = wires[item["gates"][0].qubits[0]]
+            index = item["index"]
+            preceding = wire[index - 2] if index > 0 else None
+            succeeding = wire[index + 2] if index + 2 < len(wire) else None
+
+            # the gates are moved only into runs that have gates
+            moved_front, remaining = [], item["gates"]
+            if preceding is not None and preceding["gates"]:
+                moved_front, remaining = self._commute_through(
+                    wire[index - 1], remaining, True, backend
+                )
+            moved_back = []
+            if succeeding is not None and succeeding["gates"]:
+                remaining, moved_back = self._commute_through(
+                    wire[index + 1], remaining, False, backend
+                )
+            if not moved_front and not moved_back:
+                continue
+
+            # the runs that receive gates are rewritten with them
+            old = []
+            before = []
+            if moved_front:
+                before.extend(preceding["gates"])
+                before.extend(moved_front)
+                old.extend(preceding["gates"])
+            old.extend(item["gates"])
+            after = list(moved_back)
+            if moved_back:
+                after.extend(succeeding["gates"])
+                old.extend(succeeding["gates"])
+            new_preceding = self._resynthesize(before, backend)
+            new_item = self._resynthesize(remaining, backend)
+            new_succeeding = self._resynthesize(after, backend)
+            new_length = len(new_preceding) + len(new_item) + len(new_succeeding)
+            if new_length < len(old) or (
+                self.basis is not None
+                and any(gate.name not in self.basis for gate in old)
+            ):
+                if moved_front:
+                    preceding["gates"] = new_preceding
+                if moved_back:
+                    succeeding["gates"] = new_succeeding
+                item["gates"] = new_item
+
+        new = Circuit(**circuit.init_kwargs)
+        for item in items:
+            new.add(item["gates"] if isinstance(item, dict) else item)
+
+        return new
+
+    def _commute_through(
+        self, blocker: Gate, run: list[Gate], front: bool, backend: Backend
+    ) -> tuple[list[Gate], list[Gate]]:
+        """Split a run in the gates that commute with a blocker, at its start or end.
+
+        Args:
+            blocker (:class:`qibo.gates.abstract.Gate`): Gate next to the run.
+            run (list[:class:`qibo.gates.abstract.Gate`]): Run of single-qubit gates.
+            front (bool): If ``True``, the gates at the start of the run are taken until
+                the first one that does not commute with the blocker. Otherwise, the gates
+                at the end of the run are taken.
+            backend (:class:`qibo.backends.abstract.Backend`): Backend used to build the
+                gate matrices.
+
+        Returns:
+            tuple[list[:class:`qibo.gates.abstract.Gate`], list[:class:`qibo.gates.abstract.Gate`]]:
+            The gates that were taken and the others, which are given in the order that
+            keeps the run when concatenated: the ones taken first if ``front`` is ``True``,
+            and last otherwise.
+        """
+        count = 0
+        if not (
+            isinstance(blocker, (gates.M, gates.Align, gates.Channel, SpecialGate))
+            or blocker.symbolic_parameters
+        ):
+            # the gates are compared on the qubits of the blocker, relabelled as 0, 1, 2,
+            # and so on
+            relabel = {
+                qubit: new_qubit
+                for new_qubit, qubit in enumerate(sorted(blocker.qubits))
+            }
+            embedded = Circuit(len(relabel))
+            embedded.add(blocker.on_qubits(relabel))
+            blocker_matrix = embedded.unitary(backend)
+            for gate in run if front else reversed(run):
+                embedded = Circuit(len(relabel))
+                embedded.add(gate.on_qubits({gate.qubits[0]: relabel[gate.qubits[0]]}))
+                if (
+                    backend.matrix_norm(
+                        commutator(embedded.unitary(backend), blocker_matrix),
+                        order="fro",
+                    )
+                    > self.atol
+                ):
+                    break
+                count += 1
+
+        if front:
+            return run[:count], run[count:]
+        return run[: len(run) - count], run[len(run) - count :]
+
+    def _resynthesize(self, run: list[Gate], backend: Backend) -> list[Gate]:
+        """Rewrite a run of single-qubit gates, see :class:`Optimize1qGatesDecomposition`.
+
+        Args:
+            run (list[:class:`qibo.gates.abstract.Gate`]): Run of single-qubit gates.
+            backend (:class:`qibo.backends.abstract.Backend`): Backend used to build the
+                gate matrices.
+
+        Returns:
+            list[:class:`qibo.gates.abstract.Gate`]: Gates that replace the run.
+        """
+        if not run:
+            return []
+
+        (qubit,) = run[0].qubits
+        circuit = Circuit(1)
+        circuit.add(gate.on_qubits({qubit: 0}) for gate in run)
+
+        return [
+            gate.on_qubits({0: qubit})
+            for gate in self.optimizer(circuit, backend).queue
+        ]
+
+
+class OptimizeSwapBeforeMeasure(Optimizer):
+    """Removes the SWAP gates that are only followed by measurements.
+
+    A :class:`qibo.gates.SWAP` gate is removed if the gates after it on its two qubits
+    are measurements, and if there is at least one, and the two qubits of each of these
+    measurements are exchanged instead. Thus, the outcomes of the measurements are the
+    same, and the order of their bits is kept, but the state of the circuit before them has
+    the two qubits exchanged. Swaps that become followed only by measurements, because
+    of the removal of other swaps, are removed as well.
+
+    The input circuit is not modified.
+
+    Example:
+        The swap is removed, and the measurement is on the qubits in the opposite order.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import OptimizeSwapBeforeMeasure
+
+            circuit = Circuit(3)
+            circuit.add(gates.X(0))
+            circuit.add(gates.SWAP(0, 1))
+            circuit.add(gates.SWAP(1, 2))
+            circuit.add(gates.M(0, 1, 2))
+
+            optimized = OptimizeSwapBeforeMeasure()(circuit)
+            for gate in optimized.queue:
+                print(gate.name, gate.qubits)
+
+        .. testoutput::
+
+            x (0,)
+            measure (1, 2, 0)
+    """
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Remove the swaps that are only followed by measurements.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit without the removed swaps, and
+            with the exchanged measurements.
+        """
+        # The removed gates are set to ``None``. The swaps are visited from the last one, so
+        # that the measurements that follow the others are the final ones.
+        queue = list(circuit.queue)
+        for position in reversed(range(len(queue))):
+            swap = queue[position]
+            if not (isinstance(swap, gates.SWAP) and len(swap.qubits) == 2):
+                continue
+
+            following = [
+                index
+                for index in range(position + 1, len(queue))
+                if queue[index] is not None
+                and set(queue[index].qubits) & set(swap.qubits)
+            ]
+            if following and all(
+                isinstance(queue[index], gates.M) for index in following
+            ):
+                exchange = dict(zip(swap.qubits, reversed(swap.qubits)))
+                for index in following:
+                    measurement = queue[index]
+                    queue[index] = measurement.on_qubits(
+                        {
+                            qubit: exchange.get(qubit, qubit)
+                            for qubit in measurement.qubits
+                        }
+                    )
+                queue[position] = None
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add([gate for gate in queue if gate is not None])
 
         return new
 
@@ -1022,19 +1719,43 @@ class Preprocessing(Optimizer):
 
     Args:
         connectivity (:class:`networkx.Graph`): Hardware connectivity as a graph.
-        initial_layout (list, optional): Physical qubits on which the logical qubits of the
-            circuit are placed, that is, the :math:`i`-th logical qubit is placed on the
-            physical qubit ``initial_layout[i]``. It must have one distinct node of the
-            connectivity for every logical qubit, and it replaces the ``wire_names``
-            of the circuit, which are set in place. If ``None``, the ``wire_names``
-            of the circuit are used if they are all in the connectivity, and the first
-            nodes of the connectivity otherwise. Defaults to ``None``.
+        initial_layout (list or dict, optional): Physical qubits on which the logical qubits
+            of the circuit are placed. It is either a list, where the :math:`i`-th logical
+            qubit is placed on the physical qubit ``initial_layout[i]``, or a dictionary
+            ``{i: node}`` with the same meaning, which may leave logical qubits out. These
+            are placed on the nodes of the connectivity that are not in the dictionary, in
+            the order of the connectivity. In both cases every logical qubit must be placed
+            on a distinct node of the connectivity, and the layout replaces the
+            ``wire_names`` of the circuit, which are set in place. If ``None``, the
+            ``wire_names`` of the circuit are used if they are all in the connectivity, and
+            the first nodes of the connectivity otherwise. Defaults to ``None``.
+
+    Example:
+        The first and the third qubits of the circuit are placed on the nodes ``3`` and
+        ``1``, and the second one on the first free node, which is ``0``.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Preprocessing
+
+            circuit = Circuit(3)
+            circuit.add(gates.CNOT(0, 1))
+
+            preprocessing = Preprocessing(nx.path_graph(5), initial_layout={0: 3, 2: 1})
+            print(preprocessing(circuit).wire_names)
+
+        .. testoutput::
+
+            [3, 0, 1, 2, 4]
     """
 
     def __init__(
         self,
         connectivity: nx.Graph | None = None,
-        initial_layout: list[int | str] | None = None,
+        initial_layout: list[int | str] | dict[int, int | str] | None = None,
     ):
         self.connectivity = connectivity
         self.initial_layout = initial_layout
@@ -1051,10 +1772,30 @@ class Preprocessing(Optimizer):
 
         Raises:
             PlacementError: If ``initial_layout`` does not have a distinct node of the
-                connectivity for every qubit of the circuit.
+                connectivity for every qubit of the circuit, or if it is a dictionary
+                with keys that are not qubits of the circuit.
+            ValueError: If the circuit has more qubits than the connectivity has nodes.
         """
         if self.initial_layout is not None:
-            layout = list(self.initial_layout)
+            layout = self.initial_layout
+            if isinstance(layout, dict):
+                if not set(layout) <= set(range(circuit.nqubits)):
+                    raise_error(
+                        PlacementError,
+                        f"The keys of the initial layout {layout} must be qubits of the "
+                        + f"circuit, from 0 to {circuit.nqubits - 1}.",
+                    )
+                # when there are not enough free nodes, ``None`` is not a node
+                free = iter(
+                    node
+                    for node in self.connectivity.nodes
+                    if node not in layout.values()
+                )
+                layout = [
+                    layout[qubit] if qubit in layout else next(free, None)
+                    for qubit in range(circuit.nqubits)
+                ]
+            layout = list(layout)
             if (
                 len(layout) != circuit.nqubits
                 or len(set(layout)) != len(layout)
@@ -1067,21 +1808,24 @@ class Preprocessing(Optimizer):
                 )
             circuit.wire_names = layout
 
-        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
-            default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
-            log.warning(
-                f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {default_wire_names}."
-            )
-            circuit.wire_names = default_wire_names
-
         physical_qubits = self.connectivity.number_of_nodes()
         logical_qubits = circuit.nqubits
+        # checked before the ``wire_names`` are replaced, which needs enough nodes
         if logical_qubits > physical_qubits:
             raise_error(
                 ValueError,
                 f"The number of qubits in the circuit ({logical_qubits}) "
                 + f"can't be greater than the number of physical qubits ({physical_qubits}).",
             )
+
+        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
+            default_wire_names = list(self.connectivity.nodes)[:logical_qubits]
+            log.warning(
+                "Some wire_names in the circuit are not in the connectivity graph. "
+                + f"Using wire names {default_wire_names}."
+            )
+            circuit.wire_names = default_wire_names
+
         if logical_qubits == physical_qubits:
             return circuit
 
@@ -1318,9 +2062,10 @@ class RemoveIdentityEquivalent(Optimizer):
     gate built with ``controlled_by`` that phase is a relative phase between the
     control states, so the gate is removed only if its target matrix is the identity.
 
-    Measurements, alignments, barriers, noise channels and fused gates are never
-    removed. Gates are evaluated at their current parameter values, so a removed
-    parametrized gate is not tracked by the returned circuit anymore.
+    Measurements, alignments, barriers, noise channels, fused gates and global phase
+    gates are never removed, the latter to keep the global phase of the circuit. Gates
+    are evaluated at their current parameter values, so a removed parametrized gate is
+    not tracked by the returned circuit anymore.
 
     A gate with sympy parameters is evaluated at fixed random values of its symbols. It
     is removed only if it is the identity there up to numerical precision, whatever the
@@ -1385,7 +2130,13 @@ class RemoveIdentityEquivalent(Optimizer):
         backend = _check_backend(backend)
 
         tolerance = max(1 - self.approximation_degree, 1e-14)
-        unremovable = (gates.M, gates.Align, gates.Channel, SpecialGate)
+        unremovable = (
+            gates.M,
+            gates.Align,
+            gates.Channel,
+            gates.GlobalPhase,
+            SpecialGate,
+        )
 
         kept = []
         for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
@@ -1645,6 +2396,101 @@ class TGateRules(Optimizer):
         return new
 
 
+class Validation(Optimizer):
+    """Checks that the circuit can be transpiled, before any other pass runs.
+
+    Without it, a circuit that cannot be transpiled fails deep in the pipeline.
+    This pass raises a clear error at the start instead.
+    It does not change the circuit. It checks that:
+
+    - the circuit has no noise channel. The transpiler works with unitary gates, so the
+      only channel that it accepts is :class:`qibo.gates.channels.ResetChannel`.
+    - the circuit has no more qubits than the hardware, if there is a connectivity.
+    - the initial layout, if there is one, places every qubit of the circuit on a distinct
+      node of the connectivity, see :class:`qibo.transpiler.optimizer.Preprocessing`.
+
+    Args:
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity. If
+            ``None``, neither the number of qubits nor the initial layout are checked. It
+            is set by :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
+        initial_layout (list, optional): Physical qubits on which the logical qubits of the
+            circuit are placed, in the format of
+            :class:`qibo.transpiler.optimizer.Preprocessing`. Defaults to ``None``.
+
+    Example:
+        The pass raises an error for the noise channel before the circuit is transpiled.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import Validation
+
+            circuit = Circuit(1)
+            circuit.add(gates.H(0))
+            circuit.add(gates.PauliNoiseChannel([0], [("X", 0.1)]))
+
+            try:
+                Validation()(circuit)
+            except Exception as error:
+                print(type(error).__name__)
+
+        .. testoutput::
+
+            DecompositionError
+    """
+
+    def __init__(
+        self,
+        connectivity: nx.Graph | None = None,
+        initial_layout: list[int | str] | None = None,
+    ):
+        self.connectivity = connectivity
+        self.initial_layout = initial_layout
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Check that the circuit can be transpiled.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: The same circuit, unchanged.
+
+        Raises:
+            DecompositionError: If the circuit has a noise channel other than
+                :class:`qibo.gates.channels.ResetChannel`.
+            ValueError: If the circuit has more qubits than the connectivity has nodes.
+            PlacementError: If ``initial_layout`` does not have a distinct node of the
+                connectivity for every qubit of the circuit.
+        """
+        for gate in circuit.queue:
+            if isinstance(gate, gates.Channel) and not isinstance(
+                gate, gates.ResetChannel
+            ):
+                raise_error(
+                    DecompositionError,
+                    f"The channel {gate.name} cannot be transpiled, because it is not a "
+                    + "unitary gate. Only the reset channel is supported.",
+                )
+
+        if self.connectivity is not None:
+            if circuit.nqubits > self.connectivity.number_of_nodes():
+                raise_error(
+                    ValueError,
+                    f"The number of qubits in the circuit ({circuit.nqubits}) "
+                    + "can't be greater than the number of physical qubits "
+                    + f"({self.connectivity.number_of_nodes()}).",
+                )
+
+            if self.initial_layout is not None:
+                # the layout is checked, and the circuit is not changed, on an empty copy
+                Preprocessing(self.connectivity, self.initial_layout)(
+                    Circuit(**circuit.init_kwargs)
+                )
+
+        return circuit
+
+
 def _numeric_gates(circuit: Circuit) -> list[Gate | None]:
     """Gates of a circuit with its sympy parameters replaced by numbers.
 
@@ -1679,3 +2525,35 @@ def _numeric_gates(circuit: Circuit) -> list[Gate | None]:
         numeric.append(gate)
 
     return numeric
+
+
+def _rotation(
+    matrix: ArrayLike, atol: float, backend: Backend
+) -> tuple[int, float, float] | None:
+    """Axis, global phase and angle of a single-qubit gate that is a Pauli rotation.
+
+    The matrix is :math:`e^{i \\gamma} (\\cos(\\theta / 2) I - i \\sin(\\theta / 2) P)`, where
+    :math:`P` is the Pauli matrix :math:`X`, :math:`Y` or :math:`Z`, and the function
+    returns the index of :math:`P` in that order, :math:`\\gamma` and :math:`\\theta`. It
+    returns ``None`` if the matrix is not a rotation, or if it is the identity up to a phase.
+    """
+    paulis = (backend.matrices.X, backend.matrices.Y, backend.matrices.Z)
+    components = [backend.trace(pauli @ matrix) / 2 for pauli in paulis]
+    sizes = [float(backend.abs(component)) for component in components]
+    axis = sizes.index(max(sizes))
+    if sizes[axis] <= atol or any(
+        size > atol for index, size in enumerate(sizes) if index != axis
+    ):
+        return None
+
+    # the identity and Pauli components are e^{i gamma} cos(theta / 2) and
+    # e^{i gamma} sin(theta / 2), and gamma is taken from the largest one
+    cosine = backend.trace(matrix) / 2
+    sine = 1j * components[axis]
+    reference = cosine if backend.abs(cosine) >= backend.abs(sine) else sine
+    phase = backend.arctan2(backend.imag(reference), backend.real(reference))
+    unphase = backend.cos(phase) - 1j * backend.sin(phase)
+    angle = 2 * backend.arctan2(
+        backend.real(sine * unphase), backend.real(cosine * unphase)
+    )
+    return axis, float(phase), float(angle)

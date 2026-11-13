@@ -1,14 +1,19 @@
 """Test gates defined in `qibo/gates/gates.py`."""
 
+import math
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+import sympy
 
 from qibo import Circuit, gates, matrices
+from qibo.gates.gates import is_nonzero_phase
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
-from qibo.transpiler.decompositions import standard_decompositions
+from qibo.transpiler.decompositions.standard_decompositions import (
+    standard_decompositions,
+)
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -22,7 +27,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
             assert nqubits == int(np.log2(len(state)))
 
     for gate in gatelist:
-        state = backend.apply_gate(gate, state, nqubits)
+        state = gate.apply(backend, state, nqubits)
 
     return state
 
@@ -253,6 +258,146 @@ def test_align_name_and_on_qubits():
 
     assert not gates.Align(0, delay=0).clifford
     assert not gates.Align(0, delay=0).unitary
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("theta", [0.1234, -math.pi / 2, math.pi])
+def test_global_phase(backend, theta, density_matrix):
+    nqubits = 2
+
+    reference = Circuit(nqubits, density_matrix=density_matrix)
+    reference.add(gates.H(0))
+    reference.add(gates.CNOT(0, 1))
+    target_state = backend.execute_circuit(reference).state()
+
+    circuit = Circuit(nqubits, density_matrix=density_matrix)
+    circuit.add(gates.H(0))
+    circuit.add(gates.GlobalPhase(theta))
+    circuit.add(gates.CNOT(0, 1))
+    final_state = backend.execute_circuit(circuit).state()
+
+    # the phase is only visible in state vectors, it cancels out in density matrices
+    if not density_matrix:
+        target_state = backend.exp(1j * theta) * target_state
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
+
+    gate = gates.GlobalPhase(theta)
+    target_matrix = backend.cast([[backend.exp(1j * theta)]])
+    backend.assert_allclose(gate.matrix(backend), target_matrix, atol=1e-6)
+
+    assert gate.name == "global_phase"
+    assert gate.qubits == ()
+    assert gate.parameters == (theta,)
+    assert not gate.clifford
+    assert gate.hamming_weight
+    assert gate.unitary
+    with pytest.raises(NotImplementedError):
+        gate.qasm_label
+
+
+@pytest.mark.parametrize(
+    "phase,expected",
+    [
+        (0, False),
+        (0.0, False),
+        (1e-15, False),
+        (2 * math.pi, False),
+        (-4 * math.pi, False),
+        (2 * math.pi - 1e-14, False),
+        (1e-9, True),
+        (math.pi / 4, True),
+        (-math.pi / 2, True),
+        (sympy.pi, True),
+        (4 * sympy.pi, False),
+        (sympy.Symbol("x"), True),
+        (sympy.Symbol("x") / 4, True),
+        (0 * sympy.Symbol("x"), False),
+        (sympy.Mod(sympy.Symbol("x"), 2 * math.pi), True),
+    ],
+)
+def test_is_nonzero_phase(phase, expected):
+    """Phases are compared modulo 2 pi, and symbolic phases are always nonzero."""
+    assert is_nonzero_phase(phase) is expected
+
+
+def test_is_nonzero_phase_tolerance():
+    assert not is_nonzero_phase(1e-9, atol=1e-8)
+    assert is_nonzero_phase(1e-9, atol=1e-10)
+
+
+def test_global_phase_preserves_dtype(backend):
+    backend.set_dtype("complex64")
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.GlobalPhase(0.1234))
+    assert backend.execute_circuit(circuit).state().dtype == backend.complex64
+    backend.set_dtype("complex128")
+
+
+@pytest.mark.parametrize(
+    "controls,name", [((0,), "U1"), ((1, 0), "CU1"), ((0, 1, 2), "U1")]
+)
+def test_global_phase_controlled_by(backend, controls, name):
+    theta = 0.1234
+    nqubits = 3
+
+    gate = gates.GlobalPhase(theta)
+    assert gate.controlled_by() is gate
+
+    gate = gate.controlled_by(*controls)
+    assert gate.__class__.__name__ == name
+    assert gate.control_qubits == tuple(sorted(controls[:-1]))
+    assert gate.parameters == (theta,)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+
+    # the phase is applied only if all controls are in the state 1
+    target = backend.identity(2**nqubits, dtype=backend.complex128)
+    for k in range(2**nqubits):
+        bits = f"{k:0{nqubits}b}"
+        if all(bits[qubit] == "1" for qubit in controls):
+            target[k, k] = backend.exp(1j * theta)
+
+    backend.assert_allclose(circuit.unitary(backend), target, atol=1e-6)
+
+
+def test_global_phase_dagger(backend):
+    theta = 0.1234
+
+    gate = gates.GlobalPhase(theta)
+    dagger = gate.dagger()
+    assert isinstance(dagger, gates.GlobalPhase)
+    assert dagger.parameters == (-theta,)
+
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gate)
+    circuit.add(dagger)
+
+    reference = Circuit(2)
+    reference.add(gates.H(0))
+
+    backend.assert_allclose(
+        backend.execute_circuit(circuit).state(),
+        backend.execute_circuit(reference).state(),
+        atol=1e-6,
+    )
+
+
+def test_global_phase_on_qubits_and_serialization():
+    theta = 0.1234
+    gate = gates.GlobalPhase(theta)
+
+    new_gate = gate.on_qubits({0: 1})
+    assert isinstance(new_gate, gates.GlobalPhase)
+    assert new_gate.qubits == ()
+    assert new_gate.parameters == (theta,)
+
+    loaded_gate = gates.Gate.from_dict(gate.raw)
+    assert isinstance(loaded_gate, gates.GlobalPhase)
+    assert loaded_gate.qubits == ()
+    assert loaded_gate.parameters == (theta,)
 
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
@@ -1475,6 +1620,117 @@ def test_ecr_decomposition_is_exact_in_clifford_plus_t(backend):
     assert gates.ECR(0, 1).unitary
 
 
+@pytest.mark.parametrize(
+    "name,args",
+    [
+        ("SDG", (0,)),
+        ("TDG", (0,)),
+        ("RZ", (0, 0.3)),
+        ("RZ", (0, 1.1)),
+        ("RZ", (0, 2.9)),
+        ("RX", (0, 0.7)),
+        ("RY", (0, -0.7)),
+        ("PRX", (0, 0.3, 0.8)),
+        ("U1", (0, 0.3)),
+        ("U3", (0, 0.3, 0.5, 0.9)),
+        ("CU1", (0, 1, 0.9)),
+        ("CU3", (0, 1, 0.3, 0.5, 0.9)),
+        ("CSX", (0, 1)),
+        ("CRY", (0, 1, 0.4)),
+        ("SiSWAP", (0, 1)),
+        ("RXXYY", (0, 1, 0.5)),
+        ("TOFFOLI", (0, 1, 2)),
+    ],
+)
+def test_clifford_plus_t_decomposition_is_exact(backend, name, args):
+    """The ``W`` gates of the synthesis are kept as a global phase gate."""
+    pytest.importorskip("pygridsynth")
+    gate = getattr(gates, name)(*args)
+    nqubits = len(gate.qubits)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    decomposed_gates = gate.decompose(method="clifford_plus_t")
+    # the phases of the synthesis of every rotation are merged into the last gate
+    global_phases = [
+        i for i, g in enumerate(decomposed_gates) if isinstance(g, gates.GlobalPhase)
+    ]
+    assert global_phases in ([], [len(decomposed_gates) - 1])
+
+    decomposed = Circuit(nqubits)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        decomposed.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
+@pytest.mark.parametrize(
+    "name, args, controls",
+    [
+        ("RZ", (0, 0.3), ()),
+        ("RX", (0, 0.7), ()),
+        ("U3", (0, 0.3, 0.5, 0.9), ()),
+        ("PRX", (0, 0.3, 0.8), ()),
+        ("CRZ", (0, 1, 0.3), ()),
+        ("CU1", (0, 1, 0.9), ()),
+        ("RZ", (1, 0.3), (0,)),
+    ],
+)
+def test_clifford_plus_t_decomposition_precision(backend, name, args, controls):
+    """The precision sets the number of T gates, also with nested decompositions."""
+    pytest.importorskip("pygridsynth")
+    gate = getattr(gates, name)(*args)
+    if controls:
+        gate = gate.controlled_by(*controls)
+    nqubits = len(gate.qubits)
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+
+    counts = []
+    for epsilon, atol in ((1e-2, 1e-1), (1e-8, 1e-6)):
+        decomposed_gates = gate.decompose(method="clifford_plus_t", epsilon=epsilon)
+        counts.append(sum(g.name in ("t", "tdg") for g in decomposed_gates))
+        decomposed = Circuit(nqubits)
+        decomposed.add(decomposed_gates)
+        backend.assert_allclose(
+            decomposed.unitary(backend), circuit.unitary(backend), atol=atol
+        )
+
+    assert counts[0] < counts[1]
+
+
+def test_clifford_plus_t_precision_is_restored():
+    pytest.importorskip("pygridsynth")
+    mpmath = pytest.importorskip("mpmath")
+    from qibo.transpiler.decompositions.clifford_plus_t_decompositions import (
+        clifford_plus_t,
+    )
+
+    gate = gates.RZ(0, 0.3)
+    default = len(gate.decompose(method="clifford_plus_t"))
+    # the default precision is set when the decompositions are created
+    precision = clifford_plus_t.get_precision()
+    assert None not in precision
+
+    # the precision of mpmath that was in use before is restored, and not the default one
+    decimal_places = mpmath.mp.dps
+    try:
+        mpmath.mp.dps = 40
+        coarse = gate.decompose(method="clifford_plus_t", epsilon=1e-2, mpmath_dps=50)
+        assert len(coarse) < default
+        assert mpmath.mp.dps == 40
+        assert clifford_plus_t.get_precision() == precision
+        assert len(gate.decompose(method="clifford_plus_t")) == default
+    finally:
+        mpmath.mp.dps = decimal_places
+
+    # a gate without decomposition is returned as it is, and the precision is restored too
+    unchanged = gates.H(0).decompose(method="clifford_plus_t", epsilon=1e-2)
+    assert [g.name for g in unchanged] == ["h"]
+    assert len(gate.decompose(method="clifford_plus_t")) == default
+
+
 @pytest.mark.parametrize("applyx", [False, True])
 def test_toffoli(backend, applyx):
     if applyx:
@@ -2097,6 +2353,8 @@ GATES = [
     ("ECR", (0, 1)),
     ("SiSWAP", (0, 1)),
     ("SiSWAPDG", (0, 1)),
+    ("iSWAP", (0, 1)),
+    ("DEUTSCH", (0, 1, 2, 0.5)),
 ]
 
 
@@ -2107,6 +2365,57 @@ def test_dagger(backend, gate, args):
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
     backend.assert_allclose(final_state, initial_state, atol=1e-6)
+
+
+@pytest.mark.parametrize("gate,args", GATES)
+def test_decompose_is_exact(backend, gate, args):
+    """The decomposition is equal to the gate, including its global phase."""
+    gate = getattr(gates, gate)(*args)
+    nqubits = len(gate.qubits)
+
+    decomposed_gates = gate.decompose()
+    # the global phase gate is unique and the last one, if the decomposition is not exact
+    global_phases = [
+        i for i, g in enumerate(decomposed_gates) if isinstance(g, gates.GlobalPhase)
+    ]
+    assert global_phases in ([], [len(decomposed_gates) - 1])
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    decomposed = Circuit(nqubits)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        decomposed.unitary(backend), circuit.unitary(backend), atol=1e-6
+    )
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.fSim(0, 1, 0.37, 0.81),
+        gates.fSim(2, 0, -1.2, 2.5),
+        gates.fSim(1, 2, 0.0, 0.3),
+        gates.SYC(0, 1),
+        gates.SYC(2, 0),
+    ],
+)
+def test_fsim_and_syc_decomposition(backend, gate):
+    """The fSim and SYC gates decompose exactly into CNOT and single-qubit gates."""
+    decomposed_gates = gate.decompose()
+    for decomposed_gate in decomposed_gates:
+        if len(decomposed_gate.qubits) > 1:
+            assert isinstance(decomposed_gate, gates.CNOT)
+            assert set(decomposed_gate.qubits) == set(gate.qubits)
+
+    circuit = Circuit(3)
+    circuit.add(gate)
+    decomposed = Circuit(3)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        decomposed.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
 
 
 GATES = [
@@ -2130,6 +2439,38 @@ def test_controlled_dagger(backend, gate, args):
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(backend, [gate, gate.dagger()], 4, initial_state)
     backend.assert_allclose(final_state, initial_state, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "name,args",
+    [("SX", (0,)), ("SXDG", (0,)), ("RX", (0, 0.1)), ("GPI2", (0, 0.2)), ("S", (0,))],
+)
+def test_controlled_decompose_is_exact(backend, name, args):
+    """A global phase in the decomposition of a controlled gate is a phase on the control.
+
+    The states are executed, because the unitary of a circuit with a controlled global
+    phase gate is correct even if the gate cannot be executed.
+    """
+    nqubits = 3
+    gate = getattr(gates, name)(*args).controlled_by(2)
+    decomposed_gates = gate.decompose()
+    assert not any(isinstance(gate, gates.GlobalPhase) for gate in decomposed_gates)
+
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    circuit = Circuit(nqubits)
+    circuit.add(gate)
+    decomposed = Circuit(nqubits)
+    decomposed.add(decomposed_gates)
+
+    backend.assert_allclose(
+        backend.execute_circuit(
+            decomposed, initial_state=backend.cast(initial_state, copy=True)
+        ).state(),
+        backend.execute_circuit(
+            circuit, initial_state=backend.cast(initial_state, copy=True)
+        ).state(),
+        atol=1e-6,
+    )
 
 
 @pytest.mark.parametrize("gate_1,gate_2", [("S", "SDG"), ("T", "TDG")])
@@ -2260,6 +2601,7 @@ def test_clifford_condition_update(backend, gate):
         ["I", (2,), ()],
         ["I", (2, 3), ()],
         ["Align", (0,), (1,)],
+        ["GlobalPhase", (), (0.1,)],
         ["FanOut", (0, 2, 3), ()],
         ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1,)],
         ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1, 0.5)],
@@ -2391,3 +2733,48 @@ def test_check_engine_torch():
 
         engine = _check_engine(tensor)
         assert engine is mock_torch
+
+
+def test_clifford_plus_t_partial_precision():
+    pytest.importorskip("pygridsynth")
+    from qibo.transpiler.decompositions.clifford_plus_t_decompositions import (
+        clifford_plus_t,
+    )
+
+    gate = gates.RZ(0, 0.3)
+    default = len(gate.decompose(method="clifford_plus_t"))
+    precision = clifford_plus_t.get_precision()
+
+    try:
+        # only one argument keeps the other one as set by the user, and not its hard-coded value
+        clifford_plus_t.set_precision(1e-4)
+        partial = len(gate.decompose(method="clifford_plus_t", mpmath_dps=100))
+        explicit = len(
+            gate.decompose(method="clifford_plus_t", epsilon=1e-4, mpmath_dps=100)
+        )
+        assert partial == explicit
+        assert partial < default
+
+        clifford_plus_t.set_precision(1e-16, 60)
+        assert len(gate.decompose(method="clifford_plus_t", epsilon=1e-4)) < default
+    finally:
+        clifford_plus_t.set_precision(*precision)
+
+
+def test_clifford_plus_t_precision_accessors():
+    mpmath = pytest.importorskip("mpmath")
+    from qibo.transpiler.decompositions.abstract import GateDecompositions
+
+    decompositions = GateDecompositions()
+    assert decompositions.get_precision() == (None, None)
+
+    decimal_places = mpmath.mp.dps
+    try:
+        decompositions.set_precision()
+        assert decompositions.get_precision() == (mpmath.mpmathify(1e-16), 256)
+
+        decompositions.set_precision(1e-3, 30)
+        assert decompositions.get_precision() == (mpmath.mpmathify(1e-3), 30)
+        assert mpmath.mp.dps == 30
+    finally:
+        mpmath.mp.dps = decimal_places

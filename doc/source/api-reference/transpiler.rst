@@ -113,11 +113,49 @@ Multi-controlled gate decomposition
 
 See :ref:`tutorials_multicontrolled` for examples of all the options.
 
-.. autofunction:: qibo.transpiler.multicontrolled_decompositions.multi_controlled_decomposition
+.. autofunction:: qibo.transpiler.multi_controlled_decomposition
+
+
+Quantum Shannon decomposition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.transpiler.quantum_shannon_decomposition
 
 
 Optimizer
 ---------
+
+Barrier before final measurements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.BarrierBeforeFinalMeasurements
+    :members:
+    :member-order: bysource
+
+
+Commutative cancellation
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.CommutativeCancellation
+    :members:
+    :member-order: bysource
+
+
+Filter gates
+^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.FilterGates
+    :members:
+    :member-order: bysource
+
+
+Gate direction
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.GateDirection
+    :members:
+    :member-order: bysource
+
 
 Inverse cancellation
 ^^^^^^^^^^^^^^^^^^^^
@@ -131,6 +169,22 @@ Optimize 1-qubit gates decomposition
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.transpiler.optimizer.Optimize1qGatesDecomposition
+    :members:
+    :member-order: bysource
+
+
+Optimize 1-qubit gates simple commutation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.Optimize1qGatesSimpleCommutation
+    :members:
+    :member-order: bysource
+
+
+Optimize swap before measure
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.OptimizeSwapBeforeMeasure
     :members:
     :member-order: bysource
 
@@ -209,6 +263,14 @@ T-gate rules
     :member-order: bysource
 
 
+Validation
+^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.Validation
+    :members:
+    :member-order: bysource
+
+
 Pipeline
 --------
 
@@ -232,8 +294,30 @@ Restrict qubit connectivity
 .. autofunction:: qibo.transpiler.pipeline.restrict_connectivity_qubits
 
 
+Transpile
+^^^^^^^^^
+
+.. autofunction:: qibo.transpiler.transpile
+
+
+Transpile layout
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.layout.TranspileLayout
+    :members:
+    :member-order: bysource
+
+
 Placer
 ------
+
+Dense
+^^^^^
+
+.. autoclass:: qibo.transpiler.placer.Dense
+    :members:
+    :member-order: bysource
+
 
 Random
 ^^^^^^
@@ -274,6 +358,14 @@ Circuit map
 ^^^^^^^^^^^
 
 .. autoclass:: qibo.transpiler.router.CircuitMap
+    :members:
+    :member-order: bysource
+
+
+No routing
+^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.router.NoRouting
     :members:
     :member-order: bysource
 
