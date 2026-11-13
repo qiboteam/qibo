@@ -400,7 +400,7 @@ def test_random_density_matrix_mean_purity(backend, metric, expected):
     backend.assert_allclose(backend.mean(purities), expected, atol=2e-2)
 
 
-@pytest.mark.parametrize("nqubits,nsamples", zip((1, 2), (int(3e2), int(3e3))))
+@pytest.mark.parametrize("nqubits,nsamples", list(zip((1, 2), (int(3e2), int(3e3)))))
 def test_random_clifford(backend, nqubits, nsamples):
 
     backend.set_seed(42)
