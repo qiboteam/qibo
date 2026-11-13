@@ -40,6 +40,7 @@ from qibo.models.algorithms import (
     qsp_circuit,
     qsp_phases,
     qsvt_circuit,
+    qsvt_function,
     qsvt_phases,
     swap_test,
 )
@@ -135,6 +136,7 @@ __all__ = [
     "qsp_circuit",
     "qsp_phases",
     "qsvt_circuit",
+    "qsvt_function",
     "qsvt_phases",
     "sparse_encoder",
     "spin_s_encoder",

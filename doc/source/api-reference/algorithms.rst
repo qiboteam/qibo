@@ -261,6 +261,8 @@ Quantum Singular Value Transformation
 
 .. autofunction:: qibo.models.qsvt_circuit
 
+.. autofunction:: qibo.models.qsvt_function
+
 
 Hamiltonian diagonalization
 ---------------------------
