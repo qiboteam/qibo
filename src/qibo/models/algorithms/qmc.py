@@ -44,7 +44,8 @@ class QMC:
     - **bounded relative variance** (Algorithm 4): if :math:`v(x) \\geq 0` and
       :math:`\\mathrm{Var}(v) / \\mathbb{E}[v]^{2} \\leq B`, the mean :math:`\\tilde{m}` of
       :math:`\\lceil 32 B \\rceil` samples is used to apply Algorithm 2 to :math:`v /
-      \\tilde{m}`. The relative error is :math:`\\epsilon` with probability :math:`3 / 4`.
+      \\tilde{m}`. The relative error is :math:`\\epsilon` with probability :math:`3 / 4`. It
+      assumes :math:`\\mathbb{E}[v] > 0`, and the estimate is zero if all of the samples are zero.
 
     The circuit of the last amplitude estimation is stored in the attribute ``circuit``, which
     is ``None`` before :meth:`execute`. The rotations are controlled by each of the
@@ -294,18 +295,16 @@ class QMC:
         flag = nqubits
 
         # rotation of the flag, controlled by the measured qubits, with amplitude sqrt(f(x))
+        angles = [
+            2 * float(backend.arcsin(backend.sqrt(min(value, 1.0)))) for value in values
+        ]
         circuit = Circuit(nqubits + 1)
         circuit.add(self.algorithm.on_qubits(*range(nqubits)))
-        for state, value in enumerate(values):
-            if value == 0:
-                continue
-
-            bits = format(state, f"0{len(self.qubits)}b")
-            flipped = [qubit for qubit, bit in zip(self.qubits, bits) if bit == "0"]
-            angle = 2 * float(backend.arcsin(backend.sqrt(min(value, 1.0))))
-            circuit.add(gates.X(qubit) for qubit in flipped)
-            circuit.add(gates.RY(flag, theta=angle).controlled_by(*self.qubits))
-            circuit.add(gates.X(qubit) for qubit in flipped)
+        circuit.add(
+            gates.Multiplexor(
+                self.qubits, flag, backend.cast(angles, dtype=backend.float64)
+            )
+        )
 
         # the flag in the state 1 is the good state
         oracle = Circuit(nqubits + 1)

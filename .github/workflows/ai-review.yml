@@ -14,7 +14,7 @@ on:
 jobs:
   ai-review:
     if: github.event.label.name == 'run-qibot'
-    uses: qiboteam/workflows/.github/workflows/ai-review.yml@uv
+    uses: qiboteam/workflows/.github/workflows/ai-review.yml@v3
     with:
       pr-number: ${{ github.event.pull_request.number }}
       provider-type: "openai"

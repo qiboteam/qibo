@@ -188,6 +188,39 @@ Shor's Algorithm
     :member-order: bysource
 
 
+Interference tests
+------------------
+
+Hadamard Test
+^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.hadamard_test
+
+
+Swap Test
+^^^^^^^^^
+
+.. autofunction:: qibo.models.swap_test
+
+
+Hamiltonian simulation
+----------------------
+
+qDRIFT
+^^^^^^
+
+.. autofunction:: qibo.models.qdrift
+
+
+Quantum linear systems
+----------------------
+
+Harrow-Hassidim-Lloyd (HHL) algorithm
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.HHL
+
+
 Block encodings and signal processing
 -------------------------------------
 
