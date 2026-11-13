@@ -145,13 +145,16 @@ def qsvt_function(
     :func:`qibo.models.qsvt_circuit`, with the phases of :func:`qibo.models.qsvt_phases`. The terms
     that are not zero are added with a linear combination of unitaries,
     :func:`qibo.models.lcu_circuit`, whose coefficients are :math:`s_{j}` times :math:`1` or
-    :math:`i`. If the function has only one of them, there is no linear combination.
+    :math:`i`. If the function has only one of them, there is no linear combination. A part with
+    only a constant term is applied as a multiple of the identity, whose sign is a global phase if
+    there is no other part.
 
     The circuit acts on the qubits of the linear combination, if there is one, followed by the
     signal qubit of the QSVT, the auxiliary qubit of the block encoding, and the :math:`n` qubits
     of :math:`A`. If all of the qubits but the last :math:`n` start and end in :math:`\\ket{0}`,
     the circuit applies :math:`C f(A)` to the last :math:`n` qubits, where :math:`C` is the
-    constant that it returns, which is :math:`1 / \\sum_{j} s_{j}`. It is the first
+    constant that it returns, which is :math:`1 / \\sum_{j} s_{j}`, up to a relative error of
+    about :math:`10^{-6}`, the precision of the phases. It is the first
     :math:`2^{n} \\times 2^{n}` block of its unitary. The matrix is block-encoded exactly, which
     is inefficient in the number of qubits :math:`n`, and it is only meant for small systems.
 
@@ -194,7 +197,8 @@ def qsvt_function(
         degree (int, optional): degree of the Chebyshev interpolation of a function. If ``None``,
             it is doubled from :math:`8` to :math:`1024` until the last quarter of the coefficients
             is below ``epsilon`` times the largest one, and a ``ValueError`` is raised if it never
-            is. It is not used for the coefficients. Defaults to ``None``.
+            is. If given, it is used as is, without checking that the coefficients converge. It is
+            not used for the coefficients. Defaults to ``None``.
         epsilon (float, optional): tolerance of the coefficients of a function, relative to the
             largest one, in :math:`(0, 1)`. Defaults to :math:`10^{-6}`, which is the precision
             of the phases of :func:`qibo.models.qsvt_phases`.
@@ -547,24 +551,41 @@ def _hermitian_matrix(
 def _peak(polynomial: ArrayLike, backend: Backend = None) -> float:
     """Computes the maximum of the absolute value of a Chebyshev series in :math:`[-1, 1]`.
 
+    The maxima of a grid of :math:`64 (d + 1)` Chebyshev points, which it underestimates by up to
+    :math:`10^{-3}`, are refined with Newton iterations on the derivative of the series.
+
     Args:
         polynomial (ArrayLike): real Chebyshev coefficients :math:`(c_{0}, \\dots, c_{d})`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
             calculation. If ``None``, it uses the current backend. Defaults to ``None``.
 
     Returns:
-        float: maximum in a grid of :math:`64 (d + 1)` Chebyshev points.
+        float: maximum of the series.
     """
     backend = _check_backend(backend)
 
     degree = polynomial.shape[0] - 1
     nsamples = 64 * (degree + 1)
-    angles = backend.reshape(
-        math.pi * backend.arange(nsamples, dtype=backend.float64) / nsamples, (-1, 1)
+    orders = backend.arange(degree + 1, dtype=backend.float64)
+    angles = math.pi * backend.arange(nsamples, dtype=backend.float64) / nsamples
+    magnitudes = backend.abs(
+        backend.matmul(
+            backend.cos(backend.reshape(angles, (-1, 1)) * orders), polynomial
+        )
     )
-    values = backend.matmul(
-        backend.cos(angles * backend.arange(degree + 1, dtype=backend.float64)),
-        polynomial,
-    )
+    peak = float(backend.max(magnitudes))
 
-    return float(backend.max(backend.abs(values)))
+    # the grid points that are close to the maximum are the starting points of the iterations
+    nodes = angles[magnitudes >= (1 - 1e-3) * peak]
+    for _ in range(5):
+        grid = backend.reshape(nodes, (-1, 1)) * orders
+        cosines = backend.cos(grid)
+        peak = max(
+            peak, float(backend.max(backend.abs(backend.matmul(cosines, polynomial))))
+        )
+
+        first = -backend.matmul(backend.sin(grid), orders * polynomial)
+        second = -backend.matmul(cosines, orders**2 * polynomial)
+        nodes = nodes - first / backend.where(second == 0.0, 1.0, second)
+
+    return peak

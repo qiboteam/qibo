@@ -140,6 +140,24 @@ def test_qsvt_function_coefficients(backend, kind):
     backend.assert_allclose(block, constant * expected, atol=1e-5)
 
 
+def test_qsvt_function_constant(backend):
+    """The constant is the scale of the circuit, which a peak below the maximum would change."""
+    matrix = backend.cast([[0.3, 0.8], [0.8, -0.5]], dtype=backend.complex128)
+    alpha = backend.max(backend.abs(backend.eigh(matrix)[0]))
+    function = lambda x: backend.sin(4.5 * x / alpha)
+
+    circuit, constant = qsvt_function(matrix, function, backend=backend)
+
+    block = circuit.unitary(backend)[:2, :2]
+    expected = constant * _apply(function, matrix, backend)
+
+    # the scale of the block with respect to the expected one
+    scale = backend.sum(backend.conj(expected) * block) / backend.sum(
+        backend.abs(expected) ** 2
+    )
+    backend.assert_allclose(backend.real(scale), 1.0, atol=3e-6)
+
+
 def test_qsvt_function_degree(backend):
     """The degree of the interpolation can be given, and the negligible terms are removed."""
     matrix = random_hermitian(4, seed=3, backend=backend)
@@ -218,6 +236,28 @@ def test_qsvt_function_hamiltonians(backend):
             constant * _apply(function, hamiltonian.matrix, backend),
             atol=1e-5,
         )
+
+
+@pytest.mark.parametrize("kind", ["high frequency", "chebyshev", "decaying"])
+@pytest.mark.parametrize("degree", [12, 24])
+def test_qsvt_peak(backend, degree, kind):
+    """The maximum is not underestimated by the grid, also at the borders of the interval."""
+    if kind == "chebyshev":
+        # the maximum is one at the border
+        coefficients = degree * [0.0] + [1.0]
+    else:
+        decay = 1 if kind == "decaying" else 0
+        coefficients = [
+            math.sin(1.7 * order**2 + 0.3) / (1 + order) ** decay
+            for order in range(degree + 1)
+        ]
+    polynomial = backend.cast(coefficients, dtype=backend.float64)
+
+    peak = qsvt_module._peak(polynomial, backend)
+    reference = _peak_reference(polynomial, backend)
+
+    # the reference is itself a grid, whose error is below the tolerance
+    assert reference * (1 - 1e-12) <= peak <= reference * (1 + 1e-6)
 
 
 @pytest.mark.parametrize("degree", [1, 2, 3, 4, 10, 25, 60])
@@ -407,6 +447,23 @@ def _interpolate(function, degree: int, backend: Backend) -> ArrayLike:
     coefficients[0] = coefficients[0] / 2
 
     return coefficients
+
+
+def _peak_reference(polynomial, backend):
+    """Maximum of a series on a grid of :math:`2048 (d + 1)` points, which is 32 times the one of
+    the module."""
+    degree = polynomial.shape[0] - 1
+    nsamples = 2048 * (degree + 1)
+    orders = backend.arange(degree + 1, dtype=backend.float64)
+    angles = backend.reshape(
+        math.pi * backend.arange(nsamples, dtype=backend.float64) / nsamples, (-1, 1)
+    )
+
+    return float(
+        backend.max(
+            backend.abs(backend.matmul(backend.cos(angles * orders), polynomial))
+        )
+    )
 
 
 def _polynomial(phases: ArrayLike, xs: ArrayLike, backend: Backend) -> ArrayLike:
