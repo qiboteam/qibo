@@ -62,7 +62,9 @@ def test_hamiltonian_models(backend, model, kwargs, filename):
     assert_regression_fixture(backend, matrix, filename)
 
 
-@pytest.mark.parametrize("nqubits,adj_matrix", zip([3, 4], [None, [[0, 1], [2, 3]]]))
+@pytest.mark.parametrize(
+    "nqubits,adj_matrix", list(zip([3, 4], [None, [[0, 1], [2, 3]]]))
+)
 @pytest.mark.parametrize("dense", [True, False])
 def test_maxcut(backend, nqubits, adj_matrix, dense):
     if adj_matrix is not None:
