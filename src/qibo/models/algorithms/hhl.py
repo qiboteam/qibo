@@ -7,10 +7,9 @@ from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
-from qibo.models.algorithms.block_encoding import block_encoding_circuit
 from qibo.models.algorithms.qaa import _check_circuits
 from qibo.models.algorithms.qft import QFT
-from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
+from qibo.models.algorithms.qsvt_function import _hermitian_matrix, qsvt_function
 from qibo.models.circuit import Circuit
 from qibo.models.encodings import binary_encoder
 
@@ -203,29 +202,8 @@ def _hhl_inputs(
     """
     backend = _check_backend(backend)
 
-    if isinstance(matrix, (Hamiltonian, SymbolicHamiltonian)):
-        matrix = matrix.matrix
-    matrix = backend.cast(matrix, dtype=backend.complex128)
-
-    dimension = matrix.shape[0]
-    if (
-        len(matrix.shape) != 2
-        or matrix.shape[1] != dimension
-        or dimension < 2
-        or dimension & (dimension - 1) != 0
-    ):
-        raise_error(
-            ValueError,
-            "matrix must be a square matrix of size 2^n with n >= 1, "
-            + f"but its shape is {tuple(matrix.shape)}.",
-        )
-    nqubits = dimension.bit_length() - 1
-
-    hermitian = backend.matrix_norm(
-        matrix - backend.conj(backend.transpose(matrix)), order="fro"
-    )
-    if hermitian > 1e-8 * backend.matrix_norm(matrix, order="fro"):
-        raise_error(ValueError, "matrix must be Hermitian.")
+    matrix, nqubits = _hermitian_matrix(matrix, backend)
+    dimension = 2**nqubits
 
     if isinstance(vector, Circuit):
         if _check_circuits(vector=vector) != nqubits:
@@ -418,22 +396,8 @@ def _hhl_qsvt(
         tail -= math.comb(2 * exponent, exponent + index + 1)
     coefficients = backend.cast(coefficients, dtype=backend.float64)
 
-    # the polynomial is divided by its maximum to be bounded by one
-    nsamples = 64 * (degree + 1)
-    angles = backend.reshape(
-        math.pi * backend.arange(nsamples, dtype=backend.float64) / nsamples, (-1, 1)
-    )
-    values = backend.matmul(
-        backend.cos(angles * backend.arange(degree + 1, dtype=backend.float64)),
-        coefficients,
-    )
-    peak = float(backend.max(backend.abs(values)))
-    phases = qsvt_phases(coefficients / peak, backend=backend)
-
-    block, alpha, nauxiliary = block_encoding_circuit(
-        matrix, method="dense", alpha=norm, backend=backend
-    )
-    transformation = qsvt_circuit(block, phases, nauxiliary)
+    # the polynomial is divided by its maximum, which is in the constant
+    transformation, constant = qsvt_function(matrix, coefficients, backend=backend)
 
     circuit = Circuit(transformation.nqubits, **kwargs)
     circuit.add(
@@ -443,4 +407,4 @@ def _hhl_qsvt(
     )
     circuit.add(transformation.on_qubits(*range(transformation.nqubits)))
 
-    return circuit, alpha / peak
+    return circuit, norm * constant
