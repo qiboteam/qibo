@@ -1,14 +1,17 @@
 """Tests for quantum singular value transformation in `qibo/models/algorithms/qsvt.py`."""
 
 import math
+import warnings
 
 import pytest
 from numpy.typing import ArrayLike
 
-from qibo import Circuit, gates, models
+from qibo import Circuit, gates, hamiltonians, models
 from qibo.backends import Backend
-from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_phases
-from qibo.quantum_info.random_ensembles import random_unitary
+from qibo.hamiltonians import Hamiltonian
+from qibo.models.algorithms import qsvt as qsvt_module
+from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_function, qsvt_phases
+from qibo.quantum_info.random_ensembles import random_hermitian, random_unitary
 
 
 @pytest.mark.parametrize("degree", [1, 2, 3, 4, 7, 25])
@@ -74,7 +77,187 @@ def test_qsvt_circuit_errors(backend):
 def test_qsvt_exports():
     """The QSVT functions are available from ``qibo.models``."""
     assert models.qsvt_circuit is qsvt_circuit
+    assert models.qsvt_function is qsvt_function
     assert models.qsvt_phases is qsvt_phases
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "evolution",
+        "gibbs",
+        "even",
+        "odd",
+        "imaginary",
+        "constant and odd",
+        "constant and even",
+        "complex",
+        "negative constant",
+    ],
+)
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_qsvt_function(backend, nqubits, kind):
+    """The first block of the circuit is the function of the matrix, times the constant."""
+    matrix = random_hermitian(2**nqubits, seed=3, backend=backend)
+    function, nextra = _functions(backend)[kind]
+
+    circuit, constant = qsvt_function(matrix, function, backend=backend)
+
+    block = circuit.unitary(backend)[: 2**nqubits, : 2**nqubits]
+
+    # the qubits of the linear combination, the signal qubit, the auxiliary qubit of the block
+    # encoding, and the qubits of the matrix
+    assert circuit.nqubits == nqubits + nextra
+    assert constant > 0
+    backend.assert_allclose(
+        block, constant * _apply(function, matrix, backend), atol=1e-5
+    )
+
+
+@pytest.mark.parametrize("kind", ["odd", "even", "complex"])
+def test_qsvt_function_coefficients(backend, kind):
+    """The coefficients of a polynomial in the matrix divided by its norm are applied."""
+    matrix = random_hermitian(4, seed=3, backend=backend)
+    alpha = backend.max(backend.abs(backend.eigh(matrix)[0]))
+
+    # Chebyshev polynomials T_3 and T_2 and a complex combination of them, with the peak one
+    coefficients = {
+        "odd": [0.0, 0.0, 0.0, 1.0],
+        "even": [0.0, 0.0, 1.0],
+        "complex": [0.0, 0.0, 0.5, 0.5j],
+    }[kind]
+    polynomial = {
+        "odd": lambda x: 4 * x**3 - 3 * x,
+        "even": lambda x: 2 * x**2 - 1,
+        "complex": lambda x: 0.5 * (2 * x**2 - 1) + 0.5j * (4 * x**3 - 3 * x),
+    }[kind]
+
+    circuit, constant = qsvt_function(matrix, coefficients, backend=backend)
+
+    block = circuit.unitary(backend)[:4, :4]
+    expected = _apply(lambda x: polynomial(x / alpha), matrix, backend)
+
+    backend.assert_allclose(block, constant * expected, atol=1e-5)
+
+
+def test_qsvt_function_constant(backend):
+    """The constant is the scale of the circuit, which a peak below the maximum would change."""
+    matrix = backend.cast([[0.3, 0.8], [0.8, -0.5]], dtype=backend.complex128)
+    alpha = backend.max(backend.abs(backend.eigh(matrix)[0]))
+    function = lambda x: backend.sin(4.5 * x / alpha)
+
+    circuit, constant = qsvt_function(matrix, function, backend=backend)
+
+    block = circuit.unitary(backend)[:2, :2]
+    expected = constant * _apply(function, matrix, backend)
+
+    # the scale of the block with respect to the expected one
+    scale = backend.sum(backend.conj(expected) * block) / backend.sum(
+        backend.abs(expected) ** 2
+    )
+    backend.assert_allclose(backend.real(scale), 1.0, atol=3e-6)
+
+
+def test_qsvt_function_degree(backend):
+    """The degree of the interpolation can be given, and the negligible terms are removed."""
+    matrix = random_hermitian(4, seed=3, backend=backend)
+    function = lambda x: backend.exp(-0.9j * x)
+
+    adaptive, constant = qsvt_function(matrix, function, backend=backend)
+    given, given_constant = qsvt_function(matrix, function, 40, backend=backend)
+
+    # the series of the exponential is truncated by the tolerance, and it is the same one
+    assert len(given.queue) == len(adaptive.queue)
+    backend.assert_allclose(given_constant, constant, atol=1e-12)
+    backend.assert_allclose(
+        given.unitary(backend)[:4, :4], adaptive.unitary(backend)[:4, :4], atol=1e-8
+    )
+
+    # a tighter tolerance needs a higher degree, and it is more precise
+    precise, _ = qsvt_function(matrix, function, epsilon=1e-10, backend=backend)
+    assert len(precise.queue) > len(adaptive.queue)
+
+
+def test_qsvt_function_density_matrix(backend):
+    """Keyword arguments are passed to the circuit."""
+    matrix = random_hermitian(2, seed=3, backend=backend)
+    circuit, _ = qsvt_function(
+        matrix, lambda x: backend.cos(x), density_matrix=True, backend=backend
+    )
+
+    assert circuit.density_matrix
+    assert isinstance(circuit, Circuit)
+
+
+def test_qsvt_function_errors(backend):
+    matrix = random_hermitian(2, seed=3, backend=backend)
+    function = lambda x: backend.cos(x)
+
+    for epsilon in (0.0, 1.0, -0.1, 2.0):
+        with pytest.raises(ValueError, match="epsilon must be in"):
+            qsvt_function(matrix, function, epsilon=epsilon, backend=backend)
+    for degree in (0, -1, 2.5, True):
+        with pytest.raises(ValueError, match="degree must be a positive integer"):
+            qsvt_function(matrix, function, degree, backend=backend)
+    for wrong in ([1.0, 0.5], [[1.0]], [[1.0, 0.0, 0.0]], [[1.0] * 3] * 3):
+        with pytest.raises(ValueError, match="matrix must be a square matrix"):
+            qsvt_function(wrong, function, backend=backend)
+    with pytest.raises(ValueError, match="matrix must be Hermitian"):
+        qsvt_function([[1.0, 0.5], [0.0, 1.0]], function, backend=backend)
+    with pytest.raises(ValueError, match="matrix must not be zero"):
+        qsvt_function([[0.0, 0.0], [0.0, 0.0]], function, backend=backend)
+
+    # a step has coefficients that decrease too slowly
+    with pytest.raises(ValueError, match="is not approximated"):
+        qsvt_function(matrix, lambda x: backend.sign(x), backend=backend)
+    with pytest.raises(ValueError, match="function must not be zero"):
+        qsvt_function(matrix, lambda x: 0 * x, backend=backend)
+    with pytest.raises(ValueError, match="function must not be zero"):
+        qsvt_function(matrix, [0.0, 0.0, 0.0], backend=backend)
+    for coefficients in ([1.0], [[1.0, 0.0], [0.0, 1.0]]):
+        with pytest.raises(ValueError, match="must be a vector of at least two"):
+            qsvt_function(matrix, coefficients, backend=backend)
+
+
+def test_qsvt_function_hamiltonians(backend):
+    """The matrix can be a Hamiltonian."""
+    hamiltonian = hamiltonians.TFIM(2, h=0.5, dense=False, backend=backend)
+    function = lambda x: backend.exp(-0.6j * x)
+
+    for matrix in (
+        hamiltonian,
+        Hamiltonian(2, hamiltonian.matrix, backend=backend),
+        hamiltonian.matrix,
+    ):
+        circuit, constant = qsvt_function(matrix, function, backend=backend)
+
+        backend.assert_allclose(
+            circuit.unitary(backend)[:4, :4],
+            constant * _apply(function, hamiltonian.matrix, backend),
+            atol=1e-5,
+        )
+
+
+@pytest.mark.parametrize("kind", ["high frequency", "chebyshev", "decaying"])
+@pytest.mark.parametrize("degree", [12, 24])
+def test_qsvt_peak(backend, degree, kind):
+    """The maximum is not underestimated by the grid, also at the borders of the interval."""
+    if kind == "chebyshev":
+        # the maximum is one at the border
+        coefficients = degree * [0.0] + [1.0]
+    else:
+        decay = 1 if kind == "decaying" else 0
+        coefficients = [
+            math.sin(1.7 * order**2 + 0.3) / (1 + order) ** decay
+            for order in range(degree + 1)
+        ]
+    polynomial = backend.cast(coefficients, dtype=backend.float64)
+
+    peak = qsvt_module._peak(polynomial, backend)
+    reference = _peak_reference(polynomial, backend)
+
+    # the reference is itself a grid, whose error is below the tolerance
+    assert reference * (1 - 1e-12) <= peak <= reference * (1 + 1e-6)
 
 
 @pytest.mark.parametrize("degree", [1, 2, 3, 4, 10, 25, 60])
@@ -123,6 +306,53 @@ def test_qsvt_phases_errors(backend):
         qsvt_phases([0.0, 0.3, 0.2], backend=backend)
 
 
+def test_qsvt_phases_interior_maximum(backend):
+    """A polynomial that touches one away from the endpoints does not give warnings."""
+    # odd polynomial that approximates the inverse, with a maximum above two inside of [-1, 1]
+    degree = 23
+    coefficients = _interpolate(lambda x: (1 - (1 - x**2) ** 12) / x, degree, backend)
+    xs = backend.cast(-1.0 + 2.0 * backend.arange(20001) / 20000, dtype="float64")
+    maximum = backend.max(backend.abs(_chebyshev(coefficients, xs, backend)))
+
+    # the maximum is estimated on a coarser grid than the one of the factorization, which
+    # can exceed it between the nodes, and then 1 - P^2 is negative for the smallest margins
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        phases = qsvt_phases(coefficients, backend=backend)
+
+    assert maximum > 2.0
+    backend.assert_allclose(
+        _polynomial(phases, xs, backend),
+        _chebyshev(coefficients, xs, backend) / maximum,
+        atol=1e-5,
+        rtol=0.0,
+    )
+
+
+def test_qsvt_phases_margin(backend, monkeypatch):
+    """The margin is increased if the factorization has not converged."""
+    calls = []
+    factorize = qsvt_module._spectral_factor
+
+    def not_converged(residual, degree, backend=None):
+        factor, converged = factorize(residual, degree, backend)
+        calls.append(converged)
+
+        # the first factorization is rejected
+        return factor, converged and len(calls) > 1
+
+    monkeypatch.setattr(qsvt_module, "_spectral_factor", not_converged)
+
+    # T_3 touches one at the endpoints, and its first factorization converges
+    phases = qsvt_phases([0.0, 0.0, 0.0, 1.0], backend=backend)
+
+    xs = backend.cast(-1.0 + 2.0 * backend.arange(2001) / 2000, dtype="float64")
+    assert calls == [True, True]
+    backend.assert_allclose(
+        _polynomial(phases, xs, backend), 4 * xs**3 - 3 * xs, atol=1e-6, rtol=0.0
+    )
+
+
 @pytest.mark.parametrize("parity", [0, 1])
 def test_qsvt_phases_interpolation(backend, parity):
     """Chebyshev series of smooth functions, with round-off in their coefficients."""
@@ -158,6 +388,15 @@ def test_qsvt_phases_normalization(backend):
     )
 
 
+def _apply(function, matrix, backend):
+    eigenvalues, eigenvectors = backend.eigh(matrix)
+
+    return backend.matmul(
+        eigenvectors * backend.cast(function(eigenvalues), dtype=backend.complex128),
+        backend.conj(backend.transpose(eigenvectors)),
+    )
+
+
 def _chebyshev(coefficients: ArrayLike, xs: ArrayLike, backend: Backend) -> ArrayLike:
     """Chebyshev series evaluated at ``xs``."""
     previous, current = 0 * xs + 1.0, xs
@@ -185,6 +424,20 @@ def _coefficients(degree: int, seed: int, backend: Backend) -> ArrayLike:
     return 0.9 * coefficients / maximum
 
 
+def _functions(backend):
+    return {
+        "evolution": (lambda x: backend.exp(-0.9j * x), 3),
+        "gibbs": (lambda x: backend.exp(-0.7 * x), 3),
+        "even": (lambda x: backend.cos(x), 2),
+        "odd": (lambda x: backend.sin(0.8 * x), 2),
+        "imaginary": (lambda x: 0.2j * x**3, 2),
+        "constant and odd": (lambda x: 0.5 + 0.3 * x, 3),
+        "constant and even": (lambda x: 0.3 + 0.2 * x**2, 2),
+        "complex": (lambda x: (1 + 1j) * backend.exp(0.5 * x), 4),
+        "negative constant": (lambda x: -0.5 + 0 * x, 2),
+    }
+
+
 def _interpolate(function, degree: int, backend: Backend) -> ArrayLike:
     """Chebyshev coefficients of the interpolant of ``function`` at the Chebyshev nodes."""
     nnodes = degree + 1
@@ -194,6 +447,23 @@ def _interpolate(function, degree: int, backend: Backend) -> ArrayLike:
     coefficients[0] = coefficients[0] / 2
 
     return coefficients
+
+
+def _peak_reference(polynomial, backend):
+    """Maximum of a series on a grid of :math:`2048 (d + 1)` points, which is 32 times the one of
+    the module."""
+    degree = polynomial.shape[0] - 1
+    nsamples = 2048 * (degree + 1)
+    orders = backend.arange(degree + 1, dtype=backend.float64)
+    angles = backend.reshape(
+        math.pi * backend.arange(nsamples, dtype=backend.float64) / nsamples, (-1, 1)
+    )
+
+    return float(
+        backend.max(
+            backend.abs(backend.matmul(backend.cos(angles * orders), polynomial))
+        )
+    )
 
 
 def _polynomial(phases: ArrayLike, xs: ArrayLike, backend: Backend) -> ArrayLike:

@@ -206,6 +206,12 @@ Swap Test
 Hamiltonian simulation
 ----------------------
 
+Trotter
+^^^^^^^
+
+.. autofunction:: qibo.models.Trotter
+
+
 qDRIFT
 ^^^^^^
 
@@ -254,6 +260,8 @@ Quantum Singular Value Transformation
 .. autofunction:: qibo.models.qsvt_phases
 
 .. autofunction:: qibo.models.qsvt_circuit
+
+.. autofunction:: qibo.models.qsvt_function
 
 
 Hamiltonian diagonalization
