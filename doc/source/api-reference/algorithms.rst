@@ -41,6 +41,19 @@ Grover's Algorithm
     :member-order: bysource
 
 
+Grover Adaptive Search
+^^^^^^^^^^^^^^^^^^^^^^
+
+Grover Adaptive Search (GAS) minimizes a function of :math:`n` bits that can only be evaluated.
+Pure adaptive search draws every new point uniformly from the region where the function is
+better than the best value that was found, and it needs a number of iterations that only grows
+linearly in :math:`n` for well-behaved functions. This region is unknown in general, but Grover's
+algorithm samples from it, with a number of oracle queries that is the square root of the one
+needed by classical rejection sampling.
+
+.. autofunction:: qibo.models.GAS
+
+
 Quantum Amplitude Amplification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

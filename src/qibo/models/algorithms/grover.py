@@ -1,9 +1,13 @@
 import math
+from collections.abc import Callable
+from numbers import Integral
 
 import numpy as np
 
 from qibo import gates
+from qibo.backends import Backend, _check_backend_and_local_state
 from qibo.config import log, raise_error
+from qibo.models.algorithms.qaa import QAA
 from qibo.models.circuit import Circuit
 
 
@@ -406,3 +410,158 @@ class Grover:
     def __call__(self, nshots=100, freq=False, logs=False, backend=None):
         """Equivalent to :meth:`qibo.models.Grover.execute`."""
         return self.execute(nshots=nshots, freq=freq, logs=logs, backend=backend)
+
+
+def GAS(
+    objective: Callable[[str], float],
+    nqubits: int,
+    max_iterations: int,
+    rotations: int = 1,
+    target: float | None = None,
+    seed: int | np.random.Generator | None = None,
+    backend: Backend | None = None,
+) -> tuple[str, float, int]:
+    """Finds the minimum of a function with the Grover adaptive search (GAS).
+
+    Let :math:`f : \\{0, 1\\}^{n} \\to \\mathbb{R}` be the ``objective`` function, which is a
+    black box that can only be evaluated. The algorithm [1] is a quantum implementation of pure
+    adaptive search, which draws each new point uniformly from the improving region, *i.e.* the
+    points that are better than the best one found so far. This is done with Grover's algorithm
+    [2], which finds the points of a marked set. It starts with a point :math:`x_{1}` that is
+    drawn uniformly at random, and :math:`y_{1} = f(x_{1})`. In every iteration
+    :math:`i = 1, 2, \\dots`, the algorithm:
+
+    1. marks the points of the improving region :math:`S_{i} = \\{x : f(x) < y_{i}\\}`;
+    2. runs Grover's algorithm for :math:`r` rotations, starting from the equal superposition of
+       all of the points, with :math:`S_{i}` as the marked set, and measures a point :math:`x`;
+    3. evaluates :math:`y = f(x)` classically, and if :math:`y < y_{i}` it sets
+       :math:`(x_{i + 1}, y_{i + 1}) = (x, y)`, and otherwise it keeps :math:`(x_{i}, y_{i})`.
+
+    If the proportion of the domain that is marked is :math:`p`, a run measures a marked point
+    with probability :math:`g_{r}(p) = \\sin^{2}((2 r + 1) \\arcsin(\\sqrt{p}))`, and then all of
+    the points of :math:`S_{i}` are equally likely. Every iteration costs :math:`r` queries to the
+    marking oracle and one classical evaluation of :math:`f`, plus one evaluation for the
+    initial point. The function that the oracle marks changes in each iteration. In a
+    simulation, :math:`f` is evaluated once on the whole domain to build the oracle, which is
+    not part of the cost, and the oracle changes the sign of the amplitudes of the marked points
+    with a :class:`qibo.gates.Unitary` gate, without auxiliary qubits. Domains whose size is not
+    a power of two can be embedded in a larger one, giving the points that are added the maximum
+    value of the function [1].
+
+    Let :math:`\\lambda_{1} < \\cdots < \\lambda_{K}` be the distinct values of :math:`f`,
+    :math:`\\pi_{j}` the proportion of the domain where :math:`f = \\lambda_{j}`, and
+    :math:`p_{j} = \\pi_{1} + \\cdots + \\pi_{j}`. The sequence of values of the algorithm is a
+    Markov chain, and the expected number of iterations until the minimum is found is
+
+    .. math::
+        \\sum_{j = 2}^{K} \\frac{\\pi_{j}}{g_{r}(p_{j - 1}) \\, p_{j}} \\, ,
+
+    where :math:`g_{r}(p_{j - 1})` is the probability that an iteration improves the value
+    :math:`\\lambda_{j}`, according to the transition matrix of Ref. [1], Sec. 5.1. If
+    :math:`g_{r}(p_{j}) = 1` for all :math:`j`, the algorithm is exactly pure adaptive search, and
+    the expected number of iterations is at most :math:`\\ln(1 / \\pi_{1})`, which is linear in
+    :math:`n` if the values are evenly distributed. However, the minimum is never found from the
+    values for which :math:`g_{r}(p_{j - 1}) = 0`. As the minimum is unknown in general, the
+    algorithm stops after ``max_iterations`` iterations, or as soon as the value reaches
+    ``target``.
+
+    Example:
+        .. testcode::
+
+            from qibo.models import GAS
+
+            # function of 2 qubits with its minimum at the bitstring "10"
+            def objective(bitstring):
+                return 0 if bitstring == "10" else 1
+
+            # one rotation finds the minimum with certainty, as one out of four points is marked
+            bitstring, value, iterations = GAS(
+                objective, nqubits=2, max_iterations=5, rotations=1, target=0, seed=0
+            )
+            print(bitstring, value)
+
+        .. testoutput::
+
+            10 0
+
+    Args:
+        objective (Callable): function that receives a bitstring, *e.g.* ``"101"``, where the
+            first character is the state of the first qubit, and returns a real number.
+        nqubits (int): number :math:`n` of qubits, *i.e.* the domain has :math:`2^{n}` points.
+        max_iterations (int): maximum number of iterations.
+        rotations (int, optional): number :math:`r` of Grover rotations in every iteration.
+            Defaults to :math:`1`.
+        target (float, optional): value of the objective function at which the algorithm stops,
+            *e.g.* its known minimum. If ``None``, the algorithm always runs ``max_iterations``
+            iterations. Defaults to ``None``.
+        seed (int or :class:`numpy.random.Generator`, optional): seed or generator used to draw
+            the initial point. The measurements are sampled by the backend, so they are
+            reproducible only if the seed of the backend is set, *e.g.* with
+            :meth:`qibo.backends.abstract.Backend.set_seed`. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
+            execution of the circuits. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        tuple: the bitstring with the best value that was found, its value, and the number of
+        iterations, which does not include the initial point.
+
+    References:
+        1. D. Bulger, W. P. Baritompa, and G. R. Wood, *Implementing pure adaptive search with
+        Grover's quantum algorithm*, `J. Optim. Theory Appl. 116, 517 (2003)
+        <https://doi.org/10.1023/A:1023061218864>`_.
+
+        2. L. K. Grover, *A fast quantum mechanical algorithm for database search*,
+        `Proc. 28th Annu. ACM Symp. Theory Comput. (STOC '96), 212 (1996)
+        <https://arxiv.org/abs/quant-ph/9605043>`_.
+    """
+    backend, local_state = _check_backend_and_local_state(seed, backend)
+
+    if not callable(objective):
+        raise_error(
+            TypeError, f"objective must be callable, but it is {type(objective)}."
+        )
+
+    for name, value in (
+        ("nqubits", nqubits),
+        ("max_iterations", max_iterations),
+        ("rotations", rotations),
+    ):
+        if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+            raise_error(
+                ValueError, f"{name} must be a positive integer, but it is {value}."
+            )
+
+    bitstrings = [format(index, f"0{nqubits}b") for index in range(2**nqubits)]
+    values = [objective(bitstring) for bitstring in bitstrings]
+
+    algorithm = Circuit(nqubits)
+    algorithm.add(gates.H(qubit) for qubit in range(nqubits))
+
+    # pure random search iterate
+    best = int(backend.random_integers(2**nqubits, size=1, seed=local_state)[0])
+
+    iterations = 0
+    improved = True
+    while iterations < max_iterations and (target is None or values[best] > target):
+        # the oracle changes only if the best value changes
+        if improved:
+            signs = [-1.0 if value < values[best] else 1.0 for value in values]
+            oracle = Circuit(nqubits)
+            oracle.add(
+                gates.Unitary(
+                    backend.diag(backend.cast(signs, dtype=backend.complex128)),
+                    *range(nqubits),
+                )
+            )
+            circuit = QAA(algorithm, oracle, niterations=rotations, backend=backend)
+
+        outcome = backend.execute_circuit(circuit, nshots=1).frequencies()
+        index = int(next(iter(outcome)), 2)
+
+        iterations += 1
+        improved = values[index] < values[best]
+        if improved:
+            best = index
+
+    return bitstrings[best], values[best], iterations
