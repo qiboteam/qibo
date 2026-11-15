@@ -220,6 +220,12 @@ Trotter
 .. autofunction:: qibo.models.Trotter
 
 
+Randomized Trotter
+^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.RandomizedTrotter
+
+
 qDRIFT
 ^^^^^^
 
