@@ -36,6 +36,7 @@ from qibo.models.algorithms.qrs import QRS
 from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_function, qsvt_phases
 from qibo.models.algorithms.shor import Shor
+from qibo.models.algorithms.simon import Simon, simon_secret_string
 from qibo.models.algorithms.trotter import Trotter
 
 __all__ = [
@@ -68,6 +69,7 @@ __all__ = [
     "IterativeAmplitudeEstimationResult",
     "QSearch",
     "Shor",
+    "Simon",
     "Trotter",
     "amplification_operator",
     "block_encoding_circuit",
@@ -81,5 +83,6 @@ __all__ = [
     "qsvt_circuit",
     "qsvt_function",
     "qsvt_phases",
+    "simon_secret_string",
     "swap_test",
 ]

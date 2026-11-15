@@ -29,6 +29,7 @@ from qibo.models.algorithms import (
     IterativeAmplitudeEstimationResult,
     QSearch,
     Shor,
+    Simon,
     Trotter,
     amplification_operator,
     block_encoding_circuit,
@@ -42,6 +43,7 @@ from qibo.models.algorithms import (
     qsvt_circuit,
     qsvt_function,
     qsvt_phases,
+    simon_secret_string,
     swap_test,
 )
 from qibo.models.circuit import Circuit
@@ -109,6 +111,7 @@ __all__ = [
     "IterativeAmplitudeEstimationResult",
     "QSearch",
     "Shor",
+    "Simon",
     "StateEvolution",
     "Trotter",
     "amplification_operator",
@@ -138,6 +141,7 @@ __all__ = [
     "qsvt_circuit",
     "qsvt_function",
     "qsvt_phases",
+    "simon_secret_string",
     "sparse_encoder",
     "spin_s_encoder",
     "swap_test",

@@ -154,6 +154,14 @@ Bernstein-Vazirani
 .. autofunction:: qibo.models.BernsteinVazirani
 
 
+Simon
+^^^^^
+
+.. autofunction:: qibo.models.Simon
+
+.. autofunction:: qibo.models.simon_secret_string
+
+
 Quantum arithmetic
 ------------------
 
