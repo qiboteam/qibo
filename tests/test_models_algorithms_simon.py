@@ -3,6 +3,7 @@
 import pytest
 
 from qibo import Circuit, gates
+from qibo.measurements import MeasurementResult
 from qibo.models import Simon, simon_secret_string
 
 
@@ -137,6 +138,13 @@ def test_simon_secret_string_errors():
     with pytest.raises(ValueError):
         simon_secret_string(["001", "001", "000"])
 
+    # outcomes that cannot be converted to bitstrings have the same message as other invalid ones
+    with pytest.raises(TypeError, match="Invalid bitstring 1"):
+        simon_secret_string({1: 3})
+
+    with pytest.raises(ValueError, match="Invalid bitstring"):
+        simon_secret_string([["a", "b"]])
+
 
 def test_simon_secret_string_inputs():
     expected = "110"
@@ -149,6 +157,17 @@ def test_simon_secret_string_inputs():
     assert simon_secret_string(["110", "010"]) == "001"
     assert simon_secret_string(["1"]) == "0"
     assert simon_secret_string(["0", "0"]) == "1"
+
+
+def test_simon_secret_string_measurement_result(backend):
+    circuit = Simon(_oracle("110"))
+    backend.set_seed(0)
+    backend.execute_circuit(circuit, nshots=100)
+
+    result = circuit.measurements[0].result
+
+    assert isinstance(result, MeasurementResult)
+    assert simon_secret_string(result) == "110"
 
 
 def _oracle(string):
