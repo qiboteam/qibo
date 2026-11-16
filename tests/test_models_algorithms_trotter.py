@@ -6,6 +6,7 @@ import math
 from collections import Counter
 from functools import reduce
 
+import numpy as np
 import pytest
 
 from qibo import Circuit, hamiltonians
@@ -136,6 +137,9 @@ def test_randomized_trotter_errors(backend):
     for nsteps in (0, -2, 2.5, True):
         with pytest.raises(ValueError):
             RandomizedTrotter(terms, 1.0, nsteps=nsteps, backend=backend)
+    for seed in (1.5, "a", [1]):
+        with pytest.raises(ValueError, match="seed must be"):
+            RandomizedTrotter(terms, 1.0, seed=seed, backend=backend)
     with pytest.raises(TypeError, match="hamiltonian must be a list"):
         RandomizedTrotter("ZI", 1.0, backend=backend)
     with pytest.raises(TypeError, match="the elements of hamiltonian"):
@@ -235,6 +239,17 @@ def test_randomized_trotter_hamiltonians(backend, caplog):
     backend.assert_allclose(circuit.unitary(backend), expected, atol=1e-10)
 
 
+def test_randomized_trotter_numpy_integer_seed(backend):
+    """The integer seeds of NumPy draw the same circuit as the ones of Python."""
+    kwargs = {"nsteps": 6, "order": 2, "backend": backend}
+    circuit = RandomizedTrotter(TERMS, 0.8, seed=7, **kwargs)
+
+    for seed in (np.int64(7), np.uint8(7)):
+        other = RandomizedTrotter(TERMS, 0.8, seed=seed, **kwargs)
+
+        backend.assert_allclose(other.unitary(backend), circuit.unitary(backend))
+
+
 def test_randomized_trotter_permutations(backend):
     """The permutation of the second order is any of them, with the same probability."""
     terms = [("ZII", 1.0), ("IZI", 1.0), ("IIZ", 1.0)]
@@ -289,7 +304,8 @@ def test_randomized_trotter_permuted_formula(backend, order):
             ]
             for _ in range(nsteps)
         ]
-    # the terms are not applied in the same order in every segment
+    # the seed draws different orders for the segments, so the comparison below fails if the same
+    # order is used in all of them
     assert len({tuple(draw) for draw in draws}) > 1
     if order == 1:
         assert {tuple(draw) for draw in draws} == {(0, 1, 2, 3), (3, 2, 1, 0)}
