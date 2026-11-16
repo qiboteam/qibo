@@ -2,6 +2,7 @@ from collections.abc import Iterable, Mapping
 
 from qibo import gates
 from qibo.config import raise_error
+from qibo.measurements import MeasurementResult
 from qibo.models.circuit import Circuit
 from qibo.result import MeasurementOutcomes
 
@@ -105,7 +106,8 @@ def Simon(oracle: Circuit, measure: bool = True, **kwargs) -> Circuit:
 
 
 def simon_secret_string(
-    outcomes: MeasurementOutcomes | Mapping | Iterable, nbits: int | None = None
+    outcomes: MeasurementResult | MeasurementOutcomes | Mapping | Iterable,
+    nbits: int | None = None,
 ) -> str:
     """Finds the hidden string of Simon's algorithm from the measured bitstrings.
 
@@ -121,10 +123,10 @@ def simon_secret_string(
     bitstrings, the solution is not unique, and an error is raised.
 
     Args:
-        outcomes (:class:`qibo.result.MeasurementOutcomes` or dict or list): measured
-            bitstrings. It can be the :class:`qibo.result.MeasurementOutcomes` (or any object
-            with a ``frequencies`` method, *e.g.* :class:`qibo.measurements.MeasurementResult`)
-            returned by the circuit, a dictionary of frequencies (*e.g.* ``{"01": 3, "10": 5}``),
+        outcomes (:class:`qibo.result.MeasurementOutcomes` or
+            :class:`qibo.measurements.MeasurementResult` or dict or list): measured bitstrings.
+            It can be the result returned by the circuit, *i.e.* any object with a
+            ``frequencies`` method, a dictionary of frequencies (*e.g.* ``{"01": 3, "10": 5}``),
             or an iterable of bitstrings (strings of ``"0"`` and ``"1"``, or sequences of bits).
         nbits (int, optional): number of bits :math:`n` of the hidden string. If ``None``, it
             is inferred from the length of the bitstrings. Defaults to ``None``.
@@ -144,7 +146,10 @@ def simon_secret_string(
         if isinstance(outcome, str):
             bits = outcome
         else:
-            bits = "".join(str(int(bit)) for bit in outcome)
+            try:
+                bits = "".join(str(int(bit)) for bit in outcome)
+            except (TypeError, ValueError) as error:
+                raise_error(type(error), f"Invalid bitstring {outcome!r}.")
         if bits == "" or set(bits) - {"0", "1"}:
             raise_error(ValueError, f"Invalid bitstring {outcome!r}.")
         strings.append(bits)

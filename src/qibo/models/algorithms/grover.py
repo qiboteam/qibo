@@ -441,12 +441,13 @@ def GAS(
     with probability :math:`g_{r}(p) = \\sin^{2}((2 r + 1) \\arcsin(\\sqrt{p}))`, and then all of
     the points of :math:`S_{i}` are equally likely. Every iteration costs :math:`r` queries to the
     marking oracle and one classical evaluation of :math:`f`, plus one evaluation for the
-    initial point. The function that the oracle marks changes in each iteration. In a
+    initial point. The set that the oracle marks only changes when the best value improves. In a
     simulation, :math:`f` is evaluated once on the whole domain to build the oracle, which is
     not part of the cost, and the oracle changes the sign of the amplitudes of the marked points
-    with a :class:`qibo.gates.Unitary` gate, without auxiliary qubits. Domains whose size is not
-    a power of two can be embedded in a larger one, giving the points that are added the maximum
-    value of the function [1].
+    with a :class:`qibo.gates.Unitary` gate, without auxiliary qubits. The domain has to have
+    :math:`2^{n}` points. Otherwise, the objective function can be extended to a domain of that
+    size by giving the points that are added the maximum value of the function [1], so that they
+    are never marked.
 
     Let :math:`\\lambda_{1} < \\cdots < \\lambda_{K}` be the distinct values of :math:`f`,
     :math:`\\pi_{j}` the proportion of the domain where :math:`f = \\lambda_{j}`, and

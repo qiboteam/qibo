@@ -170,6 +170,14 @@ def RandomizedTrotter(
         theories and statistical physics*, `J. Math. Phys. 32, 400 (1991)
         <https://doi.org/10.1063/1.529425>`_.
     """
+    if isinstance(seed, Integral):
+        seed = int(seed)
+    elif seed is not None and not isinstance(seed, np.random.Generator):
+        raise_error(
+            ValueError,
+            f"seed must be an integer, a random generator or None, but it is {seed!r}.",
+        )
+
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if isinstance(order, bool) or not isinstance(order, Integral) or order < 1:
