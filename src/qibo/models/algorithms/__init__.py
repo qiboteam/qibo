@@ -20,10 +20,6 @@ from qibo.models.algorithms.interference_tests import hadamard_test, swap_test
 from qibo.models.algorithms.iqae import IQAE, IterativeAmplitudeEstimationResult
 from qibo.models.algorithms.lcu import lcu_circuit, lcu_prepare, lcu_select
 from qibo.models.algorithms.mlqae import MLQAE
-from qibo.models.algorithms.phase_retrieval import (
-    hybrid_input_output,
-    vectorial_phase_retrieval,
-)
 from qibo.models.algorithms.qaa import (
     FPQAA,
     OAA,
@@ -35,7 +31,12 @@ from qibo.models.algorithms.qae import QAE
 from qibo.models.algorithms.qdrift import qdrift
 from qibo.models.algorithms.qft import QFT
 from qibo.models.algorithms.qmc import QMC
-from qibo.models.algorithms.qpe import IQPE, QPE
+from qibo.models.algorithms.qpe import (
+    IQPE,
+    QPE,
+    hybrid_input_output,
+    vectorial_phase_retrieval,
+)
 from qibo.models.algorithms.qrs import QRS
 from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_function, qsvt_phases

@@ -103,10 +103,10 @@ Phase Retrieval for Quantum Phase Estimation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Statistical phase estimation computes the time series
-:math:`f(t) = \langle \phi | e^{i H t} | \phi \rangle` with Hadamard tests, which need the time
-evolution :math:`e^{i H t}` to be controlled by an auxiliary qubit. Without it, the circuit
-:math:`U_{\phi}^{\dagger} \, e^{i H t} \, U_{\phi}`, where :math:`U_{\phi}` prepares
-:math:`|\phi\rangle`, only gives the probability :math:`|f(t)|^{2}` of measuring the all-zero
+:math:`f(t) = \bra{\phi} e^{i t H} \ket{\phi}` with Hadamard tests, which need the time
+evolution :math:`e^{i t H}` to be controlled by an auxiliary qubit. Without it, the circuit
+:math:`U_{\phi}^{\dagger} \, e^{i t H} \, U_{\phi}`, where :math:`U_{\phi}` prepares
+:math:`\ket{\phi}`, only gives the probability :math:`|f(t)|^{2}` of measuring the all-zero
 state, and the phases of :math:`f` are lost. The following functions recover them from the
 absolute values of a larger set of time series, using methods of classical phase retrieval
 [Clinton2026]_. The circuits of the time evolution can be created with
@@ -114,7 +114,7 @@ absolute values of a larger set of time series, using methods of classical phase
 :math:`-t` has to be used for :math:`e^{i t H}`.
 
 * :func:`qibo.models.vectorial_phase_retrieval` also uses the time series of the evolution of
-  other states and of their superpositions with :math:`|\phi\rangle`, and it needs the
+  other states and of their superpositions with :math:`\ket{\phi}`, and it needs the
   spectrum to be supported on an interval that is known.
 * :func:`qibo.models.hybrid_input_output` embeds the problem in two dimensions, with the time
   evolution of a Hamiltonian that commutes with :math:`H`, which makes the spectrum real and
