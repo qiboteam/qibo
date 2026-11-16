@@ -299,7 +299,7 @@ def hybrid_input_output(
 
     1. :math:`f_{i} = \\mathrm{DFT}^{-1}(F_{i})`;
     2. :math:`\\tilde{f}_{i} = |f| \\, e^{i \\arg(f_{i})}`, which has the measured absolute
-       values;
+       values, after replacing the phases of :math:`f_{i}(0, z_{l})` by ``phases``, if given;
     3. :math:`\\tilde{F}_{i} = \\mathrm{Re}(\\mathrm{DFT}(\\tilde{f}_{i}))`;
     4. :math:`F_{i + 1}[k, m] = \\tilde{F}_{i}[k, m]` if :math:`\\tilde{F}_{i}[k, m] \\geq 0`, and
        :math:`F_{i + 1}[k, m] = F_{i}[k, m] - \\beta \\, \\tilde{F}_{i}[k, m]` otherwise.
@@ -510,8 +510,10 @@ def vectorial_phase_retrieval(
     eigenvalue problem has size :math:`(R + 1) N`, and so it costs :math:`O(R^{3} N^{3})`.
 
     If :math:`|f_{1}[j]| \\, |f_{2}^{(r)}[j]| = 0`, which is always the case for :math:`j = 0`
-    as the states are orthogonal, the phase :math:`G_{r}[j] / |G_{r}[j]|` is not defined, and it
-    is set to :math:`1`, which does not affect the signal because :math:`f_{2}^{(r)}[j] = 0`.
+    as the states are orthogonal, or if the numerator of :math:`G_{r}[j]` vanishes, the phase
+    :math:`G_{r}[j] / |G_{r}[j]|` is not defined, and it is set to :math:`1`. For the first
+    case this does not affect the signal, because :math:`f_{2}^{(r)}[j] = 0`, and so any phase
+    satisfies the interference constraint.
     The global phase of the result is chosen such that :math:`f_{1}[0]`, which is one, is
     real.
 
@@ -630,7 +632,9 @@ def vectorial_phase_retrieval(
     ratio = numerator / backend.where(denominator > 0, denominator, 1.0)
     modulus = backend.abs(ratio)
     relative = backend.where(
-        modulus > 0, ratio / backend.where(modulus > 0, modulus, 1.0), 1.0
+        denominator * modulus > 0,
+        ratio / backend.where(modulus > 0, modulus, 1.0),
+        1.0,
     )
 
     # discrete Fourier transform of the frequencies where the support constraint applies

@@ -588,6 +588,23 @@ def test_vectorial_phase_retrieval_noise(backend, nreferences):
         assert 1e-8 < error < 1e-1 * float(backend.max(backend.abs(signal)))
 
 
+def test_vectorial_phase_retrieval_undefined_phase(backend):
+    """The references vanish at the time zero if they are orthogonal to the target state, which
+    leaves the relative phase undefined, and the estimate does not depend on the probabilities
+    that would define it."""
+    signal, target, references = _probabilities(backend, 24, 8, 2, orthogonal=True)
+    references[:, 0, 0] = 0
+
+    for shift in (0.0, 0.03):
+        noisy = references + 0.0
+        noisy[:, 1, 0] += shift
+        noisy[:, 2, 0] -= shift
+
+        estimate, _ = vectorial_phase_retrieval(target, noisy, 8, backend=backend)
+
+        backend.assert_allclose(estimate, signal, atol=1e-8)
+
+
 def _estimated_phase(backend, circuit, nshots=100, **kwargs):
     frequencies = backend.execute_circuit(
         circuit, nshots=nshots, **kwargs
