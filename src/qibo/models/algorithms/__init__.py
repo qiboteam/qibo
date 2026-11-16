@@ -20,6 +20,10 @@ from qibo.models.algorithms.interference_tests import hadamard_test, swap_test
 from qibo.models.algorithms.iqae import IQAE, IterativeAmplitudeEstimationResult
 from qibo.models.algorithms.lcu import lcu_circuit, lcu_prepare, lcu_select
 from qibo.models.algorithms.mlqae import MLQAE
+from qibo.models.algorithms.phase_retrieval import (
+    hybrid_input_output,
+    vectorial_phase_retrieval,
+)
 from qibo.models.algorithms.qaa import (
     FPQAA,
     OAA,
@@ -76,6 +80,7 @@ __all__ = [
     "amplification_operator",
     "block_encoding_circuit",
     "hadamard_test",
+    "hybrid_input_output",
     "lcu_circuit",
     "lcu_prepare",
     "lcu_select",
@@ -87,4 +92,5 @@ __all__ = [
     "qsvt_phases",
     "simon_secret_string",
     "swap_test",
+    "vectorial_phase_retrieval",
 ]
