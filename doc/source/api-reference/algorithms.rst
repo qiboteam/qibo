@@ -41,6 +41,19 @@ Grover's Algorithm
     :member-order: bysource
 
 
+Grover Adaptive Search
+^^^^^^^^^^^^^^^^^^^^^^
+
+Grover Adaptive Search (GAS) minimizes a function of :math:`n` bits that can only be evaluated.
+Pure adaptive search draws every new point uniformly from the region where the function is
+better than the best value that was found, and it needs a number of iterations that only grows
+linearly in :math:`n` for well-behaved functions. This region is unknown in general, but Grover's
+algorithm samples from it, with a number of oracle queries that is the square root of the one
+needed by classical rejection sampling.
+
+.. autofunction:: qibo.models.GAS
+
+
 Quantum Amplitude Amplification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -84,6 +97,36 @@ what is known about :math:`a`, the following can be used:
 .. autofunction:: qibo.models.QAA
 
 .. autofunction:: qibo.models.QSearch
+
+
+Phase Retrieval for Quantum Phase Estimation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Statistical phase estimation computes the time series
+:math:`f(t) = \bra{\phi} e^{i t H} \ket{\phi}` with Hadamard tests, which need the time
+evolution :math:`e^{i t H}` to be controlled by an auxiliary qubit. Without it, the circuit
+:math:`U_{\phi}^{\dagger} \, e^{i t H} \, U_{\phi}`, where :math:`U_{\phi}` prepares
+:math:`\ket{\phi}`, only gives the probability :math:`|f(t)|^{2}` of measuring the all-zero
+state, and the phases of :math:`f` are lost. The following functions recover them from the
+absolute values of a larger set of time series, using methods of classical phase retrieval
+[Clinton2026]_. The circuits of the time evolution can be created with
+:func:`qibo.models.Trotter`, whose circuits implement :math:`e^{-i t H}`, so the time
+:math:`-t` has to be used for :math:`e^{i t H}`.
+
+* :func:`qibo.models.vectorial_phase_retrieval` also uses the time series of the evolution of
+  other states and of their superpositions with :math:`\ket{\phi}`, and it needs the
+  spectrum to be supported on an interval that is known.
+* :func:`qibo.models.hybrid_input_output` embeds the problem in two dimensions, with the time
+  evolution of a Hamiltonian that commutes with :math:`H`, which makes the spectrum real and
+  positive.
+
+.. [Clinton2026] L. Clinton, T. S. Cubitt, R. Garcia-Patron, A. Montanaro, S. Stanisic, and
+   M. Stroeks, *Quantum phase estimation without controlled unitaries*,
+   `PRX Quantum 7, 010345 (2026) <https://doi.org/10.1103/7qcr-znl2>`_.
+
+.. autofunction:: qibo.models.vectorial_phase_retrieval
+
+.. autofunction:: qibo.models.hybrid_input_output
 
 
 Quantum Rejection Sampling
@@ -154,6 +197,14 @@ Bernstein-Vazirani
 .. autofunction:: qibo.models.BernsteinVazirani
 
 
+Simon
+^^^^^
+
+.. autofunction:: qibo.models.Simon
+
+.. autofunction:: qibo.models.simon_secret_string
+
+
 Quantum arithmetic
 ------------------
 
@@ -210,6 +261,12 @@ Trotter
 ^^^^^^^
 
 .. autofunction:: qibo.models.Trotter
+
+
+Randomized Trotter
+^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.RandomizedTrotter
 
 
 qDRIFT
