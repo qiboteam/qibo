@@ -1,6 +1,52 @@
+from itertools import pairwise
+
+from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+
+
+def _pauli_rotation(pauli: str, angle: float) -> list[gates.Gate]:
+    """Creates the gates of the rotation :math:`e^{-i \\theta P / 2}` of a Pauli string :math:`P`.
+
+    The Pauli matrices of the string are rotated to :math:`Z` with Clifford gates, then a ladder
+    of CNOT gates writes the parity of the qubits in the last of them, which has a
+    :class:`qibo.gates.RZ` gate. The identity is a :class:`qibo.gates.GlobalPhase` gate.
+
+    Args:
+        pauli (str): Pauli string, with one letter from ``"IXYZ"`` for each qubit. The :math:`j`-th
+            letter is the Pauli matrix applied to the :math:`j`-th qubit.
+        angle (float): angle :math:`\\theta` of the rotation.
+
+    Returns:
+        list: gates of the rotation.
+    """
+    targets = [qubit for qubit, letter in enumerate(pauli) if letter != "I"]
+
+    # the identity is a global phase
+    if len(targets) == 0:
+        return [gates.GlobalPhase(-angle / 2)]
+
+    # basis change that maps the Pauli string to Z in each of the targets, and a ladder
+    # of CNOTs that writes its parity in the last target
+    before, after = [], []
+    for qubit in targets:
+        if pauli[qubit] == "X":
+            before.append(gates.H(qubit))
+            after.append(gates.H(qubit))
+        elif pauli[qubit] == "Y":
+            before.extend([gates.SDG(qubit), gates.H(qubit)])
+            after.extend([gates.H(qubit), gates.S(qubit)])
+    pairs = list(pairwise(targets))
+
+    rotation = []
+    rotation.extend(before)
+    rotation.extend(gates.CNOT(*pair) for pair in pairs)
+    rotation.append(gates.RZ(targets[-1], theta=angle))
+    rotation.extend(gates.CNOT(*pair) for pair in reversed(pairs))
+    rotation.extend(after)
+
+    return rotation
 
 
 def _pauli_terms(
@@ -12,6 +58,7 @@ def _pauli_terms(
     ),
     nqubits: int | None,
     label: str = "operator",
+    real: bool = False,
     backend: Backend | None = None,
 ) -> list[tuple[str, complex]]:
     """Writes an operator as a sum of Pauli strings, :math:`\\sum_{k} c_{k} P_{k}`.
@@ -30,7 +77,10 @@ def _pauli_terms(
             ``operator``.
         label (str, optional): name of the argument of the caller that is ``operator``, which is
             used in the error messages. Defaults to ``"operator"``.
-        backend (:class:`qibo.backends.abstract.Backend`): backend to be used in the calculation.
+        real (bool, optional): If ``True``, the coefficients must be real numbers, which are
+            returned as floats. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the
+            calculation. If ``None``, it uses the current backend. Defaults to ``None``.
 
     Returns:
         list: tuples ``(pauli, coefficient)`` of the Pauli strings and their coefficients, with at
@@ -119,5 +169,23 @@ def _pauli_terms(
             ValueError,
             f"{label} must have at least one Pauli string with a non-zero coefficient.",
         )
+
+    if real:
+        coefficients = backend.cast(
+            [coefficient for _, coefficient in terms], dtype=backend.complex128
+        )
+
+        if backend.any(
+            backend.abs(backend.imag(coefficients))
+            > 1e-12 * backend.max(backend.abs(coefficients))
+        ):
+            raise_error(
+                ValueError, f"the coefficients of {label} must be real numbers."
+            )
+
+        terms = [
+            (pauli, float(coefficient))
+            for (pauli, _), coefficient in zip(terms, backend.real(coefficients))
+        ]
 
     return terms
