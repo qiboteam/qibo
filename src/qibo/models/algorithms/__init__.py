@@ -31,7 +31,12 @@ from qibo.models.algorithms.qae import QAE
 from qibo.models.algorithms.qdrift import qdrift
 from qibo.models.algorithms.qft import QFT
 from qibo.models.algorithms.qmc import QMC
-from qibo.models.algorithms.qpe import IQPE, QPE
+from qibo.models.algorithms.qpe import (
+    IQPE,
+    QPE,
+    hybrid_input_output,
+    vectorial_phase_retrieval,
+)
 from qibo.models.algorithms.qrs import QRS
 from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_function, qsvt_phases
@@ -76,6 +81,7 @@ __all__ = [
     "amplification_operator",
     "block_encoding_circuit",
     "hadamard_test",
+    "hybrid_input_output",
     "lcu_circuit",
     "lcu_prepare",
     "lcu_select",
@@ -87,4 +93,5 @@ __all__ = [
     "qsvt_phases",
     "simon_secret_string",
     "swap_test",
+    "vectorial_phase_retrieval",
 ]

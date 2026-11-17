@@ -36,6 +36,7 @@ from qibo.models.algorithms import (
     amplification_operator,
     block_encoding_circuit,
     hadamard_test,
+    hybrid_input_output,
     lcu_circuit,
     lcu_prepare,
     lcu_select,
@@ -47,6 +48,7 @@ from qibo.models.algorithms import (
     qsvt_phases,
     simon_secret_string,
     swap_test,
+    vectorial_phase_retrieval,
 )
 from qibo.models.circuit import Circuit
 from qibo.models.encodings import (
@@ -132,6 +134,7 @@ __all__ = [
     "hadamard_test",
     "hamming_weight_encoder",
     "hep",
+    "hybrid_input_output",
     "ladder_synthesis",
     "lcu_circuit",
     "lcu_prepare",
@@ -152,5 +155,6 @@ __all__ = [
     "unary_encoder",
     "unary_encoder_random_gaussian",
     "up_to_k_hamming_weight_encoder",
+    "vectorial_phase_retrieval",
     "vnCDR",
 ]
