@@ -37,7 +37,7 @@ from qibo.models.algorithms.qsp import qsp_circuit, qsp_phases
 from qibo.models.algorithms.qsvt import qsvt_circuit, qsvt_function, qsvt_phases
 from qibo.models.algorithms.shor import Shor
 from qibo.models.algorithms.simon import Simon, simon_secret_string
-from qibo.models.algorithms.trotter import Trotter
+from qibo.models.algorithms.trotter import RandomizedTrotter, Trotter
 
 __all__ = [
     "DH",
@@ -68,6 +68,7 @@ __all__ = [
     "Grover",
     "IterativeAmplitudeEstimationResult",
     "QSearch",
+    "RandomizedTrotter",
     "Shor",
     "Simon",
     "Trotter",
