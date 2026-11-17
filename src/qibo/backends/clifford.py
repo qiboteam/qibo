@@ -564,7 +564,7 @@ class CliffordBackend(Backend):
         circuit_stim = self._stim.Circuit()
         for gate in circuit.queue:
             name = gate.__class__.__name__
-            name = "S_DAG" if name == "SDG" else name
+            name = {"SDG": "S_DAG", "iSWAPDG": "ISWAP_DAG"}.get(name, name)
             circuit_stim.append(name, list(gate.qubits))
 
         x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (

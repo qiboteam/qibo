@@ -121,7 +121,17 @@ def test_single_qubit_gates(backend, gate):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "CY", "SWAP", "iSWAP", "FSWAP", "ECR", "Unitary"]
+TWO_QUBITS_CLIFFORDS = [
+    "CNOT",
+    "CZ",
+    "CY",
+    "SWAP",
+    "iSWAP",
+    "iSWAPDG",
+    "FSWAP",
+    "ECR",
+    "Unitary",
+]
 
 
 @pytest.mark.parametrize("gate", TWO_QUBITS_CLIFFORDS)
@@ -362,6 +372,7 @@ def test_stim(backend):
 
     nqubits = 3
     circuit = random_clifford(nqubits, backend=backend)
+    circuit.add([gates.SDG(0), gates.iSWAP(0, 1), gates.H(2), gates.iSWAPDG(1, 2)])
 
     result_qibo = clifford_bkd.execute_circuit(circuit)
     result_stim = clifford_stim.execute_circuit(circuit)

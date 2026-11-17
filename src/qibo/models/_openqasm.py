@@ -129,6 +129,9 @@ def _qibo_gate_name(gate):
     if gate.lower() == "iswap":
         return "iSWAP"
 
+    if gate.lower() == "iswapdg":
+        return "iSWAPDG"
+
     return gate.upper()
 
 

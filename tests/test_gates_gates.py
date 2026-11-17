@@ -1040,6 +1040,35 @@ def test_iswap(backend):
     backend.assert_allclose(unitary, target)
 
 
+def test_iswapdg(backend):
+    final_state = apply_gates(backend, [gates.X(1), gates.iSWAPDG(0, 1)], nqubits=2)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
+    target_state[2] = -1.0j
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
+
+    assert gates.iSWAPDG(0, 1).qasm_label[0] == "iswapdg"
+    assert gates.iSWAPDG(0, 1).clifford
+    assert gates.iSWAPDG(0, 1).hamming_weight
+    assert gates.iSWAPDG(0, 1).unitary
+
+    assert isinstance(gates.iSWAP(0, 1).dagger(), gates.iSWAPDG)
+    assert isinstance(gates.iSWAPDG(0, 1).dagger(), gates.iSWAP)
+    assert gates.iSWAP(1, 0).dagger().qubits == (1, 0)
+    assert gates.iSWAPDG(1, 0).dagger().qubits == (1, 0)
+
+    target = gates.iSWAPDG(0, 1).matrix(backend)
+
+    backend.assert_allclose(
+        target, backend.conj(gates.iSWAP(0, 1).matrix(backend)).T, atol=1e-10
+    )
+
+    circuit = Circuit(2)
+    circuit.add(gates.iSWAPDG(0, 1).decompose())
+    unitary = circuit.unitary(backend)
+
+    backend.assert_allclose(unitary, target, atol=1e-10)
+
+
 def test_siswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)
     target_state = np.zeros_like(backend.to_numpy(final_state))
@@ -1637,6 +1666,7 @@ def test_ecr_decomposition_is_exact_in_clifford_plus_t(backend):
         ("CU3", (0, 1, 0.3, 0.5, 0.9)),
         ("CSX", (0, 1)),
         ("CRY", (0, 1, 0.4)),
+        ("iSWAPDG", (0, 1)),
         ("SiSWAP", (0, 1)),
         ("RXXYY", (0, 1, 0.5)),
         ("TOFFOLI", (0, 1, 2)),
@@ -2354,6 +2384,7 @@ GATES = [
     ("SiSWAP", (0, 1)),
     ("SiSWAPDG", (0, 1)),
     ("iSWAP", (0, 1)),
+    ("iSWAPDG", (0, 1)),
     ("DEUTSCH", (0, 1, 2, 0.5)),
 ]
 

@@ -2398,6 +2398,7 @@ def test_gate_direction_reverses_non_symmetric_gates(backend, gate_class):
     [
         gates.CZ(0, 1),
         gates.iSWAP(0, 1),
+        gates.iSWAPDG(0, 1),
         gates.SWAP(0, 1),
         gates.FSWAP(0, 1),
         gates.SiSWAP(0, 1),
