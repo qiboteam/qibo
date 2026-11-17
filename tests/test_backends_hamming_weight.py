@@ -132,7 +132,17 @@ def test_single_qubit_gates(backend, gate, weight):
     assert result.symbolic() == hamming_result.symbolic()
 
 
-TWO_QUBIT_GATES = ["CZ", "SWAP", "iSWAP", "SiSWAP", "SiSWAPDG", "FSWAP", "SYC", "RZZ"]
+TWO_QUBIT_GATES = [
+    "CZ",
+    "SWAP",
+    "iSWAP",
+    "iSWAPDG",
+    "SiSWAP",
+    "SiSWAPDG",
+    "FSWAP",
+    "SYC",
+    "RZZ",
+]
 
 
 @pytest.mark.parametrize("weight", [1, 2, 3, 4, 5])

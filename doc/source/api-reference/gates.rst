@@ -237,6 +237,13 @@ iSwap (iSWAP)
     :members:
     :member-order: bysource
 
+Inverse iSwap (iSWAPDG)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.iSWAPDG
+    :members:
+    :member-order: bysource
+
 Square root of iSwap (SiSWAP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -190,6 +190,17 @@ if find_spec("pygridsynth") and find_spec("mpmath"):
         ],
     )
     clifford_plus_t.add(
+        gates.iSWAPDG,
+        [
+            gates.H(1),
+            gates.CNOT(1, 0),
+            gates.CNOT(0, 1),
+            gates.H(0),
+            gates.SDG(1),
+            gates.SDG(0),
+        ],
+    )
+    clifford_plus_t.add(
         gates.SiSWAP,
         [gates.SX(0), gates.SX(1)]
         + gates.RZ(0, math.pi / 2).decompose(method=METHOD)

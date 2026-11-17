@@ -1768,7 +1768,52 @@ class iSWAP(Gate):
         return "iswap"
 
     def _dagger(self) -> Gate:
-        return fSim(*self.target_qubits, math.pi / 2, 0.0, trainable=False)
+        return iSWAPDG(*self.qubits)
+
+
+class iSWAPDG(Gate):
+    """The :math:`\\text{iSWAP}^{\\dagger}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 0 & -i & 0 \\\\
+        0 & -i & 0 & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0: int, q1: int):
+        super().__init__()
+        self.name = "iswapdg"
+        self.draw_label = "idg"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+        self.unitary = True
+
+    @property
+    def clifford(self) -> bool:
+        return True
+
+    @property
+    def hamming_weight(self) -> bool:
+        return True
+
+    @property
+    def qasm_label(self) -> tuple[str, str]:
+        return (
+            "iswapdg",
+            "gate iswapdg q0,q1 {h q1; cx q1,q0; cx q0,q1; h q0; sdg q1; sdg q0;}",
+        )
+
+    def _dagger(self) -> Gate:
+        return iSWAP(*self.qubits)
 
 
 class SiSWAP(Gate):

@@ -84,6 +84,7 @@ GATES_TO_DECOMPOSE = [
     ("CU3", (0, 1, 0.37, 0.91, -0.6)),
     ("SWAP", (0, 1)),
     ("iSWAP", (0, 1)),
+    ("iSWAPDG", (0, 1)),
     ("SiSWAP", (0, 1)),
     ("SiSWAPDG", (0, 1)),
     ("FSWAP", (0, 1)),
