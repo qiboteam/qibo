@@ -71,6 +71,7 @@ from qibo.gates.gates import (
     Z,
     fSim,
     iSWAP,
+    iSWAPDG,
 )
 from qibo.gates.measurements import M
 from qibo.gates.special import Barrier, CallbackGate, FusedGate, remove_barriers
@@ -152,5 +153,6 @@ __all__ = [
     "Z",
     "fSim",
     "iSWAP",
+    "iSWAPDG",
     "remove_barriers",
 ]

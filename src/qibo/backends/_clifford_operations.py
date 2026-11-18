@@ -250,6 +250,18 @@ def iSWAP(
     return symplectic_matrix
 
 
+def iSWAPDG(
+    symplectic_matrix: ArrayLike, control_q: int, target_q: int, nqubits: int
+) -> ArrayLike:
+    """Decomposition --> H-CNOT-CNOT-H-SDG-SDG"""
+    symplectic_matrix = H(symplectic_matrix, target_q, nqubits)
+    symplectic_matrix = CNOT(symplectic_matrix, target_q, control_q, nqubits)
+    symplectic_matrix = CNOT(symplectic_matrix, control_q, target_q, nqubits)
+    symplectic_matrix = H(symplectic_matrix, control_q, nqubits)
+    symplectic_matrix = SDG(symplectic_matrix, target_q, nqubits)
+    return SDG(symplectic_matrix, control_q, nqubits)
+
+
 def FSWAP(
     symplectic_matrix: ArrayLike, control_q: int, target_q: int, nqubits: int
 ) -> ArrayLike:

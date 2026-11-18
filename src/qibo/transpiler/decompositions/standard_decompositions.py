@@ -274,6 +274,17 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
+    gates.iSWAPDG,
+    [
+        gates.H(1),
+        gates.CNOT(1, 0),
+        gates.CNOT(0, 1),
+        gates.H(0),
+        gates.SDG(1),
+        gates.SDG(0),
+    ],
+)
+standard_decompositions.add(
     gates.SiSWAP,
     [
         gates.SX(0),
