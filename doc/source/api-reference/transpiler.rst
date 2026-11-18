@@ -31,6 +31,14 @@ Placer
     :member-order: bysource
 
 
+Post layout
+^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.abstract.PostLayout
+    :members:
+    :member-order: bysource
+
+
 Router
 ^^^^^^
 
@@ -334,6 +342,14 @@ Noise-aware placer
 ^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.transpiler.placer.NoiseAwarePlacer
+    :members:
+    :member-order: bysource
+
+
+Noise-aware post layout
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.placer.NoiseAwarePostLayout
     :members:
     :member-order: bysource
 

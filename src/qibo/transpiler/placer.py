@@ -9,12 +9,17 @@ from qibo import Circuit, gates
 from qibo.backends import Backend
 from qibo.config import raise_error
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
-from qibo.transpiler.abstract import Placer, Router
+from qibo.transpiler.abstract import Placer, PostLayout, Router
 from qibo.transpiler.asserts import assert_placement
+from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.router import _find_connected_qubit
 
 if TYPE_CHECKING:
     from qibo.transpiler.hardware import HardwareModel
+
+# the gates that do not have a single-qubit gate error: barriers and measurements are not
+# gates of the hardware, and the identity, Z and RZ gates are virtual
+_ERRORLESS = (gates.Barrier, gates.I, gates.M, gates.RZ, gates.Z)
 
 
 def _find_gates_qubits_pairs(circuit: Circuit) -> list[list[int]]:
@@ -219,18 +224,23 @@ class NoiseAwarePlacer(Dense):
         where :math:`\\phi` places each qubit of the circuit on a qubit of the hardware,
         :math:`n_{1}(q)` and :math:`n_{m}(q)` are the numbers of single-qubit gates and of
         measurements of the qubit :math:`q`, and :math:`n_{2}(a, b)` is the number of
-        two-qubit gates between :math:`a` and :math:`b`. The cost is the weight of the
-        operations of the circuit, as there is no SWAP gate. If a layout is found,
+        two-qubit gates between :math:`a` and :math:`b`. The identity, Z and RZ gates are
+        virtual, so they do not count. The cost is the weight of the operations of the
+        circuit, as there is no SWAP gate. If a layout is found,
         :class:`qibo.transpiler.pipeline.Passes` does not need a router. If not, either
         because the circuit has no such layout or because a limit was reached before the
         search found any, the placer uses the method ``"dense"``, and the router has to move
         the qubits.
 
+        The search drops every partial layout whose cost, added to a lower bound of the cost of
+        the qubits that are left, is not lower than the cost of the best layout found, and it
+        places first the qubits with more two-qubit gates, each on the nodes that cost less.
+        So the layouts that it finds get better and better, and if the search ends before a
+        limit is reached, the layout is the one with the lowest cost, *i.e.* the optimal one.
         The search is bounded by ``max_matches`` and ``call_limit``, which are counts and not
-        times, so the placement is reproducible for a given version of :mod:`networkx`. The
-        layouts are not found in the order of their cost, so a limit can leave out a better
-        one: the lower the limits, the faster the placer and the farther the layout can be
-        from the best one.
+        times, so the placement is reproducible for a given version of :mod:`networkx`. If a
+        limit is reached, the best layout found until then is taken, and a higher limit can
+        find a better one.
 
     ``"dense"``
         It works as :class:`qibo.transpiler.placer.Dense`, which has the details. A region
@@ -246,7 +256,8 @@ class NoiseAwarePlacer(Dense):
 
         where :math:`E_{R}` are the connections of the region, and :math:`n_{1}`,
         :math:`n_{2}` and :math:`n_{m}` are the numbers of single-qubit gates, two-qubit gates
-        and measurements of the circuit on the qubits that take part in two-qubit gates. It is
+        and measurements of the circuit on the qubits that take part in two-qubit gates, where
+        the identity, Z and RZ gates are virtual and do not count. It is
         the expected weight of the operations if they were spread evenly over the region,
         which does not favor the regions with more connections just because they have more
         errors. The cost also sets the order of the qubits of the region, after their
@@ -315,16 +326,16 @@ class NoiseAwarePlacer(Dense):
             ``on_qubits`` restricts, which must be a subgraph of it.
         method (str, optional): Method to place the qubits, ``"vf2"`` or ``"dense"``, see
             above. Defaults to ``"vf2"``.
-        max_matches (int, optional): Only for the method ``"vf2"``. Number of layouts, in the
-            order that VF2 finds them, after which the search stops and the best one is
+        max_matches (int, optional): Only for the method ``"vf2"``. Number of layouts, each
+            better than the previous one, after which the search stops and the best one is
             taken. Defaults to :math:`10000`.
         call_limit (int, optional): Only for the method ``"vf2"``. Number of feasibility
             checks of VF2 after which the search stops, and the best layout found until then
             is taken. It bounds the time of the circuits that have no layout, as
-            :mod:`networkx` makes of the order of :math:`10^{6}` checks per second. Large
-            circuits on well-connected hardware, *e.g.* about thirty qubits on a grid, can
-            need more checks to find their first layout, and then the placer falls back.
-            Defaults to :math:`10^{6}`.
+            :mod:`networkx` makes of the order of :math:`10^{5}` to :math:`10^{6}` checks per
+            second. Large circuits on well-connected hardware, *e.g.* about thirty qubits on a
+            grid, can need more checks to find their first layout, and then the placer falls
+            back. Defaults to :math:`10^{6}`.
 
     Raises:
         ValueError: If ``method`` is not ``"vf2"`` or ``"dense"``, or if ``max_matches`` or
@@ -371,47 +382,7 @@ class NoiseAwarePlacer(Dense):
             return super().__call__(circuit, backend)
 
         assert_placement(circuit, self.connectivity)
-        pairs = Counter(tuple(pair) for pair in _find_gates_qubits_pairs(circuit))
-        if not pairs:
-            return super().__call__(circuit, backend)
-
-        nodes = self._weights.nodes
-        edge_weight = _connectivity_weights(self.connectivity, self._weights)
-        singles = Counter(
-            gate.qubits[0]
-            for gate in circuit.queue
-            if len(gate.qubits) == 1 and not isinstance(gate, (gates.Barrier, gates.M))
-        )
-        measured = Counter(
-            qubit
-            for gate in circuit.queue
-            if isinstance(gate, gates.M)
-            for qubit in gate.qubits
-        )
-
-        best, layout = math.inf, None
-        matcher = _CallLimitedMatcher(
-            self.connectivity, nx.Graph(list(pairs)), self.call_limit
-        )
-        for number, mapping in enumerate(matcher.subgraph_monomorphisms_iter(), 1):
-            place = {qubit: node for node, qubit in mapping.items()}
-            cost = sum(
-                count * nodes[place[qubit]][name]
-                for qubit in place
-                for count, name in (
-                    (singles[qubit], "gate"),
-                    (measured[qubit], "readout"),
-                )
-                if count
-            ) + sum(
-                count * edge_weight[place[first], place[second]]
-                for (first, second), count in pairs.items()
-            )
-            if cost < best:
-                best, layout = cost, place
-            if number == self.max_matches:
-                break
-
+        layout = self._search(circuit)
         if layout is None:
             return super().__call__(circuit, backend)
 
@@ -431,7 +402,7 @@ class NoiseAwarePlacer(Dense):
         singles = sum(
             len(gate.qubits) == 1 and gate.qubits[0] in qubits
             for gate in circuit.queue
-            if not isinstance(gate, (gates.Barrier, gates.M))
+            if not isinstance(gate, _ERRORLESS)
         )
         measured = sum(
             len(qubits.intersection(gate.qubits))
@@ -450,6 +421,285 @@ class NoiseAwarePlacer(Dense):
         }
         edge_cost = {edge: pairs * weight for edge, weight in edge_weight.items()}
         return node_cost, edge_cost
+
+    def _search(
+        self, circuit: Circuit, initial: dict | None = None, pinned: set | None = None
+    ) -> dict | None:
+        """Layout with the lowest cost that needs no SWAP gates, searched with VF2.
+
+        The search drops the partial layouts that cannot beat the best layout so far, so it
+        returns the best layout if it ends before a limit is reached.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be placed.
+            initial (dict, optional): Layout of the circuit, from each qubit to a node. It
+                is the first best layout, and it is returned unless a layout found has a
+                strictly lower cost. It is not used if two-qubit gates act on nodes that
+                are not connected. Defaults to ``None``.
+            pinned (set, optional): Nodes that the layouts cannot use. Defaults to
+                ``None``.
+
+        Returns:
+            dict | None: Layout of the qubits that take part in two-qubit gates, from each
+            qubit to a node, or ``None`` if the circuit has no two-qubit gates or no layout
+            was found.
+        """
+        pairs = Counter(tuple(pair) for pair in _find_gates_qubits_pairs(circuit))
+        if not pairs:
+            return None
+
+        nodes = self._weights.nodes
+        edge_weight = _connectivity_weights(self.connectivity, self._weights)
+        singles = Counter(
+            gate.qubits[0]
+            for gate in circuit.queue
+            if len(gate.qubits) == 1 and not isinstance(gate, _ERRORLESS)
+        )
+        measured = Counter(
+            qubit
+            for gate in circuit.queue
+            if isinstance(gate, gates.M)
+            for qubit in gate.qubits
+        )
+
+        target = self.connectivity
+        if pinned:
+            target = target.subgraph(
+                node for node in target.nodes if node not in pinned
+            )
+        node_cost = {
+            qubit: {
+                node: sum(
+                    count * nodes[node][name]
+                    for count, name in (
+                        (singles[qubit], "gate"),
+                        (measured[qubit], "readout"),
+                    )
+                    if count
+                )
+                for node in target.nodes
+            }
+            for qubit in {qubit for pair in pairs for qubit in pair}
+        }
+        matcher = _LayoutMatcher(
+            target,
+            _constrained_order(pairs),
+            self.call_limit,
+            node_cost,
+            edge_weight,
+            {frozenset(pair): count for pair, count in pairs.items()},
+        )
+
+        layout = None
+        if initial is not None:
+            initial = {qubit: initial[qubit] for pair in pairs for qubit in pair}
+            if all(node in target for node in initial.values()) and all(
+                (initial[first], initial[second]) in edge_weight
+                for first, second in pairs
+            ):
+                layout, matcher.best = initial, matcher.cost(initial)
+
+        # the layouts that the matcher yields are better than the best one at that time
+        for number, mapping in enumerate(matcher.subgraph_monomorphisms_iter(), 1):
+            layout = {qubit: node for node, qubit in mapping.items()}
+            matcher.best = matcher.cost(layout)
+            if number == self.max_matches:
+                break
+
+        return layout
+
+
+class NoiseAwarePostLayout(PostLayout):
+    """Moves a routed circuit to the least noisy qubits of the hardware that can run it.
+
+    The router makes a circuit executable by adding SWAP gates, but it does not know the
+    noise of the hardware, and the placer chose the qubits before knowing how many SWAP gates
+    the circuit needs. A SWAP gate is three entangling gates, so the couplings that a routed
+    circuit uses weigh more, and the quietest place where it fits may be another one. This
+    pass finds the places of the hardware where the very same routed circuit fits, *i.e.* the
+    subgraph monomorphisms of the interaction graph of the circuit into the connectivity,
+    with the VF2 algorithm of :mod:`networkx`, and moves the circuit to the one with the
+    lowest cost
+
+    .. math::
+        c(\\phi) = \\sum_{q} \\left( n_{1}(q) \\, w_{\\phi(q)}^{\\text{gate}}
+        + n_{m}(q) \\, w_{\\phi(q)}^{\\text{readout}} \\right)
+        + \\sum_{(a, b)} n_{2}(a, b) \\, w_{\\phi(a) \\phi(b)} \\, ,
+
+    where :math:`\\phi` places each qubit of the circuit on a qubit of the hardware,
+    :math:`n_{1}(q)` and :math:`n_{m}(q)` are the numbers of single-qubit gates and of
+    measurements of the qubit :math:`q`, :math:`n_{2}(a, b)` is the number of two-qubit gates
+    between :math:`a` and :math:`b`, and the weights :math:`w` are the ones of
+    :class:`qibo.transpiler.placer.NoiseAwarePlacer`, see
+    :meth:`qibo.transpiler.hardware.HardwareModel.weighted_connectivity`. The identity, Z and
+    RZ gates are virtual, so they do not count.
+
+    Only the labels of the physical qubits change. The gates of the circuit, their order and
+    the SWAP gates of the router do not, so the circuit needs the same number of gates, and
+    it still respects the connectivity. The layout that the circuit already has is scored
+    first and it is replaced only by a layout with a strictly lower cost, so the cost never
+    increases, and the circuit is not changed if it cannot be improved. The new labels are
+    also written in the layout that the router returned, which still describes how the
+    qubits move, and the transpiled circuit stays equivalent to the original one.
+
+    The cost is exact if the pass runs on the native circuit, because the SWAP gates are then
+    decomposed and the entangling gates of each coupling are counted.
+    :func:`qibo.transpiler.pipeline.generate_preset_passes` runs it at the end of the
+    pipeline, so that the optimizers have already removed the gates that they can. The only
+    exception is a directed connectivity, where the pass that sets the direction of the gates
+    depends on the qubits, so it runs before it, and the optimizers that follow can still
+    remove gates, which changes the counts a little.
+
+    The qubits that have single-qubit gates or measurements but no two-qubit gates are not
+    moved, because the interaction graph has nothing to place them with, and the layouts that
+    are searched do not use their physical qubits. The qubits without operations keep their
+    labels if they are free, and take the remaining qubits otherwise.
+
+    The search is the one of :class:`qibo.transpiler.placer.NoiseAwarePlacer`, which drops the
+    partial layouts that cannot beat the best one, and the layout that the circuit has is the
+    first best layout, so a search that ends before a limit is reached finds the layout with
+    the lowest cost. It is bounded by ``max_matches`` and ``call_limit``, which are counts and
+    not times, so the result is reproducible for a given version of :mod:`networkx`. Their
+    defaults are lower than the ones of the placer, because this pass runs for every
+    transpiled circuit. If a limit is reached, the best layout found until then is taken.
+
+    Example:
+        A circuit that needs a SWAP gate is routed on the first qubits of a line, which are
+        noisy, by the trivial placer. The pass moves it to the quietest three qubits that
+        are connected as the routed circuit, with the same number of entangling gates.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import HardwareModel, NoiseAwarePostLayout
+            from qibo.transpiler.pipeline import generate_preset_passes
+
+            couplings = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+            errors = [0.05, 0.04, 0.02, 0.001, 0.003]
+            hardware = HardwareModel(
+                tuple(range(6)),
+                couplings,
+                errors={
+                    "1q": {qubit: 0.001 for qubit in range(6)},
+                    "2q": dict(zip(couplings, errors)),
+                },
+            )
+
+            circuit = Circuit(3)
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(1, 2))
+            circuit.add(gates.CNOT(0, 2))
+            circuit.add(gates.M(0, 1, 2))
+
+            for post_layout in (None, NoiseAwarePostLayout(hardware)):
+                pipeline = generate_preset_passes(
+                    connectivity=hardware.connectivity,
+                    post_layout=post_layout,
+                    seed=1,
+                )
+                transpiled, layout = pipeline(circuit)
+                used = {transpiled.wire_names[q] for gate in transpiled.queue for q in gate.qubits}
+                cz_gates = sum(isinstance(gate, gates.CZ) for gate in transpiled.queue)
+                print(sorted(used), cz_gates)
+
+        .. testoutput::
+
+            [0, 1, 2] 6
+            [3, 4, 5] 6
+
+    Args:
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`): Hardware model. Its
+            connectivity is the one of the pass, until
+            :class:`qibo.transpiler.pipeline.Passes` sets another one, *e.g.* the one that
+            ``on_qubits`` restricts, which must be a subgraph of it.
+        max_matches (int, optional): Number of layouts, each better than the previous one,
+            after which the search stops and the best one is taken. Defaults to
+            :math:`2500`.
+        call_limit (int, optional): Number of feasibility checks of VF2 after which the
+            search stops, and the best layout found until then is taken. As
+            :mod:`networkx` makes of the order of :math:`10^{5}` to :math:`10^{6}` checks per
+            second, the default is a search of a fraction of a second. Defaults to
+            :math:`50000`.
+
+    Raises:
+        ValueError: If ``max_matches`` or ``call_limit`` is not positive.
+        ConnectivityError: If the connectivity of the pass is not a subgraph of the
+            connectivity of the hardware model.
+    """
+
+    def __init__(
+        self,
+        hardware: "HardwareModel",
+        max_matches: int = 2_500,
+        call_limit: int = 50_000,
+    ):
+        self._placer = NoiseAwarePlacer(
+            hardware, max_matches=max_matches, call_limit=call_limit
+        )
+        self.hardware = hardware
+        self.connectivity = hardware.connectivity
+
+    def __call__(self, circuit: Circuit, layout: TranspileLayout) -> TranspileLayout:
+        """Move the routed circuit to the least noisy qubits that can run it.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Routed circuit. Its
+                ``wire_names`` change in place if a better layout is found.
+            layout (:class:`qibo.transpiler.layout.TranspileLayout`): Layout of the
+                circuit, which the router returns.
+
+        Returns:
+            :class:`qibo.transpiler.layout.TranspileLayout`: Layout with the labels of the
+            new physical qubits, or ``layout`` if the circuit is not moved.
+        """
+        assert_placement(circuit, self.connectivity)
+        self._placer.connectivity = self.connectivity
+
+        labels = list(circuit.wire_names)
+        with_pairs = {
+            qubit for pair in _find_gates_qubits_pairs(circuit) for qubit in pair
+        }
+        busy = {
+            gate.qubits[0]
+            for gate in circuit.queue
+            if len(gate.qubits) == 1 and not isinstance(gate, _ERRORLESS)
+        } | {
+            qubit
+            for gate in circuit.queue
+            if isinstance(gate, gates.M)
+            for qubit in gate.qubits
+        }
+        pinned = busy - with_pairs
+        best = self._placer._search(
+            circuit,
+            initial=dict(enumerate(labels)),
+            pinned={labels[qubit] for qubit in pinned},
+        )
+        if best is None or all(labels[qubit] == node for qubit, node in best.items()):
+            return layout
+
+        # the qubits without operations keep their label if no moved qubit takes it
+        new = {qubit: best.get(qubit, label) for qubit, label in enumerate(labels)}
+        taken = set(best.values()) | {labels[qubit] for qubit in pinned}
+        displaced = []
+        for qubit in range(circuit.nqubits):
+            if qubit in best or qubit in pinned:
+                continue
+            if labels[qubit] in taken:
+                displaced.append(qubit)
+            else:
+                taken.add(labels[qubit])
+        free = (node for node in self.connectivity.nodes if node not in taken)
+        for qubit in displaced:
+            new[qubit] = next(free)
+
+        circuit.wire_names = [new[qubit] for qubit in range(circuit.nqubits)]
+        rename = {label: new[qubit] for qubit, label in enumerate(labels)}
+        return TranspileLayout(
+            {rename[label]: index for label, index in layout.items()},
+            [rename[label] for label in layout.initial_layout],
+            layout.nqubits_input,
+        )
 
 
 class StarConnectivityPlacer(Placer):
@@ -811,28 +1061,112 @@ class ReverseTraversal(Placer):
         return final_mapping
 
 
-class _CallLimitedMatcher(nx.algorithms.isomorphism.GraphMatcher):
-    """VF2 matcher that stops extending the mapping after a number of feasibility checks.
+class _LayoutMatcher(nx.algorithms.isomorphism.GraphMatcher):
+    """VF2 matcher that searches the layout with the lowest cost.
 
-    Once the limit is reached, no candidate is feasible, so the search unwinds and ends,
-    and the mappings found until then are kept.
+    It differs from the matcher of :mod:`networkx` in three things. The search stops extending
+    the layout after a number of feasibility checks, so that it is bounded and reproducible.
+    A partial layout is dropped if its cost, added to a lower bound of the cost of the qubits
+    that are left, is not lower than ``best``, which the caller updates, so the layouts that
+    are found get better and better, and the search that ends before the limit has found the
+    best one. And the nodes of each qubit are tried from the cheapest, so that the good layouts
+    come first.
 
     Args:
-        G1 (:class:`networkx.Graph`): Graph where the subgraph is searched.
-        G2 (:class:`networkx.Graph`): Subgraph to be found.
+        device (:class:`networkx.Graph`): Graph where the circuit is placed.
+        pattern (:class:`networkx.Graph`): Interaction graph of the circuit. The search places
+            its nodes in the order in which they were inserted.
         call_limit (int): Number of feasibility checks allowed.
+        node_cost (dict): Cost of each qubit on each node of the device,
+            ``node_cost[qubit][node]``.
+        edge_weight (dict): Weight of each coupling of the device, in both directions,
+            ``edge_weight[node, other]``.
+        counts (dict): Number of two-qubit gates of each pair of qubits, with the pair as a
+            ``frozenset``.
     """
 
-    def __init__(self, G1: nx.Graph, G2: nx.Graph, call_limit: int):
-        super().__init__(G1, G2)
+    def __init__(
+        self,
+        device: nx.Graph,
+        pattern: nx.Graph,
+        call_limit: int,
+        node_cost: dict,
+        edge_weight: dict,
+        counts: dict,
+    ):
+        super().__init__(device, pattern)
         self.calls = 0
         self.call_limit = call_limit
+        self.best = math.inf
+        self._node_cost = node_cost
+        self._edge_weight = edge_weight
+        self._counts = counts
+        # lower bounds of the cost of a qubit and of a gate, which are zero if they are
+        # infinite, so that the bounds are always finite
+        self._min_node = {}
+        for qubit, costs in node_cost.items():
+            lowest = min(costs.values())
+            self._min_node[qubit] = lowest if math.isfinite(lowest) else 0.0
+        lowest = min(edge_weight.values(), default=0.0)
+        self._min_edge = lowest if math.isfinite(lowest) else 0.0
+        size = pattern.number_of_nodes() + 1
+        self._total_node = sum(self._min_node.values())
+        self._total_gates = sum(counts.values())
+        # cost, lower bound of the qubits, and gates of the partial layout of each size
+        self._partial_cost = [0.0] * size
+        self._partial_nodes = [0.0] * size
+        self._partial_gates = [0.0] * size
+
+    def candidate_pairs_iter(self):
+        pairs = list(super().candidate_pairs_iter())
+        # a stable sort: the nodes that cost the same stay in the order of VF2
+        pairs.sort(key=lambda pair: self._increment(*pair)[0])
+        return iter(pairs)
+
+    def cost(self, layout: dict) -> float:
+        """Cost of a layout, from each qubit to a node, of all the qubits of the pattern."""
+        total = sum(self._node_cost[qubit][node] for qubit, node in layout.items())
+        for pair, count in self._counts.items():
+            first, second = pair
+            total += count * self._edge_weight[layout[first], layout[second]]
+        return total
+
+    def semantic_feasibility(self, G1_node, G2_node) -> bool:
+        size = len(self.core_1)
+        increment, completed = self._increment(G1_node, G2_node)
+        cost = self._partial_cost[size] + increment
+        nodes = self._partial_nodes[size] + self._min_node[G2_node]
+        done = self._partial_gates[size] + completed
+        bound = (
+            cost
+            + (self._total_node - nodes)
+            + self._min_edge * (self._total_gates - done)
+        )
+        if bound >= self.best:
+            return False
+        self._partial_cost[size + 1] = cost
+        self._partial_nodes[size + 1] = nodes
+        self._partial_gates[size + 1] = done
+        return True
 
     def syntactic_feasibility(self, G1_node, G2_node) -> bool:
         self.calls += 1
         return self.calls <= self.call_limit and super().syntactic_feasibility(
             G1_node, G2_node
         )
+
+    def _increment(self, node, qubit) -> tuple[float, int]:
+        """Cost that placing the qubit on the node adds to the partial layout, and the number of
+        two-qubit gates that it completes. A node that is not coupled to the nodes of the
+        qubits that the qubit has gates with costs infinity, and it is not feasible."""
+        cost, completed = self._node_cost[qubit][node], 0
+        for other in self.G2[qubit]:
+            if other in self.core_2:
+                count = self._counts[frozenset((qubit, other))]
+                weight = self._edge_weight.get((node, self.core_2[other]), math.inf)
+                cost += count * weight
+                completed += count
+        return cost, completed
 
 
 def _connectivity_weights(connectivity: nx.Graph, weights: nx.Graph) -> dict:
@@ -869,3 +1203,47 @@ def _connectivity_weights(connectivity: nx.Graph, weights: nx.Graph) -> dict:
         ]
         edge_weight[edge] = edge_weight[edge[::-1]] = sum(values) / len(values)
     return edge_weight
+
+
+def _constrained_order(pairs: Counter) -> nx.Graph:
+    """Interaction graph of a circuit with its qubits inserted most constrained first.
+
+    The search of a layout places the qubits in this order. It starts with the qubit that has
+    the most two-qubit gates, and it goes on with the qubit that has the most gates with the
+    qubits that are already placed, and then the most gates. The ties are decided by the lowest
+    index. If the graph is not connected, it goes on with the next group of qubits.
+
+    Args:
+        pairs (collections.Counter): Number of two-qubit gates of each pair of qubits.
+
+    Returns:
+        :class:`networkx.Graph`: Interaction graph, with the same edges as the pairs.
+    """
+    gates = nx.Graph()
+    for (first, second), count in pairs.items():
+        gates.add_edge(first, second, count=count)
+    total = {
+        qubit: sum(edge["count"] for edge in gates[qubit].values()) for qubit in gates
+    }
+
+    order = []
+    while len(order) < len(gates):
+        order.append(
+            max(
+                (qubit for qubit in gates if qubit not in order),
+                key=lambda qubit: (
+                    sum(
+                        gates[qubit][other]["count"]
+                        for other in gates[qubit]
+                        if other in order
+                    ),
+                    total[qubit],
+                    -qubit,
+                ),
+            )
+        )
+
+    ordered = nx.Graph()
+    ordered.add_nodes_from(order)
+    ordered.add_edges_from(gates.edges)
+    return ordered

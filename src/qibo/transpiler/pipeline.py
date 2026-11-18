@@ -17,7 +17,7 @@ from qibo.transpiler._exceptions import (
     PlacementError,
     TranspilerPipelineError,
 )
-from qibo.transpiler.abstract import Optimizer, Placer, Router
+from qibo.transpiler.abstract import Optimizer, Placer, PostLayout, Router
 from qibo.transpiler.asserts import (
     _find_unconnected_gate,
     assert_connectivity,
@@ -188,6 +188,15 @@ class Passes:
                 final_layout = TranspileLayout(
                     final_layout, initial_layout, nqubits_input
                 )
+            elif isinstance(transpiler_pass, PostLayout):
+                transpiler_pass.connectivity = self.connectivity
+                if final_layout is None:
+                    raise_error(
+                        TranspilerPipelineError,
+                        "A post layout relabels a routed circuit, so it needs a router "
+                        + "before it.",
+                    )
+                final_layout = transpiler_pass(circuit, final_layout)
             elif isinstance(transpiler_pass, Unroller):
                 circuit = transpiler_pass(circuit, backend=unroller_backend)
             elif transpiler_pass.__class__.__name__ == "QiskitPasses":
@@ -257,6 +266,7 @@ def generate_preset_passes(
     routing_trials: int = 5,
     optimization_level: int = 0,
     sampling_only: bool = False,
+    post_layout: PostLayout | None = None,
     backend: Backend | None = None,
 ) -> Passes:
     """Generate a ready-to-use transpiler pipeline.
@@ -281,6 +291,11 @@ def generate_preset_passes(
     6. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates,
        approximating some two-qubit gates with fewer entangling gates if
        ``approximation_degree`` is lower than :math:`1`.
+    7. ``post_layout``, if it is given, which chooses other physical qubits for the
+       routed circuit without changing its gates. It runs on the native circuit, where the
+       entangling gates of each coupling are exact. If ``connectivity`` is directed, it runs
+       before the pass that sets the direction of the gates, which depends on the qubits.
+       Otherwise, it runs after the optimizers, so that it sees the final gates.
 
     If ``connectivity`` is directed, the pipeline ends with a
     :class:`qibo.transpiler.optimizer.GateDirection` pass and an unroller, so that the
@@ -419,6 +434,13 @@ def generate_preset_passes(
             :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement` and
             :class:`qibo.transpiler.optimizer.RemoveFinalReset`, before the layout. It has
             no effect if ``optimization_level`` is :math:`0`. Defaults to ``False``.
+        post_layout (:class:`qibo.transpiler.abstract.PostLayout`, optional): Pass that
+            chooses other physical qubits for the routed circuit, *e.g.*
+            :class:`qibo.transpiler.placer.NoiseAwarePostLayout`, which moves it to the
+            least noisy qubits that can run it. It runs at the end of the pipeline, except
+            on a directed ``connectivity``, and it updates the final layout. It requires
+            ``connectivity``. Defaults to ``None``, so the qubits are the ones that the
+            placer chose.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -476,6 +498,9 @@ def generate_preset_passes(
     before_layout, before_unroller, after_unroller = _optimization_stages(
         optimization_level, native_gates, sampling_only, approximation_degree
     )
+
+    if post_layout is not None and connectivity is None:
+        raise_error(ValueError, "``post_layout`` requires ``connectivity``.")
 
     if connectivity is None:
         passes = [Validation()]
@@ -563,13 +588,17 @@ def generate_preset_passes(
         *before_unroller,
         Unroller(native_gates, **synthesis, backend=backend),
     ]
+    # the post layout runs last, so that it sees the final gates, unless the pass that
+    # sets the direction of the gates has to run after it, because it depends on the qubits
+    last = [] if post_layout is None else [post_layout]
     if connectivity.is_directed():
         # the unroller does not choose the direction of the two-qubit gates, and the
         # gates that reverse them are not necessarily native. They are decomposed exactly,
         # without ``approximation_degree``, since they are simple gates that cannot be
         # approximated with fewer entangling gates.
-        passes.extend([GateDirection(), Unroller(native_gates, backend=backend)])
-    passes.extend(after_unroller)
+        passes.extend([*last, GateDirection(), Unroller(native_gates, backend=backend)])
+        last = []
+    passes.extend([*after_unroller, *last])
 
     return Passes(
         passes=passes,
@@ -631,6 +660,7 @@ def transpile(
     routing_trials: int = 5,
     optimization_level: int = 0,
     sampling_only: bool = False,
+    post_layout: PostLayout | None = None,
     num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
@@ -770,6 +800,11 @@ def transpile(
             :func:`qibo.transpiler.pipeline.generate_preset_passes`. It logs a warning
             for the circuits without measurements, and it has no effect if
             ``optimization_level`` is :math:`0`. Defaults to ``False``.
+        post_layout (:class:`qibo.transpiler.abstract.PostLayout`, optional): Pass that
+            chooses other physical qubits for the routed circuits, see
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. All the circuits use
+            it, and each worker process gets its own copy. It requires ``connectivity``.
+            Defaults to ``None``.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -835,6 +870,7 @@ def transpile(
         routing_trials=routing_trials,
         optimization_level=optimization_level,
         sampling_only=sampling_only,
+        post_layout=post_layout,
         backend=backend,
     )
     if isinstance(circuits, Circuit):
