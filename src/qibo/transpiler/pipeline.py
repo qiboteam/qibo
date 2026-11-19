@@ -172,8 +172,12 @@ class Passes:
                     circuit = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Placer):
                 transpiler_pass.connectivity = self.connectivity
+                wire_names = circuit.wire_names.copy()
                 final_layout = transpiler_pass(circuit, backend=backend)
-                placer = transpiler_pass
+                # a placer that leaves the layout, *e.g.* because it needs no SWAP gates,
+                # does not take the place of the one that decided it
+                if placer is None or circuit.wire_names != wire_names:
+                    placer = transpiler_pass
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
                 assert_placement(circuit, self.connectivity)
@@ -453,17 +457,16 @@ def generate_preset_passes(
             least noisy qubits that can run it. It runs at the end of the pipeline, except
             on a directed ``connectivity``, and it updates the final layout. It can skip
             itself if it has nothing to do after the placer, see
-            :meth:`qibo.transpiler.abstract.PostLayout.skip`. It requires ``connectivity``.
+            :meth:`qibo.transpiler.abstract.PostLayout.skip`, which is told the placer that
+            decided the layout. It requires ``connectivity``.
             Defaults to ``None``, so the qubits are the ones that the placer chose.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
             whose errors the :class:`qibo.transpiler.placer.NoiseAwarePlacer` of the layout
             search uses, so that the layout without SWAP gates that it finds is the one with
-            the least noise, and that
-            :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition` uses to choose
-            the single-qubit gates with the lowest error. Its connectivity must be
-            ``connectivity``, or a graph that contains it. If ``None``, the placer takes the
-            first layout without SWAP gates that it finds, and the optimizer chooses the
-            shortest gates. Defaults to ``None``.
+            the least noise. Its connectivity must be ``connectivity``, or a graph that
+            contains it. If ``None``, the placer takes the first layout without
+            SWAP gates that it finds. If the layout is not searched as described above,
+            it has no effect, and a warning is logged. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -473,7 +476,8 @@ def generate_preset_passes(
 
     Raises:
         ConnectivityError: If ``initial_layout``, ``layout_method`` or ``routing_method``
-            is given without ``connectivity``.
+            is given without ``connectivity``, or if the qubits and couplings of
+            ``connectivity`` are not in ``hardware``.
         PlacementError: If ``initial_layout`` is given with a non-trivial ``layout_method``.
         ValueError: If ``layout_method`` or ``routing_method`` is not a valid method, if
             ``post_layout`` or ``hardware`` is given without ``connectivity``, if
@@ -526,8 +530,19 @@ def generate_preset_passes(
     if post_layout is not None and connectivity is None:
         raise_error(ValueError, "``post_layout`` requires ``connectivity``.")
 
-    if hardware is not None and connectivity is None:
-        raise_error(ValueError, "``hardware`` requires ``connectivity``.")
+    if hardware is not None:
+        if connectivity is None:
+            raise_error(ValueError, "``hardware`` requires ``connectivity``.")
+
+        couplings = hardware.connectivity
+        if not set(connectivity.nodes) <= set(couplings.nodes) or any(
+            not (couplings.has_edge(*edge) or couplings.has_edge(*edge[::-1]))
+            for edge in connectivity.edges
+        ):
+            raise_error(
+                ConnectivityError,
+                "The connectivity must be a subgraph of the one of ``hardware``.",
+            )
 
     if connectivity is None:
         passes = [Validation()]
@@ -556,6 +571,11 @@ def generate_preset_passes(
     )
     if default_layout:
         layout_method = "reverse_traversal"
+    if hardware is not None and not default_layout:
+        log.warning(
+            "``hardware`` has no effect, because the layout is not searched with this "
+            + "configuration."
+        )
 
     if layout_trials is None:
         layout_trials = 1 if optimization_level == 0 else 5

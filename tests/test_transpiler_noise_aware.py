@@ -20,6 +20,7 @@ from qibo.transpiler.optimizer import GateDirection
 from qibo.transpiler.pipeline import generate_preset_passes, transpile
 from qibo.transpiler.placer import (
     Dense,
+    ReverseTraversal,
     _connectivity_weights,
     _constrained_order,
     _LayoutMatcher,
@@ -521,6 +522,63 @@ def test_post_layout_in_passes():
         assert post.placers == [placer]
         assert post.calls == int(not skip)
         assert (post in called) == (not skip)
+
+
+@pytest.mark.parametrize(
+    "pairs, decider",
+    [
+        # the layout is kept
+        ([(0, 1), (1, 2)], NoiseAwarePlacer),
+        # a layout without SWAP gates is found, and the reverse traversal keeps it
+        ([(0, 2), (2, 1)], NoiseAwarePlacer),
+        # there is none, so the reverse traversal decides it
+        ([(0, 1), (1, 2), (0, 2)], ReverseTraversal),
+    ],
+)
+def test_post_layout_in_default_layout_search(pairs, decider):
+    """The post layout is told the placer that decided the layout, and not the last one."""
+    hardware = _line()
+    post = Identity()
+    passes = generate_preset_passes(
+        connectivity=hardware.connectivity,
+        optimization_level=1,
+        hardware=hardware,
+        post_layout=post,
+        seed=1,
+    )
+    passes(_circuit(6, pairs))
+    assert [type(placer) for placer in post.placers] == [decider]
+
+
+def test_noise_aware_post_layout_after_default_layout_search():
+    hardware = _line()
+
+    # the layout that was kept is not moved to the quietest qubits
+    post = NoiseAwarePostLayout(hardware)
+    passes = generate_preset_passes(
+        connectivity=hardware.connectivity,
+        optimization_level=1,
+        hardware=hardware,
+        post_layout=post,
+    )
+    transpiled, _ = passes(_circuit(6, [(0, 1), (1, 2)]))
+    assert post.stop_reason == "skipped"
+    assert transpiled.wire_names == list(range(6))
+
+    # the best layout that the placer found is not searched again if the post layout trusts it
+    post = NoiseAwarePostLayout(hardware, trust_placer=True)
+    passes = generate_preset_passes(
+        connectivity=hardware.connectivity,
+        optimization_level=1,
+        hardware=hardware,
+        post_layout=post,
+    )
+    passes(_circuit(6, [(0, 2), (2, 1)]))
+    assert post.stop_reason == "skipped"
+
+    # a circuit that needs SWAP gates is routed after the reverse traversal, so it is searched
+    passes(_circuit(6, [(0, 1), (1, 2), (0, 2)]))
+    assert post.stop_reason != "skipped"
 
 
 def test_post_layout_in_passes_error():

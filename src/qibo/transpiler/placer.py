@@ -923,8 +923,8 @@ class NoiseAwarePostLayout(PostLayout):
         same hardware model that found the best layout. Then ``stop_reason`` is ``"skipped"``.
 
         Args:
-            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Last placer that
-                placed the circuit, or ``None`` if there is none.
+            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Placer that decided
+                the layout of the circuit, or ``None`` if there is none.
 
         Returns:
             bool: ``True`` if the pass is not run.
