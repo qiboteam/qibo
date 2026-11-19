@@ -160,6 +160,14 @@ Commutative cancellation
     :member-order: bysource
 
 
+Elide permutations
+^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.optimizer.ElidePermutations
+    :members:
+    :member-order: bysource
+
+
 Filter gates
 ^^^^^^^^^^^^
 

@@ -15,12 +15,14 @@ from qibo.transpiler._exceptions import (
     PlacementError,
 )
 from qibo.transpiler.abstract import Optimizer
+from qibo.transpiler.asserts import assert_circuit_equivalence
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
 from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.optimizer import (
     BarrierBeforeFinalMeasurements,
     CommutativeCancellation,
     ConsolidateBlocks,
+    ElidePermutations,
     FilterGates,
     FixedPoint,
     GateDirection,
@@ -2763,6 +2765,193 @@ def test_barrier_before_final_measurements_circuit_kwargs():
     assert new.wire_names == ["a", "b"]
     assert new.density_matrix
     assert [gate.name for gate in new.queue] == ["h", "barrier", "measure"]
+
+
+@pytest.mark.parametrize(
+    "make_gates, basis, expected",
+    [
+        # the rotations merge into an RZ gate, if it is allowed
+        (
+            lambda: [gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4)],
+            None,
+            ["rz", "cx"],
+        ),
+        (
+            lambda: [gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4)],
+            ["rz", "cx"],
+            ["rz", "cx"],
+        ),
+        (
+            lambda: [gates.RZ(0, 0.3), gates.CNOT(0, 1), gates.RZ(0, 0.4)],
+            ["rx", "cx"],
+            ["rz", "cx", "rz"],
+        ),
+        # two T gates are a rotation that is not a gate of the Clifford+T basis
+        (lambda: [gates.T(0), gates.CNOT(0, 1), gates.T(0)], None, ["rz", "cx"]),
+        (
+            lambda: [gates.T(0), gates.CNOT(0, 1), gates.T(0)],
+            ["t", "tdg", "cx"],
+            ["t", "cx", "t"],
+        ),
+        # the pairs that cancel are removed, whatever the basis
+        (
+            lambda: [gates.T(0), gates.CNOT(0, 1), gates.TDG(0)],
+            ["t", "tdg", "cx"],
+            ["cx"],
+        ),
+        (lambda: [gates.SX(0), gates.CNOT(1, 0), gates.SX(0)], None, ["rx", "cx"]),
+        (
+            lambda: [gates.SX(0), gates.CNOT(1, 0), gates.SX(0)],
+            ["sx", "cx"],
+            ["sx", "cx", "sx"],
+        ),
+        (
+            lambda: [gates.SX(0), gates.CNOT(1, 0), gates.SX(0)],
+            ["rx", "cx"],
+            ["rx", "cx"],
+        ),
+    ],
+)
+def test_commutative_cancellation_basis(backend, make_gates, basis, expected):
+    """The rotations are merged only into the gates that are allowed."""
+    circuit = Circuit(2)
+    circuit.add(make_gates())
+    optimized = CommutativeCancellation(basis=basis)(circuit, backend=backend)
+    assert [gate.name for gate in optimized.queue] == expected
+
+
+def test_elide_permutations(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.M(0, 1, 2))
+
+    elide = ElidePermutations()
+    assert elide.permutation is None
+    elided = elide(circuit)
+    assert [(gate.name, gate.qubits) for gate in elided.queue] == [
+        ("h", (0,)),
+        ("cx", (0, 2)),
+        ("measure", (1, 0, 2)),
+    ]
+    assert elide.permutation == [1, 0, 2]
+    assert len(elided.measurements) == len(circuit.measurements)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=elided,
+        final_layout=dict(enumerate(elide.permutation)),
+    )
+
+
+def test_elide_permutations_composes_the_swaps(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.SWAP(1, 2))
+    for qubit in range(3):
+        circuit.add(gates.H(qubit))
+
+    elide = ElidePermutations()
+    elided = elide(circuit)
+    assert [(gate.name, gate.qubits) for gate in elided.queue] == [
+        ("h", (1,)),
+        ("h", (2,)),
+        ("h", (0,)),
+    ]
+    assert elide.permutation == [1, 2, 0]
+
+    # the permutation of the last call is the one that is kept
+    elide(Circuit(3))
+    assert elide.permutation == [0, 1, 2]
+
+
+def test_elide_permutations_keeps_the_other_gates(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.SWAP(0, 1).controlled_by(2))
+    circuit.add(gates.FSWAP(0, 1))
+    circuit.add(gates.iSWAP(0, 1))
+    circuit.add(gates.GlobalPhase(0.3))
+    circuit.add(gates.CNOT(0, 1))
+
+    elide = ElidePermutations()
+    assert elide(circuit) is circuit
+    assert elide.permutation == [0, 1, 2]
+    assert elide(Circuit(2)).ngates == 0
+
+
+def test_elide_permutations_relabels_every_kind_of_gate(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.SWAP(0, 2))
+    circuit.add(gates.GlobalPhase(0.3))
+    circuit.add(gates.RX(0, 0.4))
+    circuit.add(gates.RX(2, 0.5).controlled_by(0, 1))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.Barrier(0, 1, 2))
+    circuit.add(gates.ResetChannel(2, [0.0, 1.0]))
+    circuit.add(gates.H(1))
+
+    elide = ElidePermutations()
+    elided = elide(circuit)
+    assert elide.permutation == [2, 1, 0]
+    assert not any(isinstance(gate, gates.SWAP) for gate in elided.queue)
+    # the control qubits of a gate are sorted
+    assert [gate.qubits for gate in elided.queue] == [
+        (),
+        (2,),
+        (1, 2, 0),
+        (1, 0),
+        (2, 1, 0),
+        (0,),
+        (1,),
+    ]
+    # the channel is not a unitary, so the equivalence is of the circuit without it
+    circuit_gates = [
+        gate for gate in circuit.queue if not isinstance(gate, gates.Channel)
+    ]
+    plain = Circuit(3)
+    plain.add(circuit_gates)
+    assert_circuit_equivalence(
+        original_circuit=plain,
+        transpiled_circuit=ElidePermutations()(plain),
+        final_layout=dict(enumerate(elide.permutation)),
+    )
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_elide_permutations_is_equivalent(backend, seed):
+    rng = random.Random(seed)
+    circuit = Circuit(4)
+    for _ in range(25):
+        kind = rng.random()
+        first, second = rng.sample(range(4), 2)
+        if kind < 0.35:
+            circuit.add(gates.SWAP(first, second))
+        elif kind < 0.55:
+            circuit.add(gates.CNOT(first, second))
+        elif kind < 0.7:
+            circuit.add(gates.RX(first, rng.uniform(0, 6)).controlled_by(second))
+        elif kind < 0.85:
+            circuit.add(gates.RZ(first, rng.uniform(0, 6)))
+        else:
+            circuit.add(gates.H(first))
+    elide = ElidePermutations()
+    elided = elide(circuit)
+    assert not any(isinstance(gate, gates.SWAP) for gate in elided.queue)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=elided,
+        final_layout=dict(enumerate(elide.permutation)),
+    )
+
+
+def test_elide_permutations_circuit_kwargs():
+    circuit = Circuit(2, wire_names=["a", "b"], density_matrix=True)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.H(0))
+    elided = ElidePermutations()(circuit)
+    assert elided.wire_names == ["a", "b"]
+    assert elided.density_matrix
+    assert [(gate.name, gate.qubits) for gate in elided.queue] == [("h", (1,))]
 
 
 def test_filter_gates(backend):
