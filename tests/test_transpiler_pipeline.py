@@ -29,6 +29,9 @@ from qibo.transpiler.asserts import (
 from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.optimizer import (
     BarrierBeforeFinalMeasurements,
+    CommutativeCancellation,
+    ConsolidateBlocks,
+    ElidePermutations,
     FilterGates,
     FixedPoint,
     GateDirection,
@@ -2268,6 +2271,241 @@ def test_transpile_error_aware_identity_removal(
     assert found == remaining
 
 
+def test_passes_elide_permutations_without_router():
+    """The permutation of the removed SWAP gates is the one of the final layout."""
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.M(0, 1, 2))
+    transpiled, layout = Passes([ElidePermutations()])(circuit)
+    assert not any(isinstance(gate, gates.SWAP) for gate in transpiled.queue)
+    assert dict(layout) == {0: 1, 1: 0, 2: 2}
+    assert layout.routing_permutation == [1, 0, 2]
+    assert layout.initial_layout == [0, 1, 2]
+    assert_circuit_equivalence(
+        original_circuit=circuit, transpiled_circuit=transpiled, final_layout=layout
+    )
+
+
+@pytest.mark.parametrize("router", [ShortestPaths, Sabre])
+def test_passes_elide_permutations_with_router(backend, router):
+    """The permutation is composed with the one of the router, and with the auxiliary
+    qubits that the preprocessing adds."""
+    connectivity = nx.path_graph(5)
+    circuit = Circuit(4)
+    circuit.add(gates.SWAP(0, 3))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(2, 3))
+    circuit.add(gates.SWAP(1, 2))
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.H(1))
+    circuit.add(gates.M(0, 1, 2, 3))
+    pipeline = Passes(
+        [ElidePermutations(), Preprocessing(), router(seed=1)],
+        connectivity=connectivity,
+    )
+    transpiled, layout = pipeline(circuit, backend=backend)
+    assert layout.nqubits_input == 4
+    assert layout.auxiliary_qubits == [4]
+    assert layout.initial_layout == list(range(5))
+    # there is no unroller, so the gates of the circuit and the SWAP gates of the router
+    # are native
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=connectivity,
+        final_layout=layout,
+        native_gates=NativeGates.default()
+        | NativeGates.SWAP
+        | NativeGates.CNOT
+        | NativeGates.H,
+    )
+
+
+def test_passes_elide_permutations_are_composed():
+    """The permutations of several passes are composed, in the order that they run."""
+
+    class AppendSwap(Optimizer):
+        def __call__(self, circuit):
+            new = Circuit(**circuit.init_kwargs)
+            new.add(circuit.queue)
+            new.add(gates.SWAP(0, 2))
+            return new
+
+    circuit = Circuit(3)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(1, 2))
+    # The SWAP gate that the other pass adds is on the first and third qubits of the circuit
+    # that the first pass returns, whose first qubit corresponds to the second qubit of the
+    # original circuit. So it is a SWAP gate on the second and third qubits of the original.
+    expected = Circuit(3)
+    expected.add(circuit.queue)
+    expected.add(gates.SWAP(1, 2))
+
+    pipeline = Passes([ElidePermutations(), AppendSwap(), ElidePermutations()])
+    transpiled, layout = pipeline(circuit)
+    assert not any(isinstance(gate, gates.SWAP) for gate in transpiled.queue)
+    assert layout.routing_permutation != [1, 0, 2]
+    assert_circuit_equivalence(
+        original_circuit=expected, transpiled_circuit=transpiled, final_layout=layout
+    )
+
+
+def test_passes_elide_permutations_after_router():
+    pipeline = Passes(
+        [Preprocessing(), ShortestPaths(seed=1), ElidePermutations()],
+        connectivity=nx.path_graph(3),
+    )
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 2))
+    with pytest.raises(TranspilerPipelineError, match="before it"):
+        pipeline(circuit)
+
+
+@pytest.mark.parametrize(
+    "routing_method", [None, "sabre", "shortest_paths", Sabre(seed=1)]
+)
+def test_generate_preset_passes_elide_permutations(routing_method):
+    passes = generate_preset_passes(
+        nx.path_graph(4), routing_method=routing_method, optimization_level=2
+    ).passes
+    # first of the optimizers, because the others work with the gates that remain
+    assert _names(passes)[:3] == ["Validation", "Unroller", "ElidePermutations"]
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"routing_method": "none"},
+        {"routing_method": NoRouting()},
+        {"optimization_level": 1},
+        {"optimization_level": 0},
+        {"connectivity": None},
+    ],
+)
+def test_generate_preset_passes_no_elide_permutations(kwargs):
+    kwargs = {"connectivity": nx.path_graph(4), "optimization_level": 2, **kwargs}
+    passes = generate_preset_passes(**kwargs).passes
+    assert "ElidePermutations" not in _names(passes)
+
+
+def test_generate_preset_passes_consolidate_before_the_layout():
+    for optimization_level, connectivity, expected in (
+        (1, nx.path_graph(4), 1),
+        (2, nx.path_graph(4), 2),
+        # there is nothing to place and route, so the other one is enough
+        (2, None, 1),
+    ):
+        passes = generate_preset_passes(
+            connectivity, optimization_level=optimization_level
+        ).passes
+        positions = [
+            position
+            for position, item in enumerate(passes)
+            if isinstance(item, ConsolidateBlocks)
+        ]
+        assert len(positions) == expected
+        if expected == 2:
+            assert isinstance(passes[positions[0] + 1], Preprocessing)
+
+
+def test_generate_preset_passes_loop_commutative_cancellation():
+    natives = NativeGates.I | NativeGates.RZ | NativeGates.SX | NativeGates.CNOT
+    for given, basis in (
+        (None, set(NativeGates.default().gate_names)),
+        (natives, set(natives.gate_names)),
+    ):
+        for optimization_level in (1, 2):
+            passes = generate_preset_passes(
+                nx.path_graph(3), given, optimization_level=optimization_level
+            ).passes
+            loops = [item.optimizers for item in passes if isinstance(item, FixedPoint)]
+            found = [
+                [isinstance(optimizer, CommutativeCancellation) for optimizer in loop]
+                for loop in loops
+            ]
+            if optimization_level == 1:
+                assert not any(any(loop) for loop in found)
+            else:
+                # only the first loop, which has the native gates as the allowed ones
+                assert sum(any(loop) for loop in found) == 1 and any(found[0])
+                assert loops[0][found[0].index(True)].basis == basis
+
+
+def test_transpile_elides_the_swap_gates(backend):
+    connectivity = nx.path_graph(4)
+    circuit = Circuit(4)
+    for qubits in ((0, 1), (1, 2), (2, 3)):
+        circuit.add(gates.SWAP(*qubits))
+    for qubit in range(4):
+        circuit.add(gates.H(qubit))
+    circuit.add(gates.M(*range(4)))
+
+    results = {}
+    for optimization_level in (1, 2):
+        transpiled, layout = transpile(
+            circuit,
+            connectivity,
+            optimization_level=optimization_level,
+            seed=1,
+            backend=backend,
+        )
+        assert_transpiling(
+            original_circuit=circuit,
+            transpiled_circuit=transpiled,
+            connectivity=connectivity,
+            final_layout=layout,
+        )
+        results[optimization_level] = (
+            sum(isinstance(gate, gates.CZ) for gate in transpiled.queue),
+            layout.routing_permutation,
+        )
+    # the SWAP gates of the first level are three CZ gates each, and the second level
+    # has none, because the qubits that they exchange are the ones of the final layout
+    assert results[1] == (9, [0, 1, 2, 3])
+    assert results[2] == (0, [1, 2, 3, 0])
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_transpile_elide_permutations_is_equivalent(backend, seed):
+    """The final layout stays right with the router, the post layout and the auxiliary
+    qubits of a hardware that is larger than the circuit."""
+    couplings = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+    hardware = HardwareModel(
+        tuple(range(6)),
+        couplings,
+        errors={"2q": dict(zip(couplings, [0.05, 0.04, 0.02, 0.001, 0.003]))},
+    )
+    rng = random.Random(seed)
+    circuit = Circuit(4)
+    for _ in range(20):
+        kind = rng.random()
+        first, second = rng.sample(range(4), 2)
+        if kind < 0.4:
+            circuit.add(gates.SWAP(first, second))
+        elif kind < 0.8:
+            circuit.add(gates.CNOT(first, second))
+        else:
+            circuit.add(gates.H(first))
+    circuit.add(gates.M(*range(4)))
+    transpiled, layout = transpile(
+        circuit,
+        hardware.connectivity,
+        optimization_level=2,
+        hardware=hardware,
+        seed=seed,
+        backend=backend,
+    )
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=hardware.connectivity,
+        final_layout=layout,
+    )
+
+
 def test_generate_preset_passes_level_0_layout_trials():
     passes = generate_preset_passes(
         nx.path_graph(3), layout_method="reverse_traversal", optimization_level=0
@@ -2288,12 +2526,14 @@ def test_generate_preset_passes_sampling_only(optimization_level):
         # there are no optimizers
         assert _names(sampling.passes) == _names(default.passes)
     else:
-        assert _names(sampling.passes)[2:5] == [
+        # the SWAP gates are removed first at the second level
+        start = 3 if optimization_level == 2 else 2
+        assert _names(sampling.passes)[start : start + 3] == [
             "OptimizeSwapBeforeMeasure",
             "RemoveDiagonalGatesBeforeMeasurement",
             "RemoveFinalReset",
         ]
-        assert _names(sampling.passes)[5:] == _names(default.passes)[2:]
+        assert _names(sampling.passes)[start + 3 :] == _names(default.passes)[start:]
 
 
 @pytest.mark.parametrize(
@@ -2435,9 +2675,11 @@ def test_generate_preset_passes_optimization_level_2_structure():
     assert _names(passes) == [
         "Validation",
         "Unroller",
+        "ElidePermutations",
         "InverseCancellation",
         "CommutativeCancellation",
         "RemoveIdentityEquivalent",
+        "ConsolidateBlocks",
         "Preprocessing",
         "NoiseAwarePlacer",
         "ReverseTraversal",
@@ -2452,6 +2694,7 @@ def test_generate_preset_passes_optimization_level_2_structure():
     ]
     assert _names(passes[-2].optimizers) == [
         "Optimize1qGatesDecomposition",
+        "CommutativeCancellation",
         "InverseCancellation",
     ]
     assert _names(passes[-1].optimizers) == [
@@ -2464,6 +2707,10 @@ def test_generate_preset_passes_optimization_level_2_structure():
     basis = set(NativeGates.default().gate_names)
     assert passes[-1].optimizers[0].basis == basis
     assert passes[-1].optimizers[1].basis == basis
+    # the loop only merges the rotations into native gates, while the one before the last
+    # unroller can merge them into any gate
+    assert passes[-2].optimizers[1].basis == basis
+    assert passes[-4].basis is None
 
 
 @pytest.mark.parametrize("approximation_degree", [1.0, 0.9])
@@ -2517,7 +2764,10 @@ def test_generate_preset_passes_optimization_level_2_without_euler_basis():
         nx.path_graph(3), natives, optimization_level=2
     ).passes
     assert _names(passes).count("FixedPoint") == 1
-    assert _names(passes[-1].optimizers) == ["InverseCancellation"]
+    assert _names(passes[-1].optimizers) == [
+        "CommutativeCancellation",
+        "InverseCancellation",
+    ]
     assert "Optimize1qGatesSimpleCommutation" not in _names(passes)
 
 

@@ -188,6 +188,12 @@ class CommutativeCancellation(Optimizer):
     merged rotation is not tracked by the returned circuit anymore. The pass is applied
     once, use :class:`qibo.transpiler.optimizer.FixedPoint` to repeat it.
 
+    If ``basis`` is given, the rotations around an axis are merged only if the gate that
+    rotates around it, :class:`qibo.gates.RX`, :class:`qibo.gates.RY` or
+    :class:`qibo.gates.RZ`, is in ``basis``, so that a circuit in the native gates stays in
+    them. The other rotations are left as they are, and the pairs of gates whose product is
+    the identity are still cancelled.
+
     Example:
         The two :class:`qibo.gates.RZ` gates on the first qubit merge, as the
         controlled-NOT gate between them commutes with them.
@@ -216,13 +222,22 @@ class CommutativeCancellation(Optimizer):
         up_to_global_phase (bool, optional): If ``False``, two rotations are merged only
             when the new rotation has exactly the same matrix as their product, which keeps
             the global phase of the circuit. Defaults to ``True``.
+        basis (list[str], optional): Names of the gates that the circuit is allowed to
+            have, which limit the rotations that are merged, see above. If ``None``, all
+            the rotations are merged. Defaults to ``None``.
     """
 
-    def __init__(self, atol: float = 1e-12, up_to_global_phase: bool = True):
+    def __init__(
+        self,
+        atol: float = 1e-12,
+        up_to_global_phase: bool = True,
+        basis: list[str] | None = None,
+    ):
         if atol < 0:
             raise_error(ValueError, f"``atol`` must be non-negative, but got {atol}.")
         self.atol = atol
         self.up_to_global_phase = up_to_global_phase
+        self.basis = None if basis is None else set(basis)
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Merge the rotations and cancel the pairs of gates through commuting gates.
@@ -257,6 +272,13 @@ class CommutativeCancellation(Optimizer):
                 and not isinstance(gate, uncancellable)
             ):
                 rotation = _rotation(gate.matrix(backend), self.atol, backend)
+                # a rotation that would merge into a gate that is not allowed stays as it is
+                if (
+                    rotation is not None
+                    and self.basis is not None
+                    and ("rx", "ry", "rz")[rotation[0]] not in self.basis
+                ):
+                    rotation = None
 
             merged = False
             if rotation is not None:
@@ -443,6 +465,104 @@ class ConsolidateBlocks(Optimizer):
                 if isinstance(item, Block)
                 else item
             )
+
+        return new
+
+
+class ElidePermutations(Optimizer):
+    """Removes the SWAP gates of a circuit by relabelling the qubits of the gates after them.
+
+    A :class:`qibo.gates.SWAP` gate, with no control qubits, only permutes two qubits, so the
+    gates that follow it can act on the other qubit instead, and the gate is not needed.
+    The qubits of the gates after a removed SWAP gate are relabelled, including the ones of the
+    measurements, whose results keep their order. The circuit that results has the same
+    number of qubits and no SWAP gates, but its qubits are permuted at the end of the circuit:
+    the :math:`k`-th qubit of the original circuit corresponds to the qubit
+    ``permutation[k]`` of the new circuit, *i.e.* measuring the latter in the new circuit
+    gives the result of measuring the former in the original circuit. The two circuits are
+    equal up to this relabelling of the qubits, which is all that the pass tracks, and it
+    does not compute any quantum state.
+    :class:`qibo.transpiler.pipeline.Passes` composes the permutation with the final layout
+    that it returns, so the transpiled circuit is still equivalent to the original one, see
+    :class:`qibo.transpiler.layout.TranspileLayout`.
+
+    The pass is meant to run before the layout. A router does not know that the gates after a
+    SWAP gate that it adds could act on other qubits, and it needs the SWAP gates to make the
+    gates executable, so :class:`qibo.transpiler.pipeline.Passes` raises an error if the
+    pass runs after a router. The other gates, even a SWAP gate with control qubits, are not
+    changed. The gates that act on no qubit, *e.g.* the global phase, are not relabelled.
+
+    Example:
+        The SWAP gate is removed, so the controlled-NOT gate and the measurement act on the
+        qubits that take the place of the exchanged ones after it. The permutation is the one
+        of the final layout of a pipeline that has no router, which composes it.
+
+        .. testcode::
+
+            from qibo import Circuit, gates
+            from qibo.transpiler import ElidePermutations, Passes
+
+            circuit = Circuit(3)
+            circuit.add(gates.H(0))
+            circuit.add(gates.SWAP(0, 1))
+            circuit.add(gates.CNOT(1, 2))
+            circuit.add(gates.M(0, 1, 2))
+
+            elide = ElidePermutations()
+            elided = elide(circuit)
+            print([(gate.name, gate.qubits) for gate in elided.queue])
+            print(elide.permutation)
+
+            _, layout = Passes([ElidePermutations()])(circuit)
+            print(dict(layout))
+
+        .. testoutput::
+
+            [('h', (0,)), ('cx', (0, 2)), ('measure', (1, 0, 2))]
+            [1, 0, 2]
+            {0: 1, 1: 0, 2: 2}
+
+    Attributes:
+        permutation (list[int] | None): Permutation of the qubits that the last call
+            removed, where the :math:`k`-th element is the qubit of the new circuit that
+            corresponds, at the end of the circuit, to the :math:`k`-th qubit of the original
+            one. It is ``None`` before the first call.
+    """
+
+    def __init__(self):
+        self.permutation = None
+
+    def __call__(self, circuit: Circuit) -> Circuit:
+        """Remove the SWAP gates and relabel the qubits of the gates that follow them.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be processed.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit without the SWAP gates, which is
+            the same circuit if it has none.
+        """
+        # ``current[q]`` is the qubit that the gates that act on the qubit ``q`` of the
+        # original circuit have to act on after the SWAP gates that were removed
+        current = list(range(circuit.nqubits))
+        queue = []
+        for gate in circuit.queue:
+            if isinstance(gate, gates.SWAP) and len(gate.qubits) == 2:
+                first, second = gate.qubits
+                current[first], current[second] = current[second], current[first]
+            elif any(current[qubit] != qubit for qubit in gate.qubits):
+                queue.append(
+                    gate.on_qubits({qubit: current[qubit] for qubit in gate.qubits})
+                )
+            else:
+                queue.append(gate)
+        self.permutation = current
+
+        if len(queue) == circuit.ngates:
+            return circuit
+
+        new = Circuit(**circuit.init_kwargs)
+        new.add(queue)
 
         return new
 
