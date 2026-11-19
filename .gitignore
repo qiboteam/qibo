@@ -145,3 +145,4 @@ bloch.pdf
 
 # patches
 *.patch
+*.diff
