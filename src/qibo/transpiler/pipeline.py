@@ -24,6 +24,7 @@ from qibo.transpiler.asserts import (
     assert_decomposition,
     assert_placement,
 )
+from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import (
     CommutativeCancellation,
@@ -42,6 +43,7 @@ from qibo.transpiler.optimizer import (
 )
 from qibo.transpiler.placer import (
     Dense,
+    NoiseAwarePlacer,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
@@ -170,8 +172,12 @@ class Passes:
                     circuit = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Placer):
                 transpiler_pass.connectivity = self.connectivity
+                wire_names = circuit.wire_names.copy()
                 final_layout = transpiler_pass(circuit, backend=backend)
-                placer = transpiler_pass
+                # a placer that leaves the layout, *e.g.* because it needs no SWAP gates,
+                # does not take the place of the one that decided it
+                if placer is None or circuit.wire_names != wire_names:
+                    placer = transpiler_pass
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
                 assert_placement(circuit, self.connectivity)
@@ -271,6 +277,7 @@ def generate_preset_passes(
     optimization_level: int = 0,
     sampling_only: bool = False,
     post_layout: PostLayout | None = None,
+    hardware: HardwareModel | None = None,
     backend: Backend | None = None,
 ) -> Passes:
     """Generate a ready-to-use transpiler pipeline.
@@ -316,8 +323,12 @@ def generate_preset_passes(
     * A loop of :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`, with the
       native gates as ``basis``, and :class:`qibo.transpiler.optimizer.InverseCancellation`
       at the end. The first one is left out if the native gates have no Euler basis.
-    * The ``"reverse_traversal"`` placer with five trials, unless ``layout_method`` or
-      ``initial_layout`` is given.
+    * A search for the layout, unless ``layout_method`` or ``initial_layout`` is given.
+      First, :class:`qibo.transpiler.placer.NoiseAwarePlacer` looks for a layout where no
+      SWAP gate is needed, and it chooses the one with the least noise if ``hardware`` is
+      given. If there is none, the ``"reverse_traversal"`` placer with five trials looks
+      for a layout that needs few SWAP gates. Neither of them moves the circuit if the layout
+      that :class:`qibo.transpiler.optimizer.Preprocessing` set already needs no SWAP gates.
 
     Level :math:`2` adds, to the optimizers of level :math:`1`:
 
@@ -376,8 +387,9 @@ def generate_preset_passes(
             :class:`qibo.transpiler.router.Sabre`), ``"star"``
             (:class:`qibo.transpiler.placer.StarConnectivityPlacer`) or a placer. It
             requires ``connectivity``. Defaults to ``None``, which is ``"trivial"``, or
-            ``"reverse_traversal"`` if ``optimization_level`` is at least :math:`1`,
-            ``initial_layout`` is ``None`` and ``routing_method`` is ``None`` or ``"sabre"``.
+            the search of the layout described above if ``optimization_level`` is at
+            least :math:`1`, ``initial_layout`` is ``None`` and ``routing_method`` is ``None``
+            or ``"sabre"``.
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuit executable. It can be ``"sabre"``
             (:class:`qibo.transpiler.router.Sabre` with ``routing_trials`` trials),
@@ -444,8 +456,16 @@ def generate_preset_passes(
             least noisy qubits that can run it. It runs at the end of the pipeline, except
             on a directed ``connectivity``, and it updates the final layout. It can skip
             itself if it has nothing to do after the placer, see
-            :meth:`qibo.transpiler.abstract.PostLayout.skip`. It requires ``connectivity``.
+            :meth:`qibo.transpiler.abstract.PostLayout.skip`, which is told the placer that
+            decided the layout. It requires ``connectivity``.
             Defaults to ``None``, so the qubits are the ones that the placer chose.
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
+            whose errors the :class:`qibo.transpiler.placer.NoiseAwarePlacer` of the layout
+            search uses, so that the layout without SWAP gates that it finds is the one with
+            the least noise. Its connectivity must be ``connectivity``, or a graph that
+            contains it. If ``None``, the placer takes the first layout without
+            SWAP gates that it finds. If the layout is not searched as described above,
+            it has no effect, and a warning is logged. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -455,9 +475,11 @@ def generate_preset_passes(
 
     Raises:
         ConnectivityError: If ``initial_layout``, ``layout_method`` or ``routing_method``
-            is given without ``connectivity``.
+            is given without ``connectivity``, or if the qubits and couplings of
+            ``connectivity`` are not in ``hardware``.
         PlacementError: If ``initial_layout`` is given with a non-trivial ``layout_method``.
         ValueError: If ``layout_method`` or ``routing_method`` is not a valid method, if
+            ``post_layout`` or ``hardware`` is given without ``connectivity``, if
             ``approximation_degree`` is not between :math:`0` and :math:`1`, if
             ``minimize_toffolis`` and ``minimize_depth`` are both ``True``, if
             ``routing_trials`` is not positive and the router is ``"sabre"``, or if
@@ -507,6 +529,20 @@ def generate_preset_passes(
     if post_layout is not None and connectivity is None:
         raise_error(ValueError, "``post_layout`` requires ``connectivity``.")
 
+    if hardware is not None:
+        if connectivity is None:
+            raise_error(ValueError, "``hardware`` requires ``connectivity``.")
+
+        couplings = hardware.connectivity
+        if not set(connectivity.nodes) <= set(couplings.nodes) or any(
+            not (couplings.has_edge(*edge) or couplings.has_edge(*edge[::-1]))
+            for edge in connectivity.edges
+        ):
+            raise_error(
+                ConnectivityError,
+                "The connectivity must be a subgraph of the one of ``hardware``.",
+            )
+
     if connectivity is None:
         passes = [Validation()]
         if optimization_level == 0:
@@ -516,6 +552,7 @@ def generate_preset_passes(
             passes.extend([*before_layout, *before_unroller])
             passes.append(Unroller(native_gates, **synthesis, backend=backend))
             passes.extend(after_unroller)
+
         return Passes(
             passes=passes,
             native_gates=native_gates,
@@ -525,13 +562,20 @@ def generate_preset_passes(
 
     # the layout is searched by default from the first level, unless the user gives a layout
     # or a router that does not work with it
-    if (
+    default_layout = (
         layout_method is None
         and initial_layout is None
         and optimization_level >= 1
         and (routing_method is None or routing_method == "sabre")
-    ):
+    )
+    if default_layout:
         layout_method = "reverse_traversal"
+    if hardware is not None and not default_layout:
+        log.warning(
+            "``hardware`` has no effect, because the layout is not searched with this "
+            + "configuration."
+        )
+
     if layout_trials is None:
         layout_trials = 1 if optimization_level == 0 else 5
 
@@ -539,11 +583,15 @@ def generate_preset_passes(
         "dense": Dense,
         "random": lambda: Random(seed=seed),
         "reverse_traversal": lambda: ReverseTraversal(
-            routing_algorithm=Sabre(seed=seed), trials=layout_trials, seed=seed
+            routing_algorithm=Sabre(seed=seed),
+            trials=layout_trials,
+            seed=seed,
+            keep_layout=default_layout,
         ),
         "star": StarConnectivityPlacer,
         "subgraph": Subgraph,
     }
+
     routers = {
         "none": NoRouting,
         "sabre": lambda: Sabre(seed=seed, trials=routing_trials),
@@ -570,6 +618,23 @@ def generate_preset_passes(
             "``initial_layout`` cannot be used with a non-trivial ``layout_method``.",
         )
 
+    layout_passes = [] if placer is None else [placer]
+    if default_layout:
+        # a layout without SWAP gates is the best one, so it is searched before the
+        # reverse traversal, which only searches if there is none
+        if hardware is None:
+            hardware = HardwareModel(
+                tuple(connectivity.nodes), connectivity, native_gates
+            )
+        layout_passes.insert(
+            0,
+            NoiseAwarePlacer(
+                hardware,
+                call_limit=(50_000, 1_000) if optimization_level == 1 else 1_000_000,
+                keep_layout=True,
+            ),
+        )
+
     if routing_method is None:
         routing_method = "sabre"
     if isinstance(routing_method, Router):
@@ -588,7 +653,7 @@ def generate_preset_passes(
         Unroller(native_gates, min_qubits=3, **unroller_kwargs),
         *before_layout,
         Preprocessing(initial_layout=initial_layout),
-        *([] if placer is None else [placer]),
+        *layout_passes,
         router,
         *before_unroller,
         Unroller(native_gates, **synthesis, backend=backend),
@@ -666,6 +731,7 @@ def transpile(
     optimization_level: int = 0,
     sampling_only: bool = False,
     post_layout: PostLayout | None = None,
+    hardware: HardwareModel | None = None,
     num_processes: int | None = None,
     backend: Backend | None = None,
 ) -> tuple[Circuit, dict | None] | list[tuple[Circuit, dict | None]]:
@@ -810,6 +876,11 @@ def transpile(
             :func:`qibo.transpiler.pipeline.generate_preset_passes`. All the circuits use
             it, and each worker process gets its own copy. It requires ``connectivity``.
             Defaults to ``None``.
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
+            whose errors the placer of the layout search uses to choose the layout without
+            SWAP gates with the least noise, see
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`. It requires
+            ``connectivity``. Defaults to ``None``.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -855,6 +926,7 @@ def transpile(
                 log.warning(
                     "``sampling_only`` has no effect on a circuit without measurements."
                 )
+
     passes = generate_preset_passes(
         connectivity=connectivity,
         native_gates=native_gates,
@@ -876,8 +948,10 @@ def transpile(
         optimization_level=optimization_level,
         sampling_only=sampling_only,
         post_layout=post_layout,
+        hardware=hardware,
         backend=backend,
     )
+
     if isinstance(circuits, Circuit):
         results = passes(circuits, backend=backend)
     elif num_processes is None or num_processes == 1 or len(circuits) < 2:

@@ -11,7 +11,7 @@ from qibo.backends import Backend
 from qibo.config import raise_error
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Placer, PostLayout, Router
-from qibo.transpiler.asserts import assert_placement
+from qibo.transpiler.asserts import _find_unconnected_gate, assert_placement
 from qibo.transpiler.decompositions import direction_dec
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.router import _find_connected_qubit
@@ -923,8 +923,8 @@ class NoiseAwarePostLayout(PostLayout):
         same hardware model that found the best layout. Then ``stop_reason`` is ``"skipped"``.
 
         Args:
-            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Last placer that
-                placed the circuit, or ``None`` if there is none.
+            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Placer that decided
+                the layout of the circuit, or ``None`` if there is none.
 
         Returns:
             bool: ``True`` if the pass is not run.
@@ -1196,6 +1196,8 @@ class ReverseTraversal(Placer):
             circuit is needed to choose the layout. Defaults to :math:`1`.
         seed (int, optional): Seed of the random permutations of the attempts, which
             makes them reproducible. Defaults to ``None``.
+        keep_layout (bool, optional): If ``True``, the placer does not search when the layout
+            that the circuit already has needs no SWAP gates. Defaults to ``False``.
 
     References:
         1. G. Li, Y. Ding, and Y. Xie,
@@ -1210,6 +1212,7 @@ class ReverseTraversal(Placer):
         depth: int | None = None,
         trials: int = 1,
         seed: int | None = None,
+        keep_layout: bool = False,
     ):
         if trials < 1:
             raise_error(ValueError, f"``trials`` must be positive, but it is {trials}.")
@@ -1218,6 +1221,7 @@ class ReverseTraversal(Placer):
         self.depth = depth
         self.trials = trials
         self.seed = seed
+        self.keep_layout = keep_layout
         self._rng = np.random.default_rng(seed)
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
@@ -1232,6 +1236,11 @@ class ReverseTraversal(Placer):
                 :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
         assert_placement(circuit, self.connectivity)
+        if (
+            self.keep_layout
+            and _find_unconnected_gate(self.connectivity, circuit) is None
+        ):
+            return
         self.routing_algorithm.connectivity = self.connectivity
         wire_names = circuit.wire_names.copy()
 
