@@ -321,8 +321,9 @@ def generate_preset_passes(
     * :class:`qibo.transpiler.optimizer.ConsolidateBlocks` before the last unroller, which
       rewrites the blocks of two-qubit gates that have fewer :class:`qibo.gates.CZ` gates.
     * A loop of :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`, with the
-      native gates as ``basis``, and :class:`qibo.transpiler.optimizer.InverseCancellation`
-      at the end. The first one is left out if the native gates have no Euler basis.
+      native gates as ``basis`` and ``hardware``, and
+      :class:`qibo.transpiler.optimizer.InverseCancellation` at the end. The first one is left
+      out if the native gates have no Euler basis.
     * A search for the layout, unless ``layout_method`` or ``initial_layout`` is given.
       First, :class:`qibo.transpiler.placer.NoiseAwarePlacer` looks for a layout where no
       SWAP gate is needed, and it chooses the one with the least noise if ``hardware`` is
@@ -523,7 +524,7 @@ def generate_preset_passes(
         "weight": weight,
     }
     before_layout, before_unroller, after_unroller = _optimization_stages(
-        optimization_level, native_gates, sampling_only, approximation_degree
+        optimization_level, native_gates, sampling_only, approximation_degree, hardware
     )
 
     if post_layout is not None and connectivity is None:
@@ -877,10 +878,10 @@ def transpile(
             it, and each worker process gets its own copy. It requires ``connectivity``.
             Defaults to ``None``.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
-            whose errors the placer of the layout search uses to choose the layout without
-            SWAP gates with the least noise, see
-            :func:`qibo.transpiler.pipeline.generate_preset_passes`. It requires
-            ``connectivity``. Defaults to ``None``.
+            whose errors the placer of the layout search and the single-qubit optimizers
+            use to choose the layout without SWAP gates and the single-qubit gates with the
+            least noise, see :func:`qibo.transpiler.pipeline.generate_preset_passes`. It
+            requires ``connectivity``. Defaults to ``None``.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
             transpiled one after the other in the current process. It has no effect on a
@@ -981,6 +982,7 @@ def _optimization_stages(
     native_gates: NativeGates,
     sampling_only: bool,
     approximation_degree: float,
+    hardware: HardwareModel | None,
 ) -> tuple[list[Optimizer], list[Optimizer], list[Optimizer]]:
     """Optimizers of the optimization level, see :func:`generate_preset_passes`.
 
@@ -992,6 +994,9 @@ def _optimization_stages(
             of the measured qubits are included.
         approximation_degree (float): Fidelity of each entangling gate, which sets how
             close to the identity a gate has to be to be removed.
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel` or None): Hardware model
+            whose errors the single-qubit optimizers use to choose the gates that replace a
+            run.
 
     Returns:
         tuple[list, list, list]: Optimizers to run before the layout, before the last
@@ -1017,7 +1022,7 @@ def _optimization_stages(
     has_euler_basis = bool(Optimize1qGatesDecomposition(basis=basis).euler_bases)
     loop = [InverseCancellation()]
     if has_euler_basis:
-        loop.insert(0, Optimize1qGatesDecomposition(basis=basis))
+        loop.insert(0, Optimize1qGatesDecomposition(basis=basis, hardware=hardware))
     after_unroller.append(FixedPoint(loop))
 
     if optimization_level >= 2:
@@ -1027,7 +1032,7 @@ def _optimization_stages(
             after_unroller.append(
                 FixedPoint(
                     [
-                        Optimize1qGatesDecomposition(basis=basis),
+                        Optimize1qGatesDecomposition(basis=basis, hardware=hardware),
                         Optimize1qGatesSimpleCommutation(basis=basis),
                         InverseCancellation(commutation=True),
                     ]

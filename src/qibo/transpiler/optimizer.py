@@ -3,6 +3,7 @@ import math
 import random
 from collections.abc import Callable
 from inspect import signature
+from typing import TYPE_CHECKING
 
 import networkx as nx
 from numpy.typing import ArrayLike
@@ -25,6 +26,10 @@ from qibo.transpiler.decompositions.unitary_decompositions import (
     _EULER_BASES,
     _euler_sequence,
 )
+from qibo.transpiler.hardware import _VIRTUAL
+
+if TYPE_CHECKING:
+    from qibo.transpiler.hardware import HardwareModel
 
 # Gates of :class:`qibo.transpiler.optimizer.RemoveDiagonalGatesBeforeMeasurement`, whose
 # matrices are diagonal in the computational basis. A gate stays diagonal when more
@@ -899,22 +904,19 @@ class Optimize1qGatesDecomposition(Optimizer):
 
     Rotations by a multiple of :math:`2 \\pi` are left out, so runs equal to the
     identity are removed. A run is replaced if it contains a gate whose name is not
-    in ``basis``, or if the new sequence is shorter. Gates with sympy parameters end
-    a run. If ``basis`` contains no Euler basis, the circuit is returned unchanged.
-    The input circuit is not modified.
+    in ``basis``, or if the new sequence is better, *i.e.* shorter, or with ``hardware``,
+    with a lower error. Gates with ``sympy`` parameters end a run. If ``basis`` contains no
+    Euler basis, the circuit is returned unchanged. The input circuit is not modified.
 
-    Args:
-        basis (list[str], optional): Names of the gates the circuit may contain, for
-            example ``["rz", "sx", "cx"]``. Only Euler bases whose gates are all in
-            this list are used. If ``None``, all Euler bases are used and every gate
-            counts as in the basis. Defaults to ``None``.
-        atol (float, optional): Tolerance to decide that an angle is zero, that
-            :math:`\\theta` (the Y rotation angle of the equivalent
-            :class:`qibo.gates.U3` gate) is :math:`\\pi / 2` or :math:`\\pi`, and
-            that two matrices are equal (Frobenius norm of their difference).
-            Defaults to :math:`10^{-12}`.
-        up_to_global_phase (bool, optional): If ``False``, a run is replaced only when
-            the new sequence has exactly the same matrix. Defaults to ``True``.
+    With ``hardware``, the sequences are compared by their error on the qubit, and then by
+    their length. The error of a sequence is one minus the product of the fidelities of its
+    gates, where each gate that is not virtual has the error of the single-qubit gates of
+    the qubit, and the identity, Z and RZ gates have none, see
+    :meth:`qibo.transpiler.hardware.HardwareModel.error`. So a longer sequence is chosen
+    if it has fewer gates that are not virtual, and a run is replaced if the new sequence
+    has a lower error, or the same error and fewer gates. The qubit of a gate is the name
+    in ``circuit.wire_names``. The qubits that have no error in ``hardware`` are optimized
+    by their length.
 
     Example:
         The Hadamard, phase and Pauli X gates on the first qubit become an
@@ -943,6 +945,55 @@ class Optimize1qGatesDecomposition(Optimizer):
             rz (0,)
             sx (0,)
             cx (0, 1)
+
+        With ``hardware``, the sequences are compared by their error. The same run is
+        rewritten with the fewest gates on the first qubit, which has no error, and with
+        the fewest gates that are not virtual on the second one, where the RZ gates have no
+        error.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo.transpiler import HardwareModel
+
+            hardware = HardwareModel((0, 1), nx.path_graph(2), errors={"1q": {1: 0.01}})
+
+            circuit = Circuit(2)
+            for qubit in range(2):
+                circuit.add(gates.H(qubit))
+                circuit.add(gates.S(qubit))
+                circuit.add(gates.T(qubit))
+
+            optimizer = Optimize1qGatesDecomposition(
+                basis=["rz", "rx", "ry", "cz"], hardware=hardware
+            )
+            for gate in optimizer(circuit).queue:
+                print(gate.name, gate.qubits)
+
+        .. testoutput::
+
+            rx (0,)
+            ry (0,)
+            rz (1,)
+            ry (1,)
+            rz (1,)
+
+    Args:
+        basis (list[str], optional): Names of the gates the circuit may contain, for
+            example ``["rz", "sx", "cx"]``. Only Euler bases whose gates are all in
+            this list are used. If ``None``, all Euler bases are used and every gate
+            counts as in the basis. Defaults to ``None``.
+        atol (float, optional): Tolerance to decide that an angle is zero, that
+            :math:`\\theta` (the Y rotation angle of the equivalent
+            :class:`qibo.gates.U3` gate) is :math:`\\pi / 2` or :math:`\\pi`, and
+            that two matrices are equal (Frobenius norm of their difference).
+            Defaults to :math:`10^{-12}`.
+        up_to_global_phase (bool, optional): If ``False``, a run is replaced only when
+            the new sequence has exactly the same matrix. Defaults to ``True``.
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
+            whose single-qubit gate errors choose the sequence that replaces a run, see
+            above. Defaults to ``None``, so the shortest sequence is chosen.
     """
 
     def __init__(
@@ -950,12 +1001,14 @@ class Optimize1qGatesDecomposition(Optimizer):
         basis: list[str] | None = None,
         atol: float = 1e-12,
         up_to_global_phase: bool = True,
+        hardware: "HardwareModel | None" = None,
     ):
         if atol < 0:
             raise_error(ValueError, f"``atol`` must be non-negative, but got {atol}.")
         self.basis = None if basis is None else set(basis)
         self.atol = atol
         self.up_to_global_phase = up_to_global_phase
+        self.hardware = hardware
 
         self.euler_bases = [
             name
@@ -1039,12 +1092,17 @@ class Optimize1qGatesDecomposition(Optimizer):
                 continue
 
             (qubit,) = run[0].qubits
+
+            error = 0.0
+            if self.hardware is not None:
+                error = self.hardware.error((circuit.wire_names[qubit],)) or 0.0
+
             matrix = identity
             for gate in run:
                 matrix = gate.matrix(backend) @ matrix
-            theta, phi, lam = u3_dec(gates.Unitary(matrix, qubit), backend)[
-                0
-            ].parameters
+
+            params = u3_dec(gates.Unitary(matrix, qubit), backend)
+            theta, phi, lam = params[0].parameters
             # Angles of the Euler decomposition of the matrix conjugated with the
             # Hadamard gate, which swaps the X and Z axes, for the bases starting
             # with a rotation around the X axis.
@@ -1052,7 +1110,7 @@ class Optimize1qGatesDecomposition(Optimizer):
                 gates.Unitary(hadamard @ matrix @ hadamard, qubit), backend
             )[0].parameters
 
-            best = None
+            best, best_cost = None, None
             for name in self.euler_bases:
                 sequence = _euler_sequence(
                     name,
@@ -1062,20 +1120,23 @@ class Optimize1qGatesDecomposition(Optimizer):
                     self.atol,
                     backend,
                 )
-                if best is not None and len(sequence) >= len(best):
+
+                cost = (_sequence_error(sequence, error), len(sequence))
+                if best is not None and cost >= best_cost:
                     continue
 
                 product = identity
                 for gate in sequence:
                     product = gate.matrix(backend) @ product
+
                 if (
                     self.up_to_global_phase
                     or backend.matrix_norm(product - matrix, order="fro") <= self.atol
                 ):
-                    best = sequence
+                    best, best_cost = sequence, cost
 
             if best is not None and (
-                len(best) < len(run)
+                best_cost < (_sequence_error(run, error), len(run))
                 or (
                     self.basis is not None
                     and any(gate.name not in self.basis for gate in run)
@@ -2557,3 +2618,18 @@ def _rotation(
         backend.real(sine * unphase), backend.real(cosine * unphase)
     )
     return axis, float(phase), float(angle)
+
+
+def _sequence_error(sequence: list[Gate], error: float) -> float:
+    """Error of a sequence of single-qubit gates on a qubit.
+
+    Args:
+        sequence (list[:class:`qibo.gates.abstract.Gate`]): Single-qubit gates.
+        error (float): Error of the single-qubit gates of the qubit that are not virtual.
+
+    Returns:
+        float: One minus the product of the fidelities of the gates, where the virtual gates,
+        *i.e.* the identity, Z and RZ gates, have none, so it is :math:`0` if ``error`` is
+        :math:`0`.
+    """
+    return 1 - (1 - error) ** sum(not isinstance(gate, _VIRTUAL) for gate in sequence)
