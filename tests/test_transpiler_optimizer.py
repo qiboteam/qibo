@@ -15,6 +15,7 @@ from qibo.transpiler._exceptions import (
 )
 from qibo.transpiler.abstract import Optimizer
 from qibo.transpiler.decompositions.direction_decompositions import direction_dec
+from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.optimizer import (
     BarrierBeforeFinalMeasurements,
     CommutativeCancellation,
@@ -36,6 +37,7 @@ from qibo.transpiler.optimizer import (
     ResetAfterMeasureSimplification,
     TGateRules,
     Validation,
+    _sequence_error,
 )
 from qibo.transpiler.pipeline import Passes, generate_preset_passes
 from qibo.transpiler.router import Sabre
@@ -1863,6 +1865,88 @@ def test_optimize_1q_gates_decomposition_only_replaces_if_needed(backend):
     optimized = Optimize1qGatesDecomposition(["rz", "sx"])(circuit, backend=backend)
     assert [gate.name for gate in optimized.queue] == ["rz"]
     assert np.isclose(optimized.queue[0].parameters[0], 0.4)
+
+
+def _equal_up_to_phase(backend, first, second):
+    """Check that two circuits of one or two qubits have the same unitary up to a phase."""
+    dim = 2**first.nqubits
+    overlap = backend.abs(
+        backend.trace(first.unitary(backend).conj().T @ second.unitary(backend))
+    )
+    backend.assert_allclose(overlap, dim, atol=1e-10)
+
+
+@pytest.mark.parametrize("wire_names", [None, [5, 7]])
+def test_optimize_1q_gates_decomposition_hardware(backend, wire_names):
+    """The gates that are not virtual are fewer on the qubit that has an error."""
+    basis = ["rz", "rx", "ry", "cz"]
+    names = [0, 1] if wire_names is None else wire_names
+    hardware = HardwareModel(
+        tuple(names), nx.Graph([tuple(names)]), errors={"1q": {names[1]: 0.01}}
+    )
+    circuit = Circuit(2, wire_names=wire_names)
+    for qubit in range(2):
+        circuit.add(gates.H(qubit))
+        circuit.add(gates.S(qubit))
+        circuit.add(gates.T(qubit))
+
+    # without hardware, the gates are the shortest ones on both qubits
+    optimized = Optimize1qGatesDecomposition(basis)(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        ("rx", (0,)),
+        ("ry", (0,)),
+        ("rx", (1,)),
+        ("ry", (1,)),
+    ]
+
+    # with it, the qubit without error keeps them, and the other one has one gate that is
+    # not virtual, between two RZ gates, which have no error
+    optimizer = Optimize1qGatesDecomposition(basis, hardware=hardware)
+    optimized = optimizer(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in optimized.queue] == [
+        ("rx", (0,)),
+        ("ry", (0,)),
+        ("rz", (1,)),
+        ("ry", (1,)),
+        ("rz", (1,)),
+    ]
+    assert optimized.wire_names == circuit.wire_names
+    _equal_up_to_phase(backend, circuit, optimized)
+
+
+def test_optimize_1q_gates_decomposition_hardware_in_basis(backend):
+    """A run that is in the basis is replaced by a longer one with a lower error."""
+    circuit = Circuit(2)
+    for qubit in range(2):
+        circuit.add(gates.RX(qubit, 0.3))
+        circuit.add(gates.RY(qubit, 0.4))
+    hardware = HardwareModel((0, 1), nx.path_graph(2), errors={"1q": {1: 0.01}})
+    optimized = Optimize1qGatesDecomposition(["rz", "rx", "ry"], hardware=hardware)(
+        circuit, backend=backend
+    )
+
+    assert all(new is old for new, old in zip(optimized.queue[:2], circuit.queue[:2]))
+    assert [(gate.name, gate.qubits) for gate in optimized.queue[2:]] == [
+        ("rz", (1,)),
+        ("ry", (1,)),
+        ("rz", (1,)),
+    ]
+    _equal_up_to_phase(backend, circuit, optimized)
+
+    # an error on the single-qubit gates that is not for the qubit changes nothing
+    other = HardwareModel((0, 1), nx.path_graph(2), errors={"2q": {(0, 1): 0.01}})
+    optimized = Optimize1qGatesDecomposition(["rz", "rx", "ry"], hardware=other)(
+        circuit, backend=backend
+    )
+    assert all(new is old for new, old in zip(optimized.queue, circuit.queue))
+
+
+def test_sequence_error():
+    sequence = [gates.RZ(0, 0.1), gates.SX(0), gates.RZ(0, 0.2), gates.SX(0)]
+    assert math.isclose(_sequence_error(sequence, 0.1), 1 - 0.9**2)
+    assert _sequence_error(sequence, 0.0) == 0.0
+    assert _sequence_error([gates.I(0), gates.Z(0), gates.RZ(0, 0.1)], 0.5) == 0.0
+    assert _sequence_error([], 0.5) == 0.0
 
 
 def test_optimize_1q_gates_decomposition_global_phase(backend):

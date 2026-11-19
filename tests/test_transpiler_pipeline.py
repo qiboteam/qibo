@@ -27,7 +27,9 @@ from qibo.transpiler.asserts import (
 )
 from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.optimizer import (
+    FixedPoint,
     GateDirection,
+    Optimize1qGatesDecomposition,
     Preprocessing,
     RemoveIdentityEquivalent,
     Validation,
@@ -1778,6 +1780,71 @@ def test_transpile_layout_search_directed():
         connectivity=connectivity,
         final_layout=layout,
         native_gates=NativeGates.default() | NativeGates.CNOT,
+    )
+
+
+@pytest.mark.parametrize("optimization_level", [1, 2])
+def test_generate_preset_passes_hardware_optimizers(optimization_level):
+    """The single-qubit optimizers choose the gates by the errors of the hardware."""
+    connectivity = nx.path_graph(3)
+    hardware = HardwareModel((0, 1, 2), connectivity, errors={"1q": {0: 0.01}})
+    for given, expected in ((None, None), (hardware, hardware)):
+        passes = generate_preset_passes(
+            connectivity, hardware=given, optimization_level=optimization_level
+        ).passes
+        optimizers = [
+            optimizer
+            for pass_ in passes
+            if isinstance(pass_, FixedPoint)
+            for optimizer in pass_.optimizers
+            if isinstance(optimizer, Optimize1qGatesDecomposition)
+        ]
+        assert len(optimizers) == optimization_level
+        assert all(optimizer.hardware is expected for optimizer in optimizers)
+
+
+@pytest.mark.parametrize("optimization_level", [1, 2])
+def test_transpile_hardware_single_qubit_gates(backend, optimization_level):
+    natives = (
+        NativeGates.RZ
+        | NativeGates.RX
+        | NativeGates.RY
+        | NativeGates.CZ
+        | NativeGates.M
+    )
+    connectivity = nx.path_graph(2)
+    hardware = HardwareModel((0, 1), connectivity, natives, errors={"1q": {1: 0.01}})
+    circuit = Circuit(2)
+    for qubit in range(2):
+        circuit.add(gates.H(qubit))
+        circuit.add(gates.S(qubit))
+        circuit.add(gates.T(qubit))
+    circuit.add(gates.CZ(0, 1))
+
+    transpiled, layout = transpile(
+        circuit,
+        connectivity,
+        natives,
+        layout_method="trivial",
+        optimization_level=optimization_level,
+        hardware=hardware,
+        backend=backend,
+    )
+    assert [
+        (gate.name, gate.qubits) for gate in transpiled.queue if len(gate.qubits) == 1
+    ] == [
+        ("rx", (0,)),
+        ("ry", (0,)),
+        ("rz", (1,)),
+        ("ry", (1,)),
+        ("rz", (1,)),
+    ]
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=connectivity,
+        final_layout=layout,
+        native_gates=natives,
     )
 
 
