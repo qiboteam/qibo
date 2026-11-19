@@ -24,31 +24,6 @@ if TYPE_CHECKING:
 _ERRORLESS = (gates.Barrier, gates.I, gates.M, gates.RZ, gates.Z)
 
 
-def _find_gates_qubits_pairs(circuit: Circuit) -> list[list[int]]:
-    """Helper method for the placers in :mod:`qibo.transpiler.placer`.
-
-    Translate circuit into a list of pairs of qubits to be used by the router and placer.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be translated.
-
-    Returns:
-        list[list[int]]: Sorted pairs of qubits targeted by two qubits gates. Measurements
-        and barriers are skipped, since they do not need their qubits to be connected.
-    """
-    gates_qubits_pairs = []
-    for gate in circuit.queue:
-        if isinstance(gate, (gates.Barrier, gates.M)):
-            continue
-        if len(gate.qubits) == 2:
-            gates_qubits_pairs.append(sorted(gate.qubits))
-        elif len(gate.qubits) >= 3:
-            raise_error(
-                ValueError, "Gates targeting more than 2 qubits are not supported"
-            )
-    return gates_qubits_pairs
-
-
 class Dense(Placer):
     """Places the qubits on the most connected region of the hardware.
 
@@ -1539,3 +1514,28 @@ def _constrained_order(pairs: Counter) -> nx.Graph:
     ordered.add_nodes_from(order)
     ordered.add_edges_from(gates.edges)
     return ordered
+
+
+def _find_gates_qubits_pairs(circuit: Circuit) -> list[list[int]]:
+    """Helper method for the placers in :mod:`qibo.transpiler.placer`.
+
+    Translate circuit into a list of pairs of qubits to be used by the router and placer.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be translated.
+
+    Returns:
+        list[list[int]]: Sorted pairs of qubits targeted by two qubits gates. Measurements
+        and barriers are skipped, since they do not need their qubits to be connected.
+    """
+    gates_qubits_pairs = []
+    for gate in circuit.queue:
+        if isinstance(gate, (gates.Barrier, gates.M)):
+            continue
+        if len(gate.qubits) == 2:
+            gates_qubits_pairs.append(sorted(gate.qubits))
+        elif len(gate.qubits) >= 3:
+            raise_error(
+                ValueError, "Gates targeting more than 2 qubits are not supported"
+            )
+    return gates_qubits_pairs
