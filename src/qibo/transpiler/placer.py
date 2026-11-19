@@ -1533,6 +1533,12 @@ def _constrained_order(pairs: Counter) -> nx.Graph:
     qubits that are already placed, and then the most gates. The ties are decided by the lowest
     index. If the graph is not connected, it goes on with the next group of qubits.
 
+    If all the pairs have the same number of gates, there is no pair with more gates to place
+    first, and a search that starts inside a chain, which has most gates, has to close it with
+    its last qubit on the neighbour of the first one, which takes it very long on a device with
+    many qubits. So each group of qubits starts with the qubit that has the fewest two-qubit
+    gates instead, which is the end of a chain, and the rest of the order is the same.
+
     Args:
         pairs (collections.Counter): Number of two-qubit gates of each pair of qubits.
 
@@ -1546,18 +1552,24 @@ def _constrained_order(pairs: Counter) -> nx.Graph:
         qubit: sum(edge["count"] for edge in gates[qubit].values()) for qubit in gates
     }
 
+    uniform = len(set(pairs.values())) == 1
     order = []
     while len(order) < len(gates):
+        remaining = [qubit for qubit in gates if qubit not in order]
+        placed = {
+            qubit: sum(
+                gates[qubit][other]["count"] for other in gates[qubit] if other in order
+            )
+            for qubit in remaining
+        }
+        # none of the qubits has gates with the placed ones when a group of qubits starts
+        fewest = uniform and not any(placed.values())
         order.append(
             max(
-                (qubit for qubit in gates if qubit not in order),
+                remaining,
                 key=lambda qubit: (
-                    sum(
-                        gates[qubit][other]["count"]
-                        for other in gates[qubit]
-                        if other in order
-                    ),
-                    total[qubit],
+                    placed[qubit],
+                    -total[qubit] if fewest else total[qubit],
                     -qubit,
                 ),
             )

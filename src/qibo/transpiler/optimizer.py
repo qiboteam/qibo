@@ -264,6 +264,8 @@ class CommutativeCancellation(Optimizer):
         kept_numeric = []
         rotations = []
         stacks = {qubit: [] for qubit in range(circuit.nqubits)}
+        # the matrices of the gates that were compared, see ``_embedded_matrix``
+        cache = {}
         for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
             rotation = None
             if (
@@ -334,11 +336,12 @@ class CommutativeCancellation(Optimizer):
                             sorted(set(gate.qubits) | set(partner.qubits))
                         )
                     }
-                    matrices = []
-                    for operator in (kept_numeric[position], numeric):
-                        embedded = Circuit(len(relabel))
-                        embedded.add(operator.on_qubits(relabel))
-                        matrices.append(embedded.unitary(backend))
+                    matrices = [
+                        _embedded_matrix(
+                            operator, relabel, len(relabel), cache, backend
+                        )
+                        for operator in (kept_numeric[position], numeric)
+                    ]
                     if (
                         backend.matrix_norm(commutator(*matrices), order="fro")
                         > self.atol
@@ -926,6 +929,8 @@ class InverseCancellation(Optimizer):
         kept = []
         kept_numeric = []
         stacks = {qubit: [] for qubit in range(circuit.nqubits)}
+        # the matrices of the gates that were compared, see ``_embedded_matrix``
+        cache = {}
         for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
             index = None
             visited = None
@@ -977,11 +982,10 @@ class InverseCancellation(Optimizer):
                         sorted(set(gate.qubits) | set(partner.qubits))
                     )
                 }
-                matrices = []
-                for operator in (partner_numeric, numeric):
-                    embedded = Circuit(len(relabel))
-                    embedded.add(operator.on_qubits(relabel))
-                    matrices.append(embedded.unitary(backend))
+                matrices = [
+                    _embedded_matrix(operator, relabel, len(relabel), cache, backend)
+                    for operator in (partner_numeric, numeric)
+                ]
                 if backend.matrix_norm(commutator(*matrices), order="fro") > self.atol:
                     break
 
@@ -1363,6 +1367,8 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
         # in the order of their first gate, and is used to build the new circuit.
         wires = {qubit: [{"gates": [], "index": 0}] for qubit in range(circuit.nqubits)}
         items = []
+        # the matrices of the gates that were compared, see ``_embedded_matrix``
+        cache = {}
         for gate in circuit.queue:
             if (
                 len(gate.qubits) == 1
@@ -1394,12 +1400,12 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
             moved_front, remaining = [], item["gates"]
             if preceding is not None and preceding["gates"]:
                 moved_front, remaining = self._commute_through(
-                    wire[index - 1], remaining, True, backend
+                    wire[index - 1], remaining, True, cache, backend
                 )
             moved_back = []
             if succeeding is not None and succeeding["gates"]:
                 remaining, moved_back = self._commute_through(
-                    wire[index + 1], remaining, False, backend
+                    wire[index + 1], remaining, False, cache, backend
                 )
             if not moved_front and not moved_back:
                 continue
@@ -1437,7 +1443,12 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
         return new
 
     def _commute_through(
-        self, blocker: Gate, run: list[Gate], front: bool, backend: Backend
+        self,
+        blocker: Gate,
+        run: list[Gate],
+        front: bool,
+        cache: dict,
+        backend: Backend,
     ) -> tuple[list[Gate], list[Gate]]:
         """Split a run in the gates that commute with a blocker, at its start or end.
 
@@ -1447,6 +1458,8 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
             front (bool): If ``True``, the gates at the start of the run are taken until
                 the first one that does not commute with the blocker. Otherwise, the gates
                 at the end of the run are taken.
+            cache (dict): Matrices of the gates that were compared, see
+                ``_embedded_matrix``.
             backend (:class:`qibo.backends.abstract.Backend`): Backend used to build the
                 gate matrices.
 
@@ -1467,17 +1480,16 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
                 qubit: new_qubit
                 for new_qubit, qubit in enumerate(sorted(blocker.qubits))
             }
-            embedded = Circuit(len(relabel))
-            embedded.add(blocker.on_qubits(relabel))
-            blocker_matrix = embedded.unitary(backend)
+            blocker_matrix = _embedded_matrix(
+                blocker, relabel, len(relabel), cache, backend
+            )
             for gate in run if front else reversed(run):
-                embedded = Circuit(len(relabel))
-                embedded.add(gate.on_qubits({gate.qubits[0]: relabel[gate.qubits[0]]}))
+                qubit = gate.qubits[0]
+                matrix = _embedded_matrix(
+                    gate, {qubit: relabel[qubit]}, len(relabel), cache, backend
+                )
                 if (
-                    backend.matrix_norm(
-                        commutator(embedded.unitary(backend), blocker_matrix),
-                        order="fro",
-                    )
+                    backend.matrix_norm(commutator(matrix, blocker_matrix), order="fro")
                     > self.atol
                 ):
                     break
@@ -2740,6 +2752,54 @@ class Validation(Optimizer):
                 )
 
         return circuit
+
+
+def _embedded_matrix(
+    gate: Gate, relabel: dict[int, int], nqubits: int, cache: dict, backend: Backend
+):
+    """Matrix of a gate on a small circuit, where its qubits are relabelled.
+
+    The passes that move gates through others compare them by their matrices, and the same
+    few gates are compared many times, so the matrices that were built are kept in ``cache``.
+    The matrix of a gate is set by its class, its qubits and its parameters, which are the
+    key of the cache, so a gate with parameters that cannot be hashed, such as the matrix of
+    a :class:`qibo.gates.Unitary` gate, is not cached.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate`): Gate with numbers as parameters.
+        relabel (dict[int, int]): Qubit of the small circuit for each qubit of the gate.
+        nqubits (int): Number of qubits of the small circuit.
+        cache (dict): Matrices that were built, by the key of their gate. It is updated, and
+            it has to be used with one backend only.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used to build the
+            matrices.
+
+    Returns:
+        :class:`qibo.backends.abstract.Backend.tensor_type`: Matrix of the gate on the
+        circuit, which is shared if it was cached, so it must not be modified.
+    """
+    key = (
+        type(gate),
+        tuple(relabel[qubit] for qubit in gate.qubits),
+        tuple(relabel[qubit] for qubit in gate.control_qubits),
+        gate.parameters,
+        nqubits,
+    )
+    try:
+        hash(key)
+    except TypeError:
+        key = None
+
+    if key in cache:
+        return cache[key]
+
+    embedded = Circuit(nqubits)
+    embedded.add(gate.on_qubits(relabel))
+    matrix = embedded.unitary(backend)
+    if key is not None:
+        cache[key] = matrix
+
+    return matrix
 
 
 def _numeric_gates(circuit: Circuit) -> list[Gate | None]:

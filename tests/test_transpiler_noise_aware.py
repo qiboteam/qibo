@@ -85,6 +85,49 @@ def test_constrained_order():
     assert list(separate.nodes) == [0, 1, 2, 3]
 
 
+@pytest.mark.parametrize(
+    "pairs, expected",
+    [
+        # a chain starts at its end, and not inside of it, whatever the number of gates is
+        (Counter({(index, index + 1): 1 for index in range(5)}), [0, 1, 2, 3, 4, 5]),
+        (Counter({(index, index + 1): 3 for index in range(5)}), [0, 1, 2, 3, 4, 5]),
+        (Counter({(3, 5): 2}), [3, 5]),
+        # a star starts at a leaf, and goes on with the center, which has gates with it
+        (Counter({(0, qubit): 1 for qubit in range(1, 5)}), [1, 0, 2, 3, 4]),
+        (Counter({(index, (index + 1) % 5): 1 for index in range(5)}), [0, 1, 2, 3, 4]),
+        # each group of qubits starts at the end of its chain
+        (Counter({(0, 1): 1, (1, 2): 1, (3, 4): 1, (4, 5): 1}), [0, 1, 2, 3, 4, 5]),
+        # with pairs that have more gates, they go first, as in the other tests
+        (Counter({(0, 1): 1, (1, 2): 1, (2, 3): 2, (3, 4): 1}), [2, 3, 1, 0, 4]),
+        (Counter({(0, 1): 1, (1, 2): 2, (2, 3): 1, (3, 4): 2}), [1, 2, 3, 4, 0]),
+    ],
+)
+def test_constrained_order_chains(pairs, expected):
+    ordered = _constrained_order(pairs)
+    assert list(ordered.nodes) == expected
+    assert set(map(frozenset, ordered.edges)) == set(map(frozenset, pairs))
+
+
+@pytest.mark.parametrize("side, chains", [(5, (25,)), (6, (17, 17))])
+def test_noise_aware_placer_places_chains_on_a_grid(side, chains):
+    """The chains are placed on a grid with few feasibility checks, because the search starts
+    at their ends. Inside of them, it takes many thousands of checks, or it does not end."""
+    grid = nx.convert_node_labels_to_integers(nx.grid_2d_graph(side, side))
+    couplings = sorted(tuple(sorted(edge)) for edge in grid.edges)
+    hardware = HardwareModel(tuple(range(side**2)), couplings)
+    pairs, first = [], 0
+    for length in chains:
+        pairs += [(first + index, first + index + 1) for index in range(length - 1)]
+        first += length
+    circuit = _circuit(side**2, pairs)
+
+    placer = NoiseAwarePlacer(hardware, call_limit=(1000, 1000))
+    placer(circuit)
+    assert placer.stop_reason == "optimal"
+    names = circuit.wire_names
+    assert all(grid.has_edge(names[first], names[second]) for first, second in pairs)
+
+
 def test_layout_matcher_directed_cost():
     device, pattern = nx.path_graph(2), nx.Graph([(0, 1)])
     node_cost = {qubit: {0: 0.0, 1: 0.5} for qubit in (0, 1)}
