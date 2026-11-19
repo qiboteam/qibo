@@ -928,7 +928,8 @@ def transpile(
             chooses other physical qubits for the routed circuits, see
             :func:`qibo.transpiler.pipeline.generate_preset_passes`. All the circuits use
             it, and each worker process gets its own copy. It requires ``connectivity``.
-            Defaults to ``None``, which is a post layout of ``hardware`` if it is given, see
+            Defaults to ``None``, which is a post layout of ``hardware`` if it is given and
+            the default layout search is run, see
             :func:`qibo.transpiler.pipeline.generate_preset_passes`.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
             whose errors the placer of the layout search, the post layout and the
