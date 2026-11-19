@@ -31,6 +31,14 @@ Placer
     :member-order: bysource
 
 
+Post layout
+^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.abstract.PostLayout
+    :members:
+    :member-order: bysource
+
+
 Router
 ^^^^^^
 
@@ -120,6 +128,17 @@ Quantum Shannon decomposition
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: qibo.transpiler.quantum_shannon_decomposition
+
+
+Hardware
+--------
+
+Hardware model
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.hardware.HardwareModel
+    :members:
+    :member-order: bysource
 
 
 Optimizer
@@ -315,6 +334,22 @@ Dense
 ^^^^^
 
 .. autoclass:: qibo.transpiler.placer.Dense
+    :members:
+    :member-order: bysource
+
+
+Noise-aware placer
+^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.placer.NoiseAwarePlacer
+    :members:
+    :member-order: bysource
+
+
+Noise-aware post layout
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.transpiler.placer.NoiseAwarePostLayout
     :members:
     :member-order: bysource
 

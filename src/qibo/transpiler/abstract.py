@@ -4,6 +4,7 @@ import networkx as nx
 
 from qibo import Circuit
 from qibo.backends import Backend
+from qibo.transpiler.layout import TranspileLayout
 
 
 class Placer(ABC):
@@ -41,6 +42,68 @@ class Placer(ABC):
         if connectivity is not None and connectivity.is_directed():
             connectivity = connectivity.to_undirected()
         self._connectivity = connectivity
+
+
+class PostLayout(ABC):
+    """Chooses other physical qubits for a circuit that is already routed.
+
+    It only relabels the physical qubits, so the gates of the circuit and their order do
+    not change, and neither do the SWAP gates of the router. The new qubits must be
+    connected as the old ones, *i.e.* every two-qubit gate must still act on connected
+    qubits."""
+
+    @abstractmethod
+    def __init__(self, connectivity: nx.Graph, *args):
+        """Initializes the post layout.
+
+        Args:
+            connectivity (nx.Graph): Hardware topology.
+        """
+
+    @abstractmethod
+    def __call__(self, circuit: Circuit, layout: TranspileLayout) -> TranspileLayout:
+        """Find a better layout for a routed circuit.
+
+        The method changes the ``wire_names`` of the circuit in place.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Routed circuit.
+            layout (:class:`qibo.transpiler.layout.TranspileLayout`): Layout of the
+                circuit, which the router returns.
+
+        Returns:
+            :class:`qibo.transpiler.layout.TranspileLayout`: Layout with the labels of the
+            new physical qubits. If the layout of the circuit is not changed, it is
+            ``layout``.
+        """
+
+    @property
+    def connectivity(self) -> nx.Graph | None:
+        """Hardware topology. A directed graph is stored as an undirected one, because the
+        direction of the connections does not matter to choose the qubits."""
+        return self._connectivity
+
+    @connectivity.setter
+    def connectivity(self, connectivity: nx.Graph | None) -> None:
+        if connectivity is not None and connectivity.is_directed():
+            connectivity = connectivity.to_undirected()
+        self._connectivity = connectivity
+
+    def skip(self, placer: Placer | None) -> bool:
+        """Tell if the pass has nothing to improve, so that it is not run.
+
+        :class:`qibo.transpiler.pipeline.Passes` asks it before the pass, with the last placer
+        that it ran on the circuit. A placer that already found the best layout, for instance,
+        leaves nothing to improve.
+
+        Args:
+            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Last placer that
+                placed the circuit, or ``None`` if there is none.
+
+        Returns:
+            bool: ``True`` if the pass is not run. It is ``False`` by default.
+        """
+        return False
 
 
 class Router(ABC):
