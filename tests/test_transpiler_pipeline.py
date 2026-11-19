@@ -2180,6 +2180,94 @@ def test_generate_preset_passes_trials(
     assert (placer.trials, router.trials) == (2, 3)
 
 
+@pytest.mark.parametrize(
+    "optimization_level, approximation_degree, hardware, in_loop",
+    [
+        (2, None, True, True),
+        (2, None, False, False),
+        (2, 0.99, True, False),
+        (2, 1.0, True, False),
+        (1, None, True, False),
+    ],
+)
+def test_generate_preset_passes_error_aware_identity_removal(
+    optimization_level, approximation_degree, hardware, in_loop
+):
+    """The gates are removed with the errors of their qubits, which are known after the
+    layout, so the loop at the end has the pass if there are errors to use."""
+    connectivity = nx.path_graph(3)
+    model = HardwareModel((0, 1, 2), connectivity) if hardware else None
+    passes = generate_preset_passes(
+        connectivity,
+        optimization_level=optimization_level,
+        approximation_degree=approximation_degree,
+        hardware=model,
+    ).passes
+    loops = [item.optimizers for item in passes if isinstance(item, FixedPoint)]
+    found = [
+        optimizer
+        for loop in loops
+        for optimizer in loop
+        if isinstance(optimizer, RemoveIdentityEquivalent)
+    ]
+    assert len(found) == int(in_loop)
+    if in_loop:
+        assert found[0] is loops[0][0]
+        assert found[0].hardware is model
+        assert found[0].approximation_degree is None
+
+    # the one before the layout does not know the qubits
+    before = [item for item in passes if isinstance(item, RemoveIdentityEquivalent)]
+    assert len(before) == int(optimization_level == 2)
+    assert all(item.hardware is None for item in before)
+
+    # the unroller does not approximate with the errors, and it is not given ``None``
+    if approximation_degree is None:
+        unrollers = [item for item in passes if isinstance(item, Unroller)]
+        assert all(item.approximation_degree == 1.0 for item in unrollers)
+
+
+@pytest.mark.parametrize(
+    "optimization_level, approximation_degree, remaining",
+    [(2, None, [1]), (2, 1.0, [0, 1]), (1, None, [0, 1])],
+)
+def test_transpile_error_aware_identity_removal(
+    backend, optimization_level, approximation_degree, remaining
+):
+    natives = (
+        NativeGates.RZ
+        | NativeGates.RX
+        | NativeGates.RY
+        | NativeGates.CZ
+        | NativeGates.M
+    )
+    connectivity = nx.path_graph(2)
+    # the rotation is worth executing on the second qubit, where the error is lower
+    hardware = HardwareModel(
+        (0, 1), connectivity, natives, errors={"1q": {0: 1e-3, 1: 1e-9}}
+    )
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, 1e-3))
+    circuit.add(gates.RX(1, 1e-3))
+    circuit.add(gates.M(0, 1))
+    transpiled, _ = transpile(
+        circuit,
+        connectivity,
+        natives,
+        layout_method="trivial",
+        optimization_level=optimization_level,
+        approximation_degree=approximation_degree,
+        hardware=hardware,
+        backend=backend,
+    )
+    found = [
+        transpiled.wire_names[gate.qubits[0]]
+        for gate in transpiled.queue
+        if gate.name == "rx"
+    ]
+    assert found == remaining
+
+
 def test_generate_preset_passes_level_0_layout_trials():
     passes = generate_preset_passes(
         nx.path_graph(3), layout_method="reverse_traversal", optimization_level=0
