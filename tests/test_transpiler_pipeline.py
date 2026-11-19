@@ -2434,6 +2434,19 @@ def test_generate_preset_passes_loop_commutative_cancellation():
                 assert loops[0][found[0].index(True)].basis == basis
 
 
+def test_transpile_chain_on_a_grid():
+    """A chain of qubits has a layout where it needs no SWAP gates, even on a large grid, so
+    the first level, with its small search, finds it, and it has the least entangling gates."""
+    grid = nx.convert_node_labels_to_integers(nx.grid_2d_graph(5, 5))
+    circuit = Circuit(25)
+    circuit.add(gates.H(0))
+    for qubit in range(24):
+        circuit.add(gates.CNOT(qubit, qubit + 1))
+    transpiled, layout = transpile(circuit, grid, optimization_level=1, seed=0)
+    assert sum(isinstance(gate, gates.CZ) for gate in transpiled.queue) == 24
+    assert layout.routing_permutation == list(range(25))
+
+
 def test_transpile_elides_the_swap_gates(backend):
     connectivity = nx.path_graph(4)
     circuit = Circuit(4)
