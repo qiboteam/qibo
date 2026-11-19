@@ -25,6 +25,7 @@ from qibo.transpiler.asserts import (
     assert_decomposition,
     assert_transpiling,
 )
+from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.optimizer import (
     GateDirection,
     Preprocessing,
@@ -39,6 +40,7 @@ from qibo.transpiler.pipeline import (
 )
 from qibo.transpiler.placer import (
     Dense,
+    NoiseAwarePlacer,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
@@ -1571,6 +1573,7 @@ def test_generate_preset_passes_optimization_level_1_structure():
         "InverseCancellation",
         "CommutativeCancellation",
         "Preprocessing",
+        "NoiseAwarePlacer",
         "ReverseTraversal",
         "Sabre",
         "ConsolidateBlocks",
@@ -1615,27 +1618,167 @@ def test_generate_preset_passes_optimization_level_1_without_euler_basis():
 
 
 @pytest.mark.parametrize(
-    "kwargs, trials, placer",
+    "kwargs, trials, expected",
     [
-        ({}, 5, ReverseTraversal),
-        ({"layout_trials": 2}, 2, ReverseTraversal),
-        ({"layout_method": "reverse_traversal"}, 5, ReverseTraversal),
-        ({"layout_method": "trivial"}, None, None),
-        ({"layout_method": "dense"}, None, Dense),
-        ({"initial_layout": [2, 1, 0]}, None, None),
-        ({"routing_method": "shortest_paths"}, None, None),
-        ({"routing_method": ShortestPaths()}, None, None),
-        ({"routing_method": "sabre"}, 5, ReverseTraversal),
+        ({}, 5, [NoiseAwarePlacer, ReverseTraversal]),
+        ({"layout_trials": 2}, 2, [NoiseAwarePlacer, ReverseTraversal]),
+        ({"layout_method": "reverse_traversal"}, 5, [ReverseTraversal]),
+        ({"layout_method": "trivial"}, None, []),
+        ({"layout_method": "dense"}, None, [Dense]),
+        ({"initial_layout": [2, 1, 0]}, None, []),
+        ({"routing_method": "shortest_paths"}, None, []),
+        ({"routing_method": ShortestPaths()}, None, []),
+        ({"routing_method": "sabre"}, 5, [NoiseAwarePlacer, ReverseTraversal]),
     ],
 )
-def test_generate_preset_passes_optimization_level_1_layout(kwargs, trials, placer):
+def test_generate_preset_passes_optimization_level_1_layout(kwargs, trials, expected):
     passes = generate_preset_passes(
         nx.path_graph(3), optimization_level=1, **kwargs
     ).passes
     placers = [pass_ for pass_ in passes if isinstance(pass_, Placer)]
-    assert [type(pass_) for pass_ in placers] == ([] if placer is None else [placer])
+    assert [type(pass_) for pass_ in placers] == expected
     if trials is not None:
-        assert placers[0].trials == trials
+        assert placers[-1].trials == trials
+
+
+@pytest.mark.parametrize(
+    "optimization_level, call_limit", [(1, (50_000, 1_000)), (2, 1_000_000)]
+)
+def test_generate_preset_passes_layout_search(optimization_level, call_limit):
+    """The layout without SWAP gates is searched first, and kept if it already exists."""
+    connectivity = nx.path_graph(4)
+    passes = generate_preset_passes(
+        connectivity, optimization_level=optimization_level
+    ).passes
+    search, placer = [pass_ for pass_ in passes if isinstance(pass_, Placer)]
+    assert search.keep_layout
+    assert search.call_limit == call_limit
+    assert placer.keep_layout
+
+    # without ``hardware``, the model has the connectivity and no errors
+    assert nx.utils.graphs_equal(search.hardware.connectivity, connectivity)
+    assert search.hardware.native_gates == NativeGates.default()
+    assert not search.hardware.errors
+
+    # a layout that the user asks for is always searched
+    passes = generate_preset_passes(
+        connectivity, layout_method="reverse_traversal", optimization_level=1
+    ).passes
+    (placer,) = [pass_ for pass_ in passes if isinstance(pass_, Placer)]
+    assert not placer.keep_layout
+
+
+def test_generate_preset_passes_layout_search_hardware():
+    connectivity = nx.path_graph(4)
+    hardware = HardwareModel((0, 1, 2, 3), connectivity)
+    passes = generate_preset_passes(
+        connectivity, hardware=hardware, optimization_level=1
+    ).passes
+    search = next(pass_ for pass_ in passes if isinstance(pass_, NoiseAwarePlacer))
+    assert search.hardware is hardware
+
+    # the hardware is only used by the layout search of the levels that have it
+    passes = generate_preset_passes(connectivity, hardware=hardware).passes
+    assert not any(isinstance(pass_, Placer) for pass_ in passes)
+
+    with pytest.raises(ValueError):
+        generate_preset_passes(hardware=hardware, optimization_level=1)
+
+
+def test_transpile_layout_search_hardware():
+    """The layout without SWAP gates of the quietest qubits is chosen."""
+    couplings = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+    hardware = HardwareModel(
+        tuple(range(6)),
+        couplings,
+        errors={"2q": dict(zip(couplings, [0.05, 0.05, 0.05, 0.001, 0.001]))},
+    )
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(2, 1))
+    for optimization_level in (1, 2):
+        transpiled, _ = transpile(
+            circuit,
+            hardware.connectivity,
+            optimization_level=optimization_level,
+            hardware=hardware,
+        )
+        assert not any(isinstance(gate, gates.SWAP) for gate in transpiled.queue)
+        used = {
+            transpiled.wire_names[qubit]
+            for gate in transpiled.queue
+            if len(gate.qubits) == 2
+            for qubit in gate.qubits
+        }
+        assert used == {3, 4, 5}
+
+
+@pytest.mark.parametrize("trivial", [True, False])
+def test_transpile_layout_search_skips(trivial):
+    """The trivial layout is kept if it needs no SWAP gates, and the search is skipped if
+    a layout without them exists. The reverse traversal only runs if there is none."""
+    connectivity = nx.path_graph(5)
+    circuit = Circuit(5)
+    for pair in [(0, 1), (1, 2)] if trivial else [(0, 2), (2, 3)]:
+        circuit.add(gates.CNOT(*pair))
+    ran = []
+    transpiled, _ = transpile(
+        circuit,
+        connectivity,
+        optimization_level=1,
+        callback=lambda transpiler_pass, **_: ran.append(type(transpiler_pass)),
+    )
+    assert NoiseAwarePlacer in ran
+    assert Sabre not in ran
+    assert not any(isinstance(gate, gates.SWAP) for gate in transpiled.queue)
+    if trivial:
+        assert transpiled.wire_names == list(range(5))
+
+
+def test_transpile_layout_search_falls_back(backend):
+    """A circuit that needs SWAP gates has no layout without them."""
+    connectivity = nx.path_graph(5)
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(0, 2))
+    ran = []
+    transpiled, layout = transpile(
+        circuit,
+        connectivity,
+        optimization_level=1,
+        seed=1,
+        callback=lambda transpiler_pass, **_: ran.append(type(transpiler_pass)),
+        backend=backend,
+    )
+    assert ran.index(NoiseAwarePlacer) < ran.index(ReverseTraversal)
+    assert Sabre in ran
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=connectivity,
+        final_layout=layout,
+    )
+
+
+def test_transpile_layout_search_directed():
+    connectivity = nx.DiGraph([(0, 1), (1, 2), (2, 3)])
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(2, 3))
+    transpiled, layout = transpile(
+        circuit,
+        connectivity,
+        NativeGates.default() | NativeGates.CNOT,
+        optimization_level=1,
+    )
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=connectivity,
+        final_layout=layout,
+        native_gates=NativeGates.default() | NativeGates.CNOT,
+    )
 
 
 def test_generate_preset_passes_level_0_layout_trials():
@@ -1809,6 +1952,7 @@ def test_generate_preset_passes_optimization_level_2_structure():
         "CommutativeCancellation",
         "RemoveIdentityEquivalent",
         "Preprocessing",
+        "NoiseAwarePlacer",
         "ReverseTraversal",
         "Sabre",
         "ConsolidateBlocks",
@@ -1890,7 +2034,8 @@ def test_generate_preset_passes_optimization_level_2_without_euler_basis():
 
 def test_generate_preset_passes_optimization_level_2_layout():
     passes = generate_preset_passes(nx.path_graph(3), optimization_level=2).passes
-    (placer,) = [pass_ for pass_ in passes if isinstance(pass_, Placer)]
+    search, placer = [pass_ for pass_ in passes if isinstance(pass_, Placer)]
+    assert isinstance(search, NoiseAwarePlacer)
     assert isinstance(placer, ReverseTraversal)
     assert placer.trials == 5
 

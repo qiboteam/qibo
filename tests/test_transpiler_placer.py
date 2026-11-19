@@ -371,6 +371,31 @@ def test_reverse_traversal_trials(backend):
     assert swaps[10] < swaps[1]
 
 
+@pytest.mark.parametrize("keep_layout", [False, True])
+@pytest.mark.parametrize("mapped", [False, True])
+def test_reverse_traversal_keep_layout(backend, keep_layout, mapped):
+    class CountingSabre(Sabre):
+        calls = 0
+
+        def __call__(self, circuit):
+            self.calls += 1
+            return super().__call__(circuit)
+
+    connectivity = nx.path_graph(4)
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2 if mapped else 3))
+    router = CountingSabre(seed=1)
+    placer = ReverseTraversal(router, connectivity, keep_layout=keep_layout)
+    placer(circuit, backend=backend)
+    assert_placement(circuit, connectivity)
+    # the layout is kept if there is no need to move the qubits
+    searched = not (keep_layout and mapped)
+    assert (router.calls > 0) == searched
+    if not searched:
+        assert circuit.wire_names == [0, 1, 2, 3]
+
+
 def test_reverse_traversal_trials_error():
     with pytest.raises(ValueError):
         ReverseTraversal(Sabre(), trials=0)
