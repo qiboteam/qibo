@@ -752,6 +752,13 @@ class NoiseAwarePostLayout(PostLayout):
     are searched do not use their physical qubits. The qubits without operations keep their
     labels if they are free, and take the remaining qubits otherwise.
 
+    The pass is skipped if the circuit was placed by a
+    :class:`qibo.transpiler.placer.NoiseAwarePlacer` whose ``keep_layout`` left its layout,
+    because the pass would move the circuit. The pipeline does not skip it after a placer that
+    found the best layout, unless ``trust_placer`` is ``True``. The placer counts the gates
+    before the unroller and the optimizers, which change them, and this pass counts the final
+    gates, so the best layout of the placer can still be improved.
+
     The search is the one of :class:`qibo.transpiler.placer.NoiseAwarePlacer`, which drops the
     partial layouts that cannot beat the best one, and the layout that the circuit has is the
     first best layout, so a search that ends before a limit is reached finds the layout with
@@ -819,6 +826,10 @@ class NoiseAwarePostLayout(PostLayout):
             second number is the number of checks that the search can make to improve the
             layout that the circuit has, and the first one is only used if that layout needs
             SWAP gates, which is not the case after the routing. Defaults to :math:`50000`.
+        trust_placer (bool, optional): If ``True``, the pass is also skipped after a
+            :class:`qibo.transpiler.placer.NoiseAwarePlacer` of the same hardware model that
+            found the best layout, which saves the search, but gives up the small improvements
+            that the final gates allow. Defaults to ``False``.
 
     Raises:
         ValueError: If ``max_matches`` is not positive, or if ``call_limit`` is not positive
@@ -832,11 +843,13 @@ class NoiseAwarePostLayout(PostLayout):
         hardware: "HardwareModel",
         max_matches: int = 2_500,
         call_limit: int | tuple[int, int] = 50_000,
+        trust_placer: bool = False,
     ):
         self._placer = NoiseAwarePlacer(
             hardware, max_matches=max_matches, call_limit=call_limit
         )
         self.hardware = hardware
+        self.trust_placer = trust_placer
         self.connectivity = hardware.connectivity
 
     def __call__(self, circuit: Circuit, layout: TranspileLayout) -> TranspileLayout:
@@ -901,11 +914,42 @@ class NoiseAwarePostLayout(PostLayout):
             layout.nqubits_input,
         )
 
+    def skip(self, placer: Placer | None) -> bool:
+        """Tell if the pass is not to be run on the circuit that a placer placed.
+
+        It is skipped if the placer is a :class:`qibo.transpiler.placer.NoiseAwarePlacer` that
+        left the layout of the circuit because of its ``keep_layout``, since this pass would
+        move the circuit. With ``trust_placer``, it is also skipped if the placer is one of the
+        same hardware model that found the best layout. Then ``stop_reason`` is ``"skipped"``.
+
+        Args:
+            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Last placer that
+                placed the circuit, or ``None`` if there is none.
+
+        Returns:
+            bool: ``True`` if the pass is not run.
+        """
+        skip = isinstance(placer, NoiseAwarePlacer) and (
+            placer.stop_reason == "kept"
+            or (
+                self.trust_placer
+                and placer.hardware is self.hardware
+                and placer.stop_reason == "optimal"
+            )
+        )
+
+        if skip:
+            self._placer.stop_reason = "skipped"
+
+        return skip
+
     @property
     def stop_reason(self) -> str | None:
         """Why the last search ended, with the values of the ``stop_reason`` of
         :class:`qibo.transpiler.placer.NoiseAwarePlacer`. Here ``"optimal"`` means that no
-        layout has a lower cost than the layout that the circuit has."""
+        layout has a lower cost than the layout that the circuit has, and ``"skipped"`` that
+        there was no search, because :meth:`skip` told that the pass is not to be run.
+        """
         return self._placer.stop_reason
 
 

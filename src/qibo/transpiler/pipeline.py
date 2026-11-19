@@ -158,6 +158,7 @@ class Passes:
 
         final_layout = None
         nqubits_input = circuit.nqubits
+        placer = None
         for count, transpiler_pass in enumerate(self.passes):
             start = time.perf_counter()
             skipped = False
@@ -170,6 +171,7 @@ class Passes:
             elif isinstance(transpiler_pass, Placer):
                 transpiler_pass.connectivity = self.connectivity
                 final_layout = transpiler_pass(circuit, backend=backend)
+                placer = transpiler_pass
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
                 assert_placement(circuit, self.connectivity)
@@ -196,7 +198,9 @@ class Passes:
                         "A post layout relabels a routed circuit, so it needs a router "
                         + "before it.",
                     )
-                final_layout = transpiler_pass(circuit, final_layout)
+                skipped = transpiler_pass.skip(placer)
+                if not skipped:
+                    final_layout = transpiler_pass(circuit, final_layout)
             elif isinstance(transpiler_pass, Unroller):
                 circuit = transpiler_pass(circuit, backend=unroller_backend)
             elif transpiler_pass.__class__.__name__ == "QiskitPasses":
@@ -438,9 +442,10 @@ def generate_preset_passes(
             chooses other physical qubits for the routed circuit, *e.g.*
             :class:`qibo.transpiler.placer.NoiseAwarePostLayout`, which moves it to the
             least noisy qubits that can run it. It runs at the end of the pipeline, except
-            on a directed ``connectivity``, and it updates the final layout. It requires
-            ``connectivity``. Defaults to ``None``, so the qubits are the ones that the
-            placer chose.
+            on a directed ``connectivity``, and it updates the final layout. It can skip
+            itself if it has nothing to do after the placer, see
+            :meth:`qibo.transpiler.abstract.PostLayout.skip`. It requires ``connectivity``.
+            Defaults to ``None``, so the qubits are the ones that the placer chose.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
