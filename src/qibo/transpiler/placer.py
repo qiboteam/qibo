@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 from qibo import Circuit, gates
 from qibo.backends import Backend
@@ -11,6 +12,7 @@ from qibo.config import raise_error
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Placer, PostLayout, Router
 from qibo.transpiler.asserts import assert_placement
+from qibo.transpiler.decompositions import direction_dec
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.router import _find_connected_qubit
 
@@ -240,7 +242,11 @@ class NoiseAwarePlacer(Dense):
         The search is bounded by ``max_matches`` and ``call_limit``, which are counts and not
         times, so the placement is reproducible for a given version of :mod:`networkx`. If a
         limit is reached, the best layout found until then is taken, and a higher limit can
-        find a better one.
+        find a better one. A directed connectivity has couplings that only work in one
+        direction. By default, the placer does not see it, and the cost of a coupling is the
+        mean of its directions, because :class:`qibo.transpiler.optimizer.GateDirection`
+        reverses the gates afterwards, with single-qubit gates if the gate is not symmetric.
+        With ``strict_direction``, the gates that need them act in the direction of a coupling.
 
     ``"dense"``
         It works as :class:`qibo.transpiler.placer.Dense`, which has the details. A region
@@ -265,16 +271,19 @@ class NoiseAwarePlacer(Dense):
         gates. It chooses the region, not which qubit goes to which coupling.
 
     With both methods, the qubits without two-qubit gates take the remaining qubits of the
-    hardware, in the order of the connectivity. A hardware model without errors has no cost,
-    so ``"dense"`` then does what :class:`qibo.transpiler.placer.Dense` does and ``"vf2"``
-    takes the first layout that VF2 finds. The errors that are missing are completed by the
-    hardware model, which warns about them when the placer is created.
+    hardware. The ones that have single-qubit gates or measurements take the remaining qubits
+    where the total cost of their operations is the lowest, and the others take what is left,
+    in the order of the connectivity. A hardware model without
+    errors has no cost, so ``"dense"`` then does what :class:`qibo.transpiler.placer.Dense`
+    does and ``"vf2"`` takes the first layout that VF2 finds. The errors that are missing are
+    completed by the hardware model, which warns about them when the placer is created.
 
     Example:
         The qubits of a chain of two-qubit gates are placed on the quietest chain of the
         hardware, with either method. A triangle of gates cannot be placed on a line without
         SWAP gates, so the method ``"vf2"`` falls back to the method ``"dense"``, which puts
-        the triangle on the quietest three qubits.
+        the triangle on the quietest three qubits. The ``stop_reason`` of the placer says that
+        the layout of the chain is the best one, and that the triangle has none.
 
         .. testcode::
 
@@ -298,9 +307,10 @@ class NoiseAwarePlacer(Dense):
             chain.add(gates.CNOT(0, 1))
             chain.add(gates.CNOT(1, 2))
 
+            placer = NoiseAwarePlacer(hardware)
             vf2 = chain.copy()
-            NoiseAwarePlacer(hardware)(vf2)
-            print(vf2.wire_names)
+            placer(vf2)
+            print(vf2.wire_names, placer.stop_reason)
 
             dense = chain.copy()
             NoiseAwarePlacer(hardware, method="dense")(dense)
@@ -310,14 +320,47 @@ class NoiseAwarePlacer(Dense):
             triangle.add(gates.CNOT(0, 1))
             triangle.add(gates.CNOT(1, 2))
             triangle.add(gates.CNOT(0, 2))
-            NoiseAwarePlacer(hardware)(triangle)
-            print(triangle.wire_names)
+            placer(triangle)
+            print(triangle.wire_names, placer.stop_reason)
 
         .. testoutput::
 
+            [3, 4, 5, 0, 1, 2] optimal
             [3, 4, 5, 0, 1, 2]
-            [3, 4, 5, 0, 1, 2]
-            [4, 3, 5, 0, 1, 2]
+            [4, 3, 5, 0, 1, 2] none exists
+
+        The couplings of a directed connectivity only work in one direction. Here the
+        cheapest layout puts every gate against its coupling, which
+        :class:`qibo.transpiler.optimizer.GateDirection` would have to reverse with
+        single-qubit gates, and ``strict_direction`` places them along the couplings.
+
+        .. testcode::
+
+            from qibo.transpiler.unroller import NativeGates
+
+            couplings = [(0, 1), (1, 2), (2, 3)]
+            directed = HardwareModel(
+                tuple(range(4)),
+                couplings,
+                errors={"2q": dict(zip(couplings, [0.05, 0.05, 0.001]))},
+                native_gates=NativeGates.default() | NativeGates.CNOT,
+                symmetric={coupling: False for coupling in couplings},
+            )
+
+            circuit = Circuit(4)
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(1, 2))
+
+            for strict in (False, True):
+                placed = circuit.copy()
+                NoiseAwarePlacer(directed, strict_direction=strict)(placed)
+                print(placed.wire_names)
+
+        .. testoutput::
+
+            [3, 2, 1, 0]
+            [1, 2, 3, 0]
 
     Args:
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`): Hardware model. Its
@@ -329,18 +372,55 @@ class NoiseAwarePlacer(Dense):
         max_matches (int, optional): Only for the method ``"vf2"``. Number of layouts, each
             better than the previous one, after which the search stops and the best one is
             taken. Defaults to :math:`10000`.
-        call_limit (int, optional): Only for the method ``"vf2"``. Number of feasibility
-            checks of VF2 after which the search stops, and the best layout found until then
-            is taken. It bounds the time of the circuits that have no layout, as
+        call_limit (int | tuple[int, int], optional): Only for the method ``"vf2"``. Number of
+            feasibility checks of VF2 after which the search stops, and the best layout found
+            until then is taken. It bounds the time of the circuits that have no layout, as
             :mod:`networkx` makes of the order of :math:`10^{5}` to :math:`10^{6}` checks per
             second. Large circuits on well-connected hardware, *e.g.* about thirty qubits on a
             grid, can need more checks to find their first layout, and then the placer falls
-            back. Defaults to :math:`10^{6}`.
+            back. If it is a pair, the first number is the limit until the first layout is
+            found, and the second number is the number of checks that the search can make
+            after that to improve it, *i.e.* a long search for a layout and a short one to
+            improve it. Defaults to :math:`10^{6}`.
+        strict_direction (bool, optional): Only for the method ``"vf2"``. If ``True``, the
+            two-qubit gates that are not symmetric act in the direction of a coupling of the
+            hardware, so they do not have to be reversed with single-qubit gates, and they
+            cost the error of the coupling in that direction, and not the mean of its
+            directions. These are the gates of the native gates of the hardware model that
+            :class:`qibo.transpiler.optimizer.GateDirection` reverses with single-qubit
+            gates, *i.e.* ``CNOT``, ``CH``, ``CSX``, ``CSXDG``, ``CY`` and ``ECR``. The
+            symmetric gates, *e.g.* ``CZ``, are reversed by swapping their qubits, so they
+            can act in any direction. A gate against the direction makes the layout not
+            valid, so the placer falls back to the method ``"dense"`` if no layout respects
+            the directions. It has no effect if the connectivity is not directed, or if its
+            native gates have no gate to be reversed. Defaults to ``False``.
+        keep_layout (bool, optional): If ``True``, the placer does not search when the layout
+            that the circuit has already needs no SWAP gates, *i.e.* every two-qubit gate acts
+            on connected qubits. That layout is the one that
+            :class:`qibo.transpiler.optimizer.Preprocessing` sets, which is the first qubits
+            of the connectivity if there is no initial layout. The circuit is then not moved
+            to quieter qubits, which is what to want if the qubits were chosen on purpose, and
+            the placer is faster. Defaults to ``False``.
+
+    Attributes:
+        stop_reason (str | None): Why the last call ended its search, which tells what the
+            placer did. It is ``None`` before the first call. With the method ``"vf2"``, it
+            is ``"optimal"`` if the search ended before a limit with a layout, which is then
+            the best one, ``"limited"`` if a limit ended the search with a layout, which
+            higher limits can improve, ``"none exists"`` if the search ended before a limit
+            without a layout, *i.e.* the circuit needs SWAP gates, ``"none found"`` if a
+            limit ended the search before the first layout, and ``"no two-qubit gates"`` if
+            the circuit has none. In the last three cases the placer falls back to the method
+            ``"dense"``. It is ``"kept"`` if ``keep_layout`` left the layout of the circuit,
+            and ``"dense"`` for the method ``"dense"``. It belongs to the placer that was
+            called, so the worker processes of
+            :func:`qibo.transpiler.pipeline.transpile` have their own.
 
     Raises:
-        ValueError: If ``method`` is not ``"vf2"`` or ``"dense"``, or if ``max_matches`` or
-            ``call_limit`` is not positive, or, when the placer is called, if a gate of the
-            circuit acts on more than two qubits.
+        ValueError: If ``method`` is not ``"vf2"`` or ``"dense"``, or if ``max_matches`` is
+            not positive, or if ``call_limit`` is not positive or a pair of positive
+            numbers, or, when the placer is called, if a gate of the circuit acts on more
+            than two qubits.
         PlacementError: If no connected region of the hardware has as many qubits as the
             circuit has qubits in two-qubit gates, and the layout is not found.
         ConnectivityError: If the connectivity of the placer is not a subgraph of the
@@ -352,22 +432,38 @@ class NoiseAwarePlacer(Dense):
         hardware: "HardwareModel",
         method: str = "vf2",
         max_matches: int = 10_000,
-        call_limit: int = 1_000_000,
+        call_limit: int | tuple[int, int] = 1_000_000,
+        keep_layout: bool = False,
+        strict_direction: bool = False,
     ):
         if method not in ("vf2", "dense"):
             raise_error(
                 ValueError, f"``method`` must be 'vf2' or 'dense', not {method!r}."
             )
-        if max_matches < 1 or call_limit < 1:
+        limits = call_limit if isinstance(call_limit, tuple) else (call_limit,)
+        if max_matches < 1 or len(limits) > 2 or min(limits, default=0) < 1:
             raise_error(
-                ValueError, "``max_matches`` and ``call_limit`` must be positive."
+                ValueError,
+                "``max_matches`` must be positive, and ``call_limit`` must be positive or "
+                + "a pair of positive numbers.",
             )
         super().__init__(hardware.connectivity)
         self.hardware = hardware
         self.method = method
         self.max_matches = max_matches
         self.call_limit = call_limit
+        self.keep_layout = keep_layout
+        self.strict_direction = strict_direction
+        self.stop_reason = None
         self._weights = hardware.weighted_connectivity()
+        # the native gates that the reversal of their direction needs single-qubit gates for
+        self._directional = ()
+        if strict_direction:
+            self._directional = tuple(
+                gate
+                for gate in hardware.native_gates.two_qubit_gates
+                if gate in direction_dec
+            )
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> None:
         """Find the initial layout of the given circuit.
@@ -378,20 +474,39 @@ class NoiseAwarePlacer(Dense):
                 Not used by this placer, it is accepted to be compatible with
                 :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         """
-        if self.method == "dense":
-            return super().__call__(circuit, backend)
-
         assert_placement(circuit, self.connectivity)
-        layout = self._search(circuit)
-        if layout is None:
-            return super().__call__(circuit, backend)
+        pairs = _find_gates_qubits_pairs(circuit)
+        if (
+            self.keep_layout
+            and all(
+                self.connectivity.has_edge(
+                    circuit.wire_names[first], circuit.wire_names[second]
+                )
+                for first, second in pairs
+            )
+            and all(
+                self._weights.has_edge(
+                    circuit.wire_names[first], circuit.wire_names[second]
+                )
+                for first, second in self._directed_gates(circuit)
+            )
+        ):
+            self.stop_reason = "kept"
+            return
 
-        used = set(layout.values())
-        free = (node for node in self.connectivity.nodes if node not in used)
-        circuit.wire_names = [
-            layout[qubit] if qubit in layout else next(free)
-            for qubit in range(circuit.nqubits)
-        ]
+        layout = None
+        if self.method == "dense":
+            self.stop_reason = "dense"
+        else:
+            layout = self._search(circuit)
+
+        if layout is None:
+            # the region of the dense placement is kept, and the free qubits are placed again
+            super().__call__(circuit, backend)
+            layout = {
+                qubit: circuit.wire_names[qubit] for pair in pairs for qubit in pair
+            }
+        self._place_free(circuit, layout)
 
     def _costs(self, circuit: Circuit, active: list[int]) -> tuple[dict, dict]:
         """Costs of the qubits and of the connections for the operations of the circuit."""
@@ -422,13 +537,103 @@ class NoiseAwarePlacer(Dense):
         edge_cost = {edge: pairs * weight for edge, weight in edge_weight.items()}
         return node_cost, edge_cost
 
+    def _directed_gates(self, circuit: Circuit) -> Counter:
+        """Number of two-qubit gates that have to act in the direction of a coupling.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be placed.
+
+        Returns:
+            collections.Counter: Number of gates of each ordered pair of qubits, where the
+            first qubit is the first one of the gate. It is empty unless ``strict_direction``
+            is ``True``.
+        """
+        return Counter(
+            tuple(gate.qubits)
+            for gate in circuit.queue
+            if isinstance(gate, self._directional) and len(gate.qubits) == 2
+        )
+
+    def _operations(self, circuit: Circuit) -> tuple[Counter, Counter]:
+        """Number of single-qubit gates and of measurements of each qubit of the circuit.
+
+        The virtual gates do not count, because they have no error.
+        """
+        singles = Counter(
+            gate.qubits[0]
+            for gate in circuit.queue
+            if len(gate.qubits) == 1 and not isinstance(gate, _ERRORLESS)
+        )
+        measured = Counter(
+            qubit
+            for gate in circuit.queue
+            if isinstance(gate, gates.M)
+            for qubit in gate.qubits
+        )
+        return singles, measured
+
+    def _place_free(self, circuit: Circuit, layout: dict) -> None:
+        """Place the qubits that are not in the layout, *i.e.* the ones without two-qubit gates.
+
+        The qubits that have single-qubit gates or measurements take the nodes that are left
+        where the total cost of their operations is the lowest. The other qubits take the
+        nodes that are left after that, in the order of the connectivity. The ``wire_names``
+        of the circuit are set in place.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be placed.
+            layout (dict): Node of each qubit that takes part in two-qubit gates.
+        """
+        singles, measured = self._operations(circuit)
+        weights = self._weights.nodes
+        used = set(layout.values())
+        free = [node for node in self.connectivity.nodes if node not in used]
+        wire_names = [layout.get(qubit) for qubit in range(circuit.nqubits)]
+
+        busy = [
+            qubit
+            for qubit in range(circuit.nqubits)
+            if qubit not in layout and singles[qubit] + measured[qubit]
+        ]
+        if busy:
+            costs = np.array(
+                [
+                    [
+                        sum(
+                            count * weights[node][name]
+                            for count, name in (
+                                (singles[qubit], "gate"),
+                                (measured[qubit], "readout"),
+                            )
+                            if count
+                        )
+                        for node in free
+                    ]
+                    for qubit in busy
+                ]
+            )
+            # an infinite cost is made finite and larger than the sum of all the others
+            finite = np.isfinite(costs)
+            costs = np.where(finite, costs, costs[finite].sum() + 1.0)
+            for qubit, column in zip(busy, linear_sum_assignment(costs)[1]):
+                wire_names[qubit] = free[column]
+            taken = {wire_names[qubit] for qubit in busy}
+            free = [node for node in free if node not in taken]
+
+        rest = iter(free)
+        circuit.wire_names = [
+            node if node is not None else next(rest) for node in wire_names
+        ]
+
     def _search(
         self, circuit: Circuit, initial: dict | None = None, pinned: set | None = None
     ) -> dict | None:
         """Layout with the lowest cost that needs no SWAP gates, searched with VF2.
 
         The search drops the partial layouts that cannot beat the best layout so far, so it
-        returns the best layout if it ends before a limit is reached.
+        returns the best layout if it ends before a limit is reached. With
+        ``strict_direction``, the layouts that put a gate against the direction of a coupling
+        are not valid, and the gates cost the error of the coupling in their direction.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be placed.
@@ -442,25 +647,28 @@ class NoiseAwarePlacer(Dense):
         Returns:
             dict | None: Layout of the qubits that take part in two-qubit gates, from each
             qubit to a node, or ``None`` if the circuit has no two-qubit gates or no layout
-            was found.
+            was found. The reason why the search ended is in ``stop_reason``.
         """
         pairs = Counter(tuple(pair) for pair in _find_gates_qubits_pairs(circuit))
         if not pairs:
+            self.stop_reason = "no two-qubit gates"
             return None
 
         nodes = self._weights.nodes
         edge_weight = _connectivity_weights(self.connectivity, self._weights)
-        singles = Counter(
-            gate.qubits[0]
-            for gate in circuit.queue
-            if len(gate.qubits) == 1 and not isinstance(gate, _ERRORLESS)
-        )
-        measured = Counter(
-            qubit
-            for gate in circuit.queue
-            if isinstance(gate, gates.M)
-            for qubit in gate.qubits
-        )
+        singles, measured = self._operations(circuit)
+        directed = self._directed_gates(circuit)
+        directed_weight = {}
+        if directed:
+            directed_weight = _connectivity_weights(
+                self.connectivity, self._weights, directed=True
+            )
+        # the gates that act the same in both directions
+        counts = {}
+        for pair, count in pairs.items():
+            count -= directed[pair] + directed[pair[::-1]]
+            if count:
+                counts[frozenset(pair)] = count
 
         target = self.connectivity
         if pinned:
@@ -487,15 +695,24 @@ class NoiseAwarePlacer(Dense):
             self.call_limit,
             node_cost,
             edge_weight,
-            {frozenset(pair): count for pair, count in pairs.items()},
+            counts,
+            directed,
+            directed_weight,
         )
 
         layout = None
         if initial is not None:
             initial = {qubit: initial[qubit] for pair in pairs for qubit in pair}
-            if all(node in target for node in initial.values()) and all(
-                (initial[first], initial[second]) in edge_weight
-                for first, second in pairs
+            if (
+                all(node in target for node in initial.values())
+                and all(
+                    (initial[first], initial[second]) in edge_weight
+                    for first, second in pairs
+                )
+                and all(
+                    (initial[first], initial[second]) in directed_weight
+                    for first, second in directed
+                )
             ):
                 layout, matcher.best = initial, matcher.cost(initial)
 
@@ -504,8 +721,13 @@ class NoiseAwarePlacer(Dense):
             layout = {qubit: node for node, qubit in mapping.items()}
             matcher.best = matcher.cost(layout)
             if number == self.max_matches:
+                matcher.limited = True
                 break
 
+        if matcher.limited:
+            self.stop_reason = "limited" if layout is not None else "none found"
+        else:
+            self.stop_reason = "optimal" if layout is not None else "none exists"
         return layout
 
 
@@ -615,14 +837,17 @@ class NoiseAwarePostLayout(PostLayout):
         max_matches (int, optional): Number of layouts, each better than the previous one,
             after which the search stops and the best one is taken. Defaults to
             :math:`2500`.
-        call_limit (int, optional): Number of feasibility checks of VF2 after which the
-            search stops, and the best layout found until then is taken. As
+        call_limit (int | tuple[int, int], optional): Number of feasibility checks of VF2
+            after which the search stops, and the best layout found until then is taken. As
             :mod:`networkx` makes of the order of :math:`10^{5}` to :math:`10^{6}` checks per
-            second, the default is a search of a fraction of a second. Defaults to
-            :math:`50000`.
+            second, the default is a search of a fraction of a second. If it is a pair, the
+            second number is the number of checks that the search can make to improve the
+            layout that the circuit has, and the first one is only used if that layout needs
+            SWAP gates, which is not the case after the routing. Defaults to :math:`50000`.
 
     Raises:
-        ValueError: If ``max_matches`` or ``call_limit`` is not positive.
+        ValueError: If ``max_matches`` is not positive, or if ``call_limit`` is not positive
+            or a pair of positive numbers.
         ConnectivityError: If the connectivity of the pass is not a subgraph of the
             connectivity of the hardware model.
     """
@@ -631,7 +856,7 @@ class NoiseAwarePostLayout(PostLayout):
         self,
         hardware: "HardwareModel",
         max_matches: int = 2_500,
-        call_limit: int = 50_000,
+        call_limit: int | tuple[int, int] = 50_000,
     ):
         self._placer = NoiseAwarePlacer(
             hardware, max_matches=max_matches, call_limit=call_limit
@@ -700,6 +925,13 @@ class NoiseAwarePostLayout(PostLayout):
             [rename[label] for label in layout.initial_layout],
             layout.nqubits_input,
         )
+
+    @property
+    def stop_reason(self) -> str | None:
+        """Why the last search ended, with the values of the ``stop_reason`` of
+        :class:`qibo.transpiler.placer.NoiseAwarePlacer`. Here ``"optimal"`` means that no
+        layout has a lower cost than the layout that the circuit has."""
+        return self._placer.stop_reason
 
 
 class StarConnectivityPlacer(Placer):
@@ -1076,13 +1308,20 @@ class _LayoutMatcher(nx.algorithms.isomorphism.GraphMatcher):
         device (:class:`networkx.Graph`): Graph where the circuit is placed.
         pattern (:class:`networkx.Graph`): Interaction graph of the circuit. The search places
             its nodes in the order in which they were inserted.
-        call_limit (int): Number of feasibility checks allowed.
+        call_limit (int | tuple[int, int]): Number of feasibility checks allowed, or a pair
+            with the number allowed until the first layout is found, and the number of checks
+            allowed after that, which are not counted until then.
         node_cost (dict): Cost of each qubit on each node of the device,
             ``node_cost[qubit][node]``.
         edge_weight (dict): Weight of each coupling of the device, in both directions,
             ``edge_weight[node, other]``.
-        counts (dict): Number of two-qubit gates of each pair of qubits, with the pair as a
-            ``frozenset``.
+        counts (dict): Number of two-qubit gates of each pair of qubits that act the same in
+            both directions, with the pair as a ``frozenset``.
+        directed (dict, optional): Number of two-qubit gates that have to act in the direction
+            of a coupling, with the ordered pair of their qubits as key. Defaults to ``None``.
+        directed_weight (dict, optional): Weight of each coupling in each direction that it
+            has, ``directed_weight[node, other]``. A gate of ``directed`` on nodes that have no
+            coupling in its direction costs infinity. Defaults to ``None``.
     """
 
     def __init__(
@@ -1093,29 +1332,53 @@ class _LayoutMatcher(nx.algorithms.isomorphism.GraphMatcher):
         node_cost: dict,
         edge_weight: dict,
         counts: dict,
+        directed: dict | None = None,
+        directed_weight: dict | None = None,
     ):
         super().__init__(device, pattern)
         self.calls = 0
+        # whether a limit stopped the search, which the caller can also set
+        self.limited = False
         self.call_limit = call_limit
-        self.best = math.inf
+        self._first, self._extra = (
+            call_limit if isinstance(call_limit, tuple) else (call_limit, None)
+        )
+        # feasibility checks made when the first layout was found
+        self._found = None
+        self._best = math.inf
         self._node_cost = node_cost
         self._edge_weight = edge_weight
         self._counts = counts
+        self._directed = {} if directed is None else directed
+        self._directed_weight = {} if directed_weight is None else directed_weight
         # lower bounds of the cost of a qubit and of a gate, which are zero if they are
         # infinite, so that the bounds are always finite
         self._min_node = {}
         for qubit, costs in node_cost.items():
             lowest = min(costs.values())
             self._min_node[qubit] = lowest if math.isfinite(lowest) else 0.0
-        lowest = min(edge_weight.values(), default=0.0)
+        lowest = min(
+            [*edge_weight.values(), *self._directed_weight.values()], default=0.0
+        )
         self._min_edge = lowest if math.isfinite(lowest) else 0.0
         size = pattern.number_of_nodes() + 1
         self._total_node = sum(self._min_node.values())
-        self._total_gates = sum(counts.values())
+        self._total_gates = sum(counts.values()) + sum(self._directed.values())
         # cost, lower bound of the qubits, and gates of the partial layout of each size
         self._partial_cost = [0.0] * size
         self._partial_nodes = [0.0] * size
         self._partial_gates = [0.0] * size
+
+    @property
+    def best(self) -> float:
+        """Cost of the best layout found, which the caller updates."""
+        return self._best
+
+    @best.setter
+    def best(self, cost: float) -> None:
+        if self._found is None:
+            self._found = self.calls
+        self._best = cost
 
     def candidate_pairs_iter(self):
         pairs = list(super().candidate_pairs_iter())
@@ -1129,6 +1392,9 @@ class _LayoutMatcher(nx.algorithms.isomorphism.GraphMatcher):
         for pair, count in self._counts.items():
             first, second = pair
             total += count * self._edge_weight[layout[first], layout[second]]
+        for (first, second), count in self._directed.items():
+            edge = layout[first], layout[second]
+            total += count * self._directed_weight.get(edge, math.inf)
         return total
 
     def semantic_feasibility(self, G1_node, G2_node) -> bool:
@@ -1151,9 +1417,13 @@ class _LayoutMatcher(nx.algorithms.isomorphism.GraphMatcher):
 
     def syntactic_feasibility(self, G1_node, G2_node) -> bool:
         self.calls += 1
-        return self.calls <= self.call_limit and super().syntactic_feasibility(
-            G1_node, G2_node
-        )
+        limit = self._first
+        if self._found is not None and self._extra is not None:
+            limit = self._found + self._extra
+        if self.calls > limit:
+            self.limited = True
+            return False
+        return super().syntactic_feasibility(G1_node, G2_node)
 
     def _increment(self, node, qubit) -> tuple[float, int]:
         """Cost that placing the qubit on the node adds to the partial layout, and the number of
@@ -1162,24 +1432,38 @@ class _LayoutMatcher(nx.algorithms.isomorphism.GraphMatcher):
         cost, completed = self._node_cost[qubit][node], 0
         for other in self.G2[qubit]:
             if other in self.core_2:
-                count = self._counts[frozenset((qubit, other))]
-                weight = self._edge_weight.get((node, self.core_2[other]), math.inf)
-                cost += count * weight
-                completed += count
+                other_node = self.core_2[other]
+                count = self._counts.get(frozenset((qubit, other)), 0)
+                if count:
+                    cost += count * self._edge_weight.get((node, other_node), math.inf)
+                    completed += count
+                if self._directed:
+                    for count, edge in (
+                        (self._directed.get((qubit, other), 0), (node, other_node)),
+                        (self._directed.get((other, qubit), 0), (other_node, node)),
+                    ):
+                        if count:
+                            cost += count * self._directed_weight.get(edge, math.inf)
+                            completed += count
         return cost, completed
 
 
-def _connectivity_weights(connectivity: nx.Graph, weights: nx.Graph) -> dict:
+def _connectivity_weights(
+    connectivity: nx.Graph, weights: nx.Graph, directed: bool = False
+) -> dict:
     """Weight of each connection of a connectivity, taken from the weights of a hardware.
 
     Args:
         connectivity (:class:`networkx.Graph`): Connectivity of a placer.
         weights (:class:`networkx.Graph`): Weighted connectivity of a hardware model, which
             can be directed.
+        directed (bool, optional): If ``True``, the weight of each connection is the one of
+            each direction that the weights have, and not their mean. Defaults to ``False``.
 
     Returns:
         dict: Weight of each connection, in both directions. If the weights have the two
-        directions of a connection, it is their mean.
+        directions of a connection, it is their mean, unless ``directed`` is ``True``, and
+        then the directions that the weights do not have are not in the dictionary.
 
     Raises:
         ConnectivityError: If the connectivity has qubits or connections that the weights do
@@ -1193,6 +1477,14 @@ def _connectivity_weights(connectivity: nx.Graph, weights: nx.Graph) -> dict:
             ConnectivityError,
             "The connectivity must be a subgraph of the one of the hardware model.",
         )
+
+    if directed:
+        return {
+            pair: weights.edges[pair]["weight"]
+            for edge in connectivity.edges
+            for pair in (edge, edge[::-1])
+            if weights.has_edge(*pair)
+        }
 
     edge_weight = {}
     for edge in connectivity.edges:
