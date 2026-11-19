@@ -1685,6 +1685,47 @@ def test_generate_preset_passes_layout_search_hardware():
         generate_preset_passes(hardware=hardware, optimization_level=1)
 
 
+def test_generate_preset_passes_hardware_connectivity():
+    # the couplings of the hardware can be listed in any direction, and can be more
+    hardware = HardwareModel((0, 1, 2, 3, 4), [(1, 0), (2, 1), (3, 2), (4, 3)])
+    for connectivity in (nx.path_graph(4), nx.DiGraph([(0, 1), (1, 2)])):
+        generate_preset_passes(connectivity, hardware=hardware, optimization_level=1)
+
+    for qubits, couplings in (
+        ((0, 1, 2, 3), [(0, 1), (1, 2)]),
+        ((0, 1, 2), [(0, 1), (1, 2)]),
+    ):
+        with pytest.raises(ConnectivityError, match="subgraph"):
+            generate_preset_passes(
+                nx.path_graph(4),
+                hardware=HardwareModel(qubits, couplings),
+                optimization_level=1,
+            )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"optimization_level": 0},
+        {"layout_method": "trivial", "optimization_level": 1},
+        {"initial_layout": [2, 1, 0], "optimization_level": 1},
+        {"routing_method": "shortest_paths", "optimization_level": 1},
+    ],
+)
+def test_generate_preset_passes_hardware_unused_warns(caplog, kwargs):
+    hardware = HardwareModel((0, 1, 2), nx.path_graph(3))
+    with caplog.at_level("WARNING"):
+        generate_preset_passes(nx.path_graph(3), hardware=hardware, **kwargs)
+    assert caplog.text.count("``hardware`` has no effect") == 1
+
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        generate_preset_passes(
+            nx.path_graph(3), hardware=hardware, optimization_level=1
+        )
+    assert "has no effect" not in caplog.text
+
+
 def test_transpile_layout_search_hardware():
     """The layout without SWAP gates of the quietest qubits is chosen."""
     couplings = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]

@@ -92,13 +92,14 @@ class PostLayout(ABC):
     def skip(self, placer: Placer | None) -> bool:
         """Tell if the pass has nothing to improve, so that it is not run.
 
-        :class:`qibo.transpiler.pipeline.Passes` asks it before the pass, with the last placer
-        that it ran on the circuit. A placer that already found the best layout, for instance,
-        leaves nothing to improve.
+        :class:`qibo.transpiler.pipeline.Passes` asks it before the pass, with the placer that
+        decided the layout of the circuit, which is the last one that changed it, or the first
+        one if none did. A placer that already found the best layout, for instance, leaves
+        nothing to improve.
 
         Args:
-            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Last placer that
-                placed the circuit, or ``None`` if there is none.
+            placer (:class:`qibo.transpiler.abstract.Placer`, optional): Placer that decided
+                the layout of the circuit, or ``None`` if there is none.
 
         Returns:
             bool: ``True`` if the pass is not run. It is ``False`` by default.
