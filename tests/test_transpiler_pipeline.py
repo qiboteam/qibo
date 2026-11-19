@@ -1,3 +1,4 @@
+import pickle
 import random
 from concurrent.futures.process import BrokenProcessPool
 
@@ -18,7 +19,7 @@ from qibo.transpiler._exceptions import (
     PlacementError,
     TranspilerPipelineError,
 )
-from qibo.transpiler.abstract import Optimizer, Placer
+from qibo.transpiler.abstract import Optimizer, Placer, Router
 from qibo.transpiler.asserts import (
     _transpose_qubits,
     assert_circuit_equivalence,
@@ -27,6 +28,8 @@ from qibo.transpiler.asserts import (
 )
 from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.optimizer import (
+    BarrierBeforeFinalMeasurements,
+    FilterGates,
     FixedPoint,
     GateDirection,
     Optimize1qGatesDecomposition,
@@ -43,13 +46,19 @@ from qibo.transpiler.pipeline import (
 from qibo.transpiler.placer import (
     Dense,
     NoiseAwarePlacer,
+    NoiseAwarePostLayout,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
     Subgraph,
 )
 from qibo.transpiler.qiskit import QiskitPasses
-from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
+from qibo.transpiler.router import (
+    NoRouting,
+    Sabre,
+    ShortestPaths,
+    StarConnectivityRouter,
+)
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 
@@ -133,7 +142,9 @@ def test_generate_preset_passes_directed_structure():
         Validation,
         Unroller,
         Preprocessing,
+        BarrierBeforeFinalMeasurements,
         Sabre,
+        FilterGates,
         Unroller,
     ]
     assert isinstance(direction, GateDirection)
@@ -450,10 +461,15 @@ def test_generate_preset_passes_structure():
     pipeline = generate_preset_passes(connectivity, natives, seed=3)
     assert pipeline.connectivity is connectivity
     assert pipeline.native_gates == natives
-    validation, unroller, preprocessing, router, translator = pipeline.passes
+    validation, unroller, preprocessing, barrier, router, restoration, translator = (
+        pipeline.passes
+    )
     assert isinstance(validation, Validation)
     assert isinstance(unroller, Unroller) and unroller.min_qubits == 3
     assert isinstance(preprocessing, Preprocessing)
+    # the final measurements are kept after the SWAP gates of the router
+    assert isinstance(barrier, BarrierBeforeFinalMeasurements)
+    assert isinstance(restoration, FilterGates)
     assert isinstance(router, Sabre) and router.trials == 5
     # the router is seeded, which makes the transpilation reproducible
     assert router._rng.getstate() == random.Random(3).getstate()
@@ -853,12 +869,12 @@ def test_generate_preset_passes_layout_method(
         connectivity, seed=5, layout_method=layout_method, backend=backend
     )
     if placer_class is None:
-        assert len(pipeline.passes) == 5
+        assert len(pipeline.passes) == 7
     else:
-        assert len(pipeline.passes) == 6
+        assert len(pipeline.passes) == 8
         assert isinstance(pipeline.passes[2], Preprocessing)
         assert isinstance(pipeline.passes[3], placer_class)
-        assert isinstance(pipeline.passes[4], Sabre)
+        assert isinstance(pipeline.passes[5], Sabre)
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -898,7 +914,7 @@ def test_generate_preset_passes_methods_are_seeded(grid_connectivity):
     assert placer.seed == 7
     router = generate_preset_passes(
         connectivity, seed=7, routing_method="shortest_paths"
-    ).passes[-2]
+    ).passes[-3]
     assert router._rng.getstate() == random.Random(7).getstate()
 
 
@@ -924,7 +940,7 @@ def test_generate_preset_passes_routing_method_sabre(
     pipeline = generate_preset_passes(
         connectivity, seed=1, routing_method=routing_method, backend=backend
     )
-    router = pipeline.passes[3]
+    router = pipeline.passes[4]
     assert isinstance(router, Sabre) and router.trials == 5
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
@@ -942,7 +958,7 @@ def test_generate_preset_passes_routing_method_instance(backend, grid_connectivi
     pipeline = generate_preset_passes(
         connectivity, routing_method=router, backend=backend
     )
-    assert pipeline.passes[3] is router
+    assert pipeline.passes[4] is router
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -962,7 +978,7 @@ def test_generate_preset_passes_routing_method_shortest_paths(backend):
     pipeline = generate_preset_passes(
         connectivity, seed=1, routing_method="shortest_paths", backend=backend
     )
-    assert isinstance(pipeline.passes[3], ShortestPaths)
+    assert isinstance(pipeline.passes[4], ShortestPaths)
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -983,7 +999,7 @@ def test_generate_preset_passes_star_methods(backend, star_connectivity):
         backend=backend,
     )
     assert isinstance(pipeline.passes[3], StarConnectivityPlacer)
-    assert isinstance(pipeline.passes[4], StarConnectivityRouter)
+    assert isinstance(pipeline.passes[5], StarConnectivityRouter)
     transpiled_circuit, final_layout = pipeline(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
@@ -1210,8 +1226,9 @@ def test_generate_preset_passes_callback_and_transpile_list(backend):
         backend=backend,
     )
     assert len(results) == 2
-    # validation, unroller, preprocessing, unroller; the router is skipped
-    assert counts == [0, 1, 2, 4, 0, 1, 2, 4]
+    # validation, unroller, preprocessing, barrier, unroller; the router is skipped, and the
+    # barrier is removed
+    assert counts == [0, 1, 2, 3, 5, 6, 0, 1, 2, 3, 5, 6]
 
 
 @pytest.mark.parametrize("connectivity", [None, nx.path_graph(2)])
@@ -1515,7 +1532,9 @@ def test_generate_preset_passes_optimization_level_0_is_the_default():
         "Validation",
         "Unroller",
         "Preprocessing",
+        "BarrierBeforeFinalMeasurements",
         "Sabre",
+        "FilterGates",
         "Unroller",
     ]
 
@@ -1577,7 +1596,9 @@ def test_generate_preset_passes_optimization_level_1_structure():
         "Preprocessing",
         "NoiseAwarePlacer",
         "ReverseTraversal",
+        "BarrierBeforeFinalMeasurements",
         "Sabre",
+        "FilterGates",
         "ConsolidateBlocks",
         "Unroller",
         "FixedPoint",
@@ -1709,9 +1730,13 @@ def test_generate_preset_passes_hardware_connectivity():
     "kwargs",
     [
         {"optimization_level": 0},
-        {"layout_method": "trivial", "optimization_level": 1},
-        {"initial_layout": [2, 1, 0], "optimization_level": 1},
-        {"routing_method": "shortest_paths", "optimization_level": 1},
+        {"optimization_level": 0, "layout_method": "dense"},
+        # the native gates have no Euler basis, so there are no single-qubit optimizers
+        {
+            "native_gates": NativeGates.PRX | NativeGates.CZ | NativeGates.M,
+            "layout_method": "trivial",
+            "optimization_level": 1,
+        },
     ],
 )
 def test_generate_preset_passes_hardware_unused_warns(caplog, kwargs):
@@ -1720,11 +1745,22 @@ def test_generate_preset_passes_hardware_unused_warns(caplog, kwargs):
         generate_preset_passes(nx.path_graph(3), hardware=hardware, **kwargs)
     assert caplog.text.count("``hardware`` has no effect") == 1
 
-    caplog.clear()
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"optimization_level": 1},
+        {"optimization_level": 2},
+        # the single-qubit optimizers use it even if the layout is not searched
+        {"layout_method": "trivial", "optimization_level": 1},
+        {"initial_layout": [2, 1, 0], "optimization_level": 2},
+        {"routing_method": "shortest_paths", "optimization_level": 1},
+    ],
+)
+def test_generate_preset_passes_hardware_used_does_not_warn(caplog, kwargs):
+    hardware = HardwareModel((0, 1, 2), nx.path_graph(3))
     with caplog.at_level("WARNING"):
-        generate_preset_passes(
-            nx.path_graph(3), hardware=hardware, optimization_level=1
-        )
+        generate_preset_passes(nx.path_graph(3), hardware=hardware, **kwargs)
     assert "has no effect" not in caplog.text
 
 
@@ -1887,6 +1923,261 @@ def test_transpile_hardware_single_qubit_gates(backend, optimization_level):
         final_layout=layout,
         native_gates=natives,
     )
+
+
+@pytest.mark.parametrize(
+    "routing_method, router_class",
+    [
+        ("sabre", Sabre),
+        ("shortest_paths", ShortestPaths),
+        ("none", NoRouting),
+        ("star", StarConnectivityRouter),
+    ],
+)
+def test_generate_preset_passes_barrier_around_router(
+    routing_method, router_class, star_connectivity
+):
+    """The routers of the library keep the final measurements after the SWAP gates."""
+    star = routing_method == "star"
+    passes = generate_preset_passes(
+        star_connectivity() if star else nx.path_graph(4),
+        routing_method=routing_method,
+        layout_method="star" if star else None,
+    ).passes
+    (position,) = [i for i, item in enumerate(passes) if isinstance(item, Router)]
+    assert isinstance(passes[position], router_class)
+    assert isinstance(passes[position - 1], BarrierBeforeFinalMeasurements)
+    assert isinstance(passes[position + 1], FilterGates)
+
+
+def test_generate_preset_passes_no_barrier_for_other_routers():
+    class Custom(Router):
+        def __init__(self, connectivity=None):
+            self.connectivity = connectivity
+
+        def __call__(self, circuit):
+            return circuit, dict(zip(circuit.wire_names, range(circuit.nqubits)))
+
+    passes = generate_preset_passes(nx.path_graph(3), routing_method=Custom()).passes
+    assert not any(
+        isinstance(item, (BarrierBeforeFinalMeasurements, FilterGates))
+        for item in passes
+    )
+
+
+@pytest.mark.parametrize("optimization_level", [0, 1, 2])
+def test_transpile_keeps_the_barriers_on_some_qubits(backend, optimization_level):
+    connectivity = nx.path_graph(4)
+    circuit = Circuit(4)
+    circuit.add(gates.H(0))
+    # its decomposition has a global phase, which the router moves to the end
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.Barrier(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.M(0, 1, 2, 3))
+    transpiled, layout = transpile(
+        circuit,
+        connectivity,
+        optimization_level=optimization_level,
+        seed=1,
+        backend=backend,
+    )
+    # the barrier that protects the final measurements is not left in the circuit, and the
+    # one on some qubits is
+    barriers = [gate for gate in transpiled.queue if isinstance(gate, gates.Barrier)]
+    assert [len(gate.qubits) for gate in barriers] == [2]
+    assert isinstance([gate for gate in transpiled.queue if gate.qubits][-1], gates.M)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=connectivity,
+        final_layout=layout,
+    )
+
+
+@pytest.mark.parametrize("on_qubits, barriers", [(None, 1), ([1, 2, 3], 0)])
+def test_transpile_removes_the_barriers_on_all_the_qubits(on_qubits, barriers):
+    """The barrier of the circuit is removed too if it is on all the qubits of the hardware,
+    because it is not told apart from the one that protects the measurements."""
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.Barrier(0, 1, 2))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.M(0, 1, 2))
+    transpiled, _ = transpile(circuit, nx.path_graph(5), on_qubits=on_qubits, seed=1)
+    found = [gate for gate in transpiled.queue if isinstance(gate, gates.Barrier)]
+    # the circuit has the qubits of the hardware, so the barrier of the circuit is only on
+    # all of them if the hardware has three
+    assert len(found) == barriers
+    assert isinstance(transpiled.queue[-1], gates.M)
+
+
+@pytest.mark.parametrize("optimization_level", [0, 1, 2])
+def test_generate_preset_passes_can_be_pickled(optimization_level):
+    """The worker processes of ``transpile`` get the pipeline, so it cannot have lambdas."""
+    passes = generate_preset_passes(
+        nx.path_graph(4), optimization_level=optimization_level, seed=1
+    )
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.M(0, 3))
+    copy = pickle.loads(pickle.dumps(passes))
+    first, _ = passes(circuit)
+    second, _ = copy(circuit)
+    assert [(gate.name, gate.qubits) for gate in first.queue] == [
+        (gate.name, gate.qubits) for gate in second.queue
+    ]
+
+
+@pytest.mark.parametrize("optimization_level", [1, 2])
+def test_generate_preset_passes_default_post_layout(optimization_level):
+    hardware = HardwareModel((0, 1, 2, 3), nx.path_graph(4))
+    passes = generate_preset_passes(
+        nx.path_graph(4), optimization_level=optimization_level, hardware=hardware
+    ).passes
+    post_layout = passes[-1]
+    assert isinstance(post_layout, NoiseAwarePostLayout)
+    assert post_layout.hardware is hardware
+    assert post_layout.trust_placer
+    search = next(item for item in passes if isinstance(item, NoiseAwarePlacer))
+    assert search.hardware is hardware
+
+    # before the pass that sets the direction of the gates
+    passes = generate_preset_passes(
+        nx.DiGraph([(0, 1), (1, 2)]),
+        optimization_level=optimization_level,
+        hardware=HardwareModel((0, 1, 2), nx.DiGraph([(0, 1), (1, 2)])),
+    ).passes
+    position = next(
+        i for i, item in enumerate(passes) if isinstance(item, NoiseAwarePostLayout)
+    )
+    assert isinstance(passes[position + 1], GateDirection)
+
+    # the one of the user is the one that runs
+    custom = NoiseAwarePostLayout(hardware)
+    passes = generate_preset_passes(
+        nx.path_graph(4),
+        optimization_level=optimization_level,
+        hardware=hardware,
+        post_layout=custom,
+    ).passes
+    assert passes[-1] is custom
+    assert sum(isinstance(item, NoiseAwarePostLayout) for item in passes) == 1
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"optimization_level": 0},
+        {"layout_method": "trivial", "optimization_level": 1},
+        {"initial_layout": [0, 1, 2], "optimization_level": 2},
+        {"routing_method": "shortest_paths", "optimization_level": 1},
+    ],
+)
+def test_generate_preset_passes_no_default_post_layout(kwargs):
+    connectivity = nx.path_graph(3)
+    hardware = HardwareModel((0, 1, 2), connectivity)
+    passes = generate_preset_passes(connectivity, hardware=hardware, **kwargs).passes
+    assert not any(isinstance(item, NoiseAwarePostLayout) for item in passes)
+
+    # it needs a model, which the layout search makes up if there is none
+    passes = generate_preset_passes(connectivity, optimization_level=2).passes
+    assert not any(isinstance(item, NoiseAwarePostLayout) for item in passes)
+
+
+@pytest.mark.parametrize(
+    "optimization_level, hardware, keep_layout",
+    [(1, True, True), (2, True, False), (2, False, True)],
+)
+def test_generate_preset_passes_keep_layout(optimization_level, hardware, keep_layout):
+    connectivity = nx.path_graph(3)
+    passes = generate_preset_passes(
+        connectivity,
+        optimization_level=optimization_level,
+        hardware=HardwareModel((0, 1, 2), connectivity) if hardware else None,
+    ).passes
+    search = next(item for item in passes if isinstance(item, NoiseAwarePlacer))
+    assert search.keep_layout is keep_layout
+
+
+def test_transpile_default_noise_aware_layout():
+    """The layout of the second level is the one with the least noise, and the post layout
+    only runs if there is no layout without SWAP gates."""
+    couplings = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+    hardware = HardwareModel(
+        tuple(range(6)),
+        couplings,
+        errors={"2q": dict(zip(couplings, [0.05, 0.04, 0.02, 0.001, 0.003]))},
+    )
+
+    def transpile_pairs(pairs, optimization_level):
+        circuit = Circuit(6)
+        for pair in pairs:
+            circuit.add(gates.CNOT(*pair))
+        circuit.add(gates.M(0, 1, 2))
+        ran = []
+        transpiled, _ = transpile(
+            circuit,
+            hardware.connectivity,
+            optimization_level=optimization_level,
+            hardware=hardware,
+            seed=1,
+            callback=lambda transpiler_pass, **_: ran.append(transpiler_pass),
+        )
+        used = {
+            transpiled.wire_names[qubit]
+            for gate in transpiled.queue
+            if len(gate.qubits) == 2
+            for qubit in gate.qubits
+        }
+        return used, any(isinstance(item, NoiseAwarePostLayout) for item in ran)
+
+    # the first level keeps a layout without SWAP gates, and the second one moves it
+    assert transpile_pairs([(0, 1), (1, 2)], 1) == ({0, 1, 2}, False)
+    assert transpile_pairs([(0, 1), (1, 2)], 2) == ({3, 4, 5}, False)
+    for optimization_level in (1, 2):
+        assert transpile_pairs([(0, 2), (2, 1)], optimization_level) == (
+            {3, 4, 5},
+            False,
+        )
+        # a circuit that needs a SWAP gate is moved by the post layout
+        used, post_layout_ran = transpile_pairs(
+            [(0, 1), (1, 2), (0, 2)], optimization_level
+        )
+        assert used == {3, 4, 5} and post_layout_ran
+
+
+@pytest.mark.parametrize(
+    "optimization_level, layout_trials, routing_trials",
+    [(0, 1, 5), (1, 5, 5), (2, 20, 20)],
+)
+def test_generate_preset_passes_trials(
+    optimization_level, layout_trials, routing_trials
+):
+    passes = generate_preset_passes(
+        nx.path_graph(3),
+        layout_method="reverse_traversal",
+        optimization_level=optimization_level,
+    ).passes
+    placer = next(item for item in passes if isinstance(item, ReverseTraversal))
+    router = next(item for item in passes if isinstance(item, Sabre))
+    assert placer.trials == layout_trials
+    assert router.trials == routing_trials
+
+    # the trials that are given are the ones used
+    passes = generate_preset_passes(
+        nx.path_graph(3),
+        layout_method="reverse_traversal",
+        optimization_level=optimization_level,
+        layout_trials=2,
+        routing_trials=3,
+    ).passes
+    placer = next(item for item in passes if isinstance(item, ReverseTraversal))
+    router = next(item for item in passes if isinstance(item, Sabre))
+    assert (placer.trials, router.trials) == (2, 3)
 
 
 def test_generate_preset_passes_level_0_layout_trials():
@@ -2062,7 +2353,9 @@ def test_generate_preset_passes_optimization_level_2_structure():
         "Preprocessing",
         "NoiseAwarePlacer",
         "ReverseTraversal",
+        "BarrierBeforeFinalMeasurements",
         "Sabre",
+        "FilterGates",
         "ConsolidateBlocks",
         "CommutativeCancellation",
         "Unroller",
@@ -2145,7 +2438,7 @@ def test_generate_preset_passes_optimization_level_2_layout():
     search, placer = [pass_ for pass_ in passes if isinstance(pass_, Placer)]
     assert isinstance(search, NoiseAwarePlacer)
     assert isinstance(placer, ReverseTraversal)
-    assert placer.trials == 5
+    assert placer.trials == 20
 
     passes = generate_preset_passes(
         nx.path_graph(3), optimization_level=2, layout_method="trivial"

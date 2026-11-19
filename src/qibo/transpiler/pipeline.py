@@ -3,14 +3,16 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
+from functools import partial
 from inspect import signature
 from itertools import repeat
 
 import networkx as nx
 
-from qibo import Circuit
+from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
+from qibo.gates.abstract import Gate
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     DecompositionError,
@@ -27,8 +29,10 @@ from qibo.transpiler.asserts import (
 from qibo.transpiler.hardware import HardwareModel
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.optimizer import (
+    BarrierBeforeFinalMeasurements,
     CommutativeCancellation,
     ConsolidateBlocks,
+    FilterGates,
     FixedPoint,
     GateDirection,
     InverseCancellation,
@@ -44,6 +48,7 @@ from qibo.transpiler.optimizer import (
 from qibo.transpiler.placer import (
     Dense,
     NoiseAwarePlacer,
+    NoiseAwarePostLayout,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
@@ -273,7 +278,7 @@ def generate_preset_passes(
     use_dirty_ancillas: bool = True,
     minimize_toffolis: bool | None = None,
     minimize_depth: bool = False,
-    routing_trials: int = 5,
+    routing_trials: int | None = None,
     optimization_level: int = 0,
     sampling_only: bool = False,
     post_layout: PostLayout | None = None,
@@ -298,7 +303,12 @@ def generate_preset_passes(
     4. The placer selected by ``layout_method``, if it is not the trivial one.
     5. The router selected by ``routing_method``, which adds the SWAP gates that make all
        the gates executable. By default, it is :class:`qibo.transpiler.router.Sabre`
-       with the best of ``routing_trials`` trials.
+       with the best of ``routing_trials`` trials. If it is one of the routers of
+       :mod:`qibo.transpiler.router`, a barrier on all the qubits is inserted before it by
+       :class:`qibo.transpiler.optimizer.BarrierBeforeFinalMeasurements`, so that the final
+       measurements stay after the SWAP gates, and the barriers on all the qubits are
+       removed after it by :class:`qibo.transpiler.optimizer.FilterGates`, so the barriers
+       of the circuit on all the qubits are removed too, and the ones on some of them stay.
     6. :class:`qibo.transpiler.unroller.Unroller` decomposes the circuit to the native gates,
        approximating some two-qubit gates with fewer entangling gates if
        ``approximation_degree`` is lower than :math:`1`.
@@ -306,7 +316,11 @@ def generate_preset_passes(
        routed circuit without changing its gates. It runs on the native circuit, where the
        entangling gates of each coupling are exact. If ``connectivity`` is directed, it runs
        before the pass that sets the direction of the gates, which depends on the qubits.
-       Otherwise, it runs after the optimizers, so that it sees the final gates.
+       Otherwise, it runs after the optimizers, so that it sees the final gates. At levels
+       :math:`1` and :math:`2`, it is by default
+       :class:`qibo.transpiler.placer.NoiseAwarePostLayout` if ``hardware`` is given and the
+       layout is searched as described below. It is skipped if the layout was kept, or if
+       it is the best one that the search found.
 
     If ``connectivity`` is directed, the pipeline ends with a
     :class:`qibo.transpiler.optimizer.GateDirection` pass and an unroller, so that the
@@ -337,6 +351,9 @@ def generate_preset_passes(
       also removes the gates close to the identity if ``approximation_degree`` is lower
       than :math:`1`.
     * :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the last unroller.
+    * The layout search does not keep a layout without SWAP gates if ``hardware`` is given,
+      so that the one with the least noise is chosen. The ``"reverse_traversal"`` placer and
+      the ``"sabre"`` router have :math:`20` trials.
     * A second loop at the end, of
       :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`,
       :class:`qibo.transpiler.optimizer.Optimize1qGatesSimpleCommutation` and
@@ -404,8 +421,8 @@ def generate_preset_passes(
         layout_trials (int, optional): Number of layout attempts of the
             ``"reverse_traversal"`` placer, see
             :class:`qibo.transpiler.placer.ReverseTraversal`. It is not used by the other
-            placers. Defaults to ``None``, which is :math:`1` if ``optimization_level`` is
-            :math:`0` and :math:`5` otherwise.
+            placers. Defaults to ``None``, which is :math:`1`, :math:`5` or :math:`20` if
+            ``optimization_level`` is :math:`0`, :math:`1` or :math:`2`.
         callback (Callable, optional): Function called after each pass that runs, see
             :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
         approximation_degree (float, optional): Fidelity of each entangling gate, between
@@ -439,7 +456,8 @@ def generate_preset_passes(
         routing_trials (int, optional): Number of independent routing attempts of the
             ``"sabre"`` router, which keeps the best one, see
             :class:`qibo.transpiler.router.Sabre`. It is not used by the other routers, nor
-            by the router of the ``"reverse_traversal"`` placer. Defaults to :math:`5`.
+            by the router of the ``"reverse_traversal"`` placer. Defaults to ``None``, which is
+            :math:`20` if ``optimization_level`` is :math:`2` and :math:`5` otherwise.
         optimization_level (int, optional): Optimization level of the pipeline. It can be
             :math:`0`, which is the pipeline described above, that only makes the circuit
             executable on the hardware and does not optimize it, or :math:`1` or :math:`2`,
@@ -458,15 +476,18 @@ def generate_preset_passes(
             on a directed ``connectivity``, and it updates the final layout. It can skip
             itself if it has nothing to do after the placer, see
             :meth:`qibo.transpiler.abstract.PostLayout.skip`, which is told the placer that
-            decided the layout. It requires ``connectivity``.
-            Defaults to ``None``, so the qubits are the ones that the placer chose.
+            decided the layout. It requires ``connectivity``. Defaults to ``None``, so the
+            qubits are the ones that the placer chose, unless ``hardware`` is given and the
+            layout is searched at level :math:`1` or :math:`2`, and then it is
+            :class:`qibo.transpiler.placer.NoiseAwarePostLayout` with ``trust_placer``.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
             whose errors the :class:`qibo.transpiler.placer.NoiseAwarePlacer` of the layout
             search uses, so that the layout without SWAP gates that it finds is the one with
             the least noise. Its connectivity must be ``connectivity``, or a graph that
-            contains it. If ``None``, the placer takes the first layout without
-            SWAP gates that it finds. If the layout is not searched as described above,
-            it has no effect, and a warning is logged. Defaults to ``None``.
+            contains it. If ``None``, the placer takes the first layout without SWAP gates
+             that it finds, and the optimizer chooses the shortest gates. A warning is logged
+            if no pass uses it, *e.g.* if ``optimization_level`` is :math:`0`.
+            Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -571,14 +592,15 @@ def generate_preset_passes(
     )
     if default_layout:
         layout_method = "reverse_traversal"
-    if hardware is not None and not default_layout:
-        log.warning(
-            "``hardware`` has no effect, because the layout is not searched with this "
-            + "configuration."
-        )
+
+    # the model that the user gave, since the layout search makes one if there is none
+    noise_aware = hardware is not None
 
     if layout_trials is None:
-        layout_trials = 1 if optimization_level == 0 else 5
+        layout_trials = (1, 5, 20)[optimization_level]
+
+    if routing_trials is None:
+        routing_trials = 20 if optimization_level == 2 else 5
 
     placers = {
         "dense": Dense,
@@ -622,7 +644,8 @@ def generate_preset_passes(
     layout_passes = [] if placer is None else [placer]
     if default_layout:
         # a layout without SWAP gates is the best one, so it is searched before the
-        # reverse traversal, which only searches if there is none
+        # reverse traversal, which only searches if there is none. The trivial layout is
+        # kept if it is one, unless the least noisy one is wanted from the second level
         if hardware is None:
             hardware = HardwareModel(
                 tuple(connectivity.nodes), connectivity, native_gates
@@ -631,10 +654,13 @@ def generate_preset_passes(
             0,
             NoiseAwarePlacer(
                 hardware,
-                call_limit=(50_000, 1_000) if optimization_level == 1 else 1_000_000,
-                keep_layout=True,
+                call_limit=(50000, 1000) if optimization_level == 1 else int(1e6),
+                keep_layout=bool(not (noise_aware and optimization_level >= 2)),
             ),
         )
+        # the layout of the search is only improved if the search did not find the best one
+        if post_layout is None and noise_aware:
+            post_layout = NoiseAwarePostLayout(hardware, trust_placer=True)
 
     if routing_method is None:
         routing_method = "sabre"
@@ -649,13 +675,28 @@ def generate_preset_passes(
             + f"{list(routers)}.",
         )
 
+    # the final measurements stay after the SWAP gates of the routers that are known to work
+    # with a barrier, which is removed afterwards with the others on all the qubits, while
+    # the barriers on some of them stay
+    nqubits = connectivity.number_of_nodes() if on_qubits is None else len(on_qubits)
+    protection = (
+        [BarrierBeforeFinalMeasurements()],
+        [FilterGates(partial(_is_not_barrier, nqubits=nqubits))],
+    )
+    if not isinstance(
+        router, (NoRouting, Sabre, ShortestPaths, StarConnectivityRouter)
+    ):
+        protection = ([], [])
+
     passes = [
         Validation(initial_layout=initial_layout),
         Unroller(native_gates, min_qubits=3, **unroller_kwargs),
         *before_layout,
         Preprocessing(initial_layout=initial_layout),
         *layout_passes,
+        *protection[0],
         router,
+        *protection[1],
         *before_unroller,
         Unroller(native_gates, **synthesis, backend=backend),
     ]
@@ -670,6 +711,16 @@ def generate_preset_passes(
         passes.extend([*last, GateDirection(), Unroller(native_gates, backend=backend)])
         last = []
     passes.extend([*after_unroller, *last])
+
+    if noise_aware and not any(
+        getattr(item, "hardware", None) is hardware
+        for transpiler_pass in passes
+        for item in [transpiler_pass, *getattr(transpiler_pass, "optimizers", [])]
+    ):
+        log.warning(
+            "``hardware`` has no effect, because no pass of the pipeline uses it with "
+            + "this configuration."
+        )
 
     return Passes(
         passes=passes,
@@ -728,7 +779,7 @@ def transpile(
     use_dirty_ancillas: bool = True,
     minimize_toffolis: bool | None = None,
     minimize_depth: bool = False,
-    routing_trials: int = 5,
+    routing_trials: int | None = None,
     optimization_level: int = 0,
     sampling_only: bool = False,
     post_layout: PostLayout | None = None,
@@ -802,12 +853,12 @@ def transpile(
 
         .. testoutput::
 
-            {0: 1, 1: 3, 2: 0, 3: 2}
+            {0: 2, 1: 1, 2: 0, 3: 3}
             Global phase = exp(i * 9π/8)
             0: ─U3────────────o─────────o───────o─X─o────────────────M─
-            1: ────o────o─X─o─X─RZ─X─RZ─X─RZ─U3─X─o─X─o─RZ─o───────o─M─
-            2: ─U3─X─RZ─X─o─X──────o─RZ───────────────X─RZ─X─o─X─o─X─M─
-            3: ──────────────────────────────────────────────X─o─X───M─
+            1: ────o────o─X─o─X─RZ─X─RZ─X─RZ─U3─X─o─X─o─RZ─o─o─X─o───M─
+            2: ─U3─X─RZ─X─o─X──────o─RZ───────────────X─RZ─X─X─o─X─o─M─
+            3: ────────────────────────────────────────────────────X─M─
 
     Args:
         circuits (:class:`qibo.models.circuit.Circuit` or list or tuple): Circuit, or list of
@@ -831,8 +882,8 @@ def transpile(
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuits executable. Defaults to ``None``.
         layout_trials (int, optional): Number of layout attempts of the
-            ``"reverse_traversal"`` placer. Defaults to ``None``, which is :math:`1` if
-            ``optimization_level`` is :math:`0` and :math:`5` otherwise.
+            ``"reverse_traversal"`` placer. Defaults to ``None``, which is :math:`1`, :math:`5`
+            or :math:`20` if ``optimization_level`` is :math:`0`, :math:`1` or :math:`2`.
         callback (Callable, optional): Function called after each pass that runs, for each
             circuit, see :class:`qibo.transpiler.pipeline.Passes`. It cannot be used with
             more than one process. Defaults to ``None``.
@@ -862,7 +913,8 @@ def transpile(
             ``minimize_toffolis``. Defaults to ``False``.
         routing_trials (int, optional): Number of independent routing attempts of the
             ``"sabre"`` router, which keeps the best one. It is not used by the other
-            routers. Defaults to :math:`5`.
+            routers. Defaults to ``None``, which is :math:`20` if ``optimization_level`` is
+            :math:`2` and :math:`5` otherwise.
         optimization_level (int, optional): Optimization level of the pipeline, see
             :func:`qibo.transpiler.pipeline.generate_preset_passes`. It can be :math:`0`,
             :math:`1` or :math:`2`. Defaults to :math:`0`, which does not optimize the circuits.
@@ -876,11 +928,12 @@ def transpile(
             chooses other physical qubits for the routed circuits, see
             :func:`qibo.transpiler.pipeline.generate_preset_passes`. All the circuits use
             it, and each worker process gets its own copy. It requires ``connectivity``.
-            Defaults to ``None``.
+            Defaults to ``None``, which is a post layout of ``hardware`` if it is given, see
+            :func:`qibo.transpiler.pipeline.generate_preset_passes`.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
-            whose errors the placer of the layout search and the single-qubit optimizers
-            use to choose the layout without SWAP gates and the single-qubit gates with the
-            least noise, see :func:`qibo.transpiler.pipeline.generate_preset_passes`. It
+            whose errors the placer of the layout search, the post layout and the
+            single-qubit optimizers use to choose the layout and the single-qubit gates with
+            the least noise, see :func:`qibo.transpiler.pipeline.generate_preset_passes`. It
             requires ``connectivity``. Defaults to ``None``.
         num_processes (int, optional): Number of worker processes that transpile the
             circuits of a list in parallel. If ``None`` or :math:`1`, the circuits are
@@ -975,6 +1028,23 @@ def transpile(
             )
 
     return results
+
+
+def _is_not_barrier(gate: Gate, nqubits: int) -> bool:
+    """Check that a gate is not a barrier on all the qubits of the circuit.
+
+    It is a function of the module, and not a lambda, so that the pipeline can be sent to
+    the worker processes of :func:`qibo.transpiler.pipeline.transpile`.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate`): Gate to be checked.
+        nqubits (int): Number of qubits of the circuit.
+
+    Returns:
+        bool: ``False`` if the gate is a barrier that acts on ``nqubits`` qubits, and ``True``
+        otherwise.
+    """
+    return bool(not (isinstance(gate, gates.Barrier) and len(gate.qubits) == nqubits))
 
 
 def _optimization_stages(
