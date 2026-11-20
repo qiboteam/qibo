@@ -66,3 +66,66 @@ and the second will act to ``(1, 2)`` corresponding to
 .. code-block::  python
 
     [Y(1), Z(2), CNOT(1, 2), H(1), H(2)]
+
+Parametrized custom gates
+-------------------------
+
+Use :class:`qibo.gates.ParametrizedFusedGate` to build a reusable gate from
+several operations while retaining their trainable parameters. The block is
+applied as a single matrix, and its parameters can be updated with
+:meth:`qibo.models.circuit.Circuit.set_parameters` without rebuilding it.
+
+For example, the following block exposes two rotation angles and keeps a
+third rotation fixed:
+
+.. testcode::
+
+    from qibo import Circuit, gates
+
+    block = gates.ParametrizedFusedGate(0, 1)
+    block.append(gates.RX(0, theta=0.1))
+    block.append(gates.CNOT(0, 1))
+    block.append(gates.RY(1, theta=-0.2))
+    fixed_rotation = gates.RZ(1, theta=0.3, trainable=False)
+    block.append(fixed_rotation)
+
+    circuit = Circuit(2)
+    circuit.add(block)
+    assert circuit.get_parameters() == [(0.1, -0.2)]
+
+    # Update with a flat vector, as in a variational optimization loop.
+    circuit.set_parameters([0.4, -0.5])
+    assert block.parameters == (0.4, -0.5)
+    assert fixed_rotation.parameters == (0.3,)
+
+    # A dictionary can update a specific block in a larger circuit.
+    circuit.set_parameters({block: (0.6, 0.7)})
+    assert circuit.get_parameters("flatlist") == [0.6, 0.7]
+
+Parameters follow the order of the contained gates, including gates added
+with ``prepend``. Gates such as :class:`qibo.gates.U3` expose each of their
+parameters in that order. Array-valued parameters, such as the matrix of a
+:class:`qibo.gates.Unitary`, retain their shape in ``block.parameters`` and
+``circuit.get_parameters()``. The ``"flatlist"`` format and flat parameter
+updates use the individual array elements instead.
+
+Only trainable child gates contribute to the block's parameter interface.
+Setting ``trainable=False`` on the block excludes the entire block from
+circuit parameter updates. As with other parametrized gates, its parameters
+can still be assigned directly. Parametrized blocks may contain other
+parametrized blocks; a non-trainable nested block contributes its operation
+but does not expose its parameters to the enclosing block.
+
+Finish building the block before adding it to a circuit or another
+parametrized block. Once added, ``append`` and ``prepend`` raise
+``RuntimeError``, including on nested blocks, so the containing block's
+and circuit's qubits and parameter count remain consistent.
+Parameter values can still change. Child gates are retained by reference;
+changing a child gate's parameters directly is also reflected in the block.
+Keep child trainability unchanged after constructing the block.
+
+Parametrized blocks support qubit remapping with ``on_qubits``, inversion
+with ``dagger``, and independent copies with ``circuit.copy(deep=True)``.
+The block is also preserved when the surrounding circuit is fused.
+Analytical block gradients and OpenQASM export are not implemented.
+Serialization relies on the serialization support of the contained gates.
