@@ -104,7 +104,10 @@ class Block:
         return len(set(self.qubits).intersection(block.qubits)) == 0
 
     def kak_decompose(
-        self, weight: float = math.sqrt(2), backend: Backend | None = None
+        self,
+        weight: float = math.sqrt(2),
+        split_swaps: bool = False,
+        backend: Backend | None = None,
     ) -> list[Gate]:
         """Return the gates of the block with as few CZ gates as the KAK decomposition allows.
 
@@ -114,13 +117,18 @@ class Block:
         if it has fewer CZ gates than the block, where a :class:`qibo.gates.SWAP` gate
         counts as three CZ gates, an :class:`qibo.gates.iSWAP` gate as two and any other
         two-qubit gate as one. Otherwise the gates of the block are returned.
-        All the gates of the block must be unitary.
+        A block with a single generic two-qubit gate is only decomposed if that gate is a
+        tensor product of single-qubit gates, All the gates of the block must be unitary.
 
         Args:
             weight (float, optional): Weight of the imaginary part in the matrix that is
-                diagonalized to find the local gates, see
+                diagonalized to find the local gates of the decomposition, see
                 :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
                 Defaults to :math:`\\sqrt{2}`.
+            split_swaps (bool, optional): If ``True``, a block that is a
+                :class:`qibo.gates.SWAP` gate up to single-qubit gates is written as
+                these single-qubit gates followed by a :class:`qibo.gates.SWAP` gate.
+                A block that is only a SWAP gate is not changed. Defaults to ``False``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used to
                 build the matrix of the block. If ``None``, defaults to the global
                 backend. Defaults to ``None``.
@@ -135,20 +143,39 @@ class Block:
         """
         backend = _check_backend(backend)
 
-        cost = sum(
-            _CZ_COSTS.get(type(gate), 1) for gate in self.gates if len(gate.qubits) == 2
-        )
+        two_qubit_gates = [gate for gate in self.gates if len(gate.qubits) == 2]
+        cost = sum(_CZ_COSTS.get(type(gate), 1) for gate in two_qubit_gates)
         # A block with a single two-qubit gate is kept, since the cost of any gate
-        # other than SWAP and iSWAP is taken to be one.
-        if cost < 2:
+        # other than SWAP and iSWAP is taken to be one, unless the gate is a generic unitary
+        if cost < 2 and not any(
+            isinstance(gate, gates.Unitary) for gate in two_qubit_gates
+        ):
             return self.gates
 
         circuit = Circuit(2)
         circuit.add(self.on_qubits((0, 1)).gates)
+        unitary = circuit.unitary(backend)
         decomposition = two_qubit_decomposition(
-            *self.qubits, circuit.unitary(backend), backend=backend, weight=weight
+            *self.qubits, unitary, backend=backend, weight=weight
         )
-        if _count_2q_gates(decomposition) < cost:
+        count = _count_2q_gates(decomposition)
+
+        # a block that needs three CZ gates is a SWAP gate if its product with a SWAP gate
+        # needs none, and then the SWAP gate is the only two-qubit gate that is left
+        if split_swaps and count == 3:
+            swap = gates.SWAP(*self.qubits)
+            local = two_qubit_decomposition(
+                *self.qubits,
+                swap.matrix(backend) @ unitary,
+                weight=weight,
+                backend=backend,
+            )
+            if _count_2q_gates(local) == 0 and any(
+                not isinstance(gate, gates.SWAP) for gate in two_qubit_gates
+            ):
+                return [*local, swap]
+
+        if count < cost:
             return decomposition
 
         return self.gates

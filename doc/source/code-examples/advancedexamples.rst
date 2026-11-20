@@ -2562,6 +2562,9 @@ into native gates:
   It is useful after routing, where SWAP gates meet the gates of the circuit.
   Its ``weight`` argument, :math:`\sqrt{2}` by default, is described in
   :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
+  With ``split_swaps=True``, the blocks that are a SWAP gate up to single-qubit gates are
+  written as a SWAP gate, which :class:`qibo.transpiler.optimizer.ElidePermutations`
+  removes before the layout and the routing.
 - :class:`qibo.transpiler.optimizer.FixedPoint` applies a list of optimizers repeatedly
   until the circuit stops changing, so that each optimizer can profit from the
   simplifications made by the others.
