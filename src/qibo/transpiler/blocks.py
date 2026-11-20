@@ -118,7 +118,7 @@ class Block:
         counts as three CZ gates, an :class:`qibo.gates.iSWAP` gate as two and any other
         two-qubit gate as one. Otherwise the gates of the block are returned.
         A block with a single generic two-qubit gate is only decomposed if that gate is a
-        tensor product of single-qubit gates, All the gates of the block must be unitary.
+        tensor product of single-qubit gates. All the gates of the block must be unitary.
 
         Args:
             weight (float, optional): Weight of the imaginary part in the matrix that is
