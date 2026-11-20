@@ -272,7 +272,7 @@ def generate_preset_passes(
     routing_method: str | Router | None = None,
     layout_trials: int | None = None,
     callback: Callable | None = None,
-    approximation_degree: float = 1.0,
+    approximation_degree: float | None = 1.0,
     threshold: float | None = None,
     weight: float | None = None,
     use_dirty_ancillas: bool = True,
@@ -349,7 +349,10 @@ def generate_preset_passes(
 
     * :class:`qibo.transpiler.optimizer.RemoveIdentityEquivalent` before the layout, which
       also removes the gates close to the identity if ``approximation_degree`` is lower
-      than :math:`1`.
+      than :math:`1`. If ``approximation_degree`` is ``None`` and ``hardware`` is given, it
+      also runs at the start of the first loop at the end, where the qubits of the gates are
+      known, and it removes the gates whose infidelity is lower than their error. The
+      post layout can still move the circuit to other qubits afterwards.
     * :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the last unroller.
     * The layout search does not keep a layout without SWAP gates if ``hardware`` is given,
       so that the one with the least noise is chosen. The ``"reverse_traversal"`` placer and
@@ -425,13 +428,18 @@ def generate_preset_passes(
             ``optimization_level`` is :math:`0`, :math:`1` or :math:`2`.
         callback (Callable, optional): Function called after each pass that runs, see
             :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
-        approximation_degree (float, optional): Fidelity of each entangling gate, between
-            :math:`0` and :math:`1`. If it is lower than :math:`1`, the unroller that
+        approximation_degree (float | None, optional): Fidelity of each entangling gate,
+            between :math:`0` and :math:`1`. If it is lower than :math:`1`, the unroller that
             decomposes the circuit to the native gates approximates the two-qubit gates that
             it decomposes from their matrix with fewer :class:`qibo.gates.CZ` gates, if it
             increases the expected fidelity, see
             :class:`qibo.transpiler.unroller.Unroller`. The multi-qubit gates are decomposed
-            exactly. Defaults to :math:`1`, which is the exact decomposition.
+            exactly. If it is ``None``, the unroller is exact, and at level :math:`2` the
+            gates close to the identity are removed if their infidelity is lower than their
+            error in ``hardware``, see
+            :class:`qibo.transpiler.optimizer.RemoveIdentityEquivalent`, which is the same as
+            :math:`1` without ``hardware``. Defaults to :math:`1`, which is the exact
+            decomposition.
         threshold (float, optional): Tolerance of the decomposition of the two-qubit gates
             that are decomposed from their matrix, like for ``approximation_degree``, see
             :class:`qibo.transpiler.unroller.Unroller`. Defaults to ``None``, which uses
@@ -483,11 +491,14 @@ def generate_preset_passes(
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
             whose errors the :class:`qibo.transpiler.placer.NoiseAwarePlacer` of the layout
             search uses, so that the layout without SWAP gates that it finds is the one with
-            the least noise. Its connectivity must be ``connectivity``, or a graph that
-            contains it. If ``None``, the placer takes the first layout without SWAP gates
-             that it finds, and the optimizer chooses the shortest gates. A warning is logged
-            if no pass uses it, *e.g.* if ``optimization_level`` is :math:`0`.
-            Defaults to ``None``.
+            the least noise, and that
+            :class:`qibo.transpiler.placer.NoiseAwarePostLayout`,
+            :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition` and
+            :class:`qibo.transpiler.optimizer.RemoveIdentityEquivalent` use. Its
+            connectivity must be ``connectivity``, or a graph that contains it. If ``None``,
+            the placer takes the first layout without SWAP gates that it finds, and the
+            optimizers choose the shortest gates. A warning is logged if no pass uses it,
+            *e.g.* if ``optimization_level`` is :math:`0`. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend used by the
             unrollers to compute the gate matrices, unless another one is given when the
             pipeline is called. If ``None``, it uses the global backend. Defaults to ``None``.
@@ -539,8 +550,11 @@ def generate_preset_passes(
         ),
         "minimize_depth": minimize_depth,
     }
+
+    _approx_degree = 1.0 if approximation_degree is None else approximation_degree
     synthesis = {
-        "approximation_degree": approximation_degree,
+        # the unroller does not approximate with the errors of the hardware
+        "approximation_degree": _approx_degree,
         "threshold": threshold,
         "weight": weight,
     }
@@ -773,7 +787,7 @@ def transpile(
     routing_method: str | Router | None = None,
     layout_trials: int | None = None,
     callback: Callable | None = None,
-    approximation_degree: float = 1.0,
+    approximation_degree: float | None = 1.0,
     threshold: float | None = None,
     weight: float | None = None,
     use_dirty_ancillas: bool = True,
@@ -887,10 +901,11 @@ def transpile(
         callback (Callable, optional): Function called after each pass that runs, for each
             circuit, see :class:`qibo.transpiler.pipeline.Passes`. It cannot be used with
             more than one process. Defaults to ``None``.
-        approximation_degree (float, optional): Fidelity of each entangling gate, between
-            :math:`0` and :math:`1`. If it is lower than :math:`1`, the two-qubit gates that
-            are decomposed from their matrix are approximated with fewer entangling gates,
-            if it increases the expected fidelity, see
+        approximation_degree (float | None, optional): Fidelity of each entangling gate,
+            between :math:`0` and :math:`1`. If it is lower than :math:`1`, the two-qubit gates
+            that are decomposed from their matrix are approximated with fewer entangling
+            gates, if it increases the expected fidelity, and it can be ``None`` to remove the
+            gates close to the identity with the errors of ``hardware``, see
             :func:`qibo.transpiler.pipeline.generate_preset_passes`. Defaults to :math:`1`,
             which is the exact decomposition.
         threshold (float, optional): Tolerance of the decomposition of the two-qubit gates
@@ -932,8 +947,8 @@ def transpile(
             the default layout search is run, see
             :func:`qibo.transpiler.pipeline.generate_preset_passes`.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
-            whose errors the placer of the layout search, the post layout and the
-            single-qubit optimizers use to choose the layout and the single-qubit gates with
+            whose errors the placer of the layout search, the post layout, the single-qubit
+            optimizers and the identity removal use to choose the layout and the gates with
             the least noise, see :func:`qibo.transpiler.pipeline.generate_preset_passes`. It
             requires ``connectivity``. Defaults to ``None``.
         num_processes (int, optional): Number of worker processes that transpile the
@@ -1052,7 +1067,7 @@ def _optimization_stages(
     optimization_level: int,
     native_gates: NativeGates,
     sampling_only: bool,
-    approximation_degree: float,
+    approximation_degree: float | None,
     hardware: HardwareModel | None,
 ) -> tuple[list[Optimizer], list[Optimizer], list[Optimizer]]:
     """Optimizers of the optimization level, see :func:`generate_preset_passes`.
@@ -1063,8 +1078,9 @@ def _optimization_stages(
             hardware.
         sampling_only (bool): If ``True``, the optimizers that keep only the distribution
             of the measured qubits are included.
-        approximation_degree (float): Fidelity of each entangling gate, which sets how
-            close to the identity a gate has to be to be removed.
+        approximation_degree (float | None): Fidelity of each entangling gate, which sets how
+            close to the identity a gate has to be to be removed, or ``None`` to use the errors
+            of ``hardware``.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel` or None): Hardware model
             whose errors the single-qubit optimizers use to choose the gates that replace a
             run.
@@ -1094,6 +1110,14 @@ def _optimization_stages(
     loop = [InverseCancellation()]
     if has_euler_basis:
         loop.insert(0, Optimize1qGatesDecomposition(basis=basis, hardware=hardware))
+    # the gates that are not worth to execute are removed with the errors of the qubits
+    # that they act on, which are known after the layout
+    if (
+        optimization_level >= 2
+        and approximation_degree is None
+        and hardware is not None
+    ):
+        loop.insert(0, RemoveIdentityEquivalent(approximation_degree, hardware))
     after_unroller.append(FixedPoint(loop))
 
     if optimization_level >= 2:

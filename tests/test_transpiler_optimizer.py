@@ -8,6 +8,7 @@ import sympy
 
 from qibo import Circuit, gates
 from qibo.gates.special import Barrier
+from qibo.quantum_info import average_gate_fidelity, to_liouville
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     DecompositionError,
@@ -1493,6 +1494,135 @@ def test_remove_identity_equivalent_approximation_degree(backend):
 
     with pytest.raises(ValueError):
         RemoveIdentityEquivalent(approximation_degree=1.5)
+
+
+@pytest.mark.parametrize("wire_names", [None, [5, 7]])
+def test_remove_identity_equivalent_hardware(backend, wire_names):
+    """The tolerance is the error of the gate, which depends on its qubits."""
+    names = [0, 1] if wire_names is None else wire_names
+    hardware = HardwareModel(
+        tuple(names),
+        nx.Graph([tuple(names)]),
+        errors={"1q": {names[0]: 1e-3, names[1]: 1e-9}, "2q": {tuple(names): 1e-3}},
+    )
+    circuit = Circuit(2, wire_names=wire_names)
+    circuit.add(gates.RX(0, 1e-3))
+    circuit.add(gates.RX(1, 1e-3))
+    # virtual gates have no error
+    circuit.add(gates.RZ(0, 1e-3))
+    circuit.add(gates.I(1))
+    circuit.add(gates.RZZ(0, 1, 1e-3))
+    circuit.add(gates.RX(0, 0.5))
+
+    optimizer = RemoveIdentityEquivalent(approximation_degree=None, hardware=hardware)
+    reduced = optimizer(circuit, backend=backend)
+    assert [(gate.name, gate.qubits) for gate in reduced.queue] == [
+        ("rx", (1,)),
+        ("rz", (0,)),
+        ("rx", (0,)),
+    ]
+    assert reduced.wire_names == circuit.wire_names
+
+    # the rotation on two qubits stays if the coupling has no error
+    only_single = HardwareModel(
+        tuple(names), nx.Graph([tuple(names)]), errors={"1q": {names[0]: 1e-3}}
+    )
+    optimizer = RemoveIdentityEquivalent(
+        approximation_degree=None, hardware=only_single
+    )
+    reduced = optimizer(circuit, backend=backend)
+    assert [gate.name for gate in reduced.queue] == ["rx", "rz", "rzz", "rx"]
+
+
+def test_remove_identity_equivalent_hardware_unknown_error(backend):
+    circuit = Circuit(3)
+    circuit.add(gates.RX(0, 1e-3))
+    circuit.add(gates.RX(0, 1e-3).controlled_by(1, 2))
+    circuit.add(gates.RX(2, sympy.Symbol("x")))
+
+    # the names of the qubits are not the ones of the hardware, or the gate has no error
+    names = (5, 6, 7)
+    hardware = HardwareModel(
+        names, nx.Graph([(5, 6), (6, 7)]), errors={"1q": {5: 1e-3, 6: 1e-3, 7: 1e-3}}
+    )
+    optimizer = RemoveIdentityEquivalent(approximation_degree=None, hardware=hardware)
+    assert optimizer(circuit, backend=backend).ngates == 3
+
+    # three qubits have no error, and a gate with symbols is never removed with it
+    circuit = Circuit(3, wire_names=list(names))
+    circuit.add(gates.RX(0, 1e-3).controlled_by(1, 2))
+    circuit.add(gates.RX(2, sympy.Symbol("x")))
+    assert optimizer(circuit, backend=backend).ngates == 2
+
+
+def test_remove_identity_equivalent_hardware_needs_no_degree(backend):
+    hardware = HardwareModel(
+        (0, 1), nx.path_graph(2), errors={"1q": {0: 1e-3, 1: 1e-9}}
+    )
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, 1e-3))
+    circuit.add(gates.RX(1, 1e-3))
+
+    # a number sets the tolerance, so the errors do not matter
+    reduced = RemoveIdentityEquivalent(hardware=hardware)(circuit, backend=backend)
+    assert reduced.ngates == 2
+    reduced = RemoveIdentityEquivalent(
+        approximation_degree=1 - 1e-6, hardware=hardware
+    )(circuit, backend=backend)
+    assert reduced.ngates == 0
+
+    # without hardware, ``None`` only removes the gates that are the identity
+    circuit.add(gates.I(0))
+    circuit.add(gates.RZ(1, 2 * np.pi))
+    reduced = RemoveIdentityEquivalent(approximation_degree=None)(
+        circuit, backend=backend
+    )
+    assert [gate.name for gate in reduced.queue] == ["rx", "rx"]
+
+
+@pytest.mark.parametrize(
+    "make_gate",
+    [
+        lambda: gates.RX(0, 1e-3),
+        lambda: gates.RZZ(0, 1, 1e-3),
+        lambda: gates.CRX(0, 1, 1e-2),
+        lambda: gates.RX(0, 1e-2).controlled_by(1, 2),
+    ],
+)
+def test_remove_identity_equivalent_is_the_average_gate_fidelity(backend, make_gate):
+    """The gate is removed if its infidelity is not above the tolerance, where the fidelity
+    is the average gate fidelity of the gate on all the qubits that it acts on."""
+    gate = make_gate()
+    circuit = Circuit(max(gate.qubits) + 1)
+    circuit.add(gate)
+    infidelity = 1 - average_gate_fidelity(
+        to_liouville(circuit.unitary(backend), backend=backend), backend=backend
+    )
+    for scale, removed in ((1.01, True), (0.99, False)):
+        optimizer = RemoveIdentityEquivalent(
+            approximation_degree=1 - scale * infidelity
+        )
+        assert (optimizer(circuit, backend=backend).ngates == 0) is removed
+
+
+def test_remove_identity_equivalent_native_controlled_gate(backend):
+    """The matrix of the controlled gates of the library has the dimension of all their
+    qubits, so the identity of the controls that are off is not added to it again."""
+    # the infidelity of the rotation is theta^2 / 10, and not theta^2 / 18
+    circuit = Circuit(2)
+    circuit.add(gates.CRX(0, 1, 1e-2))
+    optimizer = RemoveIdentityEquivalent(approximation_degree=1 - 8e-6)
+    assert optimizer(circuit, backend=backend).ngates == 1
+    optimizer = RemoveIdentityEquivalent(approximation_degree=1 - 1.1e-5)
+    assert optimizer(circuit, backend=backend).ngates == 0
+
+    # the same rotation built with ``controlled_by`` has the matrix of its target
+    circuit = Circuit(2)
+    circuit.add(gates.RX(1, 1e-2).controlled_by(0))
+    optimizer = RemoveIdentityEquivalent(approximation_degree=1 - 8e-6)
+    assert optimizer(circuit, backend=backend).ngates == 1
+    optimizer = RemoveIdentityEquivalent(approximation_degree=1 - 1.1e-5)
+    assert optimizer(circuit, backend=backend).ngates == 0
 
 
 def test_remove_identity_equivalent_controlled(backend):

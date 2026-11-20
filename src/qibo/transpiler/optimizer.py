@@ -12,7 +12,7 @@ from qibo import Circuit, gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, log, raise_error
 from qibo.gates.abstract import Gate, SpecialGate
-from qibo.quantum_info.linalg_operations import commutator
+from qibo.quantum_info import average_gate_fidelity, commutator, to_liouville
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     DecompositionError,
@@ -2119,9 +2119,11 @@ class RemoveIdentityEquivalent(Optimizer):
     dimension of the Hilbert space, :math:`\\text{Tr}` is the matrix trace and
     :math:`\\epsilon` is the tolerance. Since :math:`|\\text{Tr}(U)|` does not
     depend on a global phase, an uncontrolled gate that equals the identity up to
-    a phase, e.g. a rotation around the Z axis by :math:`2\\pi`, is removed. For a
+    a phase, *e.g.* a rotation around the Z axis by :math:`2\\pi`, is removed. For a
     gate built with ``controlled_by`` that phase is a relative phase between the
     control states, so the gate is removed only if its target matrix is the identity.
+    The pass is meant for circuits that are decomposed to gates on at most two qubits,
+    as in the preset pipeline.
 
     Measurements, alignments, barriers, noise channels, fused gates and global phase
     gates are never removed, the latter to keep the global phase of the circuit. Gates
@@ -2133,11 +2135,17 @@ class RemoveIdentityEquivalent(Optimizer):
     value of ``approximation_degree``, because the true values of the symbols are
     unknown.
 
-    Args:
-        approximation_degree (float, optional): Value in :math:`[0, 1]` that sets the
-            tolerance as :math:`\\epsilon = 1 -` ``approximation_degree``. With the
-            default value only gates equal to the identity up to numerical precision
-            (:math:`\\epsilon = 10^{-14}`) are removed. Defaults to :math:`1.0`.
+    If ``approximation_degree`` is ``None``, the tolerance of each gate is its error in
+    ``hardware``, so a gate is removed if executing it would add more error than the one
+    that removing it does, as in qiskit. The error of a gate on one qubit is the one of
+    the single-qubit gates of the qubit, and the one of a gate on two qubits is the one of
+    the coupling, see :meth:`qibo.transpiler.hardware.HardwareModel.error`. The identity,
+    Z and RZ gates are virtual, so they have no error, and neither do the gates on more
+    qubits, or without an error in ``hardware``. They are removed only if they are equal to
+    the identity up to numerical precision. The qubits of a gate are the names in
+    ``circuit.wire_names``, so the circuit has to be placed on the hardware before. A
+    numerical ``approximation_degree`` is not changed by ``hardware``, and with ``None``
+    and no ``hardware`` the gates are removed like with :math:`1`.
 
     Example:
 
@@ -2166,15 +2174,63 @@ class RemoveIdentityEquivalent(Optimizer):
 
             2
             1
+
+
+        With ``approximation_degree=None``, the tolerance is the error of the gate, which
+        depends on its qubit. The first qubit has an error of :math:`10^{-3}` and the second
+        one of :math:`10^{-9}`, so the rotation is removed from the first one, where it adds
+        more error than it removes, and it stays on the second one. The RZ gate is virtual,
+        so it stays.
+
+        .. testcode::
+
+            import networkx as nx
+
+            from qibo.transpiler import HardwareModel
+
+            hardware = HardwareModel(
+                (0, 1), nx.path_graph(2), errors={"1q": {0: 1e-3, 1: 1e-9}}
+            )
+
+            circuit = Circuit(2)
+            circuit.add(gates.RX(0, 1e-3))
+            circuit.add(gates.RX(1, 1e-3))
+            circuit.add(gates.RZ(0, 1e-3))
+
+            optimizer = RemoveIdentityEquivalent(approximation_degree=None, hardware=hardware)
+            print([(gate.name, gate.qubits) for gate in optimizer(circuit).queue])
+
+        .. testoutput::
+
+            [('rx', (1,)), ('rz', (0,))]
+
+    Args:
+        approximation_degree (float | None, optional): Value in :math:`[0, 1]` that sets the
+            tolerance as :math:`\\epsilon = 1 -` ``approximation_degree``. With the
+            default value only gates equal to the identity up to numerical precision
+            (:math:`\\epsilon = 10^{-14}`) are removed. If ``None``, the tolerance is the error
+            of each gate in ``hardware``, see above. Defaults to :math:`1.0`.
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
+            whose errors set the tolerance if ``approximation_degree`` is ``None``. It has no
+            effect otherwise. Defaults to ``None``.
+
+    Raises:
+        ValueError: If ``approximation_degree`` is not ``None`` and not between :math:`0` and
+            :math:`1`.
     """
 
-    def __init__(self, approximation_degree: float = 1.0):
-        if not 0.0 <= approximation_degree <= 1.0:
+    def __init__(
+        self,
+        approximation_degree: float | None = 1.0,
+        hardware: "HardwareModel | None" = None,
+    ):
+        if approximation_degree is not None and not 0.0 <= approximation_degree <= 1.0:
             raise_error(
                 ValueError,
                 f"``approximation_degree`` must be in [0, 1], but got {approximation_degree}.",
             )
         self.approximation_degree = approximation_degree
+        self.hardware = hardware
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Remove the gates that are equivalent to the identity.
@@ -2190,7 +2246,9 @@ class RemoveIdentityEquivalent(Optimizer):
         """
         backend = _check_backend(backend)
 
-        tolerance = max(1 - self.approximation_degree, 1e-14)
+        tolerance = 1e-14
+        if self.approximation_degree is not None:
+            tolerance = max(1 - self.approximation_degree, tolerance)
         unremovable = (
             gates.M,
             gates.Align,
@@ -2206,16 +2264,28 @@ class RemoveIdentityEquivalent(Optimizer):
                 gate, unremovable + (gates.FusedGate,)
             ):
                 matrix = numeric.matrix(backend)
-                target_dim = matrix.shape[0]
-                control_dim = 2 ** len(gate.control_qubits)
-                dim = target_dim * control_dim
-                # the controlled gate acts as the identity when a control is off
-                trace = (control_dim - 1) * target_dim + backend.trace(matrix)
-                fidelity = (backend.abs(trace) ** 2 + dim) / (dim * (dim + 1))
+                # the matrix of a gate built with ``controlled_by`` is the one of its targets,
+                # and the gate acts as the identity when a control is off, unlike the matrix
+                # of the controlled gates of the library, which is the one of all the qubits
+                missing = 2 ** len(gate.qubits) - matrix.shape[0]
+                if missing > 0:
+                    matrix = backend.block_diag(backend.identity(missing), matrix)
+                fidelity = average_gate_fidelity(
+                    to_liouville(matrix, backend=backend), backend=backend
+                )
+                gate_tolerance = tolerance
+                if (
+                    self.approximation_degree is None
+                    and self.hardware is not None
+                    and not isinstance(gate, _VIRTUAL)
+                ):
+                    names = tuple(circuit.wire_names[qubit] for qubit in gate.qubits)
+                    gate_tolerance = max(self.hardware.error(names) or 0.0, tolerance)
                 # A gate with sympy parameters is evaluated at one value of its symbols,
                 # so it is removed only if it is the identity up to numerical precision.
                 removable = bool(
-                    1 - fidelity <= (1e-14 if gate.symbolic_parameters else tolerance)
+                    1 - fidelity
+                    <= (1e-14 if gate.symbolic_parameters else gate_tolerance)
                 )
             if not removable:
                 kept.append(gate)
