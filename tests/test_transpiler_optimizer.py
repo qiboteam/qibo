@@ -2359,6 +2359,48 @@ def test_consolidate_blocks_single_qubit_gates_join_block(backend):
     assert sum(len(gate.qubits) == 2 for gate in consolidated.queue) <= 5
 
 
+def test_consolidate_blocks_lone_unitary(backend):
+    local = Circuit(2)
+    local.add([gates.H(0), gates.RX(1, 0.3)])
+    circuit = Circuit(3)
+    circuit.add(gates.Unitary(local.unitary(backend), 0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    consolidated = ConsolidateBlocks()(circuit, backend=backend)
+    assert [len(gate.qubits) for gate in consolidated.queue] == [1, 1, 2]
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+
+def test_consolidate_blocks_split_swaps(backend):
+    circuit = Circuit(3)
+    circuit.add(
+        [
+            gates.CNOT(0, 1),
+            gates.CNOT(1, 0),
+            gates.CNOT(0, 1),
+            gates.H(1),
+            gates.CZ(1, 2),
+        ]
+    )
+    assert ConsolidateBlocks().split_swaps is False
+    kept = ConsolidateBlocks()(circuit, backend=backend)
+    assert sum(isinstance(gate, gates.SWAP) for gate in kept.queue) == 0
+
+    consolidated = ConsolidateBlocks(split_swaps=True)(circuit, backend=backend)
+    assert sum(isinstance(gate, gates.SWAP) for gate in consolidated.queue) == 1
+    assert sum(len(gate.qubits) == 2 for gate in consolidated.queue) == 2
+    backend.assert_allclose(
+        consolidated.unitary(backend), circuit.unitary(backend), atol=1e-8
+    )
+
+    # the SWAP gate is removed by relabelling the qubits of the gates after it
+    elide = ElidePermutations()
+    elided = elide(consolidated)
+    assert [len(gate.qubits) for gate in elided.queue].count(2) == 1
+    assert elide.permutation == [1, 0, 2]
+
+
 def test_consolidate_blocks_unchanged(backend):
     circuit = Circuit(3)
     circuit.add(gates.H(0))

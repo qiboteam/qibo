@@ -440,6 +440,84 @@ def test_kak_decompose_weight(backend):
         )
 
 
+def test_kak_decompose_lone_unitary(backend):
+    # a lone unitary gate that is a product of single-qubit gates needs no CZ gate
+    original = Circuit(2)
+    original.add([gates.H(0), gates.RX(1, 0.3)])
+    block = Block(qubits=(0, 1), gates=[gates.Unitary(original.unitary(backend), 0, 1)])
+    decomposition = block.kak_decompose(backend=backend)
+    assert all(len(gate.qubits) == 1 for gate in decomposition)
+    new = Circuit(2)
+    new.add(decomposition)
+    backend.assert_allclose(new.unitary(backend), original.unitary(backend), atol=1e-8)
+
+    block = Block(
+        qubits=(0, 1), gates=[gates.Unitary(Circuit(2).unitary(backend), 0, 1)]
+    )
+    assert block.kak_decompose(backend=backend) == []
+
+    # one that needs a CZ gate, or three, is kept
+    for entangling in (gates.CNOT(0, 1), gates.SWAP(0, 1)):
+        original = Circuit(2)
+        original.add(entangling)
+        block = Block(
+            qubits=(0, 1), gates=[gates.Unitary(original.unitary(backend), 0, 1)]
+        )
+        assert block.kak_decompose(backend=backend) is block.gates
+
+
+@pytest.mark.parametrize("qubits", [(0, 1), (2, 5)])
+def test_kak_decompose_split_swaps(backend, qubits):
+    first, second = qubits
+    block = Block(
+        qubits=qubits,
+        gates=[
+            gates.CNOT(first, second),
+            gates.CNOT(second, first),
+            gates.CNOT(first, second),
+            gates.H(first),
+            gates.RX(second, 0.3),
+        ],
+    )
+    # the block needs three CZ gates, so it is only changed if the SWAP gate is split
+    assert block.kak_decompose(backend=backend) is block.gates
+
+    decomposition = block.kak_decompose(split_swaps=True, backend=backend)
+    assert [gate.name for gate in decomposition if len(gate.qubits) == 2] == ["swap"]
+    assert decomposition[-1].qubits == qubits
+    assert all(set(gate.qubits) <= set(qubits) for gate in decomposition)
+
+    original = Circuit(6)
+    original.add(block.gates)
+    new = Circuit(6)
+    new.add(decomposition)
+    backend.assert_allclose(new.unitary(backend), original.unitary(backend), atol=1e-8)
+
+    # a lone unitary gate is also split
+    swapped = Circuit(2)
+    swapped.add([gates.H(0), gates.RX(1, 0.3), gates.SWAP(0, 1), gates.RY(0, 0.7)])
+    block = Block(qubits=(0, 1), gates=[gates.Unitary(swapped.unitary(backend), 0, 1)])
+    decomposition = block.kak_decompose(split_swaps=True, backend=backend)
+    assert [gate.name for gate in decomposition if len(gate.qubits) == 2] == ["swap"]
+    new = Circuit(2)
+    new.add(decomposition)
+    backend.assert_allclose(new.unitary(backend), swapped.unitary(backend), atol=1e-8)
+
+
+def test_kak_decompose_split_swaps_unchanged(backend):
+    for block_gates in (
+        # only SWAP gates and single-qubit gates
+        [gates.SWAP(0, 1)],
+        [gates.H(0), gates.SWAP(0, 1), gates.X(1)],
+        # three CZ gates that are not a SWAP gate
+        [gates.RXX(0, 1, 0.3), gates.RYY(0, 1, 0.5), gates.RZZ(0, 1, 0.7)],
+        # a single CZ gate
+        [gates.H(0), gates.CZ(0, 1)],
+    ):
+        block = Block(qubits=(0, 1), gates=block_gates)
+        assert block.kak_decompose(split_swaps=True, backend=backend) is block.gates
+
+
 def test_count_2q_gates_ignores_barriers():
     block = Block(qubits=(0, 1), gates=[gates.CZ(0, 1), gates.Barrier(0, 1)])
     assert block._count_2q_gates() == 1
