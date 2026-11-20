@@ -831,14 +831,9 @@ def _folded_grid(
     # Stage I: Slater determinant of M free fermions in the squeezed chain
     # Givens rotations between consecutive fermion sites, which eliminate one entry of the matrix
     # of sine orbitals at a time, starting from M excitations in the first M sites
-    orbitals = backend.sin(
-        math.pi
-        * backend.outer(
-            backend.cast(modes, dtype=backend.float64),
-            backend.arange(1, nsqueezed + 1),
-        )
-        / (nsqueezed + 1)
-    )
+    _modes = backend.cast(modes, dtype=backend.float64)
+    orbitals = backend.outer(_modes, backend.arange(1, nsqueezed + 1))
+    orbitals = backend.sin(math.pi * orbitals / (nsqueezed + 1))
     rotations = []
     for row in range(nmagnons):
         for col in range(nsqueezed - 1, row, -1):
