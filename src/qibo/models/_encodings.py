@@ -834,14 +834,21 @@ def _folded_grid(
     _modes = backend.cast(modes, dtype=backend.float64)
     orbitals = backend.outer(_modes, backend.arange(1, nsqueezed + 1))
     orbitals = backend.sin(math.pi * orbitals / (nsqueezed + 1))
+    # The angles of each row are the hyperspherical angles of its entries from the column
+    # ``row`` on, which the rotations above it have already mixed, and its rotations are applied
+    # to the rows below it
     rotations = []
     for row in range(nmagnons):
+        thetas = _generate_rbs_angles(orbitals[row, row:], "diagonal", backend=backend)
         for col in range(nsqueezed - 1, row, -1):
-            theta = backend.arctan2(orbitals[row, col], orbitals[row, col - 1])
+            theta = thetas[col - row - 1]
             cos, sin = backend.cos(theta), backend.sin(theta)
-            left = cos * orbitals[:, col - 1] + sin * orbitals[:, col]
-            orbitals[:, col] = cos * orbitals[:, col] - sin * orbitals[:, col - 1]
-            orbitals[:, col - 1] = left
+            left, right = orbitals[row + 1 :, col - 1], orbitals[row + 1 :, col]
+            # both new columns are computed before either is written
+            orbitals[row + 1 :, col - 1], orbitals[row + 1 :, col] = (
+                cos * left + sin * right,
+                cos * right - sin * left,
+            )
             first, second = bonds[columns[col]], bonds[columns[col + 1]]
             if second == first + 1:
                 rotations.append([gates.RBS(first, second, theta)])
