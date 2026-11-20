@@ -8,7 +8,11 @@ class TranspileLayout(dict):
     {logical: physical} qubit mapping is expected. It also stores the layout before the
     routing. If the pipeline has no router, the qubits are not moved, so the mapping and
     the routing permutation are the identity, and the initial layout is the one of the
-    transpiled circuit.
+    transpiled circuit. The only exception is a pipeline that removes SWAP gates with
+    :class:`qibo.transpiler.optimizer.ElidePermutations`, whose permutation is composed with
+    the one of the routing. The mapping then gives, for each qubit of the circuit, the qubit
+    of the transpiled circuit that has to be measured at the end of the circuit to get the
+    result of measuring it in the original circuit.
 
     Example:
         A circuit on four qubits is transpiled to a line of five qubits. It is drawn

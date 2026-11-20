@@ -32,6 +32,7 @@ from qibo.transpiler.optimizer import (
     BarrierBeforeFinalMeasurements,
     CommutativeCancellation,
     ConsolidateBlocks,
+    ElidePermutations,
     FilterGates,
     FixedPoint,
     GateDirection,
@@ -157,7 +158,8 @@ class Passes:
             :class:`qibo.transpiler.layout.TranspileLayout`): Transpiled circuit and final
             {logical: physical} qubit mapping, which also stores the layout before the
             routing. If the pipeline has no router, the qubits are not moved, so the
-            mapping is the identity.
+            mapping is the identity, unless a :class:`qibo.transpiler.optimizer.ElidePermutations`
+            pass removed SWAP gates, whose permutation it composes.
         """
         # an unroller uses its own backend unless one is explicitly given
         unroller_backend = backend
@@ -166,15 +168,34 @@ class Passes:
         final_layout = None
         nqubits_input = circuit.nqubits
         placer = None
+        elided = None
         for count, transpiler_pass in enumerate(self.passes):
             start = time.perf_counter()
             skipped = False
             if isinstance(transpiler_pass, Optimizer):
                 transpiler_pass.connectivity = self.connectivity
+
+                if isinstance(transpiler_pass, ElidePermutations) and (
+                    final_layout is not None
+                ):
+                    raise_error(
+                        TranspilerPipelineError,
+                        "The router needs its SWAP gates, so ``ElidePermutations`` has to "
+                        + "run before it.",
+                    )
+
                 if "backend" in signature(transpiler_pass.__call__).parameters:
                     circuit = transpiler_pass(circuit, backend=backend)
                 else:
                     circuit = transpiler_pass(circuit)
+
+                if isinstance(transpiler_pass, ElidePermutations):
+                    # the permutations of the passes are composed, in the order they ran
+                    elided = (
+                        transpiler_pass.permutation
+                        if elided is None
+                        else [transpiler_pass.permutation[qubit] for qubit in elided]
+                    )
             elif isinstance(transpiler_pass, Placer):
                 transpiler_pass.connectivity = self.connectivity
                 wire_names = circuit.wire_names.copy()
@@ -235,6 +256,21 @@ class Passes:
                 {name: index for index, name in enumerate(circuit.wire_names)},
                 circuit.wire_names,
                 nqubits_input,
+            )
+
+        if elided is not None:
+            # each qubit of the input corresponds to the qubit that the removed SWAP gates
+            # relabelled it as, and then to the one that the routing moves that qubit to
+            routed = final_layout.routing_permutation
+            order = elided + list(range(len(elided), len(routed)))
+            dictionary = {
+                label: routed[order[position]]
+                for position, label in enumerate(final_layout.initial_layout)
+            }
+            final_layout = TranspileLayout(
+                final_layout=dictionary,
+                initial_layout=final_layout.initial_layout,
+                nqubits_input=nqubits_input,
             )
 
         return circuit, final_layout
@@ -347,13 +383,24 @@ def generate_preset_passes(
 
     Level :math:`2` adds, to the optimizers of level :math:`1`:
 
+    * :class:`qibo.transpiler.optimizer.ElidePermutations` first before the layout, which
+      removes the SWAP gates of the circuit by relabelling the qubits of the gates after
+      them, and composes their permutation with the final layout that it returns. It is left
+      out if the router is :class:`qibo.transpiler.router.NoRouting`, because the circuit
+      cannot be routed, and without ``connectivity``.
     * :class:`qibo.transpiler.optimizer.RemoveIdentityEquivalent` before the layout, which
       also removes the gates close to the identity if ``approximation_degree`` is lower
       than :math:`1`. If ``approximation_degree`` is ``None`` and ``hardware`` is given, it
       also runs at the start of the first loop at the end, where the qubits of the gates are
       known, and it removes the gates whose infidelity is lower than their error. The
       post layout can still move the circuit to other qubits afterwards.
-    * :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the last unroller.
+    * :class:`qibo.transpiler.optimizer.ConsolidateBlocks` also before the layout, so that
+      the blocks that it rewrites with fewer entangling gates are the ones that the layout
+      and the router see, if there is ``connectivity``. The one before the last unroller
+      still merges the SWAP gates of the router with the gates around them.
+    * :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the last unroller,
+      and in the first loop at the end, with the native gates as ``basis``, so that it only
+      merges the rotations into native gates.
     * The layout search does not keep a layout without SWAP gates if ``hardware`` is given,
       so that the one with the least noise is chosen. The ``"reverse_traversal"`` placer and
       the ``"sabre"`` router have :math:`20` trials.
@@ -688,6 +735,13 @@ def generate_preset_passes(
             f"Unknown routing method {routing_method!r}. It must be a router or one of "
             + f"{list(routers)}.",
         )
+
+    # the layout and the router see the blocks of two-qubit gates with fewer entangling gates,
+    # and the SWAP gates of the circuit are removed, unless the circuit cannot be routed
+    if optimization_level >= 2:
+        before_layout.append(ConsolidateBlocks())
+        if not isinstance(router, NoRouting):
+            before_layout.insert(0, ElidePermutations())
 
     # the final measurements stay after the SWAP gates of the routers that are known to work
     # with a barrier, which is removed afterwards with the others on all the qubits, while
@@ -1108,6 +1162,9 @@ def _optimization_stages(
     basis = native_gates.gate_names
     has_euler_basis = bool(Optimize1qGatesDecomposition(basis=basis).euler_bases)
     loop = [InverseCancellation()]
+    # the rotations are only merged into the native gates, which the loop cannot translate
+    if optimization_level >= 2:
+        loop.insert(0, CommutativeCancellation(basis=basis))
     if has_euler_basis:
         loop.insert(0, Optimize1qGatesDecomposition(basis=basis, hardware=hardware))
     # the gates that are not worth to execute are removed with the errors of the qubits
