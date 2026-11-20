@@ -13,6 +13,7 @@ from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Placer, PostLayout, Router
 from qibo.transpiler.asserts import _find_unconnected_gate, assert_placement
 from qibo.transpiler.decompositions import direction_dec
+from qibo.transpiler.hardware import _connectivity_weights
 from qibo.transpiler.layout import TranspileLayout
 from qibo.transpiler.router import _find_connected_qubit
 
@@ -1478,55 +1479,6 @@ class _LayoutMatcher(nx.algorithms.isomorphism.GraphMatcher):
                             cost += count * self._directed_weight.get(edge, math.inf)
                             completed += count
         return cost, completed
-
-
-def _connectivity_weights(
-    connectivity: nx.Graph, weights: nx.Graph, directed: bool = False
-) -> dict:
-    """Weight of each connection of a connectivity, taken from the weights of a hardware.
-
-    Args:
-        connectivity (:class:`networkx.Graph`): Connectivity of a placer.
-        weights (:class:`networkx.Graph`): Weighted connectivity of a hardware model, which
-            can be directed.
-        directed (bool, optional): If ``True``, the weight of each connection is the one of
-            each direction that the weights have, and not their mean. Defaults to ``False``.
-
-    Returns:
-        dict: Weight of each connection, in both directions. If the weights have the two
-        directions of a connection, it is their mean, unless ``directed`` is ``True``, and
-        then the directions that the weights do not have are not in the dictionary.
-
-    Raises:
-        ConnectivityError: If the connectivity has qubits or connections that the weights do
-            not have.
-    """
-    if not set(connectivity.nodes) <= set(weights.nodes) or any(
-        not (weights.has_edge(*edge) or weights.has_edge(*edge[::-1]))
-        for edge in connectivity.edges
-    ):
-        raise_error(
-            ConnectivityError,
-            "The connectivity must be a subgraph of the one of the hardware model.",
-        )
-
-    if directed:
-        return {
-            pair: weights.edges[pair]["weight"]
-            for edge in connectivity.edges
-            for pair in (edge, edge[::-1])
-            if weights.has_edge(*pair)
-        }
-
-    edge_weight = {}
-    for edge in connectivity.edges:
-        values = [
-            weights.edges[pair]["weight"]
-            for pair in (edge, edge[::-1])
-            if weights.has_edge(*pair)
-        ]
-        edge_weight[edge] = edge_weight[edge[::-1]] = sum(values) / len(values)
-    return edge_weight
 
 
 def _constrained_order(pairs: Counter) -> nx.Graph:
