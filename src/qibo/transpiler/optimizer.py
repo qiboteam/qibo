@@ -264,6 +264,8 @@ class CommutativeCancellation(Optimizer):
         kept_numeric = []
         rotations = []
         stacks = {qubit: [] for qubit in range(circuit.nqubits)}
+        # the matrices of the gates that were compared, see ``_embedded_matrix``
+        cache = {}
         for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
             rotation = None
             if (
@@ -334,11 +336,12 @@ class CommutativeCancellation(Optimizer):
                             sorted(set(gate.qubits) | set(partner.qubits))
                         )
                     }
-                    matrices = []
-                    for operator in (kept_numeric[position], numeric):
-                        embedded = Circuit(len(relabel))
-                        embedded.add(operator.on_qubits(relabel))
-                        matrices.append(embedded.unitary(backend))
+                    matrices = [
+                        _embedded_matrix(
+                            operator, relabel, len(relabel), cache, backend
+                        )
+                        for operator in (kept_numeric[position], numeric)
+                    ]
                     if (
                         backend.matrix_norm(commutator(*matrices), order="fro")
                         > self.atol
@@ -624,7 +627,8 @@ class FixedPoint(Optimizer):
     up to numerical tolerance, or after ``max_iterations`` iterations. This lets an
     optimizer profit from the simplifications of the ones that come after it, for
     example a pair of gates that only cancels once the gates between them are merged
-    into the identity.
+    into the identity. An optimizer is not applied again if it left the circuit unchanged
+    and none of the others has changed it since.
 
     The ``connectivity`` that :class:`qibo.transpiler.pipeline.Passes` sets on this
     optimizer is set on ``optimizers`` too.
@@ -690,30 +694,42 @@ class FixedPoint(Optimizer):
             :class:`qibo.models.circuit.Circuit`: Optimized circuit.
         """
         backend = _check_backend(backend)
+        with_backend = [
+            "backend" in signature(optimizer.__call__).parameters
+            for optimizer in self.optimizers
+        ]
 
+        # The number of changes that the circuit has had, and the number that each optimizer
+        # saw when it left the circuit unchanged. The position identifies an optimizer, since
+        # the same one can be in the list more than once.
+        version = 0
+        clean = {}
         for _ in range(self.max_iterations):
             previous = circuit
-            for optimizer in self.optimizers:
+            changed = False
+            for position, optimizer in enumerate(self.optimizers):
+                if clean.get(position) == version:
+                    continue
                 if self.connectivity is not None:
                     optimizer.connectivity = self.connectivity
-                if "backend" in signature(optimizer.__call__).parameters:
-                    circuit = optimizer(circuit, backend=backend)
+                if with_backend[position]:
+                    result = optimizer(circuit, backend=backend)
                 else:
-                    circuit = optimizer(circuit)
+                    result = optimizer(circuit)
+                # The qubits and the other attributes of the circuit are not in its gates, but
+                # an optimizer can change them, *e.g.* by adding qubits.
+                if _unchanged(result, circuit, backend) and (
+                    result.init_kwargs == circuit.init_kwargs
+                ):
+                    clean[position] = version
+                else:
+                    circuit = result
+                    version += 1
+                    changed = True
 
-            unchanged = len(circuit.queue) == len(previous.queue) and all(
-                new.__class__ is old.__class__
-                and new.qubits == old.qubits
-                and new.control_qubits == old.control_qubits
-                and new.symbolic_parameters == old.symbolic_parameters
-                and all(
-                    backend.allclose(x, y)
-                    for i, (x, y) in enumerate(zip(new.parameters, old.parameters))
-                    if i not in new.symbolic_parameters
-                )
-                for new, old in zip(circuit.queue, previous.queue)
-            )
-            if unchanged:
+            # Optimizers can undo the changes of each other, so the circuit is also compared
+            # with the one at the start of the iteration, which is the same if nothing changed.
+            if not changed or _unchanged(circuit, previous, backend):
                 break
 
         return circuit
@@ -926,6 +942,8 @@ class InverseCancellation(Optimizer):
         kept = []
         kept_numeric = []
         stacks = {qubit: [] for qubit in range(circuit.nqubits)}
+        # the matrices of the gates that were compared, see ``_embedded_matrix``
+        cache = {}
         for gate, numeric in zip(circuit.queue, _numeric_gates(circuit)):
             index = None
             visited = None
@@ -977,11 +995,10 @@ class InverseCancellation(Optimizer):
                         sorted(set(gate.qubits) | set(partner.qubits))
                     )
                 }
-                matrices = []
-                for operator in (partner_numeric, numeric):
-                    embedded = Circuit(len(relabel))
-                    embedded.add(operator.on_qubits(relabel))
-                    matrices.append(embedded.unitary(backend))
+                matrices = [
+                    _embedded_matrix(operator, relabel, len(relabel), cache, backend)
+                    for operator in (partner_numeric, numeric)
+                ]
                 if backend.matrix_norm(commutator(*matrices), order="fro") > self.atol:
                     break
 
@@ -1363,6 +1380,8 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
         # in the order of their first gate, and is used to build the new circuit.
         wires = {qubit: [{"gates": [], "index": 0}] for qubit in range(circuit.nqubits)}
         items = []
+        # the matrices of the gates that were compared, see ``_embedded_matrix``
+        cache = {}
         for gate in circuit.queue:
             if (
                 len(gate.qubits) == 1
@@ -1394,12 +1413,12 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
             moved_front, remaining = [], item["gates"]
             if preceding is not None and preceding["gates"]:
                 moved_front, remaining = self._commute_through(
-                    wire[index - 1], remaining, True, backend
+                    wire[index - 1], remaining, True, cache, backend
                 )
             moved_back = []
             if succeeding is not None and succeeding["gates"]:
                 remaining, moved_back = self._commute_through(
-                    wire[index + 1], remaining, False, backend
+                    wire[index + 1], remaining, False, cache, backend
                 )
             if not moved_front and not moved_back:
                 continue
@@ -1437,7 +1456,12 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
         return new
 
     def _commute_through(
-        self, blocker: Gate, run: list[Gate], front: bool, backend: Backend
+        self,
+        blocker: Gate,
+        run: list[Gate],
+        front: bool,
+        cache: dict,
+        backend: Backend,
     ) -> tuple[list[Gate], list[Gate]]:
         """Split a run in the gates that commute with a blocker, at its start or end.
 
@@ -1447,6 +1471,8 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
             front (bool): If ``True``, the gates at the start of the run are taken until
                 the first one that does not commute with the blocker. Otherwise, the gates
                 at the end of the run are taken.
+            cache (dict): Matrices of the gates that were compared, see
+                ``_embedded_matrix``.
             backend (:class:`qibo.backends.abstract.Backend`): Backend used to build the
                 gate matrices.
 
@@ -1467,17 +1493,16 @@ class Optimize1qGatesSimpleCommutation(Optimizer):
                 qubit: new_qubit
                 for new_qubit, qubit in enumerate(sorted(blocker.qubits))
             }
-            embedded = Circuit(len(relabel))
-            embedded.add(blocker.on_qubits(relabel))
-            blocker_matrix = embedded.unitary(backend)
+            blocker_matrix = _embedded_matrix(
+                blocker, relabel, len(relabel), cache, backend
+            )
             for gate in run if front else reversed(run):
-                embedded = Circuit(len(relabel))
-                embedded.add(gate.on_qubits({gate.qubits[0]: relabel[gate.qubits[0]]}))
+                qubit = gate.qubits[0]
+                matrix = _embedded_matrix(
+                    gate, {qubit: relabel[qubit]}, len(relabel), cache, backend
+                )
                 if (
-                    backend.matrix_norm(
-                        commutator(embedded.unitary(backend), blocker_matrix),
-                        order="fro",
-                    )
+                    backend.matrix_norm(commutator(matrix, blocker_matrix), order="fro")
                     > self.atol
                 ):
                     break
@@ -2742,6 +2767,54 @@ class Validation(Optimizer):
         return circuit
 
 
+def _embedded_matrix(
+    gate: Gate, relabel: dict[int, int], nqubits: int, cache: dict, backend: Backend
+):
+    """Matrix of a gate on a small circuit, where its qubits are relabelled.
+
+    The passes that move gates through others compare them by their matrices, and the same
+    few gates are compared many times, so the matrices that were built are kept in ``cache``.
+    The matrix of a gate is set by its class, its qubits and its parameters, which are the
+    key of the cache, so a gate with parameters that cannot be hashed, such as the matrix of
+    a :class:`qibo.gates.Unitary` gate, is not cached.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate`): Gate with numbers as parameters.
+        relabel (dict[int, int]): Qubit of the small circuit for each qubit of the gate.
+        nqubits (int): Number of qubits of the small circuit.
+        cache (dict): Matrices that were built, by the key of their gate. It is updated, and
+            it has to be used with one backend only.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used to build the
+            matrices.
+
+    Returns:
+        :class:`qibo.backends.abstract.Backend.tensor_type`: Matrix of the gate on the
+        circuit, which is shared if it was cached, so it must not be modified.
+    """
+    key = (
+        type(gate),
+        tuple(relabel[qubit] for qubit in gate.qubits),
+        tuple(relabel[qubit] for qubit in gate.control_qubits),
+        gate.parameters,
+        nqubits,
+    )
+    try:
+        hash(key)
+    except TypeError:
+        key = None
+
+    if key in cache:
+        return cache[key]
+
+    embedded = Circuit(nqubits)
+    embedded.add(gate.on_qubits(relabel))
+    matrix = embedded.unitary(backend)
+    if key is not None:
+        cache[key] = matrix
+
+    return matrix
+
+
 def _numeric_gates(circuit: Circuit) -> list[Gate | None]:
     """Gates of a circuit with its sympy parameters replaced by numbers.
 
@@ -2823,3 +2896,37 @@ def _sequence_error(sequence: list[Gate], error: float) -> float:
         :math:`0`.
     """
     return 1 - (1 - error) ** sum(not isinstance(gate, _VIRTUAL) for gate in sequence)
+
+
+def _unchanged(circuit: Circuit, previous: Circuit, backend: Backend) -> bool:
+    """Check that two circuits have the same gates.
+
+    The gates are the same if they are the same object, or if they have the same classes,
+    qubits and parameters, up to numerical tolerance.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be compared.
+        previous (:class:`qibo.models.circuit.Circuit`): Circuit that it is compared with.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used to compare the
+            parameters.
+
+    Returns:
+        bool: ``True`` if the circuits have the same gates.
+    """
+    first_check = bool(len(circuit.queue) == len(previous.queue))
+    second_check = all(
+        new is old
+        or (
+            new.__class__ is old.__class__
+            and new.qubits == old.qubits
+            and new.control_qubits == old.control_qubits
+            and new.symbolic_parameters == old.symbolic_parameters
+            and all(
+                backend.allclose(x, y)
+                for i, (x, y) in enumerate(zip(new.parameters, old.parameters))
+                if i not in new.symbolic_parameters
+            )
+        )
+        for new, old in zip(circuit.queue, previous.queue)
+    )
+    return bool(first_check and second_check)

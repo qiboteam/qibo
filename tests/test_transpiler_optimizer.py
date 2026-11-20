@@ -1,3 +1,4 @@
+import itertools
 import math
 import random
 
@@ -8,7 +9,8 @@ import sympy
 
 from qibo import Circuit, gates
 from qibo.gates.special import Barrier
-from qibo.quantum_info import average_gate_fidelity, to_liouville
+from qibo.quantum_info import average_gate_fidelity, random_unitary, to_liouville
+from qibo.transpiler import optimizer as optimizer_module
 from qibo.transpiler._exceptions import (
     ConnectivityError,
     DecompositionError,
@@ -40,7 +42,9 @@ from qibo.transpiler.optimizer import (
     ResetAfterMeasureSimplification,
     TGateRules,
     Validation,
+    _embedded_matrix,
     _sequence_error,
+    _unchanged,
 )
 from qibo.transpiler.pipeline import Passes, generate_preset_passes
 from qibo.transpiler.router import Sabre
@@ -2436,6 +2440,154 @@ def test_fixed_point_stops_when_unchanged(backend):
     assert optimized is circuit
 
 
+class _CountingOptimizer(Optimizer):
+    """Optimizer that counts its calls, and that returns a circuit from a function."""
+
+    def __init__(self, function=None):
+        self.calls = 0
+        self.function = function
+
+    def __call__(self, circuit):
+        self.calls += 1
+        return circuit if self.function is None else self.function(circuit)
+
+
+def _with_gates(circuit, queue):
+    new = Circuit(**circuit.init_kwargs)
+    new.add(queue)
+    return new
+
+
+def _remove_first_rx(circuit):
+    queue = list(circuit.queue)
+    for index, gate in enumerate(queue):
+        if gate.name == "rx":
+            del queue[index]
+            break
+    return _with_gates(circuit, queue)
+
+
+def test_fixed_point_skips_optimizers_that_cannot_change(backend):
+    circuit = Circuit(1)
+    for index in range(3):
+        circuit.add(gates.RX(0, 0.1 * (index + 1)))
+    remover, spy = _CountingOptimizer(_remove_first_rx), _CountingOptimizer()
+    optimized = FixedPoint([remover, spy])(circuit, backend)
+    assert optimized.ngates == 0
+    # the last iteration only confirms that the remover has nothing to remove, so the optimizer
+    # that came after the last change, and found nothing to do, is not applied again
+    assert (remover.calls, spy.calls) == (4, 3)
+
+    # the position identifies the optimizers, so the same one is applied for each position
+    same = _CountingOptimizer()
+    FixedPoint([same, same])(circuit, backend)
+    assert same.calls == 2
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_fixed_point_does_not_change_the_result(backend, seed):
+    basis = ["rz", "sx", "x", "cz"]
+
+    def optimizers():
+        return [
+            Optimize1qGatesDecomposition(basis),
+            InverseCancellation(commutation=True),
+            CommutativeCancellation(basis=basis),
+        ]
+
+    circuit = _repetitive_circuit(seed)
+    # the loop that applies all the optimizers in all the iterations
+    expected = circuit
+    for _ in range(10):
+        previous = expected
+        for optimizer in optimizers():
+            expected = optimizer(expected, backend=backend)
+        if _unchanged(expected, previous, backend):
+            break
+
+    optimized = FixedPoint(optimizers())(circuit, backend)
+    assert _gate_signature(optimized) == _gate_signature(expected)
+
+
+def test_fixed_point_optimizers_that_undo_each_other(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.X(0))
+    adder = _CountingOptimizer(
+        lambda circ: _with_gates(circ, [*circ.queue, gates.H(0)])
+    )
+    remover = _CountingOptimizer(lambda circ: _with_gates(circ, circ.queue[:-1]))
+    optimized = FixedPoint([adder, remover], max_iterations=10)(circuit, backend)
+    # the circuit is the same after the first iteration, whatever the optimizers did
+    assert (adder.calls, remover.calls) == (1, 1)
+    assert _gate_signature(optimized) == _gate_signature(circuit)
+
+
+def test_fixed_point_max_iterations(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.X(0))
+    adder = _CountingOptimizer(
+        lambda circ: _with_gates(circ, [*circ.queue, gates.H(0)])
+    )
+    spy = _CountingOptimizer()
+    optimized = FixedPoint([adder, spy], max_iterations=4)(circuit, backend)
+    # every iteration changes the circuit, so all the optimizers are applied in all of them
+    assert (adder.calls, spy.calls) == (4, 4)
+    assert optimized.ngates == 5
+
+
+def test_fixed_point_keeps_the_attributes_that_an_optimizer_changes(backend):
+    def pad(circuit):
+        if circuit.nqubits == 3:
+            return circuit
+        return _with_gates(Circuit(3, wire_names=[0, 1, 2]), circuit.queue)
+
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    padder = _CountingOptimizer(pad)
+    optimized = FixedPoint([padder])(circuit, backend)
+    # the gates are the same, but the circuit is not
+    assert optimized.nqubits == 3
+    assert padder.calls == 1
+
+
+def test_unchanged(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, 0.3))
+    circuit.add(gates.CNOT(0, 1))
+    x = sympy.Symbol("x")
+    symbolic = _with_gates(circuit, [gates.RX(0, x), gates.CNOT(0, 1)])
+
+    def with_first(gate):
+        return _with_gates(circuit, [gate, circuit.queue[1]])
+
+    same_gates = [
+        circuit,
+        _with_gates(circuit, circuit.queue),
+        # the parameters are the same up to the tolerance
+        with_first(gates.RX(0, 0.3 + 1e-12)),
+        symbolic,
+        _with_gates(circuit, [gates.RX(0, x), gates.CNOT(0, 1)]),
+    ]
+    assert _unchanged(same_gates[0], circuit, backend)
+    assert _unchanged(same_gates[1], circuit, backend)
+    assert _unchanged(same_gates[2], circuit, backend)
+    assert _unchanged(same_gates[4], symbolic, backend)
+
+    other_gates = [
+        with_first(gates.RX(0, 0.31)),
+        with_first(gates.RY(0, 0.3)),
+        with_first(gates.RX(1, 0.3)),
+        with_first(gates.RX(0, 0.3).controlled_by(1)),
+        _with_gates(circuit, circuit.queue[:1]),
+        _with_gates(circuit, [circuit.queue[0], gates.CNOT(1, 0)]),
+        symbolic,
+        _with_gates(circuit, [gates.RX(0, sympy.Symbol("y")), gates.CNOT(0, 1)]),
+    ]
+    for other in other_gates:
+        assert not _unchanged(other, circuit, backend)
+    assert not _unchanged(circuit, symbolic, backend)
+
+
 def test_fixed_point_symbolic(backend):
     x, y = sympy.symbols("x y")
     circuit = Circuit(2)
@@ -2952,6 +3104,160 @@ def test_elide_permutations_circuit_kwargs():
     assert elided.wire_names == ["a", "b"]
     assert elided.density_matrix
     assert [(gate.name, gate.qubits) for gate in elided.queue] == [("h", (1,))]
+
+
+def _plain_matrix(gate, relabel, nqubits, cache, backend):
+    """The matrix that ``_embedded_matrix`` caches, which is always built."""
+    embedded = Circuit(nqubits)
+    embedded.add(gate.on_qubits(relabel))
+    return embedded.unitary(backend)
+
+
+@pytest.mark.parametrize(
+    "make_gate",
+    [
+        lambda: gates.RZ(0, 0.3),
+        lambda: gates.SX(1),
+        lambda: gates.CNOT(0, 1),
+        lambda: gates.CZ(2, 0),
+        lambda: gates.U3(2, 0.1, 0.2, 0.3),
+        lambda: gates.RX(0, 0.4).controlled_by(1, 2),
+        lambda: gates.GlobalPhase(0.3),
+    ],
+)
+def test_embedded_matrix(backend, make_gate):
+    gate = make_gate()
+    relabel = {qubit: (qubit + 1) % 3 for qubit in gate.qubits}
+    cache = {}
+    first = _embedded_matrix(gate, relabel, 3, cache, backend)
+    backend.assert_allclose(first, _plain_matrix(gate, relabel, 3, cache, backend))
+    assert len(cache) == 1
+
+    # a gate that is equal to the first one gets the matrix that was built
+    again = _embedded_matrix(make_gate(), relabel, 3, cache, backend)
+    assert again is first
+    assert len(cache) == 1
+
+
+def test_embedded_matrix_keys(backend):
+    cache = {}
+    matrices = [
+        _embedded_matrix(gate, relabel, nqubits, cache, backend)
+        for gate, relabel, nqubits in (
+            (gates.RZ(0, 0.1), {0: 0}, 2),
+            # the parameter, the qubit, the size of the circuit and the gate are others
+            (gates.RZ(0, 0.2), {0: 0}, 2),
+            (gates.RZ(0, 0.1), {0: 1}, 2),
+            (gates.RZ(0, 0.1), {0: 0}, 3),
+            (gates.RX(0, 0.1), {0: 0}, 2),
+            # the control qubit and the target are not exchanged
+            (gates.RX(0, 0.1).controlled_by(1), {0: 0, 1: 1}, 2),
+            (gates.RX(1, 0.1).controlled_by(0), {0: 0, 1: 1}, 2),
+        )
+    ]
+    assert len(cache) == len(matrices)
+    for first, second in itertools.combinations(matrices, 2):
+        assert first is not second
+        if first.shape == second.shape:
+            assert not backend.allclose(first, second)
+
+
+def test_embedded_matrix_is_not_cached_without_hashable_parameters(backend):
+    """The matrices of the gates that carry them are different, and they are not cached."""
+    cache = {}
+    relabel = {0: 0, 1: 1}
+    unitaries = [
+        _embedded_matrix(
+            gates.Unitary(random_unitary(4, seed=seed, backend=backend), 0, 1),
+            relabel,
+            2,
+            cache,
+            backend,
+        )
+        for seed in (1, 2)
+    ]
+    assert not backend.allclose(*unitaries)
+    gate = gates.GeneralizedfSim(0, 1, random_unitary(2, seed=3, backend=backend), 0.3)
+    backend.assert_allclose(
+        _embedded_matrix(gate, relabel, 2, cache, backend),
+        _plain_matrix(gate, relabel, 2, cache, backend),
+    )
+    assert not cache
+
+
+def _gate_signature(circuit):
+    return [(gate.name, gate.qubits, str(gate.parameters)) for gate in circuit.queue]
+
+
+def _repetitive_circuit(seed):
+    """Few distinct gates on few qubits, so that many comparisons repeat."""
+    rng = random.Random(seed)
+    circuit = Circuit(3)
+    for _ in range(40):
+        kind = rng.random()
+        first, second = rng.sample(range(3), 2)
+        if kind < 0.3:
+            circuit.add(gates.RZ(first, rng.choice([0.3, -0.3, 0.7, math.pi])))
+        elif kind < 0.45:
+            circuit.add(gates.SX(first))
+        elif kind < 0.55:
+            circuit.add(gates.X(first))
+        elif kind < 0.65:
+            circuit.add(gates.RX(first, 0.5).controlled_by(second))
+        elif kind < 0.85:
+            circuit.add(gates.CZ(first, second))
+        else:
+            circuit.add(gates.CNOT(first, second))
+    return circuit
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_commutation_cache_does_not_change_the_result(backend, monkeypatch, seed):
+    circuit = _repetitive_circuit(seed)
+    for optimizer in (
+        InverseCancellation(commutation=True),
+        CommutativeCancellation(),
+        Optimize1qGatesSimpleCommutation(basis=["rz", "sx", "x", "cz"]),
+    ):
+        cached = optimizer(circuit, backend=backend)
+        with monkeypatch.context() as patch:
+            patch.setattr(optimizer_module, "_embedded_matrix", _plain_matrix)
+            reference = optimizer(circuit, backend=backend)
+        assert _gate_signature(cached) == _gate_signature(reference)
+
+
+def test_commutation_cache_builds_few_matrices(backend, monkeypatch):
+    repeated = Circuit(2)
+    for _ in range(30):
+        repeated.add(gates.SX(0))
+        repeated.add(gates.CZ(0, 1))
+    runs = Circuit(2)
+    for step in range(20):
+        runs.add(gates.RZ(0, 0.1 * (step % 3 + 1)))
+        runs.add(gates.CZ(0, 1))
+        runs.add(gates.SX(1))
+
+    calls = []
+    unitary = Circuit.unitary
+    monkeypatch.setattr(
+        Circuit,
+        "unitary",
+        lambda self, backend=None: calls.append(1) or unitary(self, backend),
+    )
+    for optimizer, circuit in (
+        (InverseCancellation(commutation=True), repeated),
+        (CommutativeCancellation(), repeated),
+        (Optimize1qGatesSimpleCommutation(basis=["rz", "sx", "x", "cz"]), runs),
+    ):
+        calls.clear()
+        optimizer(circuit, backend=backend)
+        cached = len(calls)
+        calls.clear()
+        with monkeypatch.context() as patch:
+            patch.setattr(optimizer_module, "_embedded_matrix", _plain_matrix)
+            optimizer(circuit, backend=backend)
+        # the matrices of the same gates are built once, and not for every comparison
+        assert 0 < cached < len(calls) / 2
 
 
 def test_filter_gates(backend):

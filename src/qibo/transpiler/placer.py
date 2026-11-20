@@ -1243,6 +1243,9 @@ class ReverseTraversal(Placer):
             return
         self.routing_algorithm.connectivity = self.connectivity
         wire_names = circuit.wire_names.copy()
+        # The assembled circuit is the same in all the attempts, which only change its layout,
+        # so the router can reuse the blocks of its gates.
+        assembled = self._assemble_circuit(circuit)
 
         best_swaps, best_layout = None, None
         for trial in range(self.trials):
@@ -1253,7 +1256,8 @@ class ReverseTraversal(Placer):
                 else [wire_names[i] for i in self._rng.permutation(len(wire_names))]
             )
             circuit.wire_names = start
-            final_layout = self._routing_step(self._assemble_circuit(circuit))
+            assembled.wire_names = start
+            final_layout = self._routing_step(assembled)
 
             # The final layout of the reversed circuit is the initial layout of the circuit.
             layout = [start[final_layout[name]] for name in start]
@@ -1533,6 +1537,12 @@ def _constrained_order(pairs: Counter) -> nx.Graph:
     qubits that are already placed, and then the most gates. The ties are decided by the lowest
     index. If the graph is not connected, it goes on with the next group of qubits.
 
+    If all the pairs have the same number of gates, there is no pair with more gates to place
+    first, and a search that starts inside a chain, which has most gates, has to close it with
+    its last qubit on the neighbour of the first one, which takes it very long on a device with
+    many qubits. So each group of qubits starts with the qubit that has the fewest two-qubit
+    gates instead, which is the end of a chain, and the rest of the order is the same.
+
     Args:
         pairs (collections.Counter): Number of two-qubit gates of each pair of qubits.
 
@@ -1546,18 +1556,24 @@ def _constrained_order(pairs: Counter) -> nx.Graph:
         qubit: sum(edge["count"] for edge in gates[qubit].values()) for qubit in gates
     }
 
+    uniform = len(set(pairs.values())) == 1
     order = []
     while len(order) < len(gates):
+        remaining = [qubit for qubit in gates if qubit not in order]
+        placed = {
+            qubit: sum(
+                gates[qubit][other]["count"] for other in gates[qubit] if other in order
+            )
+            for qubit in remaining
+        }
+        # none of the qubits has gates with the placed ones when a group of qubits starts
+        fewest = uniform and not any(placed.values())
         order.append(
             max(
-                (qubit for qubit in gates if qubit not in order),
+                remaining,
                 key=lambda qubit: (
-                    sum(
-                        gates[qubit][other]["count"]
-                        for other in gates[qubit]
-                        if other in order
-                    ),
-                    total[qubit],
+                    placed[qubit],
+                    -total[qubit] if fewest else total[qubit],
                     -qubit,
                 ),
             )
