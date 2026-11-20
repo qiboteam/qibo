@@ -2562,6 +2562,77 @@ def test_transpile_elides_swap_equivalent_blocks(backend):
     assert cz_gates[1] > cz_gates[2]
 
 
+def test_generate_preset_passes_noise_router():
+    """The routers weigh the SWAP gates with the errors from the second level."""
+    connectivity = nx.path_graph(4)
+    couplings = list(connectivity.edges)
+    hardware = HardwareModel(
+        tuple(range(4)),
+        couplings,
+        errors={"2q": dict(zip(couplings, [0.05, 0.01, 0.02]))},
+    )
+
+    def routers(**kwargs):
+        passes = generate_preset_passes(connectivity, **kwargs).passes
+        (router,) = [item for item in passes if isinstance(item, Sabre)]
+        (placer,) = [item for item in passes if isinstance(item, ReverseTraversal)]
+        return router, placer.routing_algorithm
+
+    for optimization_level, heuristic in ((1, "decay"), (2, "noise")):
+        for router in routers(optimization_level=optimization_level, hardware=hardware):
+            assert router.heuristic == heuristic
+            assert (router.hardware is hardware) == (heuristic == "noise")
+
+    # there are no errors to weigh without the hardware model
+    for router in routers(optimization_level=2):
+        assert router.heuristic == "decay"
+        assert router.hardware is None
+
+    # a router that is given is not changed, nor the one of the placer that is given
+    own = Sabre(heuristic="basic")
+    placer = ReverseTraversal(Sabre(heuristic="basic"))
+    passes = generate_preset_passes(
+        connectivity,
+        optimization_level=2,
+        hardware=hardware,
+        routing_method=own,
+        layout_method=placer,
+    ).passes
+    assert any(item is own for item in passes)
+    assert any(item is placer for item in passes)
+    assert own.heuristic == placer.routing_algorithm.heuristic == "basic"
+
+
+@pytest.mark.parametrize("seed", range(3))
+def test_transpile_noise_router_is_equivalent(backend, seed):
+    """The circuit stays equivalent with the noise router in the whole pipeline."""
+    connectivity = nx.cycle_graph(6)
+    couplings = list(connectivity.edges)
+    noisy = {(0, 1), (1, 2), (2, 3)}
+    hardware = HardwareModel(
+        tuple(range(6)),
+        couplings,
+        errors={"2q": {edge: 0.2 if edge in noisy else 0.001 for edge in couplings}},
+    )
+    circuit = Circuit(6)
+    circuit.add([gates.CNOT(0, 3), gates.CNOT(1, 4), gates.CNOT(2, 5)])
+    circuit.add(gates.M(*range(6)))
+    transpiled, layout = transpile(
+        circuit,
+        connectivity,
+        optimization_level=2,
+        hardware=hardware,
+        seed=seed,
+        backend=backend,
+    )
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled,
+        connectivity=connectivity,
+        final_layout=layout,
+    )
+
+
 def test_generate_preset_passes_level_0_layout_trials():
     passes = generate_preset_passes(
         nx.path_graph(3), layout_method="reverse_traversal", optimization_level=0

@@ -14,7 +14,7 @@ from qibo.gates.gates import is_nonzero_phase
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.asserts import assert_connectivity, assert_placement
-from qibo.transpiler.blocks import Block, CircuitBlocks
+from qibo.transpiler.blocks import _CZ_COSTS, Block, CircuitBlocks
 from qibo.transpiler.hardware import _connectivity_weights
 
 if TYPE_CHECKING:
@@ -22,6 +22,19 @@ if TYPE_CHECKING:
 
 # Number of circuits whose blocks and DAG a router keeps, see ``Sabre._preprocessing``.
 _MAX_TEMPLATES = 8
+
+# Largest weight, *i.e.* minus the logarithm of the fidelity, that a coupling has in the
+# noise heuristic of ``Sabre``. A coupling with an error of one has an infinite weight, which
+# would make the distances infinite, so it only gets a very large one.
+_MAX_WEIGHT = 100.0
+
+# Weight added to the weight of every coupling in the noise heuristic of ``Sabre``. It is
+# negligible for the errors of a device, and it makes the cost of a path grow with its length,
+# so the router still approaches the qubits if the errors are zero or the same.
+_HOP_WEIGHT = 1e-6
+
+# Number of CZ gates of a SWAP gate, which is also the most that a two-qubit block needs.
+_SWAP_COST = _CZ_COSTS[gates.SWAP]
 
 
 class CircuitMap:
@@ -289,17 +302,37 @@ class Sabre(Router):
             - ``"decay"``: the terms of ``"lookahead"``, with the distances of the qubits
               that were recently swapped increased by ``delta``, which favors
               non-overlapping SWAPs.
+            - ``"noise"``: it needs ``hardware``, and it does not use the distances, but
+              the infidelity that the circuit gets, see below. The cost of a candidate is
+              the infidelity of its SWAP gate, plus the infidelity that the gates of the
+              front layer need to be executed after it, plus the ones of the next
+              ``lookahead`` layers, weighted by ``decay_lookahead``. ``delta`` is not used.
 
             Defaults to ``"decay"``.
         hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
             whose errors weigh the qubits and the couplings, see
             :meth:`qibo.transpiler.hardware.HardwareModel.weighted_connectivity`. Its
             connectivity must contain the one of the router. The weights are stored with the
-            qubits relabeled as the ones of the circuit. Defaults to ``None``.
+            qubits relabeled as the ones of the circuit, and the heuristic ``"noise"`` uses
+            them. Defaults to ``None``.
+
+    With the heuristic ``"noise"``, the weight of a coupling is minus the logarithm of the
+    fidelity of its two-qubit gate, plus a negligible weight that makes the paths with fewer
+    couplings cheaper if the errors are the same, so the weights of independent gates add up.
+    A SWAP gate costs three two-qubit gates, and a block of the circuit costs the number of
+    CZ gates that its gates have, at most three. The infidelity that a gate on the qubits
+    :math:`a` and :math:`b` needs is the lowest one of moving :math:`a` to one end :math:`u`
+    of a coupling and :math:`b` to the other end :math:`v`, with the SWAP gates of the
+    couplings in between, and applying the gate on :math:`(u, v)`, see
+    :func:`qibo.transpiler.router._noise_distances`. The blocks without two-qubit gates cost
+    nothing. The best of the ``trials`` is the one with the lowest infidelity of all its
+    gates, and not the one with the fewest SWAP gates. If a gate is stuck, the router moves
+    its qubits along the path of the couplings with the lowest infidelity.
 
     Raises:
         ValueError: If ``trials`` is not positive, or ``heuristic`` is not ``"basic"``,
-            ``"lookahead"`` or ``"decay"``.
+            ``"lookahead"``, ``"decay"`` or ``"noise"``, or it is ``"noise"`` and there is no
+            ``hardware``.
         ConnectivityError: When the router is called, if its connectivity is not a subgraph
             of the connectivity of ``hardware``.
 
@@ -323,12 +356,17 @@ class Sabre(Router):
     ):
         if trials < 1:
             raise_error(ValueError, f"``trials`` must be positive, but it is {trials}.")
-        if heuristic not in ("basic", "lookahead", "decay"):
+
+        if heuristic not in ("basic", "lookahead", "decay", "noise"):
             raise_error(
                 ValueError,
                 f"Unknown heuristic {heuristic!r}. It must be one of "
-                + "'basic', 'lookahead' or 'decay'.",
+                + "'basic', 'lookahead', 'decay' or 'noise'.",
             )
+
+        if heuristic == "noise" and hardware is None:
+            raise_error(ValueError, "The heuristic 'noise' needs ``hardware``.")
+
         self.connectivity = connectivity
         self.hardware = hardware
         self.heuristic = heuristic
@@ -350,6 +388,12 @@ class Sabre(Router):
             None if hardware is None else hardware.weighted_connectivity()
         )
         self._weights = None
+        # the data of the noise heuristic, see ``_preprocessing``
+        self._block_costs = None
+        self._edge_weight = None
+        self._noise_cache = None
+        self._noise_dist = None
+        self._noise_layers = None
         # the blocks and the DAG of the circuits that were routed, see ``_preprocessing``
         self._templates = {}
 
@@ -404,13 +448,15 @@ class Sabre(Router):
                 if is_nonzero_phase(global_phase):
                     routed_circuit.add(gates.GlobalPhase(global_phase, trainable=False))
 
-                # the first trial among the ones with the fewest swaps is kept
-                if best_trial is None or self.circuit_map._swaps < best_trial[0]:
-                    best_trial = (
-                        self.circuit_map._swaps,
-                        routed_circuit,
-                        self.circuit_map,
-                    )
+                # the first trial among the ones with the fewest swaps, or with the lowest
+                # infidelity for the noise heuristic, is kept
+                cost = (
+                    self._routing_cost()
+                    if self.heuristic == "noise"
+                    else self.circuit_map._swaps
+                )
+                if best_trial is None or cost < best_trial[0]:
+                    best_trial = (cost, routed_circuit, self.circuit_map)
         finally:
             self.connectivity = connectivity
 
@@ -428,6 +474,10 @@ class Sabre(Router):
             - _final_measurements: measurement gates at the end of the circuit.
             - _weights: weights of the errors of ``hardware``, if there is one, on the
                 connectivity with the nodes relabeled as the logical qubits.
+            - _block_costs, _edge_weight and _noise_dist: only for the noise heuristic,
+                the number of CZ gates of each block, the weight of each coupling, and the
+                infidelity of each pair of qubits for a gate of one, two or three CZ gates,
+                see :func:`qibo.transpiler.router._noise_distances`.
             - _dist_matrix: matrix reporting the shortest path length between all node pairs.
             - _dag: direct acyclic graph of the circuit based on commutativity.
             - _memory_map: list to remember previous SWAP moves.
@@ -452,6 +502,10 @@ class Sabre(Router):
             self._weights = _relabel_weights(
                 self._hardware_weights, self.connectivity, mapping
             )
+
+        if self.heuristic == "noise":
+            self._set_noise_data(circuit.wire_names)
+
         self.connectivity = nx.relabel_nodes(self.connectivity, mapping)
 
         queue = tuple(circuit.queue)
@@ -461,6 +515,7 @@ class Sabre(Router):
         except TypeError:
             key = None
         template = self._templates.get(key)
+
         if template is None:
             copied_circuit = circuit.copy(deep=True)
             # global phases act on no qubits, so they are not routed, see ``__call__``
@@ -472,13 +527,14 @@ class Sabre(Router):
             final_measurements = self._detach_final_measurements(copied_circuit)
             blocks = CircuitBlocks(copied_circuit, index_names=True)
             dag = _create_dag([block.qubits for block in blocks()])
-            template = (queue, final_measurements, blocks, dag)
+            costs = [_block_cost(block) for block in blocks()]
+            template = (queue, final_measurements, blocks, dag, costs)
             if key is not None:
                 if len(self._templates) >= _MAX_TEMPLATES:
                     del self._templates[next(iter(self._templates))]
                 self._templates[key] = template
 
-        _, self._final_measurements, blocks, dag = template
+        _, self._final_measurements, blocks, dag, self._block_costs = template
         # the blocks are not modified, but they are removed from the list while routing
         fresh_blocks = copy(blocks)
         fresh_blocks.block_list = blocks.block_list.copy()
@@ -500,6 +556,41 @@ class Sabre(Router):
         self._update_dag_layers()
         self._update_front_layer()
         self._delta_register = [1.0 for _ in range(circuit.nqubits)]
+
+    def _routing_cost(self) -> float:
+        """Infidelity of the routed circuit, *i.e.* the sum of the weights of the couplings of
+        its two-qubit gates, each as many times as the CZ gates that the gate costs."""
+        return sum(
+            cost * self._edge_weight[block.qubits]
+            for block in self.circuit_map._routed_blocks.block_list
+            if (cost := _block_cost(block))
+        )
+
+    def _set_noise_data(self, wire_names: list) -> None:
+        """Set the weights of the couplings and the infidelity of the gates for the qubits of
+        the circuit, for the noise heuristic.
+
+        The infidelities only depend on the connectivity, so they are kept to route the
+        circuits that are placed on the same connectivity, and they are ordered for each one.
+
+        Args:
+            wire_names (list): Nodes of the connectivity that the qubits of the circuit are
+                placed on. The connectivity of the router is the one before the relabeling.
+        """
+        key = (
+            frozenset(self.connectivity.nodes),
+            frozenset(frozenset(edge) for edge in self.connectivity.edges),
+        )
+        if self._noise_cache is None or self._noise_cache[0] != key:
+            nodes = list(self.connectivity.nodes)
+            weights = _relabel_weights(self._hardware_weights, self.connectivity, {})
+            self._noise_cache = (key, nodes, *_noise_distances(weights, nodes))
+
+        _, nodes, edge_weight, distances = self._noise_cache
+        position = {node: index for index, node in enumerate(nodes)}
+        order = np.ix_(*[[position[name] for name in wire_names]] * 2)
+        self._edge_weight = edge_weight[order]
+        self._noise_dist = {cost: matrix[order] for cost, matrix in distances.items()}
 
     def _detach_final_measurements(self, circuit: Circuit) -> list[gates.M] | None:
         """Detach measurement gates at the end of the circuit for separate handling."""
@@ -540,9 +631,19 @@ class Sabre(Router):
 
         Method works in-place.
         """
+        self._noise_layers = []
         for layer, nodes in enumerate(nx.topological_generations(self._dag)):
             for node in nodes:
                 self._dag.nodes[node]["layer"] = layer
+            # the gates that the noise heuristic looks at, which are the ones that need routing
+            if self.heuristic == "noise" and layer <= self.lookahead:
+                self._noise_layers.append(
+                    [
+                        (self._dag.nodes[node]["qubits"], self._block_costs[node])
+                        for node in nodes
+                        if self._block_costs[node]
+                    ]
+                )
 
     def _update_front_layer(self) -> None:
         """Update the front layer of the dag.
@@ -580,8 +681,13 @@ class Sabre(Router):
             candidates_evaluation[candidate] = self._compute_cost(candidate)
 
         best_cost = min(candidates_evaluation.values())
+        # the costs of the noise heuristic are sums of floats, so the ones that only differ
+        # by the order of their terms are the same
+        tolerance = 1e-9 if self.heuristic == "noise" else 0.0
         best_candidates = [
-            key for key, value in candidates_evaluation.items() if value == best_cost
+            key
+            for key, value in candidates_evaluation.items()
+            if value <= best_cost + tolerance
         ]
         best_candidate = self._rng.choice(best_candidates)
 
@@ -599,6 +705,21 @@ class Sabre(Router):
 
         if temporary_circuit.physical_to_logical in self._memory_map:
             return float("inf")
+
+        if self.heuristic == "noise":
+            first, second = self.circuit_map.logical_pair_to_physical(candidate)
+            tot_infidelity = _SWAP_COST * self._edge_weight[first, second]
+
+            weight = 1.0
+            for layer_gates in self._noise_layers:
+                for lq_pair, cost in layer_gates:
+                    qubits = temporary_circuit.logical_pair_to_physical(lq_pair)
+                    tot_infidelity += (
+                        weight * self._noise_dist[cost][qubits[0], qubits[1]]
+                    )
+                weight *= self.decay
+
+            return float(tot_infidelity)
 
         tot_distance = 0.0
         weight = 1.0
@@ -696,14 +817,24 @@ class Sabre(Router):
         for block in self._front_layer:
             q1, q2 = self.circuit_map.get_physical_qubits(block)
             distance = self._dist_matrix[q1, q2]
+            if self.heuristic == "noise":
+                distance = self._noise_dist[self._block_costs[block]][q1, q2]
 
             if distance < min_distance:
                 min_distance = distance
                 shortest_path_qubits = [q1, q2]
 
-        shortest_path = nx.bidirectional_shortest_path(
-            self.connectivity, shortest_path_qubits[0], shortest_path_qubits[1]
-        )
+        if self.heuristic == "noise":
+            # the path of the couplings with the lowest infidelity
+            shortest_path = nx.shortest_path(
+                self.connectivity,
+                *shortest_path_qubits,
+                weight=lambda first, second, _: self._edge_weight[first, second],
+            )
+        else:
+            shortest_path = nx.bidirectional_shortest_path(
+                self.connectivity, shortest_path_qubits[0], shortest_path_qubits[1]
+            )
 
         # move q1
         q1 = self.circuit_map.physical_to_logical[shortest_path[0]]
@@ -1120,6 +1251,29 @@ class StarConnectivityRouter(Router):
                 )
 
 
+def _block_cost(block: Block) -> int:
+    """Helper method for :class:`qibo.transpiler.router.Sabre`.
+
+    Number of CZ gates that the two-qubit gates of a block need, at most three, because any
+    two-qubit block can be rewritten with three. A SWAP gate costs three and an iSWAP gate
+    two, like in :meth:`qibo.transpiler.blocks.Block.kak_decompose`, and any other gate one.
+
+    Args:
+        block (:class:`qibo.transpiler.blocks.Block`): Block of gates.
+
+    Returns:
+        int: Number of CZ gates, which is zero if the block has no two-qubit gate.
+    """
+    return min(
+        _SWAP_COST,
+        sum(
+            _CZ_COSTS.get(type(gate), 1)
+            for gate in block.gates
+            if len(gate.qubits) == 2 and not isinstance(gate, gates.Barrier)
+        ),
+    )
+
+
 def _check_connected_components(
     circuit_map: CircuitMap, connectivity: nx.Graph
 ) -> None:
@@ -1220,6 +1374,70 @@ def _find_connected_qubit(
                 return possible_qubits.pop()
 
     return qubits[0]
+
+
+def _noise_distances(
+    weights: nx.Graph, nodes: list
+) -> tuple[np.ndarray, dict[int, np.ndarray]]:
+    """Helper method for :class:`qibo.transpiler.router.Sabre`.
+
+    Weight of the couplings, and infidelity that a gate needs for each pair of qubits.
+
+    The weight of a coupling is the one of ``weights``, which is minus the logarithm of the
+    fidelity of its gate, at most ``_MAX_WEIGHT``, plus ``_HOP_WEIGHT``. A SWAP gate costs
+    three times as much. Let :math:`S_{ab}` be the lowest cost of the SWAP gates that move a
+    qubit from :math:`a` to :math:`b`. The cost of a gate that needs :math:`k` CZ gates
+    between the qubits :math:`a` and :math:`b` is the lowest of
+
+    .. math::
+        S_{au} + k \\, w_{uv} + S_{vb} \\, ,
+
+    over the couplings :math:`(u, v)` in both directions: the qubits are moved to the ends of
+    a coupling, where the gate is applied. The qubits of different connected components have
+    a finite distance that is larger than the other ones, like in
+    :class:`qibo.transpiler.router.Sabre`, since no gate acts on them.
+
+    Args:
+        weights (:class:`networkx.Graph`): Weighted connectivity of a hardware model, with
+            the nodes in ``nodes``, see
+            :meth:`qibo.transpiler.hardware.HardwareModel.weighted_connectivity`.
+        nodes (list): Nodes of ``weights``, which set the order of the rows and the columns.
+
+    Returns:
+        tuple[:class:`numpy.ndarray`, dict]: Weight of each coupling, which is infinite where
+        there is none, and the matrices of the infidelity for the number of CZ gates from one
+        to three, as a dictionary.
+    """
+    size = len(nodes)
+    index = {node: position for position, node in enumerate(nodes)}
+    couplings = [
+        (index[first], index[second], min(weight, _MAX_WEIGHT) + _HOP_WEIGHT)
+        for first, second, weight in weights.edges(data="weight")
+    ]
+
+    edge_weight = np.full((size, size), np.inf)
+    swap = np.full((size, size), np.inf)
+    np.fill_diagonal(swap, 0.0)
+    for first, second, weight in couplings:
+        edge_weight[first, second] = edge_weight[second, first] = weight
+        swap[first, second] = swap[second, first] = _SWAP_COST * weight
+    for middle in range(size):
+        swap = np.minimum(swap, swap[:, middle, None] + swap[None, middle, :])
+
+    distances = {}
+    for cost in range(1, _SWAP_COST + 1):
+        distance = np.full((size, size), np.inf)
+        for first, second, weight in couplings:
+            for start, end in ((first, second), (second, first)):
+                distance = np.minimum(
+                    distance,
+                    swap[:, start, None] + cost * weight + swap[None, end, :],
+                )
+        finite = np.isfinite(distance)
+        distance[~finite] = distance[finite].max() + 1.0
+        distances[cost] = distance
+
+    return edge_weight, distances
 
 
 def _relabel_weights(
