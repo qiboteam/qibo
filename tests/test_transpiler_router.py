@@ -18,6 +18,7 @@ from qibo.transpiler.asserts import (
     assert_connectivity,
     assert_placement,
 )
+from qibo.transpiler.blocks import Block
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import (
@@ -33,6 +34,7 @@ from qibo.transpiler.router import (
     Sabre,
     ShortestPaths,
     StarConnectivityRouter,
+    _block_cost,
     _check_connected_components,
     _create_dag,
 )
@@ -1340,6 +1342,225 @@ def test_router_hardware_connectivity_error(router, connectivity):
         router(connectivity, hardware=hardware)(circuit)
 
 
+def test_sabre_noise_needs_hardware():
+    with pytest.raises(ValueError, match="needs"):
+        Sabre(connectivity=line_connectivity(3), heuristic="noise")
+    assert Sabre(heuristic="noise", hardware=_line_hardware(3)).heuristic == "noise"
+
+
+@pytest.mark.parametrize("swap_threshold", [1.5, 0.0])
+def test_sabre_noise_avoids_noisy_couplings(swap_threshold):
+    """The gate of the opposite qubits of a ring is routed through the quiet half of it,
+    also when the router is stuck and moves the qubits along a path."""
+    noisy = {frozenset(edge) for edge in [(0, 1), (1, 2), (2, 3)]}
+    ring, hardware = _ring_hardware(6, noisy)
+    circuit = Circuit(6)
+    circuit.add(gates.CNOT(0, 3))
+
+    used = {}
+    for heuristic, kwargs in (("decay", {}), ("noise", {"hardware": hardware})):
+        used[heuristic] = []
+        for seed in range(8):
+            router = Sabre(
+                ring,
+                seed=seed,
+                heuristic=heuristic,
+                swap_threshold=swap_threshold,
+                **kwargs,
+            )
+            routed, layout = router(circuit)
+            couplings = {
+                frozenset(gate.qubits) for gate in routed.queue if len(gate.qubits) == 2
+            }
+            used[heuristic].append(bool(couplings & noisy))
+            assert_circuit_equivalence(
+                original_circuit=circuit,
+                transpiled_circuit=routed,
+                final_layout=layout,
+            )
+    # the noise heuristic never uses the noisy couplings, and the other one does sometimes,
+    # unless the router is stuck, and then the shortest path in the hops is not unique either
+    assert not any(used["noise"])
+    assert any(used["decay"]) or swap_threshold == 0.0
+
+
+def test_sabre_noise_routing_cost():
+    connectivity = line_connectivity(5)
+    hardware = _line_hardware(5)
+    weights = hardware.weighted_connectivity()
+    circuit = Circuit(5)
+    circuit.add([gates.CNOT(0, 4), gates.H(1), gates.CZ(1, 3), gates.RX(2, 0.3)])
+
+    router = Sabre(connectivity, seed=1, heuristic="noise", hardware=hardware)
+    routed, _ = router(circuit)
+    assert router.added_swaps > 0
+    # the SWAP gates cost three CZ gates, and the gates without couplings nothing
+    expected = sum(
+        (3 if gate.name == "swap" else 1)
+        * (
+            weights.edges[tuple(sorted(gate.qubits))]["weight"]
+            + router_module._HOP_WEIGHT
+        )
+        for gate in routed.queue
+        if len(gate.qubits) == 2
+    )
+    assert router._routing_cost() == pytest.approx(expected)
+
+
+def test_sabre_noise_block_cost():
+    assert _block_cost(Block((0, 1), [gates.H(0), gates.RX(1, 0.1)])) == 0
+    assert _block_cost(Block((0, 1), [gates.CZ(0, 1), gates.H(0)])) == 1
+    assert _block_cost(Block((0, 1), [gates.iSWAP(0, 1)])) == 2
+    assert _block_cost(Block((0, 1), [gates.SWAP(0, 1)])) == 3
+    # a block cannot need more than three
+    assert _block_cost(Block((0, 1), [gates.CZ(0, 1)] * 5)) == 3
+    assert _block_cost(Block((0, 1, 2), [gates.Barrier(0, 1, 2)])) == 0
+
+
+def test_sabre_noise_trials():
+    """The best of the trials has the lowest infidelity, and not the fewest SWAP gates."""
+    connectivity = nx.convert_node_labels_to_integers(nx.grid_2d_graph(3, 3))
+    rng = random.Random(0)
+    couplings = list(connectivity.edges)
+    hardware = HardwareModel(
+        tuple(connectivity.nodes),
+        couplings,
+        errors={
+            "2q": {edge: rng.choice([0.002, 0.01, 0.05, 0.2]) for edge in couplings}
+        },
+    )
+
+    costs = []
+    for seed in range(6):
+        circuit = generate_random_circuit(nqubits=9, ngates=40, seed=seed)
+        Random(connectivity)(circuit)
+        costs.append([])
+        for trials in (1, 8):
+            router = Sabre(
+                connectivity,
+                seed=seed,
+                heuristic="noise",
+                hardware=hardware,
+                trials=trials,
+            )
+            router(circuit)
+            costs[-1].append(router._routing_cost())
+    assert all(best <= first for first, best in costs)
+    assert any(best < first for first, best in costs)
+
+
+@pytest.mark.parametrize("errors", ["random", "none", "unusable"])
+def test_sabre_noise_random_circuits(backend, errors):
+    """The circuit is routed whatever the errors are, also if they are zero, which makes
+    the hops the only difference between the paths, or one, which cannot be used."""
+    connectivity = nx.cycle_graph(5)
+    couplings = list(connectivity.edges)
+    rng = random.Random(1)
+    two_qubit = {
+        "random": {edge: rng.choice([0.002, 0.02, 0.2]) for edge in couplings},
+        "none": {},
+        "unusable": {edge: 1.0 if edge == (1, 2) else 0.01 for edge in couplings},
+    }[errors]
+    hardware = HardwareModel(tuple(range(5)), couplings, errors={"2q": two_qubit})
+    circuit = generate_random_circuit(nqubits=5, ngates=40)
+    measurement = gates.M(*range(5))
+    circuit.add(measurement)
+    original_circuit = circuit.copy()
+    placer = Random(connectivity)
+    router = Sabre(connectivity, seed=1, heuristic="noise", hardware=hardware)
+
+    placer(circuit, backend=backend)
+    transpiled_circuit, final_layout = router(circuit)
+
+    assert router.added_swaps > 0
+    assert_connectivity(connectivity, transpiled_circuit)
+    assert_placement(transpiled_circuit, connectivity)
+    assert_circuit_equivalence(
+        original_circuit=original_circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_layout=final_layout,
+    )
+    assert transpiled_circuit.queue[-1].register_name == measurement.register_name
+    if errors == "unusable":
+        used = {frozenset(gate.qubits) for gate in transpiled_circuit.queue}
+        assert frozenset((1, 2)) not in used
+
+
+def test_sabre_noise_data():
+    """The weights and the infidelities are ordered as the qubits of the circuit, and they
+    are only computed again for another connectivity."""
+    connectivity = line_connectivity(4)
+    hardware = _line_hardware(4)
+    weights = hardware.weighted_connectivity()
+    hop = router_module._HOP_WEIGHT
+    router = Sabre(connectivity, seed=1, heuristic="noise", hardware=hardware)
+
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 3))
+    router(circuit)
+    cache = router._noise_cache
+    assert router._edge_weight[1, 2] == weights.edges[1, 2]["weight"] + hop
+    assert router._edge_weight[0, 2] == np.inf
+
+    # the qubits are placed on the nodes 3, 1, 2 and 0, so the couplings are the ones of
+    # (3, 2) and (1, 0), and the distances are the ones of the nodes
+    wire_names = [3, 1, 2, 0]
+    other = Circuit(4, wire_names=wire_names)
+    other.add(gates.CNOT(0, 3))
+    routed, layout = router(other)
+    assert router._noise_cache is cache
+    assert router._edge_weight[0, 2] == weights.edges[2, 3]["weight"] + hop
+    assert router._edge_weight[1, 3] == weights.edges[0, 1]["weight"] + hop
+    assert router._edge_weight[0, 1] == np.inf
+    assert_circuit_equivalence(
+        original_circuit=other, transpiled_circuit=routed, final_layout=layout
+    )
+    for cost, matrix in router._noise_dist.items():
+        reference = cache[3][cost]
+        for first, second in itertools.product(range(4), repeat=2):
+            assert (
+                matrix[first, second]
+                == reference[wire_names[first], wire_names[second]]
+            )
+
+    # a smaller connectivity is a different one
+    router.connectivity = line_connectivity(3)
+    small = Circuit(3)
+    small.add(gates.CNOT(0, 2))
+    router(small)
+    assert router._noise_cache is not cache
+
+
+def test_sabre_noise_disconnected_components():
+    connectivity = nx.Graph([(0, 1), (2, 3)])
+    hardware = HardwareModel(
+        tuple(range(4)), list(connectivity.edges), errors={"2q": {(0, 1): 0.1}}
+    )
+    circuit = Circuit(4)
+    circuit.add([gates.CNOT(0, 1), gates.CNOT(2, 3)])
+    router = Sabre(connectivity, seed=1, heuristic="noise", hardware=hardware)
+    router(circuit)
+    # the distance between the components is finite, and larger than the other ones
+    for matrix in router._noise_dist.values():
+        assert np.isfinite(matrix).all()
+        assert matrix[0, 2] > matrix[0, 1]
+        assert matrix[0, 2] > matrix[2, 3]
+
+
+def test_sabre_noise_barrier():
+    """The barrier of several qubits is not a gate that needs routing."""
+    connectivity = line_connectivity(4)
+    circuit = Circuit(4)
+    circuit.add([gates.CNOT(0, 3), gates.Barrier(0, 1, 2), gates.CNOT(1, 3)])
+    router = Sabre(connectivity, seed=1, heuristic="noise", hardware=_line_hardware(4))
+    routed, layout = router(circuit)
+    assert router._block_costs.count(0) == 1
+    assert_connectivity(connectivity, routed)
+    assert_circuit_equivalence(
+        original_circuit=circuit, transpiled_circuit=routed, final_layout=layout
+    )
+
+
 def _line_hardware(nqubits):
     """Hardware on a line, whose errors are different for every qubit and coupling."""
     couplings = [(qubit, qubit + 1) for qubit in range(nqubits - 1)]
@@ -1352,3 +1573,11 @@ def _line_hardware(nqubits):
             "readout": {qubit: 0.02 * (qubit + 1) for qubit in range(nqubits)},
         },
     )
+
+
+def _ring_hardware(nqubits, noisy):
+    """Ring and hardware on it, whose couplings are noisy if they are in ``noisy``."""
+    ring = nx.cycle_graph(nqubits)
+    couplings = list(ring.edges)
+    errors = {edge: 0.2 if frozenset(edge) in noisy else 0.001 for edge in couplings}
+    return ring, HardwareModel(tuple(range(nqubits)), couplings, errors={"2q": errors})
