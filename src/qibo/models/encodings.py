@@ -22,6 +22,7 @@ from qibo.models._encodings import (  # _up_to_k_hamming_weight_encoder_deprecat
     _dicke_tree_cuts,
     _ehrlich_algorithm,
     _fanout_parity_tree,
+    _folded_grid,
     _folded_merged,
     _folded_sopena,
     _generate_rbs_angles,
@@ -497,6 +498,7 @@ def folded_xxz_eigenstate(
     modes: list[int] | None = None,
     method: str = "sopena",
     return_toffolis: bool = False,
+    nrows: int = 2,
     backend: Backend | None = None,
 ) -> Circuit:
     """Create circuit that prepares an eigenstate of the open-boundary folded XXZ spin chain.
@@ -527,19 +529,46 @@ def folded_xxz_eigenstate(
     the preparation of a Slater determinant of :math:`M` free fermions in a squeezed chain of
     :math:`n_{0}` sites, which needs :math:`n_{0} \\geq 2M`; a network of controlled-SWAP gates that
     enforces the hard-core repulsion between magnons; and the insertion of the domain walls.
-    These stages can be implemented with two different methods. With ``"sopena"``, the free
-    fermions are prepared with the algebraic Bethe circuit of Refs. [2, 3], which starts from a
-    dense unitary on :math:`2M` qubits and limits :math:`M` to a few. Then, the magnons are
-    shifted in place, and inserted one by one in the chain with the domain walls. With
-    ``"merged"``, the free fermions are prepared with :math:`M (n_{0} - 1) - M (M - 1) / 2` Givens
-    rotations (see Refs. [4, 5]), and the last two stages are performed at once: a single pass
-    over the squeezed chain writes the output in a separate register, and a second pass clears
-    the input from the output. For domain walls, it needs fewer qubits and gates, and for no
-    domain walls, it needs more.
+    These stages can be implemented with three different methods:
 
-    The first ``nsites`` qubits of the circuit hold the chain. The remaining qubits are auxiliary
-    qubits, which are returned to :math:`\\ket{0}`, and thus the state of the chain can be read
-    out by discarding them.
+    * With ``"sopena"``, the free fermions are prepared with the algebraic Bethe circuit of
+      Refs. [2, 3], which starts from a dense unitary on :math:`2M` qubits and limits :math:`M`
+      to a few. Then, the magnons are shifted in-place, and inserted one by one in the chain
+      with the domain walls.
+    * With ``"merged"``, the free fermions are prepared with :math:`M (n_{0} - 1) - M (M - 1) / 2`
+      Givens rotations (see Refs. [4, 5]), and the last two stages are performed at once: a single
+      pass over the squeezed chain writes the output in a separate register, and a second pass
+      clears the input from the output. For domain walls, it needs fewer qubits and gates,
+      and for no domain walls, it needs more.
+    * With ``"grid"``, all the gates act on neighboring qubits of a grid with ``nrows`` rows.
+      The free fermion stage is prepared with the same Givens rotations as ``"merged"``,
+      and the last two stages are performed in-place on a ladder of two rows and
+      :math:`n + 1` columns: the first row holds the bonds between the sites of the chain,
+      and the second row is a tally of magnons. The ladder needs :math:`2n + 2` qubits for
+      any number of magnons and of domain walls, and, unlike the other methods, the circuit
+      also holds the two boundary sites. Without domain walls, it has
+      :math:`(15M - 1) \\, n - 28 M^{2} + 25 M - 4` CNOTs and a depth that grows linearly with
+      :math:`n`, *e.g.* :math:`23 \\, (n - M) - 7` layers of CNOTs for :math:`M \\geq 3`.
+      Each domain wall adds at most :math:`(7 M^{2} + M + 16) / 2` CNOTs in the cases that were
+      measured, which is the cost of a domain wall that is far from the others and from the ends
+      of the chain. The ladder is folded in :math:`n_{b} = \\text{nrows} / 2` bands of
+      :math:`w = \\lceil (n + 1) / n_{b} \\rceil` columns, and the grid has ``nrows`` rows and
+      :math:`w` columns. The gates between the two sides of each bend are bridged with CNOTs.
+      Without domain walls, four rows add at most :math:`24M - 14` CNOTs, and each further band
+      adds at most about :math:`35M` CNOTs and :math:`35M` layers of CNOTs. At the end, the chain
+      is gathered in the first rows, which adds at most :math:`w \\, (n_{b} - 1)(n_{b} - 2)` CNOTs
+      and :math:`2 \\, (n_{b} - 2)` layers. The site :math:`0` is then in the row :math:`0`
+      and column :math:`0`, and, for :math:`k = 1, \\ldots, n + 1`, the site :math:`k`
+      is in the row :math:`s + 1` and in the column :math:`(k - 1) \\bmod w` if :math:`s`
+      is even and :math:`w - 1 - ((k - 1) \\bmod w)` otherwise, with
+      :math:`s = \\lfloor (k - 1) / w \\rfloor`. So the chain is a snake of neighboring qubits,
+      which starts above the site :math:`1`.
+
+    With ``"sopena"`` and ``"merged"``, the first ``nsites`` qubits of the circuit hold the
+    sites :math:`1, \\ldots, n` of the chain. With ``"grid"``, the first ``nsites + 2`` qubits
+    hold the sites :math:`0, \\ldots, n + 1`, and the remaining qubits are labelled in
+    row-major order of the grid. The remaining qubits are auxiliary qubits, which are returned to
+    :math:`\\ket{0}`, and thus the state of the chain can be read out by discarding them.
 
     Args:
         nsites (int): number of sites :math:`n` of the chain.
@@ -553,11 +582,17 @@ def folded_xxz_eigenstate(
             of the magnons. If ``None``, uses :math:`M` evenly spaced integers between :math:`2`
             and :math:`n_{0}`, rounded to the nearest integer. Defaults to ``None``.
         method (str, optional): implementation of the circuit, either ``"sopena"``, following
-            Ref. [1], or ``"merged"``. Defaults to ``"sopena"``.
-        return_toffolis (bool, optional): only used if ``method="merged"``. If ``True``,
-            the Toffoli gates are returned as :class:`qibo.gates.TOFFOLI` gates, which are not
-            decomposed into CNOTs and single-qubit rotations. Otherwise, they are implemented
-            up to a relative phase with CNOTs and single-qubit rotations. Defaults to ``False``.
+            Ref. [1], ``"merged"``, or ``"grid"``. Defaults to ``"sopena"``.
+        return_toffolis (bool, optional): only used if ``method`` is ``"merged"`` or
+            ``"grid"``. If ``True``, the Toffoli gates are returned as :class:`qibo.gates.TOFFOLI`
+            gates, which are not decomposed into CNOTs and single-qubit rotations. Otherwise,
+            they are implemented up to a relative phase with CNOTs and single-qubit rotations.
+            With ``method="grid"`` and more than two rows, the gates between the two sides
+            of a bend are then routed with SWAP gates instead of being bridged with CNOTs.
+            Defaults to ``False``.
+        nrows (int, optional): only used if ``method="grid"``. Even number of rows of the grid,
+            which must leave at least one column of the ladder in each band. Defaults to
+            :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -587,10 +622,30 @@ def folded_xxz_eigenstate(
     """
     backend = _check_backend(backend)
 
-    if method not in ("sopena", "merged"):
+    if method not in ("sopena", "merged", "grid"):
         raise_error(
             ValueError,
-            f"``method`` must be either ``sopena`` or ``merged``, but it is ``{method}``.",
+            "``method`` must be either ``sopena``, ``merged`` or ``grid``, "
+            + f"but it is ``{method}``.",
+        )
+
+    if method != "grid" and nrows != 2:
+        raise_error(
+            ValueError,
+            f"``nrows`` is only used with ``method='grid'``, but it is {nrows}.",
+        )
+
+    nbands = nrows // 2
+    if (
+        not isinstance(nrows, (int, np.integer))
+        or nrows < 2
+        or nrows % 2
+        or (nbands - 1) * -(-(nsites + 1) // nbands) >= nsites + 1
+    ):
+        raise_error(
+            ValueError,
+            "``nrows`` must be an even integer that leaves at least one column in each band, "
+            + f"but it is {nrows}.",
         )
 
     domains = [list(domain) for domain in domains or []]
@@ -646,6 +701,17 @@ def folded_xxz_eigenstate(
                 + "sites after the end of the previous one.",
             )
         previous_end = domain[-1]
+
+    if method == "grid":
+        return _folded_grid(
+            nsites,
+            nmagnons,
+            domains,
+            modes,
+            nrows=nrows,
+            return_toffolis=return_toffolis,
+            backend=backend,
+        )
 
     if method == "merged":
         return _folded_merged(

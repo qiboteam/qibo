@@ -1367,6 +1367,8 @@ def test_leaf_separable_encoder_errors(backend):
         (12, 1, [[3, 4], [6, 7]], None, "sopena"),
         (6, 0, None, None, "merged"),
         (7, 1, [[3, 5]], None, "merged"),
+        (6, 0, None, None, "grid"),
+        (7, 1, [[3, 5]], None, "grid"),
         (5, 1, [[3, 4]], None, "other"),
     ],
 )
@@ -1395,7 +1397,7 @@ EIGENSTATE_CASES = [
         (8, 1, None, None, [2]),
         (8, 1, [[3, 4], [7, 8]], None, [2]),
     ]
-    for method in ["sopena", "merged"]
+    for method in ["sopena", "merged", "grid"]
 ]
 EIGENSTATE_CASES.extend(
     [
@@ -1403,6 +1405,9 @@ EIGENSTATE_CASES.extend(
         (10, 3, [[7, 8]], None, [2, 4, 6], "merged"),
         (9, 2, [[6, 7]], None, [2, 6], "merged"),
         (9, 2, [[5, 6, 7]], None, [2, 6], "merged"),
+        (8, 2, [[7, 8]], None, [2, 5], "grid"),
+        (9, 2, [[6, 7]], None, [2, 6], "grid"),
+        (9, 2, [[5, 6, 7]], None, [2, 6], "grid"),
     ]
 )
 
@@ -1419,7 +1424,11 @@ def test_folded_xxz_eigenstate(
 
     # the chain is in the first qubits, and the auxiliary qubits are in the zero state
     state = backend.execute_circuit(circuit).state()
-    chain = state[:: 2 ** (circuit.nqubits - nsites)]
+    if method == "grid":
+        # the chain has its boundary sites, which are in the zero state
+        chain = state[:: 2 ** (circuit.nqubits - nsites - 2)][: 2 ** (nsites + 1) : 2]
+    else:
+        chain = state[:: 2 ** (circuit.nqubits - nsites)]
     backend.assert_allclose(backend.vector_norm(chain), 1.0, atol=1e-8)
 
     # the boundary qubits of the Hamiltonian are in the zero state
@@ -1508,18 +1517,221 @@ def test_folded_xxz_eigenstate_many_domains(
     backend.assert_allclose(hamiltonian @ state, energy * state, atol=1e-8)
 
 
+def _grid_positions(nsites, nrows):
+    """Positions of the qubits in the grid, as given in the docstring of
+    :func:`qibo.models.encodings.folded_xxz_eigenstate`."""
+    nbands = nrows // 2
+    width = -(-(nsites + 1) // nbands)
+    positions = {0: (0, 0)}
+    for site in range(1, nsites + 2):
+        band, offset = divmod(site - 1, width)
+        col = offset if band % 2 == 0 else width - 1 - offset
+        positions[site] = (band + 1, col)
+    unused = sorted(set(product(range(nrows), range(width))) - set(positions.values()))
+    positions.update(zip(range(nsites + 2, nrows * width), unused))
+    return positions, width
+
+
+@pytest.mark.parametrize(
+    "nsites,nmagnons,domains,target_modes",
+    [
+        (12, 1, [[3, 4], [7, 8], [11, 12]], [2]),
+        (14, 2, [[5, 6], [9, 10], [13, 14]], [2, 7]),
+        (14, 3, [[7, 8], [11, 12]], [1, 3, 6]),
+        (15, 3, [[7, 8, 9, 10], [13, 14]], [2, 4, 5]),
+    ],
+)
+@pytest.mark.parametrize("nrows", [2, 4])
+def test_folded_xxz_eigenstate_grid_many_domains(
+    backend, nsites, nmagnons, domains, target_modes, nrows
+):
+    """The circuits are too large to be simulated, so the first stage is simulated alone, and the
+    other stages, which only permute basis states, are applied to the bit strings of its state.
+    """
+    circuit = folded_xxz_eigenstate(
+        nsites,
+        nmagnons,
+        domains,
+        target_modes,
+        method="grid",
+        return_toffolis=True,
+        nrows=nrows,
+        backend=backend,
+    )
+
+    # the first stage is the only one with rotations, and it acts on the free fermions, the
+    # qubits of the domain walls between them, and the qubits that the SWAP gates go through
+    last = max(
+        i
+        for i, gate in enumerate(circuit.queue)
+        if isinstance(gate, (gates.RBS, gates.RY, gates.H))
+    )
+    first_stage = circuit.queue[: last + 1]
+    touched = sorted({qubit for gate in first_stage for qubit in gate.qubits})
+    free_fermions = Circuit(len(touched))
+    free_fermions.add(
+        gate.on_qubits({qubit: touched.index(qubit) for qubit in gate.qubits})
+        for gate in first_stage
+    )
+    amplitudes = backend.to_numpy(backend.execute_circuit(free_fermions).state())
+
+    chain = np.zeros(2**nsites, dtype=complex)
+    for index in np.flatnonzero(abs(amplitudes) > 1e-12):
+        bits = [0] * circuit.nqubits
+        for qubit, bit in zip(touched, f"{index:0{len(touched)}b}"):
+            bits[qubit] = int(bit)
+        for gate in circuit.queue[len(first_stage) :]:
+            if all(bits[qubit] for qubit in gate.control_qubits):
+                first, *others = gate.target_qubits
+                if others:
+                    bits[first], bits[others[0]] = bits[others[0]], bits[first]
+                else:
+                    bits[first] ^= 1
+        # the boundary sites are the first qubit and the qubit after the chain
+        assert not bits[0] and not any(bits[nsites + 1 :])
+        chain[int("".join(map(str, bits[1 : nsites + 1])), 2)] += amplitudes[index]
+
+    chain = backend.cast(chain, dtype=backend.complex128)
+    backend.assert_allclose(backend.vector_norm(chain), 1.0, atol=1e-8)
+
+    vacuum = backend.zero_state(1)
+    state = backend.kron(backend.kron(vacuum, chain), vacuum)
+    hamiltonian = FoldedXXZ(nsites + 2, dense=False, backend=backend)
+
+    nsqueezed = nsites - 2 * len(domains) - nmagnons + 1
+    momenta = (
+        math.pi * backend.cast(target_modes, dtype=backend.float64) / (nsqueezed + 1)
+    )
+    energy = -backend.sum(backend.cos(momenta))
+    backend.assert_allclose(hamiltonian @ state, energy * state, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nsites,nmagnons,domains,nrows",
+    [
+        (8, 3, None, 2),
+        (7, 2, [[5, 6]], 2),
+        (14, 3, [[7, 8], [11, 12]], 2),
+        (14, 3, [[7, 8], [11, 12]], 4),
+        (14, 3, [[7, 8], [11, 12]], 6),
+        (8, 2, [[7, 8]], 6),
+        (5, 1, [[3, 4]], 12),
+    ],
+)
+@pytest.mark.parametrize("return_toffolis", [False, True])
+def test_folded_xxz_eigenstate_grid_neighbors(
+    backend, nsites, nmagnons, domains, nrows, return_toffolis
+):
+    circuit = folded_xxz_eigenstate(
+        nsites,
+        nmagnons,
+        domains,
+        method="grid",
+        return_toffolis=return_toffolis,
+        nrows=nrows,
+        backend=backend,
+    )
+    positions, width = _grid_positions(nsites, nrows)
+    assert circuit.nqubits == nrows * width
+
+    # consecutive sites of the chain, including its boundary sites, are neighbors of the grid
+    for site in range(nsites + 1):
+        assert (
+            abs(positions[site][0] - positions[site + 1][0])
+            + abs(positions[site][1] - positions[site + 1][1])
+            == 1
+        )
+
+    # the gates act on neighbors of the grid, where the Toffoli gates that are not
+    # decomposed act on a path of three qubits
+    for gate in circuit.queue:
+        assert len(gate.qubits) <= (3 if return_toffolis else 2)
+        neighbors = sum(
+            abs(positions[first][0] - positions[second][0])
+            + abs(positions[first][1] - positions[second][1])
+            == 1
+            for first, second in combinations(gate.qubits, 2)
+        )
+        assert neighbors == len(gate.qubits) - 1
+
+
+@pytest.mark.parametrize(
+    "nsites,nmagnons,domains,target_modes,nrows",
+    [
+        (8, 3, None, [2, 4, 6], 4),
+        (7, 2, [[5, 6]], [2, 4], 4),
+        (8, 2, [[7, 8]], [2, 5], 6),
+        (8, 1, [[3, 4], [7, 8]], [2], 6),
+    ],
+)
+@pytest.mark.parametrize("return_toffolis", [False, True])
+def test_folded_xxz_eigenstate_grid_rows(
+    backend, nsites, nmagnons, domains, target_modes, nrows, return_toffolis
+):
+    circuit = folded_xxz_eigenstate(
+        nsites,
+        nmagnons,
+        domains,
+        target_modes,
+        method="grid",
+        return_toffolis=return_toffolis,
+        nrows=nrows,
+        backend=backend,
+    )
+
+    # the chain, with its boundary sites in the zero state, is in the first qubits, and the
+    # other qubits are in the zero state
+    state = backend.execute_circuit(circuit).state()
+    chain = state[:: 2 ** (circuit.nqubits - nsites - 2)][: 2 ** (nsites + 1) : 2]
+    backend.assert_allclose(backend.vector_norm(chain), 1.0, atol=1e-8)
+
+    vacuum = backend.zero_state(1)
+    state = backend.kron(backend.kron(vacuum, chain), vacuum)
+    hamiltonian = FoldedXXZ(nsites + 2, backend=backend)
+
+    nsqueezed = nsites - nmagnons + 1 - 2 * len(domains or [])
+    momenta = (
+        math.pi * backend.cast(target_modes, dtype=backend.float64) / (nsqueezed + 1)
+    )
+    energy = -backend.sum(backend.cos(momenta))
+    backend.assert_allclose(hamiltonian.matrix @ state, energy * state, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "method,nrows",
+    [
+        ("merged", 4),
+        ("sopena", 4),
+        ("grid", 3),
+        ("grid", 0),
+        ("grid", 4.0),
+        ("grid", 8),
+    ],
+)
+def test_folded_xxz_eigenstate_grid_rows_errors(backend, method, nrows):
+    with pytest.raises(ValueError):
+        folded_xxz_eigenstate(8, 2, method=method, nrows=nrows, backend=backend)
+
+
 @pytest.mark.parametrize("nsites,nmagnons,domains", [(8, 3, None), (7, 2, [[5, 6]])])
 def test_folded_xxz_eigenstate_methods(backend, nsites, nmagnons, domains):
     chains = []
-    for method in ("sopena", "merged"):
+    for method in ("sopena", "merged", "grid"):
         circuit = folded_xxz_eigenstate(
             nsites, nmagnons, domains, method=method, backend=backend
         )
         state = backend.execute_circuit(circuit).state()
-        chains.append(state[:: 2 ** (circuit.nqubits - nsites)])
+        if method == "grid":
+            chain = state[:: 2 ** (circuit.nqubits - nsites - 2)][
+                : 2 ** (nsites + 1) : 2
+            ]
+        else:
+            chain = state[:: 2 ** (circuit.nqubits - nsites)]
+        chains.append(chain)
 
-    overlap = backend.sum(backend.conj(chains[0]) * chains[1])
-    backend.assert_allclose(backend.abs(overlap), 1.0, atol=1e-8)
+    for chain in chains[1:]:
+        overlap = backend.sum(backend.conj(chains[0]) * chain)
+        backend.assert_allclose(backend.abs(overlap), 1.0, atol=1e-8)
 
 
 @pytest.mark.parametrize("absent", [(0, 1), (1, 1)])
@@ -1552,7 +1764,10 @@ def test_folded_xxz_cswap_toffolis(backend, absent):
 
 
 @pytest.mark.parametrize("nsites,nmagnons,domains", [(5, 2, None), (7, 2, [[5, 6]])])
-def test_folded_xxz_eigenstate_return_toffolis(backend, nsites, nmagnons, domains):
+@pytest.mark.parametrize("method", ["merged", "grid"])
+def test_folded_xxz_eigenstate_return_toffolis(
+    backend, nsites, nmagnons, domains, method
+):
     chains = []
     queues = []
     for return_toffolis in (False, True):
@@ -1560,18 +1775,20 @@ def test_folded_xxz_eigenstate_return_toffolis(backend, nsites, nmagnons, domain
             nsites,
             nmagnons,
             domains,
-            method="merged",
+            method=method,
             return_toffolis=return_toffolis,
             backend=backend,
         )
         queues.append(circuit.queue)
         state = backend.execute_circuit(circuit).state()
-        chains.append(state[:: 2 ** (circuit.nqubits - nsites)])
+        nchain = nsites + 2 if method == "grid" else nsites
+        chains.append(state[:: 2 ** (circuit.nqubits - nchain)])
 
     # by default, the Toffoli gates are decomposed, and they are not otherwise
     assert not any(isinstance(gate, gates.TOFFOLI) for gate in queues[0])
     assert any(isinstance(gate, gates.TOFFOLI) for gate in queues[1])
-    assert not any(isinstance(gate, gates.RY) for gate in queues[1])
+    if method == "merged":
+        assert not any(isinstance(gate, gates.RY) for gate in queues[1])
 
     # the Toffoli gates are returned without the relative phases, which cancel in the
     # decomposed circuit, and the state of the chain is the same
