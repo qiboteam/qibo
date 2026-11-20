@@ -44,6 +44,7 @@ from qibo.transpiler.optimizer import (
     Validation,
     _embedded_matrix,
     _sequence_error,
+    _unchanged,
 )
 from qibo.transpiler.pipeline import Passes, generate_preset_passes
 from qibo.transpiler.router import Sabre
@@ -2437,6 +2438,154 @@ def test_fixed_point_stops_when_unchanged(backend):
     optimized = FixedPoint([counter, counter], max_iterations=5)(circuit, backend)
     assert counter.calls == 2
     assert optimized is circuit
+
+
+class _CountingOptimizer(Optimizer):
+    """Optimizer that counts its calls, and that returns a circuit from a function."""
+
+    def __init__(self, function=None):
+        self.calls = 0
+        self.function = function
+
+    def __call__(self, circuit):
+        self.calls += 1
+        return circuit if self.function is None else self.function(circuit)
+
+
+def _with_gates(circuit, queue):
+    new = Circuit(**circuit.init_kwargs)
+    new.add(queue)
+    return new
+
+
+def _remove_first_rx(circuit):
+    queue = list(circuit.queue)
+    for index, gate in enumerate(queue):
+        if gate.name == "rx":
+            del queue[index]
+            break
+    return _with_gates(circuit, queue)
+
+
+def test_fixed_point_skips_optimizers_that_cannot_change(backend):
+    circuit = Circuit(1)
+    for index in range(3):
+        circuit.add(gates.RX(0, 0.1 * (index + 1)))
+    remover, spy = _CountingOptimizer(_remove_first_rx), _CountingOptimizer()
+    optimized = FixedPoint([remover, spy])(circuit, backend)
+    assert optimized.ngates == 0
+    # the last iteration only confirms that the remover has nothing to remove, so the optimizer
+    # that came after the last change, and found nothing to do, is not applied again
+    assert (remover.calls, spy.calls) == (4, 3)
+
+    # the position identifies the optimizers, so the same one is applied for each position
+    same = _CountingOptimizer()
+    FixedPoint([same, same])(circuit, backend)
+    assert same.calls == 2
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_fixed_point_does_not_change_the_result(backend, seed):
+    basis = ["rz", "sx", "x", "cz"]
+
+    def optimizers():
+        return [
+            Optimize1qGatesDecomposition(basis),
+            InverseCancellation(commutation=True),
+            CommutativeCancellation(basis=basis),
+        ]
+
+    circuit = _repetitive_circuit(seed)
+    # the loop that applies all the optimizers in all the iterations
+    expected = circuit
+    for _ in range(10):
+        previous = expected
+        for optimizer in optimizers():
+            expected = optimizer(expected, backend=backend)
+        if _unchanged(expected, previous, backend):
+            break
+
+    optimized = FixedPoint(optimizers())(circuit, backend)
+    assert _gate_signature(optimized) == _gate_signature(expected)
+
+
+def test_fixed_point_optimizers_that_undo_each_other(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.X(0))
+    adder = _CountingOptimizer(
+        lambda circ: _with_gates(circ, [*circ.queue, gates.H(0)])
+    )
+    remover = _CountingOptimizer(lambda circ: _with_gates(circ, circ.queue[:-1]))
+    optimized = FixedPoint([adder, remover], max_iterations=10)(circuit, backend)
+    # the circuit is the same after the first iteration, whatever the optimizers did
+    assert (adder.calls, remover.calls) == (1, 1)
+    assert _gate_signature(optimized) == _gate_signature(circuit)
+
+
+def test_fixed_point_max_iterations(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.X(0))
+    adder = _CountingOptimizer(
+        lambda circ: _with_gates(circ, [*circ.queue, gates.H(0)])
+    )
+    spy = _CountingOptimizer()
+    optimized = FixedPoint([adder, spy], max_iterations=4)(circuit, backend)
+    # every iteration changes the circuit, so all the optimizers are applied in all of them
+    assert (adder.calls, spy.calls) == (4, 4)
+    assert optimized.ngates == 5
+
+
+def test_fixed_point_keeps_the_attributes_that_an_optimizer_changes(backend):
+    def pad(circuit):
+        if circuit.nqubits == 3:
+            return circuit
+        return _with_gates(Circuit(3, wire_names=[0, 1, 2]), circuit.queue)
+
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(0, 1))
+    padder = _CountingOptimizer(pad)
+    optimized = FixedPoint([padder])(circuit, backend)
+    # the gates are the same, but the circuit is not
+    assert optimized.nqubits == 3
+    assert padder.calls == 1
+
+
+def test_unchanged(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, 0.3))
+    circuit.add(gates.CNOT(0, 1))
+    x = sympy.Symbol("x")
+    symbolic = _with_gates(circuit, [gates.RX(0, x), gates.CNOT(0, 1)])
+
+    def with_first(gate):
+        return _with_gates(circuit, [gate, circuit.queue[1]])
+
+    same_gates = [
+        circuit,
+        _with_gates(circuit, circuit.queue),
+        # the parameters are the same up to the tolerance
+        with_first(gates.RX(0, 0.3 + 1e-12)),
+        symbolic,
+        _with_gates(circuit, [gates.RX(0, x), gates.CNOT(0, 1)]),
+    ]
+    assert _unchanged(same_gates[0], circuit, backend)
+    assert _unchanged(same_gates[1], circuit, backend)
+    assert _unchanged(same_gates[2], circuit, backend)
+    assert _unchanged(same_gates[4], symbolic, backend)
+
+    other_gates = [
+        with_first(gates.RX(0, 0.31)),
+        with_first(gates.RY(0, 0.3)),
+        with_first(gates.RX(1, 0.3)),
+        with_first(gates.RX(0, 0.3).controlled_by(1)),
+        _with_gates(circuit, circuit.queue[:1]),
+        _with_gates(circuit, [circuit.queue[0], gates.CNOT(1, 0)]),
+        symbolic,
+        _with_gates(circuit, [gates.RX(0, sympy.Symbol("y")), gates.CNOT(0, 1)]),
+    ]
+    for other in other_gates:
+        assert not _unchanged(other, circuit, backend)
+    assert not _unchanged(circuit, symbolic, backend)
 
 
 def test_fixed_point_symbolic(backend):

@@ -1243,6 +1243,9 @@ class ReverseTraversal(Placer):
             return
         self.routing_algorithm.connectivity = self.connectivity
         wire_names = circuit.wire_names.copy()
+        # The assembled circuit is the same in all the attempts, which only change its layout,
+        # so the router can reuse the blocks of its gates.
+        assembled = self._assemble_circuit(circuit)
 
         best_swaps, best_layout = None, None
         for trial in range(self.trials):
@@ -1253,7 +1256,8 @@ class ReverseTraversal(Placer):
                 else [wire_names[i] for i in self._rng.permutation(len(wire_names))]
             )
             circuit.wire_names = start
-            final_layout = self._routing_step(self._assemble_circuit(circuit))
+            assembled.wire_names = start
+            final_layout = self._routing_step(assembled)
 
             # The final layout of the reversed circuit is the initial layout of the circuit.
             layout = [start[final_layout[name]] for name in start]
