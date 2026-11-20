@@ -727,6 +727,462 @@ def _fanout_parity_tree(
     return circuit
 
 
+def _folded_grid(
+    nsites: int,
+    nmagnons: int,
+    domains: list[list[int]],
+    modes: list[int],
+    nrows: int = 2,
+    return_toffolis: bool = False,
+    backend: Backend | None = None,
+) -> Circuit:
+    """Circuit of :func:`qibo.models.encodings.folded_xxz_eigenstate` with the ``"grid"`` method.
+
+    The circuit is built on a ladder of two rows and ``nsites + 1`` columns, where all the gates
+    act on qubits that are neighbors. The first row is made of the first ``nsites + 1`` qubits,
+    and the qubit ``nsites + 1 + j`` of the second row is next to the qubit ``j`` of the first
+    one. Then, :func:`_folded_grid_fold` places the ladder on a grid with ``nrows`` rows, and
+    labels the qubits so that the first ``nsites + 2`` ones hold the whole chain, including its
+    boundary sites.
+
+    The first row holds the chain in terms of its bonds, *i.e.* the qubit :math:`j` is
+    :math:`\\ket{1}` if the sites :math:`j` and :math:`j + 1` of the chain are different.
+    Both moves of the model exchange the bonds :math:`110` and :math:`011`, a magnon is two
+    consecutive bonds, a domain wall is a single bond, and a magnon that crosses a domain wall
+    leaves the bonds as they are. The free fermions are prepared in the first qubits of this row
+    with Givens rotations, where each domain wall has a qubit of its own at a fixed position
+    between them. Then, the qubits are processed in place from right to left. The second row
+    is a tally in unary code of the magnons that are not processed yet, with one mark
+    above each of the empty sites that separate the processed qubits from the others.
+    A magnon crosses the marked empty sites and takes the last one as its second bond, which
+    removes its mark. A domain wall crosses them too, and waits in front of the processed
+    qubits, where a magnon merges with it and an empty site hops over it. Last, the bonds are
+    mapped to the sites.
+
+    Args:
+        nsites (int): number of sites :math:`n` of the chain.
+        nmagnons (int): number of magnons :math:`M`.
+        domains (list[list[int]]): blocks of spin-down sites of the reference configuration.
+        modes (list[int]): integers :math:`m_{1} < \\cdots < m_{M}` that fix the momenta of the
+            magnons.
+        nrows (int, optional): even number of rows of the grid. Defaults to :math:`2`.
+        return_toffolis (bool, optional): If ``True``, the Toffoli gates are returned as
+            :class:`qibo.gates.TOFFOLI` gates, which are not decomposed into CNOTs and
+            single-qubit rotations, and the controlled-SWAP gates are returned as a
+            Toffoli gate between two CNOTs. Otherwise, they are implemented up to a relative
+            phase for a state that is never present. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that prepares the eigenstate.
+
+    References:
+        1. R. Ruiz, A. Sopena, B. Pozsgay, and E. López, *Efficient Eigenstate Preparation in an
+        Integrable Model with Hilbert Space Fragmentation*, `PRX Quantum 6, 030316 (2025)
+        <https://doi.org/10.1103/g9f9-p8ks>`_.
+
+        2. Z. Jiang, K. J. Sung, K. Kechedzhi, V. N. Smelyanskiy, and S. Boixo, *Quantum
+        algorithms to simulate many-body physics of correlated fermions*, `Phys. Rev. Applied 9,
+        044036 (2018) <https://doi.org/10.1103/PhysRevApplied.9.044036>`_.
+    """
+    backend = _check_backend(backend)
+
+    nsqueezed = (
+        nsites - 2 * len(domains) - nmagnons + 1
+    )  # sites of the free-fermion chain
+
+    # Qubits: the row of the bonds, whose first qubits are the chain at the end, and the row of
+    # the tally, which are auxiliary qubits together with the last qubit of the first row
+    ncols = nsites + 1
+    bonds = list(range(ncols))
+    tally = list(range(ncols, 2 * ncols))
+    circuit = Circuit(2 * ncols)
+
+    # a domain wall is right before an empty site in the bonds of the reference configuration
+    # without the magnons, and it is labelled by the number of that empty site
+    spins = [0] * (nsites + 2)
+    for domain in domains:
+        for site in domain:
+            spins[site] = 1
+    walls, nempty = [], 0
+    for site in range(2 * nmagnons, nsites + 1):
+        if spins[site] != spins[site + 1]:
+            walls.append(nempty + 1)
+        else:
+            nempty += 1
+
+    # Columns of the grid: the free fermions, with the wall ``wall`` right after the fermion
+    # site ``wall + nmagnons``, which is the last one that can be the empty site that follows
+    # it. Then, the empty sites of the magnons, and the walls that do not fit before them
+    items = []
+    for site in range(1, nsqueezed + 1):
+        items.append(("site", site))
+        items.extend(
+            ("wall", wall)
+            for wall in walls
+            if wall + nmagnons == site and site < nsqueezed
+        )
+    nitems = len(items)
+    nlate = sum(wall + nmagnons >= nsqueezed for wall in walls)
+    columns = {site: col for col, (kind, site) in enumerate(items) if kind == "site"}
+
+    # Stage I: Slater determinant of M free fermions in the squeezed chain
+    # Givens rotations between consecutive fermion sites, which eliminate one entry of the matrix
+    # of sine orbitals at a time, starting from M excitations in the first M sites
+    orbitals = backend.sin(
+        math.pi
+        * backend.outer(
+            backend.cast(modes, dtype=backend.float64),
+            backend.arange(1, nsqueezed + 1),
+        )
+        / (nsqueezed + 1)
+    )
+    rotations = []
+    for row in range(nmagnons):
+        for col in range(nsqueezed - 1, row, -1):
+            theta = backend.arctan2(orbitals[row, col], orbitals[row, col - 1])
+            cos, sin = backend.cos(theta), backend.sin(theta)
+            left = cos * orbitals[:, col - 1] + sin * orbitals[:, col]
+            orbitals[:, col] = cos * orbitals[:, col] - sin * orbitals[:, col - 1]
+            orbitals[:, col - 1] = left
+            first, second = bonds[columns[col]], bonds[columns[col + 1]]
+            if second == first + 1:
+                rotations.append([gates.RBS(first, second, theta)])
+            else:
+                # there is the qubit of a wall in between, which is empty at this stage, so
+                # the two CNOTs of the rotation go through it
+                rotation = [gates.H(first)]
+                for _ in range(2):
+                    rotation.extend(
+                        [
+                            gates.CNOT(first, first + 1),
+                            gates.CNOT(first + 1, second),
+                            gates.CNOT(first, first + 1),
+                        ]
+                    )
+                    rotation.extend([gates.RY(first, theta), gates.RY(second, theta)])
+                rotations.append([*rotation[:-2], gates.H(first)])
+    circuit.add(gates.X(bonds[columns[site]]) for site in range(1, nmagnons + 1))
+    circuit.add(gate for rotation in rotations[::-1] for gate in rotation)
+
+    # the walls, and one mark of the tally per magnon above the empty sites
+    circuit.add(
+        gates.X(bonds[col]) for col, (kind, _) in enumerate(items) if kind == "wall"
+    )
+    circuit.add(
+        gates.X(qubit) for qubit in bonds[nitems + nmagnons : nitems + nmagnons + nlate]
+    )
+    circuit.add(gates.X(qubit) for qubit in tally[nitems : nitems + nmagnons])
+
+    # states of the two controls and of the target of the Toffoli gates that are never present,
+    # for which the gates have a relative phase
+    absent_walk, absent_fill, absent_mark, absent_hop = (
+        (None,) * 4 if return_toffolis else ((1, 0, 1), (0, 1, 1), (1, 0, 1), (1, 0, 0))
+    )
+
+    # Stages II and III: from right to left, the column ``col`` crosses the marked empty sites
+    for col in reversed(range(nitems)):
+        kind, label = items[col]
+        nleft = sum(kind == "site" for kind, _ in items[: col + 1])
+        # the fewest and the most marks that there can be
+        low = max(0, nmagnons - (nsqueezed - nleft))
+        high = min(nmagnons, nleft)
+
+        if kind == "wall":
+            # halfway through the shift of the marks to the left, the only marks are above
+            # the wall and above the last marked empty site, which is where the wall goes
+            circuit.add(
+                gates.CNOT(tally[j + 1], tally[j]) for j in range(col, col + high)
+            )
+            circuit.add(
+                gates.CNOT(tally[j], bonds[j]) for j in range(col, col + high + 1)
+            )
+            circuit.add(
+                gates.CNOT(tally[j], tally[j + 1]) for j in range(col, col + high)
+            )
+            continue
+
+        for j in range(col, col + high):
+            if j < col + low:
+                # the mark is there for sure, and the site below it is empty
+                circuit.add([gates.X(tally[j]), gates.X(tally[j + 1])])
+                circuit.add(gates.CNOT(bonds[j], bonds[j + 1]))
+                circuit.add(gates.CNOT(bonds[j + 1], bonds[j]))
+                continue
+            # the mark moves to the left, and then it controls the swap of the sites below.
+            # The site to the right is empty if there is a mark, so 11 is never swapped
+            circuit.add(gates.CNOT(tally[j + 1], tally[j]))
+            circuit.add(gates.CNOT(tally[j], tally[j + 1]))
+            circuit.add(gates.CNOT(bonds[j], bonds[j + 1]))
+            circuit.add(
+                _folded_xxz_multicontrolled(
+                    [tally[j], bonds[j + 1]], [], bonds[j], None, absent=absent_walk
+                )
+            )
+            circuit.add(gates.CNOT(bonds[j], bonds[j + 1]))
+
+        # a magnon takes the last marked empty site as its second bond, and removes its mark,
+        # which the mark to its left tells apart from the sites to the right
+        for j in range(max(col, col + low - 1), col + high):
+            circuit.add(
+                _folded_xxz_multicontrolled(
+                    [bonds[j + 1], tally[j]], [], bonds[j], None, absent=absent_fill
+                )
+            )
+            if j == col:
+                circuit.add(gates.CNOT(bonds[j], tally[j]))
+            else:
+                circuit.add(
+                    _folded_xxz_multicontrolled(
+                        [bonds[j], tally[j - 1]], [], tally[j], None, absent=absent_mark
+                    )
+                )
+
+        # an empty site, which is next to the last mark, hops over the walls in front of the
+        # processed qubits that have to be at its left. With ``nmarks`` marks left, there are
+        # ``hops[nmarks]`` of them, and the sites that it crosses are ones in any other case
+        marks = list(range(max(0, low - 1), high + 1))
+        hops = {
+            nmarks: sum(label - nmagnons <= wall <= label - nmarks for wall in walls)
+            for nmarks in marks
+        }
+        if not any(hops.values()):
+            continue
+        pairs = []
+        for j in range(col + marks[0], max(col + m + hops[m] for m in marks)):
+            origins = [m for m in marks if col + m <= j < col + m + hops[m]]
+            if origins:
+                pairs.append((j, origins))
+
+        # the hop over the sites ``j`` and ``j + 1`` needs the number of marks to be one
+        # of ``origins``. Either the control is the parity of the last mark that is needed
+        # and of the mark above the site, if they are neighbors,
+        direct, single = [], []
+        ndirect, nsingle = 0, 0
+        for j, origins in pairs:
+            if origins == marks:
+                direct.append(gates.SWAP(bonds[j], bonds[j + 1]))
+                ndirect += 3
+                continue
+            if origins[0] > marks[0]:
+                gate, qubits = gates.CNOT, (tally[j - 1], tally[j])
+                ndirect += 7 if origins[0] == j - col else math.inf
+            else:
+                gate, qubits = gates.X, (tally[j],)
+                ndirect += 5
+            direct.append(gate(*qubits))
+            direct.append(gates.CNOT(bonds[j], bonds[j + 1]))
+            direct.extend(
+                _folded_xxz_multicontrolled(
+                    [tally[j], bonds[j + 1]], [], bonds[j], None, absent=absent_hop
+                )
+            )
+            direct.append(gates.CNOT(bonds[j], bonds[j + 1]))
+            direct.append(gate(*qubits))
+
+        # or the marks become a single mark above the site next to the last one, and the
+        # control is the parity of the single marks above the sites where the hop can start
+        start = min(col + origins[0] for _, origins in pairs)
+        ladder = range(max(start, col + 1), pairs[-1][0] + 1)
+        single.extend(gates.CNOT(tally[i - 1], tally[i]) for i in reversed(ladder))
+        nsingle += 2 * len(ladder)
+        if start == col:
+            single.append(gates.X(tally[col]))
+        for j, origins in pairs:
+            if origins == marks:
+                single.append(gates.SWAP(bonds[j], bonds[j + 1]))
+                nsingle += 3
+                continue
+            chain = range(col + origins[0], j)
+            single.extend(gates.CNOT(tally[i], tally[i + 1]) for i in chain)
+            single.append(gates.CNOT(bonds[j], bonds[j + 1]))
+            single.extend(
+                _folded_xxz_multicontrolled(
+                    [tally[j], bonds[j + 1]], [], bonds[j], None, absent=absent_hop
+                )
+            )
+            single.append(gates.CNOT(bonds[j], bonds[j + 1]))
+            single.extend(gates.CNOT(tally[i], tally[i + 1]) for i in reversed(chain))
+            nsingle += 5 + 2 * len(chain)
+        if start == col:
+            single.append(gates.X(tally[col]))
+        single.extend(gates.CNOT(tally[i - 1], tally[i]) for i in ladder)
+
+        circuit.add(single if nsingle < ndirect else direct)
+
+    # the bonds are mapped to the sites, and the last qubit of the row is left empty
+    circuit.add(gates.CNOT(bonds[j], bonds[j + 1]) for j in range(nsites))
+
+    return _folded_grid_fold(circuit, nsites, nrows, return_toffolis)
+
+
+def _folded_grid_fold(
+    circuit: Circuit, nsites: int, nrows: int, return_toffolis: bool = False
+) -> Circuit:
+    """Folds the ladder circuit of :func:`_folded_grid` onto a grid with ``nrows`` rows.
+
+    The :math:`n + 1` columns of the ladder are split in :math:`n_{b} = \\text{nrows} / 2` bands
+    of :math:`w = \\lceil (n + 1) / n_{b} \\rceil` columns, which are stacked, and traversed
+    from left to right in the even bands and from right to left in the odd ones. The columns
+    :math:`j` and :math:`j + 1` at the two sides of a bend are on top of each other, and two of
+    their qubits are not neighbors in the grid. The band :math:`s` has the first row of the
+    ladder in the row :math:`1` if :math:`s = 0` and in the row :math:`2s` otherwise, and the
+    second row in the other row of the band, so the two qubits of the first row of the ladder
+    are neighbors at the first bend, and the qubits at the other bends are at distance :math:`2`.
+
+    At the end, the qubits that are not in the chain are in :math:`\\ket{0}`, since the circuit
+    permutes the basis states that it reaches, and each of them is mapped to a state in which
+    these qubits are :math:`\\ket{0}`. So the qubit of the first row in the band :math:`s` is
+    moved to the row :math:`s + 1`, with two CNOTs per row, where all the bands move one row at a
+    time in parallel. The sites :math:`1, \\ldots, n + 1` of the chain then fill the rows
+    :math:`1, \\ldots, n_{b}` as a snake, the site :math:`0` is the qubit of the row :math:`0` and
+    column :math:`0`, which is above the site :math:`1`, and the site :math:`n + 1` is the qubit
+    next to the site :math:`n`, which is not moved since it is :math:`\\ket{0}`. The qubits are
+    labelled by these sites, and the remaining ones in row-major order.
+
+    The gates that do not act on neighbors are replaced. If ``return_toffolis`` is ``False``,
+    they are decomposed into CNOTs, and each sequence of CNOTs between the same two qubits is
+    replaced by the shortest sequence of CNOTs between neighbors along a path between them,
+    which is found by a breadth-first search over the linear maps of the qubits of the path.
+    Otherwise, the qubits are brought next to each other with SWAP gates, which are undone after
+    the gate.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit of :func:`_folded_grid` on a
+            ladder of two rows.
+        nsites (int): number of sites :math:`n` of the chain.
+        nrows (int): even number of rows of the grid.
+        return_toffolis (bool, optional): If ``True``, the gates are routed with SWAP gates, and
+            not decomposed. Defaults to ``False``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit whose gates act on neighbors of the grid of
+        ``nrows`` rows and :math:`w` columns, with the sites :math:`0, \\ldots, n + 1` of the chain
+        in its first :math:`n + 2` qubits.
+    """
+    import networkx as nx  # pylint: disable=import-outside-toplevel
+
+    ncols = nsites + 1
+    nbands = nrows // 2
+    width = -(-ncols // nbands)
+    grid = nx.grid_2d_graph(nrows, width)
+
+    # positions of the qubits of the ladder in the grid, and the final position of each site,
+    # which labels the qubits of the circuit
+    nodes, sites = {}, {}
+    for j in range(ncols):
+        band, offset = divmod(j, width)
+        col = offset if band % 2 == 0 else width - 1 - offset
+        rows = (2 * band + 1, 2 * band) if band == 0 else (2 * band, 2 * band + 1)
+        nodes[j], nodes[ncols + j] = (rows[0], col), (rows[1], col)
+        sites[(band + 1, col)] = j + 1
+    nodes.update(
+        zip(
+            range(2 * ncols, nrows * width),
+            sorted(set(grid.nodes) - set(nodes.values())),
+        )
+    )
+    labels = {(0, 0): 0, **sites}
+    labels.update(
+        zip(sorted(set(grid.nodes) - set(labels)), range(ncols + 1, nrows * width))
+    )
+
+    folded = Circuit(nrows * width)
+    cache, run = {}, []
+
+    def flush():
+        """Replaces the sequence of CNOTs between two qubits by CNOTs between neighbors."""
+        if not run:
+            return
+        path = nx.shortest_path(grid, *run[0])
+        key = (len(path), tuple((path.index(c), path.index(t)) for c, t in run))
+        if key not in cache:
+            # rows of the linear map of the CNOTs, where CNOT(c, t) adds the row c to the row t
+            target = [1 << q for q in range(key[0])]
+            for control, other in key[1]:
+                target[other] ^= target[control]
+            start, target = tuple(1 << q for q in range(key[0])), tuple(target)
+            moves = [(q, q + 1) for q in range(key[0] - 1)]
+            moves.extend((q + 1, q) for q in range(key[0] - 1))
+            seen, queue = {start: []}, [start]
+            while target not in seen:
+                state = queue.pop(0)
+                for control, other in moves:
+                    rows = list(state)
+                    rows[other] ^= rows[control]
+                    rows = tuple(rows)
+                    if rows not in seen:
+                        seen[rows] = seen[state] + [(control, other)]
+                        queue.append(rows)
+            cache[key] = seen[target]
+        folded.add(gates.CNOT(labels[path[c]], labels[path[t]]) for c, t in cache[key])
+        run.clear()
+
+    for gate in circuit.queue:
+        positions = [nodes[qubit] for qubit in gate.qubits]
+        if nx.is_connected(grid.subgraph(positions)):
+            flush()
+            folded.add(
+                gate.on_qubits({q: labels[p] for q, p in zip(gate.qubits, positions)})
+            )
+        elif return_toffolis:
+            # each qubit is moved next to the ones that are connected to the first qubit
+            swaps = []
+            while not nx.is_connected(grid.subgraph(positions)):
+                component = nx.node_connected_component(
+                    grid.subgraph(positions), positions[0]
+                )
+                index = next(
+                    i for i, node in enumerate(positions) if node not in component
+                )
+                path = min(
+                    (
+                        nx.shortest_path(grid, positions[index], node)
+                        for node in component
+                    ),
+                    key=len,
+                )
+                for first, second in itertools.pairwise(path[:-1]):
+                    swaps.append(gates.SWAP(labels[first], labels[second]))
+                    positions = [
+                        second if node == first else first if node == second else node
+                        for node in positions
+                    ]
+            folded.add(swaps)
+            folded.add(
+                gate.on_qubits({q: labels[p] for q, p in zip(gate.qubits, positions)})
+            )
+            folded.add(swaps[::-1])
+        else:
+            for part in gate.decompose():
+                part_positions = [nodes[qubit] for qubit in part.qubits]
+                if len(part_positions) == 1:
+                    flush()
+                    folded.add(
+                        part.on_qubits({part.qubits[0]: labels[part_positions[0]]})
+                    )
+                else:
+                    if run and set(run[0]) != set(part_positions):
+                        flush()
+                    run.append(tuple(part_positions))
+    flush()
+
+    # in the round ``step``, the sites of the band ``band`` move from the row
+    # ``2 * band - step + 1`` to the row above, which the band above has left in the round before
+    for step in range(1, nbands - 1):
+        for j in range(nsites):
+            band = j // width
+            if band - 1 >= step:
+                source, target = nodes[j], (2 * band - step, nodes[j][1])
+                folded.add(gates.CNOT(labels[source], labels[target]))
+                folded.add(gates.CNOT(labels[target], labels[source]))
+                nodes[j] = target
+
+    return folded
+
+
 def _folded_merged(
     nsites: int,
     nmagnons: int,
