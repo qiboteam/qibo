@@ -627,7 +627,8 @@ class FixedPoint(Optimizer):
     up to numerical tolerance, or after ``max_iterations`` iterations. This lets an
     optimizer profit from the simplifications of the ones that come after it, for
     example a pair of gates that only cancels once the gates between them are merged
-    into the identity.
+    into the identity. An optimizer is not applied again if it left the circuit unchanged
+    and none of the others has changed it since.
 
     The ``connectivity`` that :class:`qibo.transpiler.pipeline.Passes` sets on this
     optimizer is set on ``optimizers`` too.
@@ -693,30 +694,42 @@ class FixedPoint(Optimizer):
             :class:`qibo.models.circuit.Circuit`: Optimized circuit.
         """
         backend = _check_backend(backend)
+        with_backend = [
+            "backend" in signature(optimizer.__call__).parameters
+            for optimizer in self.optimizers
+        ]
 
+        # The number of changes that the circuit has had, and the number that each optimizer
+        # saw when it left the circuit unchanged. The position identifies an optimizer, since
+        # the same one can be in the list more than once.
+        version = 0
+        clean = {}
         for _ in range(self.max_iterations):
             previous = circuit
-            for optimizer in self.optimizers:
+            changed = False
+            for position, optimizer in enumerate(self.optimizers):
+                if clean.get(position) == version:
+                    continue
                 if self.connectivity is not None:
                     optimizer.connectivity = self.connectivity
-                if "backend" in signature(optimizer.__call__).parameters:
-                    circuit = optimizer(circuit, backend=backend)
+                if with_backend[position]:
+                    result = optimizer(circuit, backend=backend)
                 else:
-                    circuit = optimizer(circuit)
+                    result = optimizer(circuit)
+                # The qubits and the other attributes of the circuit are not in its gates, but
+                # an optimizer can change them, *e.g.* by adding qubits.
+                if _unchanged(result, circuit, backend) and (
+                    result.init_kwargs == circuit.init_kwargs
+                ):
+                    clean[position] = version
+                else:
+                    circuit = result
+                    version += 1
+                    changed = True
 
-            unchanged = len(circuit.queue) == len(previous.queue) and all(
-                new.__class__ is old.__class__
-                and new.qubits == old.qubits
-                and new.control_qubits == old.control_qubits
-                and new.symbolic_parameters == old.symbolic_parameters
-                and all(
-                    backend.allclose(x, y)
-                    for i, (x, y) in enumerate(zip(new.parameters, old.parameters))
-                    if i not in new.symbolic_parameters
-                )
-                for new, old in zip(circuit.queue, previous.queue)
-            )
-            if unchanged:
+            # Optimizers can undo the changes of each other, so the circuit is also compared
+            # with the one at the start of the iteration, which is the same if nothing changed.
+            if not changed or _unchanged(circuit, previous, backend):
                 break
 
         return circuit
@@ -2883,3 +2896,37 @@ def _sequence_error(sequence: list[Gate], error: float) -> float:
         :math:`0`.
     """
     return 1 - (1 - error) ** sum(not isinstance(gate, _VIRTUAL) for gate in sequence)
+
+
+def _unchanged(circuit: Circuit, previous: Circuit, backend: Backend) -> bool:
+    """Check that two circuits have the same gates.
+
+    The gates are the same if they are the same object, or if they have the same classes,
+    qubits and parameters, up to numerical tolerance.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be compared.
+        previous (:class:`qibo.models.circuit.Circuit`): Circuit that it is compared with.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used to compare the
+            parameters.
+
+    Returns:
+        bool: ``True`` if the circuits have the same gates.
+    """
+    first_check = bool(len(circuit.queue) == len(previous.queue))
+    second_check = all(
+        new is old
+        or (
+            new.__class__ is old.__class__
+            and new.qubits == old.qubits
+            and new.control_qubits == old.control_qubits
+            and new.symbolic_parameters == old.symbolic_parameters
+            and all(
+                backend.allclose(x, y)
+                for i, (x, y) in enumerate(zip(new.parameters, old.parameters))
+                if i not in new.symbolic_parameters
+            )
+        )
+        for new, old in zip(circuit.queue, previous.queue)
+    )
+    return bool(first_check and second_check)

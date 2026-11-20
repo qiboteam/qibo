@@ -2,7 +2,7 @@ import itertools
 import math
 import random
 from collections.abc import Sequence
-from copy import deepcopy
+from copy import copy, deepcopy
 
 import networkx as nx
 import numpy as np
@@ -14,6 +14,9 @@ from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.asserts import assert_connectivity, assert_placement
 from qibo.transpiler.blocks import Block, CircuitBlocks
+
+# Number of circuits whose blocks and DAG a router keeps, see ``Sabre._preprocessing``.
+_MAX_TEMPLATES = 8
 
 
 class CircuitMap:
@@ -329,6 +332,8 @@ class Sabre(Router):
         self._final_measurements = None
         self._temp_added_swaps = []
         self._rng = random.Random(seed)
+        # the blocks and the DAG of the circuits that were routed, see ``_preprocessing``
+        self._templates = {}
 
     def __call__(self, circuit: Circuit) -> tuple[Circuit, dict]:
         """Route the circuit.
@@ -410,6 +415,14 @@ class Sabre(Router):
             - _delta_register: list containing the special weigh added to qubits
                 to prevent overlapping swaps.
 
+        The blocks of the circuit and its DAG do not depend on the layout, and routing consumes
+        them, so a template of them is built once for the gates that the circuit has, and each
+        call gets its own copy. This saves the work of the trials, and of the layout search
+        that routes the same circuit with many layouts. The gates are identified by the objects,
+        their qubits and their parameters, and the template keeps them, so that another circuit
+        never gets the data of a gate that it does not have, such as the register name of a
+        measurement. A circuit with parameters that cannot be hashed has no template.
+
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be preprocessed.
         """
@@ -418,15 +431,35 @@ class Sabre(Router):
             self.connectivity, {v: i for i, v in enumerate(circuit.wire_names)}
         )
 
-        copied_circuit = circuit.copy(deep=True)
-        # global phases act on no qubits, so they are not routed, see ``__call__``
-        copied_circuit.queue[:] = [
-            gate
-            for gate in copied_circuit.queue
-            if not isinstance(gate, gates.GlobalPhase)
-        ]
-        self._final_measurements = self._detach_final_measurements(copied_circuit)
-        self.circuit_map = CircuitMap(copied_circuit)
+        queue = tuple(circuit.queue)
+        key = tuple((id(gate), gate.qubits, gate.parameters) for gate in queue)
+        try:
+            hash(key)
+        except TypeError:
+            key = None
+        template = self._templates.get(key)
+        if template is None:
+            copied_circuit = circuit.copy(deep=True)
+            # global phases act on no qubits, so they are not routed, see ``__call__``
+            copied_circuit.queue[:] = [
+                gate
+                for gate in copied_circuit.queue
+                if not isinstance(gate, gates.GlobalPhase)
+            ]
+            final_measurements = self._detach_final_measurements(copied_circuit)
+            blocks = CircuitBlocks(copied_circuit, index_names=True)
+            dag = _create_dag([block.qubits for block in blocks()])
+            template = (queue, final_measurements, blocks, dag)
+            if key is not None:
+                if len(self._templates) >= _MAX_TEMPLATES:
+                    del self._templates[next(iter(self._templates))]
+                self._templates[key] = template
+
+        _, self._final_measurements, blocks, dag = template
+        # the blocks are not modified, but they are removed from the list while routing
+        fresh_blocks = copy(blocks)
+        fresh_blocks.block_list = blocks.block_list.copy()
+        self.circuit_map = CircuitMap(circuit, blocks=fresh_blocks)
         _check_connected_components(self.circuit_map, self.connectivity)
         # the nodes are the logical qubits after the relabeling, so the matrix is indexed
         # by them, and not by the position of the nodes in the graph
@@ -439,7 +472,7 @@ class Sabre(Router):
         # and it keeps the longest path, which sets the swap threshold, finite.
         finite = np.isfinite(self._dist_matrix)
         self._dist_matrix[~finite] = self._dist_matrix[finite].max() + 1.0
-        self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
+        self._dag = dag.copy()
         self._memory_map = []
         self._update_dag_layers()
         self._update_front_layer()

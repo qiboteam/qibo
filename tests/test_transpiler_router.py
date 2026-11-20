@@ -9,6 +9,7 @@ import pytest
 from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.quantum_info.random_ensembles import random_unitary
+from qibo.transpiler import router as router_module
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import (
     _transpose_qubits,
@@ -18,8 +19,14 @@ from qibo.transpiler.asserts import (
 )
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
-from qibo.transpiler.placer import Random, StarConnectivityPlacer, Subgraph
+from qibo.transpiler.placer import (
+    Random,
+    ReverseTraversal,
+    StarConnectivityPlacer,
+    Subgraph,
+)
 from qibo.transpiler.router import (
+    _MAX_TEMPLATES,
     CircuitMap,
     NoRouting,
     Sabre,
@@ -354,6 +361,134 @@ def test_sabre_shortest_path_routing():
     # Check if the physical qubits of the gate (2, 8) are adjacent
     assert gate_28_qubits[1] in list(router.connectivity.neighbors(gate_28_qubits[0]))
     assert gate_28_qubits[0] in list(router.connectivity.neighbors(gate_28_qubits[1]))
+
+
+def _route_circuit(qubit_pairs, nqubits=5, measure=True, **measurement):
+    circuit = Circuit(nqubits)
+    for index, pair in enumerate(qubit_pairs):
+        circuit.add(gates.RZ(pair[0], 0.1 * (index + 1)))
+        circuit.add(gates.CZ(*pair))
+    if measure:
+        circuit.add(gates.M(0, 1, **measurement))
+    return circuit
+
+
+def _gate_signature(circuit):
+    return [(gate.name, gate.qubits, str(gate.parameters)) for gate in circuit.queue]
+
+
+PAIRS = [(0, 2), (1, 3), (0, 4), (2, 4), (1, 4)]
+
+
+def test_sabre_template_cache():
+    router = Sabre(line_connectivity(5, None), seed=1)
+    circuit = _route_circuit(PAIRS)
+
+    router._preprocessing(circuit=circuit)
+    assert len(router._templates) == 1
+    dag, blocks = router._dag, router.circuit_map.circuit_blocks
+    nodes, edges = set(dag.nodes), set(dag.edges)
+    layers = {node: dag.nodes[node]["layer"] for node in dag.nodes}
+
+    # routing consumes the DAG and the blocks, and the next call starts from the whole ones
+    for node in list(dag.nodes):
+        dag.remove_node(node)
+    blocks.block_list.clear()
+    router._preprocessing(circuit=circuit)
+    assert len(router._templates) == 1
+    assert router._dag is not dag
+    assert router.circuit_map.circuit_blocks is not blocks
+    assert set(router._dag.nodes) == nodes and set(router._dag.edges) == edges
+    assert {n: router._dag.nodes[n]["layer"] for n in router._dag.nodes} == layers
+    assert len(router.circuit_map.circuit_blocks.block_list) == len(nodes)
+
+    # the blocks are not modified, so they are not copied
+    again = router.circuit_map.circuit_blocks.block_list
+    router._preprocessing(circuit=circuit)
+    assert all(
+        first is second
+        for first, second in zip(again, router.circuit_map.circuit_blocks.block_list)
+    )
+
+
+@pytest.mark.parametrize("seed", range(3))
+def test_sabre_template_cache_does_not_change_the_result(seed):
+    connectivity = line_connectivity(5, None)
+    circuit = _route_circuit(PAIRS)
+    cold, warm = (
+        Sabre(connectivity, seed=seed, trials=3),
+        Sabre(connectivity, seed=seed, trials=3),
+    )
+    warm._preprocessing(circuit=circuit)
+    assert not cold._templates and len(warm._templates) == 1
+
+    routed_cold, layout_cold = cold(circuit)
+    routed_warm, layout_warm = warm(circuit)
+    assert _gate_signature(routed_cold) == _gate_signature(routed_warm)
+    assert layout_cold == layout_warm
+    assert len(cold._templates) == len(warm._templates) == 1
+
+
+def test_sabre_template_cache_is_not_shared_between_circuits():
+    router = Sabre(line_connectivity(5, None), seed=1)
+    first = _route_circuit(PAIRS, register_name="a")
+    second = _route_circuit(PAIRS, register_name="b")
+    assert [gate.name for gate in first.queue] == [gate.name for gate in second.queue]
+
+    registers = []
+    for circuit in (first, second, first):
+        routed, _ = router(circuit)
+        registers.append(routed.measurements[0].register_name)
+    # the circuits have the same gates, but not the same objects, so each one has its own
+    assert registers == ["a", "b", "a"]
+    assert len(router._templates) == 2
+
+
+def test_sabre_template_cache_follows_the_gates():
+    router = Sabre(line_connectivity(5, None), seed=1)
+    circuit = _route_circuit(PAIRS, measure=False)
+    first, _ = router(circuit)
+    # a parameter that changes in place, and a gate that is added
+    circuit.queue[0].parameters = (0.77,)
+    second, _ = router(circuit)
+    assert any(gate.parameters == (0.77,) for gate in second.queue)
+    assert not any(gate.parameters == (0.77,) for gate in first.queue)
+    circuit.add(gates.CZ(0, 3))
+    third, _ = router(circuit)
+    assert sum(gate.name == "cz" for gate in third.queue) == len(PAIRS) + 1
+    assert len(router._templates) == 3
+
+
+def test_sabre_template_cache_limits():
+    router = Sabre(line_connectivity(5, None), seed=1)
+    for _ in range(_MAX_TEMPLATES + 3):
+        router(_route_circuit(PAIRS, measure=False))
+    assert len(router._templates) == _MAX_TEMPLATES
+
+    # the parameters that cannot be hashed have no template, and the circuit is routed
+    router = Sabre(line_connectivity(5, None), seed=1)
+    circuit = Circuit(5)
+    circuit.add(gates.Unitary(random_unitary(4, seed=1), 0, 3))
+    circuit.add(gates.CZ(1, 4))
+    routed, _ = router(circuit)
+    assert not router._templates
+    assert any(isinstance(gate, gates.Unitary) for gate in routed.queue)
+
+
+def test_reverse_traversal_builds_the_dag_once_per_circuit(monkeypatch):
+    connectivity = line_connectivity(5, None)
+    router = Sabre(connectivity, seed=1)
+    built = []
+    create_dag = router_module._create_dag
+    monkeypatch.setattr(
+        router_module,
+        "_create_dag",
+        lambda pairs: built.append(1) or create_dag(pairs),
+    )
+    trials = 6
+    ReverseTraversal(router, connectivity, trials=trials, seed=1)(_route_circuit(PAIRS))
+    # the reversed circuit, and the circuit with the layouts of the attempts
+    assert len(built) == 2 < trials
 
 
 def test_circuit_map():
