@@ -37,7 +37,23 @@ from qibo.transpiler.router import (
     _block_cost,
     _check_connected_components,
     _create_dag,
+    _native_counts,
+    _noise_costs,
+    _noise_distances,
 )
+from qibo.transpiler.unroller import NativeGates
+
+_BASE = (
+    NativeGates.I
+    | NativeGates.RZ
+    | NativeGates.Z
+    | NativeGates.GPI2
+    | NativeGates.U3
+    | NativeGates.M
+)
+_CNOT_ONLY = _BASE | NativeGates.CNOT
+_ISWAP_ONLY = _BASE | NativeGates.iSWAP
+_SYCAMORE = _BASE | NativeGates.SYC
 
 
 def line_connectivity(n, names=None):
@@ -1388,22 +1404,33 @@ def test_sabre_noise_routing_cost():
     connectivity = line_connectivity(5)
     hardware = _line_hardware(5)
     weights = hardware.weighted_connectivity()
+    per_cz, swaps = _native_counts(hardware.native_gates)
     circuit = Circuit(5)
     circuit.add([gates.CNOT(0, 4), gates.H(1), gates.CZ(1, 3), gates.RX(2, 0.3)])
 
     router = Sabre(connectivity, seed=1, heuristic="noise", hardware=hardware)
     routed, _ = router(circuit)
     assert router.added_swaps > 0
-    # the SWAP gates cost three CZ gates, and the gates without couplings nothing
-    expected = sum(
-        (3 if gate.name == "swap" else 1)
-        * (
+
+    expected = 0.0
+    for gate in routed.queue:
+        if len(gate.qubits) != 2:
+            continue
+        first, second = gate.qubits
+        weight = (
             weights.edges[tuple(sorted(gate.qubits))]["weight"]
             + router_module._HOP_WEIGHT
         )
-        for gate in routed.queue
-        if len(gate.qubits) == 2
-    )
+        if gate.name == "swap":
+            # the native gates of the SWAP gate, with the qubits in the order that it has
+            two, first_singles, second_singles = swaps[False, 0]
+            expected += (
+                two * weight
+                + first_singles * weights.nodes[first]["gate"]
+                + second_singles * weights.nodes[second]["gate"]
+            )
+        else:
+            expected += per_cz * weight
     assert router._routing_cost() == pytest.approx(expected)
 
 
@@ -1433,7 +1460,7 @@ def test_sabre_noise_trials():
     costs = []
     for seed in range(6):
         circuit = generate_random_circuit(nqubits=9, ngates=40, seed=seed)
-        Random(connectivity)(circuit)
+        Random(connectivity, seed=seed)(circuit)
         costs.append([])
         for trials in (1, 8):
             router = Sabre(
@@ -1466,7 +1493,7 @@ def test_sabre_noise_random_circuits(backend, errors):
     measurement = gates.M(*range(5))
     circuit.add(measurement)
     original_circuit = circuit.copy()
-    placer = Random(connectivity)
+    placer = Random(connectivity, seed=1)
     router = Sabre(connectivity, seed=1, heuristic="noise", hardware=hardware)
 
     placer(circuit, backend=backend)
@@ -1482,12 +1509,20 @@ def test_sabre_noise_random_circuits(backend, errors):
     )
     assert transpiled_circuit.queue[-1].register_name == measurement.register_name
     if errors == "unusable":
-        used = {frozenset(gate.qubits) for gate in transpiled_circuit.queue}
-        assert frozenset((1, 2)) not in used
+        # the SWAP gates of the router, which are the blocks without a name, and not the
+        # ones of the circuit, are not on the coupling whose error is one, whose qubits
+        # are the nodes in the wire names
+        swaps = [
+            frozenset(transpiled_circuit.wire_names[qubit] for qubit in block.qubits)
+            for block in router.circuit_map._routed_blocks.block_list
+            if block.name is None
+        ]
+        assert swaps
+        assert frozenset((1, 2)) not in swaps
 
 
 def test_sabre_noise_data():
-    """The weights and the infidelities are ordered as the qubits of the circuit, and they
+    """The costs and the infidelities are ordered as the qubits of the circuit, and they
     are only computed again for another connectivity."""
     connectivity = line_connectivity(4)
     hardware = _line_hardware(4)
@@ -1499,8 +1534,12 @@ def test_sabre_noise_data():
     circuit.add(gates.CNOT(0, 3))
     router(circuit)
     cache = router._noise_cache
-    assert router._edge_weight[1, 2] == weights.edges[1, 2]["weight"] + hop
-    assert router._edge_weight[0, 2] == np.inf
+    assert router._gate_cost[1, 2] == weights.edges[1, 2]["weight"] + hop
+    assert router._gate_cost[0, 2] == np.inf
+    assert router._swap_cost[0, 2] == np.inf
+    assert router._swap_cost[1, 2] == min(
+        router._swap_ordered[1, 2], router._swap_ordered[2, 1]
+    )
 
     # the qubits are placed on the nodes 3, 1, 2 and 0, so the couplings are the ones of
     # (3, 2) and (1, 0), and the distances are the ones of the nodes
@@ -1509,14 +1548,26 @@ def test_sabre_noise_data():
     other.add(gates.CNOT(0, 3))
     routed, layout = router(other)
     assert router._noise_cache is cache
-    assert router._edge_weight[0, 2] == weights.edges[2, 3]["weight"] + hop
-    assert router._edge_weight[1, 3] == weights.edges[0, 1]["weight"] + hop
-    assert router._edge_weight[0, 1] == np.inf
+    assert router._gate_cost[0, 2] == weights.edges[2, 3]["weight"] + hop
+    assert router._gate_cost[1, 3] == weights.edges[0, 1]["weight"] + hop
+    assert router._gate_cost[0, 1] == np.inf
     assert_circuit_equivalence(
         original_circuit=other, transpiled_circuit=routed, final_layout=layout
     )
+    for name in ("_gate_cost", "_swap_cost", "_swap_ordered"):
+        reference = {
+            "_gate_cost": cache[2],
+            "_swap_cost": cache[4],
+            "_swap_ordered": cache[3],
+        }[name]
+        matrix = getattr(router, name)
+        for first, second in itertools.product(range(4), repeat=2):
+            assert (
+                matrix[first, second]
+                == reference[wire_names[first], wire_names[second]]
+            )
     for cost, matrix in router._noise_dist.items():
-        reference = cache[3][cost]
+        reference = cache[5][cost]
         for first, second in itertools.product(range(4), repeat=2):
             assert (
                 matrix[first, second]
@@ -1559,6 +1610,219 @@ def test_sabre_noise_barrier():
     assert_circuit_equivalence(
         original_circuit=circuit, transpiled_circuit=routed, final_layout=layout
     )
+
+
+def test_circuit_map_update_order():
+    """The SWAP gate has the qubits in the order that is given, and the mapping is the same."""
+    default = CircuitMap(circuit=Circuit(3))
+    default.update((0, 1))
+    reverse = CircuitMap(circuit=Circuit(3))
+    reverse.update((0, 1), physical_order=(1, 0))
+
+    assert default.routed_circuit().queue[0].qubits == (0, 1)
+    assert reverse.routed_circuit().queue[0].qubits == (1, 0)
+    assert default.physical_to_logical == reverse.physical_to_logical == [1, 0, 2]
+    assert reverse._swaps == 1
+    reverse.undo()
+    assert reverse.physical_to_logical == [0, 1, 2]
+
+
+@pytest.mark.parametrize(
+    "natives, per_cz, swap_gates",
+    [
+        (NativeGates.default(), 1, 3),
+        (_CNOT_ONLY, 1, 3),
+        (_ISWAP_ONLY, 2, 3),
+        (_SYCAMORE, 2, 6),
+        (NativeGates.default() | NativeGates.SWAP, 1, 1),
+    ],
+)
+def test_native_counts(natives, per_cz, swap_gates):
+    """The native gates of a CZ gate and of a SWAP gate follow from the native gates."""
+    cz_count, swaps = _native_counts(natives)
+    assert cz_count == per_cz
+    assert set(swaps) == set(itertools.product([False, True], [0, 1]))
+    assert all(counts[0] == swap_gates for counts in swaps.values())
+
+    # without a direction, the order of the qubits of the SWAP gate swaps the counts of the
+    # single-qubit gates on them
+    two, first, second = swaps[False, 0]
+    assert swaps[False, 1] == (two, second, first)
+    if natives & NativeGates.SWAP:
+        assert swaps[False, 0] == (1, 0, 0)
+
+
+def test_native_counts_direction():
+    """The gates against the direction of a coupling are reversed with single-qubit gates, so
+    the SWAP gate from the source to the target needs fewer, and the other order more.
+    """
+    _, swaps = _native_counts(_CNOT_ONLY)
+    assert swaps[False, 0] == swaps[False, 1] == (3, 0, 0)
+    forward, backward = swaps[True, 0], swaps[True, 1]
+    assert sum(forward[1:]) > 0
+    assert sum(forward[1:]) < sum(backward[1:])
+
+
+def test_noise_costs():
+    hardware = HardwareModel(
+        (0, 1, 2),
+        [(0, 1), (1, 2)],
+        errors={
+            "2q": {(0, 1): 0.01, (1, 2): 0.02},
+            "1q": {0: 0.001, 1: 0.004, 2: 0.002},
+        },
+    )
+    weights = hardware.weighted_connectivity()
+    per_cz, swaps = _native_counts(hardware.native_gates)
+    gate_cost, swap_ordered = _noise_costs(
+        weights, line_connectivity(3), [0, 1, 2], hardware.native_gates
+    )
+
+    two, first, second = swaps[False, 0]
+    for qubits in itertools.permutations(range(3), 2):
+        if abs(qubits[0] - qubits[1]) != 1:
+            assert gate_cost[qubits] == swap_ordered[qubits] == np.inf
+            continue
+        weight = (
+            weights.edges[tuple(sorted(qubits))]["weight"] + router_module._HOP_WEIGHT
+        )
+        assert gate_cost[qubits] == pytest.approx(per_cz * weight)
+        # the qubit that the SWAP gate has first is the one with the first single-qubit gates
+        assert swap_ordered[qubits] == pytest.approx(
+            two * weight
+            + first * weights.nodes[qubits[0]]["gate"]
+            + second * weights.nodes[qubits[1]]["gate"]
+        )
+    assert swap_ordered[0, 1] != swap_ordered[1, 0]
+
+
+@pytest.mark.parametrize("edges", [[(0, 1), (1, 2)], [(1, 0), (2, 1)]])
+def test_noise_costs_directed(edges):
+    """Only the direction of a coupling has a weight, and the SWAP gate with the qubits
+    from the source to the target costs less, with the same errors."""
+    couplings = [(0, 1), (1, 2)]
+    hardware = HardwareModel(
+        (0, 1, 2),
+        couplings,
+        native_gates=_CNOT_ONLY,
+        errors={
+            "2q": {(0, 1): 0.01, (1, 2): 0.03},
+            "1q": dict.fromkeys(range(3), 0.002),
+        },
+        symmetric=dict.fromkeys(couplings, False),
+    )
+    weights = hardware.weighted_connectivity()
+    assert weights.is_directed()
+    connectivity = nx.Graph(edges)
+    gate_cost, swap_ordered = _noise_costs(
+        weights, connectivity, list(connectivity.nodes), _CNOT_ONLY
+    )
+
+    _, swaps = _native_counts(_CNOT_ONLY)
+    nodes = list(connectivity.nodes)
+    for source, target in couplings:
+        weight = weights.edges[source, target]["weight"] + router_module._HOP_WEIGHT
+        single = weights.nodes[source]["gate"]
+        for start, end, order in ((source, target, 0), (target, source, 1)):
+            two, first, second = swaps[True, order]
+            expected = two * weight + (first + second) * single
+            assert swap_ordered[nodes.index(start), nodes.index(end)] == pytest.approx(
+                expected
+            )
+        assert (
+            swap_ordered[nodes.index(source), nodes.index(target)]
+            < swap_ordered[nodes.index(target), nodes.index(source)]
+        )
+        assert gate_cost[nodes.index(source), nodes.index(target)] == pytest.approx(
+            weight
+        )
+
+
+def test_noise_distances():
+    inf = np.inf
+    gate_cost = np.array([[inf, 2.0, inf], [2.0, inf, 5.0], [inf, 5.0, inf]])
+    swap_cost = np.array([[inf, 7.0, inf], [7.0, inf, 1.0], [inf, 1.0, inf]])
+    distances = _noise_distances(gate_cost, swap_cost)
+
+    assert set(distances) == {1, 2, 3}
+    for cost, matrix in distances.items():
+        np.testing.assert_allclose(matrix, matrix.T)
+        # the qubits of a coupling only need their gate
+        assert matrix[0, 1] == 2.0 * cost
+        # the gate on the first coupling after moving the third qubit, or on the second
+        # coupling after moving the first qubit
+        assert matrix[0, 2] == min(2.0 * cost + 1.0, 5.0 * cost + 7.0)
+
+
+@pytest.mark.parametrize(
+    "natives, per_cz",
+    [(_ISWAP_ONLY, 2), (NativeGates.default() | NativeGates.SWAP, 1)],
+)
+def test_sabre_noise_native_gates(natives, per_cz):
+    """The costs follow from the native gates of the hardware model."""
+    couplings = [(0, 1), (1, 2), (2, 3)]
+    hardware = HardwareModel(
+        tuple(range(4)),
+        couplings,
+        native_gates=natives,
+        errors={
+            "2q": dict(zip(couplings, [0.01, 0.02, 0.03])),
+            "1q": dict.fromkeys(range(4), 0.002),
+        },
+    )
+    weights = hardware.weighted_connectivity()
+    router = Sabre(line_connectivity(4), seed=1, heuristic="noise", hardware=hardware)
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(0, 3))
+    routed, layout = router(circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit, transpiled_circuit=routed, final_layout=layout
+    )
+
+    weight = weights.edges[1, 2]["weight"] + router_module._HOP_WEIGHT
+    single = weights.nodes[1]["gate"]
+    assert router._gate_cost[1, 2] == pytest.approx(per_cz * weight)
+    two, first, second = _native_counts(natives)[1][False, 0]
+    assert router._swap_cost[1, 2] == pytest.approx(
+        two * weight + (first + second) * single
+    )
+    if natives & NativeGates.SWAP:
+        # a native SWAP gate is one gate, and not three
+        assert router._swap_cost[1, 2] == pytest.approx(weight)
+
+
+def test_sabre_noise_swap_order():
+    """The SWAP gates of the router go from the source to the target of a directed
+    coupling, which the hop-count heuristics do not choose."""
+    couplings = [(0, 1), (1, 2), (2, 3), (3, 4)]
+    hardware = HardwareModel(
+        tuple(range(5)),
+        couplings,
+        native_gates=_CNOT_ONLY,
+        errors={
+            "2q": dict.fromkeys(couplings, 0.01),
+            "1q": dict.fromkeys(range(5), 0.001),
+        },
+        symmetric=dict.fromkeys(couplings, False),
+    )
+    rng = random.Random(5)
+    circuit = Circuit(5)
+    for _ in range(12):
+        circuit.add(gates.CNOT(*rng.sample(range(5), 2)))
+
+    against = {}
+    for heuristic, kwargs in (("decay", {}), ("noise", {"hardware": hardware})):
+        router = Sabre(nx.path_graph(5), seed=1, heuristic=heuristic, **kwargs)
+        routed, layout = router(circuit)
+        assert_circuit_equivalence(
+            original_circuit=circuit, transpiled_circuit=routed, final_layout=layout
+        )
+        # the circuit has no SWAP gates, so the ones of the routed circuit are the router's
+        swaps = [gate.qubits for gate in routed.queue if gate.name == "swap"]
+        assert len(swaps) == router.added_swaps > 0
+        against[heuristic] = sum(first > second for first, second in swaps)
+    assert against["noise"] == 0
+    assert against["decay"] > 0
 
 
 def _line_hardware(nqubits):
