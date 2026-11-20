@@ -3,6 +3,7 @@ import math
 import random
 from collections.abc import Sequence
 from copy import copy, deepcopy
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
@@ -14,6 +15,10 @@ from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.asserts import assert_connectivity, assert_placement
 from qibo.transpiler.blocks import Block, CircuitBlocks
+from qibo.transpiler.hardware import _connectivity_weights
+
+if TYPE_CHECKING:
+    from qibo.transpiler.hardware import HardwareModel
 
 # Number of circuits whose blocks and DAG a router keeps, see ``Sabre._preprocessing``.
 _MAX_TEMPLATES = 8
@@ -286,10 +291,17 @@ class Sabre(Router):
               non-overlapping SWAPs.
 
             Defaults to ``"decay"``.
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
+            whose errors weigh the qubits and the couplings, see
+            :meth:`qibo.transpiler.hardware.HardwareModel.weighted_connectivity`. Its
+            connectivity must contain the one of the router. The weights are stored with the
+            qubits relabeled as the ones of the circuit. Defaults to ``None``.
 
     Raises:
         ValueError: If ``trials`` is not positive, or ``heuristic`` is not ``"basic"``,
             ``"lookahead"`` or ``"decay"``.
+        ConnectivityError: When the router is called, if its connectivity is not a subgraph
+            of the connectivity of ``hardware``.
 
     References:
         1. G. Li, Y. Ding, and Y. Xie,
@@ -307,6 +319,7 @@ class Sabre(Router):
         seed: int | None = None,
         trials: int = 1,
         heuristic: str = "decay",
+        hardware: "HardwareModel | None" = None,
     ):
         if trials < 1:
             raise_error(ValueError, f"``trials`` must be positive, but it is {trials}.")
@@ -317,6 +330,7 @@ class Sabre(Router):
                 + "'basic', 'lookahead' or 'decay'.",
             )
         self.connectivity = connectivity
+        self.hardware = hardware
         self.heuristic = heuristic
         self.lookahead = lookahead
         self.decay = decay_lookahead
@@ -332,6 +346,10 @@ class Sabre(Router):
         self._final_measurements = None
         self._temp_added_swaps = []
         self._rng = random.Random(seed)
+        self._hardware_weights = (
+            None if hardware is None else hardware.weighted_connectivity()
+        )
+        self._weights = None
         # the blocks and the DAG of the circuits that were routed, see ``_preprocessing``
         self._templates = {}
 
@@ -408,6 +426,8 @@ class Sabre(Router):
         """The following objects will be initialised:
             - circuit: class to represent circuit and to perform {logical: physical} qubit mapping.
             - _final_measurements: measurement gates at the end of the circuit.
+            - _weights: weights of the errors of ``hardware``, if there is one, on the
+                connectivity with the nodes relabeled as the logical qubits.
             - _dist_matrix: matrix reporting the shortest path length between all node pairs.
             - _dag: direct acyclic graph of the circuit based on commutativity.
             - _memory_map: list to remember previous SWAP moves.
@@ -427,9 +447,12 @@ class Sabre(Router):
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be preprocessed.
         """
 
-        self.connectivity = nx.relabel_nodes(
-            self.connectivity, {v: i for i, v in enumerate(circuit.wire_names)}
-        )
+        mapping = {v: i for i, v in enumerate(circuit.wire_names)}
+        if self._hardware_weights is not None:
+            self._weights = _relabel_weights(
+                self._hardware_weights, self.connectivity, mapping
+            )
+        self.connectivity = nx.relabel_nodes(self.connectivity, mapping)
 
         queue = tuple(circuit.queue)
         key = tuple((id(gate), gate.qubits, gate.parameters) for gate in queue)
@@ -695,10 +718,29 @@ class ShortestPaths(Router):
         connectivity (:class:`networkx.Graph`): Chip connectivity.
         seed (int, optional): Seed for the random number generator.
             If ``None``, defaults to :math:`42`. Defaults to ``None``.
+        hardware (:class:`qibo.transpiler.hardware.HardwareModel`, optional): Hardware model
+            whose errors weigh the qubits and the couplings, see
+            :meth:`qibo.transpiler.hardware.HardwareModel.weighted_connectivity`. Its
+            connectivity must contain the one of the router. The weights are stored with the
+            qubits relabeled as the ones of the circuit. Defaults to ``None``.
+
+    Raises:
+        ConnectivityError: When the router is called, if its connectivity is not a subgraph
+            of the connectivity of ``hardware``.
     """
 
-    def __init__(self, connectivity: nx.Graph | None = None, seed: int | None = None):
+    def __init__(
+        self,
+        connectivity: nx.Graph | None = None,
+        seed: int | None = None,
+        hardware: "HardwareModel | None" = None,
+    ):
         self.connectivity = connectivity
+        self.hardware = hardware
+        self._hardware_weights = (
+            None if hardware is None else hardware.weighted_connectivity()
+        )
+        self._weights = None
         self._front_layer = None
         self.circuit_map = None
         self._dag = None
@@ -916,14 +958,19 @@ class ShortestPaths(Router):
         """The following objects will be initialised:
             - circuit: class to represent circuit and to perform {logical: physical} qubit mapping.
             - _final_measurements: measurement gates at the end of the circuit.
+            - _weights: weights of the errors of ``hardware``, if there is one, on the
+                connectivity with the nodes relabeled as the logical qubits.
             - _front_layer: list containing the blocks to be executed.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be preprocessed.
         """
-        self.connectivity = nx.relabel_nodes(
-            self.connectivity, {v: i for i, v in enumerate(circuit.wire_names)}
-        )
+        mapping = {v: i for i, v in enumerate(circuit.wire_names)}
+        if self._hardware_weights is not None:
+            self._weights = _relabel_weights(
+                self._hardware_weights, self.connectivity, mapping
+            )
+        self.connectivity = nx.relabel_nodes(self.connectivity, mapping)
         copied_circuit = circuit.copy(deep=True)
         # global phases act on no qubits, so they are not routed, see ``__call__``
         copied_circuit.queue[:] = [
@@ -1173,6 +1220,40 @@ def _find_connected_qubit(
                 return possible_qubits.pop()
 
     return qubits[0]
+
+
+def _relabel_weights(
+    weights: nx.Graph, connectivity: nx.Graph, mapping: dict
+) -> nx.Graph:
+    """Helper method for :class:`qibo.transpiler.router.Sabre` and
+    :class:`qibo.transpiler.router.ShortestPaths`.
+
+    Weights of a hardware model on the connectivity of a router, with the nodes relabeled.
+
+    Args:
+        weights (:class:`networkx.Graph`): Weighted connectivity of a hardware model, see
+            :meth:`qibo.transpiler.hardware.HardwareModel.weighted_connectivity`.
+        connectivity (:class:`networkx.Graph`): Connectivity of the router, with the nodes
+            before the relabeling.
+        mapping (dict): New label of each node of ``connectivity``.
+
+    Returns:
+        :class:`networkx.Graph`: Graph with the nodes and the couplings of ``connectivity``,
+        relabeled with ``mapping``. Each node has the attributes ``"gate"``, ``"readout"``
+        and ``"weight"`` that ``weights`` has, and each coupling has the attribute
+        ``"weight"``, which is the mean of its directions if ``weights`` is directed.
+
+    Raises:
+        ConnectivityError: If ``connectivity`` has qubits or couplings that ``weights`` does
+            not have.
+    """
+    edge_weight = _connectivity_weights(connectivity, weights)
+    graph = nx.Graph()
+    graph.add_nodes_from((node, weights.nodes[node]) for node in connectivity.nodes)
+    graph.add_weighted_edges_from(
+        (*edge, edge_weight[edge]) for edge in connectivity.edges
+    )
+    return nx.relabel_nodes(graph, mapping)
 
 
 def _remove_redundant_connections(dag: nx.DiGraph) -> nx.DiGraph:
