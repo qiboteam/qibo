@@ -1072,6 +1072,41 @@ def test_generate_preset_passes_disconnected_connectivity(backend, routing_metho
         pipeline(circuit, backend=backend)
 
 
+@pytest.mark.parametrize("seed", range(3))
+@pytest.mark.parametrize("optimization_level", [1, 2])
+@pytest.mark.parametrize(
+    "edges, isolated",
+    [
+        ([(0, 1), (1, 2), (3, 4), (4, 5)], []),  # two lines
+        ([(0, 1), (1, 2), (2, 3), (3, 4)], [5]),  # a line and an isolated qubit
+    ],
+    ids=["two_lines", "isolated_qubit"],
+)
+def test_transpile_disconnected_connectivity_layout_search(
+    backend, edges, isolated, optimization_level, seed
+):
+    """The layout search of the levels that have it does not place the qubits of a gate
+    in different connected components of the hardware."""
+    connectivity = nx.Graph(edges)
+    connectivity.add_nodes_from(isolated)
+    circuit = Circuit(3)
+    circuit.add([gates.CNOT(0, 2), gates.CNOT(0, 1), gates.CNOT(1, 2)])
+    circuit.add(gates.M(0, 1, 2))
+    transpiled_circuit, final_layout = transpile(
+        circuit,
+        connectivity,
+        optimization_level=optimization_level,
+        seed=seed,
+        backend=backend,
+    )
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        final_layout=final_layout,
+    )
+
+
 @pytest.mark.parametrize("directed", [False, True], ids=["undirected", "directed"])
 def test_generate_preset_passes_unitary_on_many_qubits(backend, directed):
     connectivity = nx.DiGraph if directed else nx.Graph
