@@ -977,8 +977,8 @@ class StarConnectivityPlacer(Placer):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
-                Only single qubit gates, two qubits gates and barriers are supported by
-                the router.
+                Only single qubit gates, two qubits gates, barriers and measurements are
+                supported by the placer.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to use.
                 Not used by this placer, it is accepted to be compatible with
                 :class:`qibo.transpiler.pipeline.Passes`. Defaults to ``None``.
@@ -990,14 +990,16 @@ class StarConnectivityPlacer(Placer):
         wire_names = circuit.wire_names.copy()
 
         for i, gate in enumerate(circuit.queue):
-            if isinstance(gate, gates.Barrier):
+            if isinstance(gate, (gates.Barrier, gates.M)):
                 continue
+
             if len(gate.qubits) > 2:
                 raise_error(
                     PlacementError,
-                    "Gates targeting more than 2 qubits are not supported, "
-                    + "except for barriers.",
+                    "Except for barriers and measurements, gates targeting "
+                    + "more than 2 qubits are not supported.",
                 )
+
             if len(gate.qubits) == 2 and middle_qubit_idx not in gate.qubits:
                 new_middle = _find_connected_qubit(
                     gate.qubits,
@@ -1242,6 +1244,7 @@ class ReverseTraversal(Placer):
             and _find_unconnected_gate(self.connectivity, circuit) is None
         ):
             return
+
         self.routing_algorithm.connectivity = self.connectivity
         wire_names = circuit.wire_names.copy()
         # The assembled circuit is the same in all the attempts, which only change its layout,
@@ -1250,12 +1253,21 @@ class ReverseTraversal(Placer):
 
         best_swaps, best_layout = None, None
         for trial in range(self.trials):
-            # the first attempt starts from the layout of the circuit
-            start = (
-                wire_names
-                if trial == 0
-                else [wire_names[i] for i in self._rng.permutation(len(wire_names))]
-            )
+            # the first attempt starts from the layout of the circuit, and the others
+            # exchange the qubits that are in the same connected component of the hardware,
+            # since a gate between two components cannot be routed
+            start = wire_names
+            if trial > 0:
+                start = wire_names.copy()
+                for component in nx.connected_components(self.connectivity):
+                    slots = [
+                        slot
+                        for slot, name in enumerate(wire_names)
+                        if name in component
+                    ]
+                    for slot, new in zip(slots, self._rng.permutation(len(slots))):
+                        start[slot] = wire_names[slots[new]]
+
             circuit.wire_names = start
             assembled.wire_names = start
             final_layout = self._routing_step(assembled)

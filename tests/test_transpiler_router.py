@@ -1174,6 +1174,92 @@ def test_star_router_with_barrier(barrier_qubits, star_connectivity):
     assert [gate.name for gate in routed_circuit.queue].count("barrier") == 1
 
 
+@pytest.mark.parametrize("measured", [(0, 1), (0, 1, 2), (0, 1, 2, 3, 4)])
+def test_star_router_with_measurements(measured, star_connectivity):
+    """The measurements need no connectivity, whatever the number of their qubits, also
+    when the router looks for the qubit to move to the middle."""
+    connectivity = star_connectivity(middle_qubit_idx=2)
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))  # two qubits that are not the middle one
+    circuit.add(gates.M(*measured))
+    routed_circuit, final_layout = StarConnectivityRouter(connectivity)(circuit)
+    assert_connectivity(connectivity, routed_circuit)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+    assert [gate.name for gate in routed_circuit.queue].count("measure") == 1
+
+
+def test_star_router_measurements_do_not_change_the_swaps(star_connectivity):
+    """A measurement is not a gate between its qubits, so it does not decide which of
+    the qubits of a gate goes to the middle."""
+    connectivity = star_connectivity(middle_qubit_idx=2)
+    swaps = []
+    for measured in (None, (1, 4)):
+        circuit = Circuit(5)
+        circuit.add(gates.CNOT(0, 1))
+        if measured is not None:
+            circuit.add(gates.M(*measured))
+        circuit.add(gates.CNOT(0, 3))
+        routed_circuit, _ = StarConnectivityRouter(connectivity)(circuit)
+        swaps.append(sum(isinstance(gate, gates.SWAP) for gate in routed_circuit.queue))
+    assert swaps == [1, 1]
+
+
+@pytest.mark.parametrize(
+    "make_gate",
+    [
+        lambda target: gates.H(target),
+        lambda target: gates.S(target),
+        lambda target: gates.SDG(target),
+        lambda target: gates.T(target),
+        lambda target: gates.TDG(target),
+        lambda target: gates.SX(target),
+        lambda target: gates.SXDG(target),
+        lambda target: gates.GPI(target, 0.3),
+        lambda target: gates.GPI2(target, 0.3),
+        lambda target: gates.Unitary(np.array([[0.0, 1.0], [1.0, 0.0]]), target),
+        lambda target: gates.RX(target, 0.3),
+    ],
+    ids=[
+        "H",
+        "S",
+        "SDG",
+        "T",
+        "TDG",
+        "SX",
+        "SXDG",
+        "GPI",
+        "GPI2",
+        "Unitary",
+        "RX",
+    ],
+)
+@pytest.mark.parametrize("control", [0, 2])
+def test_star_router_controlled_gates(make_gate, control, star_connectivity):
+    """A gate with a control keeps its class, its control and its target, whether it needs
+    a SWAP gate, as the one of two qubits that are not the middle one, or not."""
+    connectivity = star_connectivity(middle_qubit_idx=2)
+    circuit = Circuit(5)
+    circuit.add(gates.X(control))
+    circuit.add(make_gate(1).controlled_by(control))
+    gate = circuit.queue[-1]
+
+    routed_circuit, final_layout = StarConnectivityRouter(connectivity)(circuit)
+    assert_connectivity(connectivity, routed_circuit)
+    routed_gate = routed_circuit.queue[-1]
+    assert routed_gate.__class__ is gate.__class__
+    assert len(routed_gate.control_qubits) == 1
+    assert len(routed_gate.target_qubits) == 1
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=routed_circuit,
+        final_layout=final_layout,
+    )
+
+
 DISCONNECTED_CONNECTIVITY = nx.Graph([(0, 1), (1, 2), (2, 3), (4, 5), (5, 6), (7, 8)])
 DISCONNECTED_CONNECTIVITY.add_node(9)
 

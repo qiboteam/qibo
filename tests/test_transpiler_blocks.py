@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pytest
 
 from qibo import Circuit, gates
@@ -20,10 +21,44 @@ from qibo.transpiler.blocks import (
 
 
 def assert_gates_equality(gates_1: list, gates_2: list):
-    """Check that the gates are the same."""
+    """Check that the gates are the same, with the same qubits and parameters."""
+    assert len(gates_1) == len(gates_2)
     for g_1, g_2 in zip(gates_1, gates_2):
         assert g_1.qubits == g_2.qubits
         assert g_1.__class__ == g_2.__class__
+        assert len(g_1.parameters) == len(g_2.parameters)
+        for parameter_1, parameter_2 in zip(g_1.parameters, g_2.parameters):
+            np.testing.assert_allclose(parameter_1, parameter_2)
+
+
+@pytest.mark.parametrize(
+    "gates_1, gates_2",
+    [
+        # a gate is missing, on either side
+        ([gates.H(0), gates.CZ(0, 1), gates.X(1)], [gates.H(0)]),
+        ([gates.H(0)], [gates.H(0), gates.CZ(0, 1)]),
+        ([gates.H(0)], []),
+        # the qubits, the class or the parameters are different
+        ([gates.H(0)], [gates.H(1)]),
+        ([gates.H(0)], [gates.X(0)]),
+        ([gates.RX(0, 0.1)], [gates.RX(0, 3.0)]),
+        (
+            [gates.Unitary(np.eye(2), 0)],
+            [gates.Unitary(np.array([[0.0, 1.0], [1.0, 0.0]]), 0)],
+        ),
+    ],
+)
+def test_assert_gates_equality_fails(gates_1, gates_2):
+    with pytest.raises(AssertionError):
+        assert_gates_equality(gates_1, gates_2)
+
+
+def test_assert_gates_equality_passes():
+    assert_gates_equality([], [])
+    assert_gates_equality(
+        [gates.H(0), gates.RX(1, 0.1), gates.Unitary(np.eye(2), 0)],
+        [gates.H(0), gates.RX(1, 0.1), gates.Unitary(np.eye(2), 0)],
+    )
 
 
 def test_count_2q_gates():
