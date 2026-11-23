@@ -9,6 +9,7 @@ import pytest
 from qibo import Circuit, gates
 from qibo.backends import NumpyBackend
 from qibo.quantum_info.random_ensembles import random_unitary
+from qibo.transpiler import HardwareModel
 from qibo.transpiler import router as router_module
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import (
@@ -1276,3 +1277,78 @@ def test_sabre_layout_does_not_change_the_swaps(backend):
         permuted += swaps(wire_names, seed)
 
     assert permuted <= 1.4 * identity
+
+
+@pytest.mark.parametrize("router", [Sabre, ShortestPaths])
+def test_router_hardware_does_not_change_the_routing(router):
+    connectivity = line_connectivity(5)
+    circuit = generate_random_circuit(5, 30)
+    results = []
+    for hardware in (None, _line_hardware(5)):
+        routed, layout = router(connectivity, seed=1, hardware=hardware)(circuit)
+        results.append(([(gate.name, gate.qubits) for gate in routed.queue], layout))
+    assert results[0] == results[1]
+
+
+@pytest.mark.parametrize("router", [Sabre, ShortestPaths])
+def test_router_hardware_weights(router):
+    """The weights are relabeled as the qubits of the circuit, and only the qubits and the
+    couplings of the connectivity are kept."""
+    hardware = _line_hardware(6)
+    graph = hardware.weighted_connectivity()
+    connectivity = line_connectivity(4, names=[1, 2, 3, 4])
+    wire_names = [3, 1, 4, 2]
+    circuit = Circuit(4, wire_names=wire_names)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(2, 3))
+
+    routing = router(connectivity, hardware=hardware)
+    assert routing._weights is None
+    routing(circuit)
+    # the connectivity is restored after the routing
+    assert routing.connectivity is connectivity
+
+    weights = routing._weights
+    assert sorted(weights.nodes) == [0, 1, 2, 3]
+    for logical, name in enumerate(wire_names):
+        assert weights.nodes[logical] == graph.nodes[name]
+    assert weights.number_of_edges() == connectivity.number_of_edges()
+    for first, second in connectivity.edges:
+        edge = (wire_names.index(first), wire_names.index(second))
+        assert weights.edges[edge]["weight"] == graph.edges[first, second]["weight"]
+
+
+@pytest.mark.parametrize("router", [Sabre, ShortestPaths])
+def test_router_without_hardware_has_no_weights(router):
+    routing = router(line_connectivity(3))
+    routing(generate_random_circuit(3, 5))
+    assert routing.hardware is None
+    assert routing._weights is None
+
+
+@pytest.mark.parametrize("router", [Sabre, ShortestPaths])
+@pytest.mark.parametrize(
+    "connectivity", [line_connectivity(4), nx.Graph([(0, 1), (1, 2), (0, 2)])]
+)
+def test_router_hardware_connectivity_error(router, connectivity):
+    # the hardware has fewer qubits, or no coupling between the qubits 0 and 2
+    hardware = _line_hardware(3)
+    circuit = Circuit(len(connectivity))
+    circuit.add(gates.CNOT(0, 1))
+    with pytest.raises(ConnectivityError, match="subgraph"):
+        router(connectivity, hardware=hardware)(circuit)
+
+
+def _line_hardware(nqubits):
+    """Hardware on a line, whose errors are different for every qubit and coupling."""
+    couplings = [(qubit, qubit + 1) for qubit in range(nqubits - 1)]
+    return HardwareModel(
+        tuple(range(nqubits)),
+        couplings,
+        errors={
+            "1q": {qubit: 0.001 * (qubit + 1) for qubit in range(nqubits)},
+            "2q": {coupling: 0.01 * (coupling[0] + 1) for coupling in couplings},
+            "readout": {qubit: 0.02 * (qubit + 1) for qubit in range(nqubits)},
+        },
+    )

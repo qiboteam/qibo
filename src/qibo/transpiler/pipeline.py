@@ -396,8 +396,12 @@ def generate_preset_passes(
       post layout can still move the circuit to other qubits afterwards.
     * :class:`qibo.transpiler.optimizer.ConsolidateBlocks` also before the layout, so that
       the blocks that it rewrites with fewer entangling gates are the ones that the layout
-      and the router see, if there is ``connectivity``. The one before the last unroller
-      still merges the SWAP gates of the router with the gates around them.
+      and the router see, if there is ``connectivity``. If the router is not
+      :class:`qibo.transpiler.router.NoRouting`, it also writes the blocks that are a SWAP
+      gate up to single-qubit gates as a SWAP gate, and a second
+      :class:`qibo.transpiler.optimizer.ElidePermutations` removes it after it. The one
+      before the last unroller still merges the SWAP gates of the router with the gates
+      around them.
     * :class:`qibo.transpiler.optimizer.CommutativeCancellation` before the last unroller,
       and in the first loop at the end, with the native gates as ``basis``, so that it only
       merges the rotations into native gates.
@@ -737,11 +741,14 @@ def generate_preset_passes(
         )
 
     # the layout and the router see the blocks of two-qubit gates with fewer entangling gates,
-    # and the SWAP gates of the circuit are removed, unless the circuit cannot be routed
+    # and the SWAP gates of the circuit, including the blocks that are equivalent to one, are
+    # removed, unless the circuit cannot be routed
     if optimization_level >= 2:
-        before_layout.append(ConsolidateBlocks())
-        if not isinstance(router, NoRouting):
+        elide = not isinstance(router, NoRouting)
+        before_layout.append(ConsolidateBlocks(split_swaps=elide))
+        if elide:
             before_layout.insert(0, ElidePermutations())
+            before_layout.append(ElidePermutations())
 
     # the final measurements stay after the SWAP gates of the routers that are known to work
     # with a barrier, which is removed afterwards with the others on all the qubits, while

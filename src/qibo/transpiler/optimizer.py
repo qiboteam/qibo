@@ -373,19 +373,14 @@ class ConsolidateBlocks(Optimizer):
     single CZ gate are written with none or one CZ gate, respectively. A
     :class:`qibo.gates.SWAP` gate counts as three CZ gates and an
     :class:`qibo.gates.iSWAP` gate as two, which makes this pass useful after routing,
-    where SWAP gates meet the gates of the circuit.
+    where SWAP gates meet the gates of the circuit. If a block with a generic two-qubit gate
+    corresponds to a tensor product of single-qubit gates, it is rewritten as such.
 
     Measurements, alignments, barriers, noise channels, fused gates, gates with sympy
     parameters and gates acting on more than two qubits are not part of any block and
     stop the block on their qubits. The new gates are :class:`qibo.gates.CZ` and
     :class:`qibo.gates.Unitary` gates, so this pass is meant to be used before
     :class:`qibo.transpiler.unroller.Unroller`.
-
-    Args:
-        weight (float, optional): Weight of the imaginary part in the matrix that is
-            diagonalized to find the local gates of the decomposition, see
-            :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
-            Defaults to :math:`\\sqrt{2}`.
 
     Example:
         A SWAP gate followed by a controlled-NOT (CNOT) gate costs four CZ gates, which
@@ -407,14 +402,52 @@ class ConsolidateBlocks(Optimizer):
 
             ['cz', 'cz']
 
+        Three CNOT gates that alternate their control and target qubits are a SWAP
+        gate. With ``split_swaps`` the block is written as a SWAP gate, which
+        :class:`qibo.transpiler.optimizer.ElidePermutations` removes, instead of three
+        CZ gates.
+
+        .. testcode::
+
+            from qibo.transpiler import ElidePermutations
+
+            circuit = Circuit(2)
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CNOT(1, 0))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.M(0, 1))
+
+            consolidated = ConsolidateBlocks(split_swaps=True)(circuit)
+            print([gate.name for gate in consolidated.queue])
+
+            elided = ElidePermutations()(consolidated)
+            print([(gate.name, gate.qubits) for gate in elided.queue])
+
+        .. testoutput::
+
+            ['swap', 'measure']
+            [('measure', (1, 0))]
+
+    Args:
+        weight (float, optional): Weight of the imaginary part in the matrix that is
+            diagonalized to find the local gates of the decomposition, see
+            :func:`qibo.transpiler.decompositions.unitary_decompositions.calculate_psi`.
+            Defaults to :math:`\\sqrt{2}`.
+        split_swaps (bool, optional): If ``True``, the blocks that are a
+            :class:`qibo.gates.SWAP` gate up to single-qubit gates are written as these
+            gates followed by a :class:`qibo.gates.SWAP` gate, which
+            :class:`qibo.transpiler.optimizer.ElidePermutations` can remove, see
+            :meth:`qibo.transpiler.blocks.Block.kak_decompose`. Defaults to ``False``.
+
     References:
         1. F. Vatan and C. Williams,
         *Optimal quantum circuits for general two-qubit gates*,
         `Phys. Rev. A 69, 032315 (2004) <https://doi.org/10.1103/PhysRevA.69.032315>`_.
     """
 
-    def __init__(self, weight: float = math.sqrt(2)):
+    def __init__(self, weight: float = math.sqrt(2), split_swaps: bool = False):
         self.weight = weight
+        self.split_swaps = split_swaps
 
     def __call__(self, circuit: Circuit, backend: Backend | None = None) -> Circuit:
         """Rewrite the blocks of gates acting on two qubits.
@@ -464,7 +497,7 @@ class ConsolidateBlocks(Optimizer):
         new = Circuit(**circuit.init_kwargs)
         for item in queue:
             new.add(
-                item.kak_decompose(self.weight, backend)
+                item.kak_decompose(self.weight, self.split_swaps, backend)
                 if isinstance(item, Block)
                 else item
             )

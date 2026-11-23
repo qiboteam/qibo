@@ -16,6 +16,7 @@ from qibo.noise import (
     _Conditions,
 )
 from qibo.quantum_info import average_gate_fidelity, to_liouville
+from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.unroller import NativeGates
 
 
@@ -576,6 +577,56 @@ class HardwareModel:
 
 
 _VIRTUAL = (gates.I, gates.Z, gates.RZ)
+
+
+def _connectivity_weights(
+    connectivity: nx.Graph, weights: nx.Graph, directed: bool = False
+) -> dict:
+    """Weight of each edge of a connectivity, taken from the weights of a hardware.
+
+    Args:
+        connectivity (:class:`networkx.Graph`): Connectivity of a placer.
+        weights (:class:`networkx.Graph`): Weighted connectivity of a hardware model, which
+            can be directed.
+        directed (bool, optional): If ``True``, the weight of each connection is the one of
+            each direction that the weights have, and not their mean. Defaults to ``False``.
+
+    Returns:
+        dict: Weight of each connection, in both directions. If the weights have the two
+        directions of a connection, it is their mean, unless ``directed`` is ``True``, and
+        then the directions that the weights do not have are not in the dictionary.
+
+    Raises:
+        ConnectivityError: If the connectivity has qubits or connections that the weights do
+            not have.
+    """
+    if not set(connectivity.nodes) <= set(weights.nodes) or any(
+        not (weights.has_edge(*edge) or weights.has_edge(*edge[::-1]))
+        for edge in connectivity.edges
+    ):
+        raise_error(
+            ConnectivityError,
+            "The connectivity must be a subgraph of the one of the hardware model.",
+        )
+
+    if directed:
+        return {
+            pair: weights.edges[pair]["weight"]
+            for edge in connectivity.edges
+            for pair in (edge, edge[::-1])
+            if weights.has_edge(*pair)
+        }
+
+    edge_weight = {}
+    for edge in connectivity.edges:
+        values = [
+            weights.edges[pair]["weight"]
+            for pair in (edge, edge[::-1])
+            if weights.has_edge(*pair)
+        ]
+        edge_weight[edge] = edge_weight[edge[::-1]] = sum(values) / len(values)
+
+    return edge_weight
 
 
 def _mean(measure: list | None) -> float | None:
