@@ -1848,7 +1848,7 @@ def _generate_rbs_angles(
     architecture: str,
     dims: int | None = None,
     backend: Backend | None = None,
-) -> list[float]:
+) -> ArrayLike:
     """Generate list of angles for RBS gates based on ``architecture``.
 
     Args:
@@ -1860,16 +1860,17 @@ def _generate_rbs_angles(
         nqubits (int): Number of qubits. To be used then ``architecture="tree"``.
 
     Returns:
-        List[float]: List of phases for RBS gates.
+        ArrayLike: phases for RBS gates.
     """
     backend = _check_backend(backend)
 
     if architecture == "diagonal":
-        phases = [
-            backend.arctan2(backend.vector_norm(data[k + 1 :]), data[k])
-            for k in range(len(data) - 2)
-        ]
-        phases.append(backend.arctan2(data[-1], data[-2]))
+        # hyperspherical angles: the angle k is the one between data[k] and the norm of
+        # data[k + 1:], where the norms of all the tails come from a single reverse cumulative
+        # sum, and the last angle keeps the sign of the last entry
+        tails = backend.flip(backend.cumsum(backend.flip(backend.abs(data) ** 2)))
+        tails = backend.sqrt(tails[1:-1])
+        phases = backend.arctan2(backend.concatenate((tails, data[-1:])), data[:-1])
 
     if architecture == "tree":
         if dims is None:  # pragma: no cover
