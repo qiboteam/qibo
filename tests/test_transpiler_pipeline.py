@@ -2392,14 +2392,17 @@ def test_generate_preset_passes_no_elide_permutations(kwargs):
 
 
 def test_generate_preset_passes_consolidate_before_the_layout():
-    for optimization_level, connectivity, expected in (
-        (1, nx.path_graph(4), 1),
-        (2, nx.path_graph(4), 2),
+    for optimization_level, connectivity, routing_method, expected in (
+        (1, nx.path_graph(4), None, 1),
+        (2, nx.path_graph(4), None, 2),
+        (2, nx.path_graph(4), "none", 2),
         # there is nothing to place and route, so the other one is enough
-        (2, None, 1),
+        (2, None, None, 1),
     ):
         passes = generate_preset_passes(
-            connectivity, optimization_level=optimization_level
+            connectivity,
+            routing_method=routing_method,
+            optimization_level=optimization_level,
         ).passes
         positions = [
             position
@@ -2408,7 +2411,16 @@ def test_generate_preset_passes_consolidate_before_the_layout():
         ]
         assert len(positions) == expected
         if expected == 2:
-            assert isinstance(passes[positions[0] + 1], Preprocessing)
+            # the blocks that are a SWAP gate are removed after the consolidation, unless
+            # the circuit cannot be routed
+            consolidate = passes[positions[0]]
+            if routing_method == "none":
+                assert not consolidate.split_swaps
+                assert isinstance(passes[positions[0] + 1], Preprocessing)
+            else:
+                assert consolidate.split_swaps
+                assert isinstance(passes[positions[0] + 1], ElidePermutations)
+                assert isinstance(passes[positions[0] + 2], Preprocessing)
 
 
 def test_generate_preset_passes_loop_commutative_cancellation():
@@ -2436,7 +2448,8 @@ def test_generate_preset_passes_loop_commutative_cancellation():
 
 def test_transpile_chain_on_a_grid():
     """A chain of qubits has a layout where it needs no SWAP gates, even on a large grid, so
-    the first level, with its small search, finds it, and it has the least entangling gates."""
+    the first level, with its small search, finds it, and it has the least entangling gates.
+    """
     grid = nx.convert_node_labels_to_integers(nx.grid_2d_graph(5, 5))
     circuit = Circuit(25)
     circuit.add(gates.H(0))
@@ -2517,6 +2530,36 @@ def test_transpile_elide_permutations_is_equivalent(backend, seed):
         connectivity=hardware.connectivity,
         final_layout=layout,
     )
+
+
+def test_transpile_elides_swap_equivalent_blocks(backend):
+    """Three CNOT gates that are a SWAP gate cost no CZ gate at the second level."""
+    connectivity = nx.path_graph(3)
+    circuit = Circuit(3)
+    circuit.add(
+        [gates.CNOT(0, 1), gates.CNOT(1, 0), gates.CNOT(0, 1), gates.CNOT(1, 2)]
+    )
+    circuit.add(gates.M(0, 1, 2))
+    cz_gates = {}
+    for optimization_level in (1, 2):
+        transpiled, layout = transpile(
+            circuit,
+            connectivity,
+            optimization_level=optimization_level,
+            seed=1,
+            backend=backend,
+        )
+        assert_transpiling(
+            original_circuit=circuit,
+            transpiled_circuit=transpiled,
+            connectivity=connectivity,
+            final_layout=layout,
+        )
+        cz_gates[optimization_level] = sum(
+            isinstance(gate, gates.CZ) for gate in transpiled.queue
+        )
+    assert cz_gates[2] == 1
+    assert cz_gates[1] > cz_gates[2]
 
 
 def test_generate_preset_passes_level_0_layout_trials():
@@ -2693,6 +2736,7 @@ def test_generate_preset_passes_optimization_level_2_structure():
         "CommutativeCancellation",
         "RemoveIdentityEquivalent",
         "ConsolidateBlocks",
+        "ElidePermutations",
         "Preprocessing",
         "NoiseAwarePlacer",
         "ReverseTraversal",
