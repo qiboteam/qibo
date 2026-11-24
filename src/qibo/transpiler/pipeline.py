@@ -408,6 +408,12 @@ def generate_preset_passes(
     * The layout search does not keep a layout without SWAP gates if ``hardware`` is given,
       so that the one with the least noise is chosen. The ``"reverse_traversal"`` placer and
       the ``"sabre"`` router have :math:`20` trials.
+    * If ``hardware`` is given, the ``"sabre"`` router and the one of the
+      ``"reverse_traversal"`` placer use the heuristic ``"noise"``, which adds the SWAP
+      gates on the least noisy couplings, and the best of their trials is the one with the
+      least infidelity. Another heuristic is used by giving a
+      :class:`qibo.transpiler.router.Sabre` as ``routing_method``, and as the router of a
+      :class:`qibo.transpiler.placer.ReverseTraversal` given as ``layout_method``.
     * A second loop at the end, of
       :class:`qibo.transpiler.optimizer.Optimize1qGatesDecomposition`,
       :class:`qibo.transpiler.optimizer.Optimize1qGatesSimpleCommutation` and
@@ -464,7 +470,9 @@ def generate_preset_passes(
             or ``"sabre"``.
         routing_method (str or :class:`qibo.transpiler.abstract.Router`, optional): Router
             that makes the circuit executable. It can be ``"sabre"``
-            (:class:`qibo.transpiler.router.Sabre` with ``routing_trials`` trials),
+            (:class:`qibo.transpiler.router.Sabre` with ``routing_trials`` trials, and with
+            the heuristic ``"noise"`` if ``hardware`` is given and ``optimization_level``
+            is at least :math:`2`),
             ``"shortest_paths"``
             (:class:`qibo.transpiler.router.ShortestPaths`), ``"star"``
             (:class:`qibo.transpiler.router.StarConnectivityRouter`), ``"none"``
@@ -661,6 +669,14 @@ def generate_preset_passes(
     # the model that the user gave, since the layout search makes one if there is none
     noise_aware = hardware is not None
 
+    # the router of the second level, and the one of the layout search, weigh the SWAP gates
+    # with the errors of the model, which a router that the user gives does not
+    sabre_noise = (
+        {"heuristic": "noise", "hardware": hardware}
+        if noise_aware and optimization_level >= 2
+        else {}
+    )
+
     if layout_trials is None:
         layout_trials = (1, 5, 20)[optimization_level]
 
@@ -671,7 +687,7 @@ def generate_preset_passes(
         "dense": Dense,
         "random": lambda: Random(seed=seed),
         "reverse_traversal": lambda: ReverseTraversal(
-            routing_algorithm=Sabre(seed=seed),
+            routing_algorithm=Sabre(seed=seed, **sabre_noise),
             trials=layout_trials,
             seed=seed,
             keep_layout=default_layout,
@@ -682,7 +698,7 @@ def generate_preset_passes(
 
     routers = {
         "none": NoRouting,
-        "sabre": lambda: Sabre(seed=seed, trials=routing_trials),
+        "sabre": lambda: Sabre(seed=seed, trials=routing_trials, **sabre_noise),
         "shortest_paths": lambda: ShortestPaths(seed=seed),
         "star": StarConnectivityRouter,
     }
