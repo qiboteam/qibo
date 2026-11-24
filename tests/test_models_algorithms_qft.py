@@ -159,7 +159,6 @@ def test_approximate_qft_error_bounds(backend, nqubits):
         backend.assert_allclose(backend.abs(approximate), backend.abs(exact), atol=1e-8)
 
 
-@pytest.mark.parametrize("degree", [0, -1])
 def test_approximate_qft_value_error():
     for degree in [0, -1]:
         with pytest.raises(ValueError):
