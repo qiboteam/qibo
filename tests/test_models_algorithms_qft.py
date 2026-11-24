@@ -150,7 +150,7 @@ def test_approximate_qft_error_bounds(backend, nqubits):
         )
         # operator norm
         backend.assert_allclose(
-            backend.matrix_norm(approximate - exact, ord=2) <= bound + 1e-8, True
+            backend.matrix_norm(approximate - exact, order=2) <= bound + 1e-8, True
         )
         # elementwise phases
         mask = backend.abs(exact) > 1e-12
