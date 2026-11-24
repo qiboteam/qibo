@@ -1248,8 +1248,8 @@ class StarConnectivityRouter(Router):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
-                Only single qubit gates, two qubits gates and barriers are supported by
-                the router.
+                Only single qubit gates, two qubits gates, barriers and measurements are
+                supported by the router.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
@@ -1279,7 +1279,7 @@ class StarConnectivityRouter(Router):
                 raise_error(
                     ConnectivityError,
                     "Gates targeting more than two qubits are not supported, "
-                    + "except for barriers.",
+                    + "except for barriers and measurements.",
                 )
 
             if len(routed_qubits) == 2 and middle_qubit_idx not in routed_qubits:
@@ -1297,13 +1297,8 @@ class StarConnectivityRouter(Router):
 
             routed_qubits = [l2p[q] for q in gate.qubits]
 
-            # add gate to the hardware circuit
-            if isinstance(gate, gates.Unitary):
-                # gates.Unitary requires matrix as first argument
-                matrix = gate.init_args[0]
-                new.add(gate.__class__(matrix, *routed_qubits, **gate.init_kwargs))
-            else:
-                new.add(gate.__class__(*routed_qubits, **gate.init_kwargs))
+            # add gate to the hardware circuit, keeping its controls and its targets
+            new.add(gate.on_qubits(dict(zip(gate.qubits, routed_qubits))))
         return new, {circuit.wire_names[i]: l2p[i] for i in range(nqubits)}
 
     def _check_star_connectivity(self) -> None:
@@ -1423,17 +1418,20 @@ def _find_connected_qubit(
     and :class:`qibo.transpiler.placer.StarConnectivityPlacer`.
 
     Finds which qubit should be mapped to hardware middle qubit
-    by looking at the two-qubit gates that follow.
+    by looking at the two-qubit gates that follow. The barriers and the measurements are
+    not gates that need the qubits to be connected, so they are skipped.
     """
     possible_qubits = {qubits[0], qubits[1]}
     for next_gate in queue:
-        if isinstance(next_gate, gates.Barrier):
+        if isinstance(next_gate, (gates.Barrier, gates.M)):
             continue
+
         if len(next_gate.qubits) > 2:
             raise_error(
                 error,
                 "Gates targeting more than 2 qubits are not supported",
             )
+
         if len(next_gate.qubits) == 2:
             possible_qubits &= {
                 mapping[next_gate.qubits[0]],

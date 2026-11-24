@@ -4,7 +4,11 @@ import pytest
 from qibo import Circuit, gates
 from qibo.models.encodings import entangling_layer
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
-from qibo.transpiler.asserts import assert_placement, assert_transpiling
+from qibo.transpiler.asserts import (
+    assert_connectivity,
+    assert_placement,
+    assert_transpiling,
+)
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
 from qibo.transpiler.placer import (
@@ -154,6 +158,48 @@ def test_reverse_traversal_no_gates(backend, star_connectivity):
         placer(circuit, backend=backend)
 
 
+@pytest.mark.parametrize("router_algorithm", [ShortestPaths, Sabre])
+@pytest.mark.parametrize("seed", range(5))
+@pytest.mark.parametrize(
+    "edges, isolated",
+    [
+        ([(0, 1), (1, 2), (3, 4), (4, 5)], []),  # two lines
+        ([(0, 1), (1, 2), (2, 3), (3, 4)], [5]),  # a line and an isolated qubit
+        ([(0, 1), (1, 2), (3, 4), (4, 5), (6, 7)], []),  # three components
+    ],
+    ids=["two_lines", "isolated_qubit", "three_components"],
+)
+def test_reverse_traversal_disconnected_connectivity(
+    backend, edges, isolated, seed, router_algorithm
+):
+    """The qubits are only exchanged inside their connected component, so a gate is never
+    placed between two of them, which the router cannot route."""
+    connectivity = nx.Graph(edges)
+    connectivity.add_nodes_from(isolated)
+    circuit = Circuit(connectivity.number_of_nodes())
+    circuit.add(gates.CNOT(0, 2))  # a ring of three qubits needs SWAP gates on a line
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    original_names = circuit.wire_names.copy()
+    component = {
+        node: index
+        for index, nodes in enumerate(nx.connected_components(connectivity))
+        for node in nodes
+    }
+
+    routing = router_algorithm(connectivity=connectivity)
+    placer = ReverseTraversal(routing, connectivity, trials=8, seed=seed)
+    placer(circuit, backend=backend)
+
+    assert_placement(circuit, connectivity)
+    # every qubit stays in the component where it started
+    assert [component[name] for name in circuit.wire_names] == [
+        component[name] for name in original_names
+    ]
+    routed_circuit, _ = routing(circuit)
+    assert_connectivity(connectivity, routed_circuit)
+
+
 def test_reverse_traversal_restricted(backend, star_connectivity):
     circuit = Circuit(4)
     circuit.add(gates.CNOT(1, 3))
@@ -202,6 +248,41 @@ def test_star_connectivity_placer_error(first, star_connectivity):
     with pytest.raises(ConnectivityError):
         placer = StarConnectivityPlacer(chip)
         placer(circ)
+
+
+@pytest.mark.parametrize("measured", [(0, 1), (0, 1, 2), (0, 1, 2, 3, 4)])
+@pytest.mark.parametrize("first", [True, False])
+def test_star_connectivity_placer_measurements(first, measured, star_connectivity):
+    """The measurements need no connectivity, whatever the number of their qubits and
+    whether they are before the gates or after them."""
+    connectivity = star_connectivity()
+    circ = Circuit(5)
+    if first:
+        circ.add(gates.M(*measured))
+    circ.add(gates.CZ(0, 2))  # a gate of the middle qubit, which needs no placement
+    circ.add(gates.CZ(1, 2))
+    if not first:
+        circ.add(gates.M(*measured))
+    StarConnectivityPlacer(connectivity)(circ)
+    assert_placement(circ, connectivity)
+
+
+def test_star_connectivity_placer_measurements_do_not_change_the_layout(
+    star_connectivity,
+):
+    """A measurement is not a gate between its qubits, so it does not decide which of the
+    qubits of the first gate goes to the middle."""
+    connectivity = star_connectivity()
+    layouts = []
+    for measured in (None, (3, 4)):
+        circ = Circuit(5)
+        if measured is not None:
+            circ.add(gates.M(*measured))
+        circ.add(gates.CNOT(0, 1))
+        circ.add(gates.CNOT(0, 1))
+        StarConnectivityPlacer(connectivity)(circ)
+        layouts.append(circ.wire_names)
+    assert layouts[0] == layouts[1]
 
 
 def test_star_connectivity_placer_wrong_node_count(star_connectivity):
