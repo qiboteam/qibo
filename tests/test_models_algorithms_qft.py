@@ -1,9 +1,12 @@
 """Test methods defined in `qibo/models/circuit.py`."""
 
+import math
+
 import numpy as np
 import pytest
 
-from qibo.models import QFT
+from qibo import gates
+from qibo.models import QFT, Circuit
 from qibo.models.algorithms.qft import _DistributedQFT
 from qibo.quantum_info import random_statevector
 
@@ -83,3 +86,99 @@ def test_qft_errors():
         QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
         _DistributedQFT(2, accelerators={"/GPU:0": 4})
+
+
+@pytest.mark.parametrize("with_swaps", [True, False])
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_approximate_qft_exact_equivalence(backend, nqubits, with_swaps):
+    target = QFT(nqubits, with_swaps).unitary(backend)
+    for degree in [None, nqubits, nqubits + 1, 3 * nqubits]:
+        circuit = QFT(nqubits, with_swaps, approximation_degree=degree)
+        backend.assert_allclose(circuit.unitary(backend), target, atol=1e-7)
+
+
+@pytest.mark.parametrize("with_swaps", [True, False])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4])
+def test_approximate_qft_hadamards(backend, nqubits, with_swaps):
+    circuit = QFT(nqubits, with_swaps, approximation_degree=1)
+    target = backend.matrices.H
+    expected = target
+    for _ in range(nqubits - 1):
+        expected = backend.kron(expected, target)
+    if with_swaps:
+        # the swaps commute with the Hadamards and reverse the order of the qubits
+        reversal = Circuit(nqubits)
+        for qubit in range(nqubits // 2):
+            reversal.add(gates.SWAP(qubit, nqubits - qubit - 1))
+        expected = expected @ reversal.unitary(backend)
+    backend.assert_allclose(circuit.unitary(backend), expected, atol=1e-7)
+    assert not [gate for gate in circuit.queue if isinstance(gate, gates.CU1)]
+
+
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 5, 8])
+def test_approximate_qft_gate_count(nqubits):
+    for degree in range(1, nqubits + 3):
+        circuit = QFT(nqubits, approximation_degree=degree)
+        ncu1 = len([gate for gate in circuit.queue if isinstance(gate, gates.CU1)])
+        expected = sum(min(degree - 1, nqubits - 1 - i) for i in range(nqubits))
+        assert ncu1 == expected
+        if degree <= nqubits:
+            assert ncu1 == nqubits * (degree - 1) - degree * (degree - 1) // 2
+        assert circuit.ngates == nqubits + ncu1 + nqubits // 2
+        for gate in circuit.queue:
+            if isinstance(gate, gates.CU1):
+                assert (
+                    gate.target_qubits[0]
+                    < gate.control_qubits[0]
+                    < (gate.target_qubits[0] + degree)
+                )
+
+
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_approximate_qft_error_bounds(backend, nqubits):
+    exact = QFT(nqubits).unitary(backend)
+    for degree in range(1, nqubits + 1):
+        approximate = QFT(nqubits, approximation_degree=degree).unitary(backend)
+
+        bound = 2 * math.pi * nqubits * 2.0 ** (-degree)
+
+        # unitarity
+        backend.assert_allclose(
+            approximate @ backend.dagger(approximate),
+            backend.identity(2**nqubits),
+            atol=1e-8,
+        )
+        # operator norm
+        backend.assert_allclose(
+            backend.matrix_norm(approximate - exact, ord=2) <= bound + 1e-8, True
+        )
+        # elementwise phases
+        mask = backend.abs(exact) > 1e-12
+        phases = backend.angle(approximate[mask] / exact[mask])
+        backend.assert_allclose(backend.max(np.abs(phases)) <= bound + 1e-8, True)
+        backend.assert_allclose(backend.abs(approximate), backend.abs(exact), atol=1e-8)
+
+
+@pytest.mark.parametrize("degree", [0, -1])
+def test_approximate_qft_value_error():
+    for degree in [0, -1]:
+        with pytest.raises(ValueError):
+            QFT(4, approximation_degree=degree)
+
+    for degree in [2.5, True, "2"]:
+        with pytest.raises(TypeError):
+            QFT(4, approximation_degree=degree)
+
+
+@pytest.mark.parametrize("degree", [1, 2, 3, 5, None])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_approximate_distributed_qft(nqubits, degree):
+    """Gate lists of the distributed QFT, which do not need GPUs, are filtered."""
+    circuit = _DistributedQFT(nqubits, approximation_degree=degree)
+    degree = nqubits if degree is None else degree
+    ncu1 = len([gate for gate in circuit.queue if isinstance(gate, gates.CU1)])
+    assert ncu1 == sum(min(degree - 1, nqubits - 1 - i) for i in range(nqubits))
+    exact = _DistributedQFT(nqubits)
+    assert exact.ngates >= circuit.ngates
+    if degree >= nqubits:
+        assert [g.name for g in circuit.queue] == [g.name for g in exact.queue]
