@@ -722,7 +722,7 @@ def test_qasm_file(backend):
 )
 def test_from_qasm_gate_command_parameter_expressions(backend, body, target):
     """Expressions of the parameters of a defined gate are evaluated at the call."""
-    expected = backend.cast(expected, dtype=backend.float64)
+    target = backend.cast(target, dtype=backend.float64)
     qasm = (
         'OPENQASM 2.0;\ninclude "qelib1.inc";\n'
         + f"gate g(a) x {{ {body} }}\nqreg q[1];\ng(0.4) q[0];\n"
