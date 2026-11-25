@@ -5,6 +5,129 @@ from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
 
+def OptimisticQFT(
+    nqubits: int, block_size: int, with_swaps: bool = True, **kwargs
+) -> Circuit:
+    """Creates a circuit that implements the optimistic Quantum Fourier Transform.
+
+    Implements Algorithm 3 of Ref. [1], an approximation of the :func:`qibo.models.QFT` with
+    logarithmic depth that uses no auxiliary qubits, measurements, or long-range gates, and is
+    built only from exact QFTs on blocks of qubits. The qubits are split into
+    :math:`B = \\lceil n / m \\rceil` consecutive blocks of ``block_size`` :math:`= m` qubits,
+    the last one being shorter if :math:`m` does not divide :math:`n`. The circuit applies
+
+    1. a QFT on each window that consists of blocks :math:`(2 j, \\, 2 j + 1)`,
+       or of the last block alone if there is no :math:`2 j + 1`;
+    2. an inverse QFT on every block;
+    3. a QFT on each window that consists of blocks :math:`(2 j + 1, \\, 2 j + 2)`,
+       or of the first or last block alone if it has no partner.
+
+    Every window is a layer of disjoint operations, so each step has depth
+    :math:`O(m)` if the operations are scheduled in parallel, which gives a total depth
+    :math:`O(m)` with :math:`O(n \\, m)` gates, and no auxiliary qubits. This is the same depth
+    reported by :meth:`qibo.models.circuit.Circuit.depth`. The QFT of a lone block
+    is adjacent to the inverse QFT of the same block, and the pair cancels exactly, so neither
+    is added. Each block QFT is implemented with :func:`qibo.models.QFT`.
+
+    This is an *optimistic* approximation: it is accurate on most inputs, but it can have a
+    large error on a small subspace, namely the states in which some even-indexed block
+    (the indices of the blocks start at zero) starts with a long string of :math:`0` or
+    :math:`1`. Its quality is measured by the normalized squared Frobenius
+    error :math:`\\| \\tilde{U} - U \\|_{F}^{2} / 2^{n}`. Theorem 3 of Ref. [1] establishes that
+    this error is at most :math:`\\epsilon` for a block size :math:`m = O(\\log(n / \\epsilon))`;
+    the constant is not specified, and should be chosen by the user for the desired average error.
+    This differs from the ``approximation_degree`` of :func:`qibo.models.QFT`, which bounds the
+    worst-case (operator norm) error and can be used as a drop-in uniform approximation. The
+    optimistic QFT should only be used if the application does not concentrate on the bad
+    subspace. Ref. [1] also gives reductions to remove this limitation, which are not
+    implemented here.
+
+    Example:
+        .. testcode::
+
+            from qibo.models import OptimisticQFT
+
+            circuit = OptimisticQFT(nqubits=8, block_size=4)
+
+    Args:
+        nqubits (int): number of qubits in the circuit.
+        block_size (int): number of qubits of each block, :math:`1 \\leq m \\leq n`.
+        with_swaps (bool, optional): If ``True``, the order of the qubits of the output is
+            reversed with :class:`qibo.gates.SWAP` gates at the end of the circuit, so that it
+            is the same as in the input. Otherwise, the qubits of the final state are in the
+            reverse order, as in :func:`qibo.models.QFT`. Defaults to ``True``.
+        kwargs (dict, optional): Additional arguments used to initialize
+            :class:`qibo.models.Circuit`, *e.g.* ``density_matrix``. Distributed circuits
+            (``accelerators``) are not supported.
+
+    Returns:
+        :class:`qibo.models.Circuit`: implementation of the optimistic Quantum Fourier Transform.
+
+    References:
+        1. K. Kahanamoku-Meyer, J. Blue, T. Bergamaschi, C. Gidney, and I. L. Chuang,
+        *A log-depth in-place quantum Fourier transform that rarely needs ancillas*,
+        `arXiv:2505.00701 <https://arxiv.org/abs/2505.00701>`_.
+    """
+    if "accelerators" in kwargs:
+        raise_error(
+            NotImplementedError, "Distributed optimistic QFT is not implemented."
+        )
+
+    if not isinstance(with_swaps, bool):
+        raise_error(
+            TypeError,
+            f"``with_swaps`` must be a boolean, but it is {type(with_swaps)}.",
+        )
+
+    if isinstance(block_size, bool) or not isinstance(block_size, int):
+        raise_error(
+            TypeError,
+            f"``block_size`` must be an integer, but it is {type(block_size)}.",
+        )
+
+    if block_size < 1 or block_size > nqubits:
+        raise_error(
+            ValueError,
+            f"``block_size`` must be between 1 and ``nqubits`` = {nqubits}, "
+            + f"but it is {block_size}.",
+        )
+
+    if block_size == nqubits:
+        return QFT(nqubits, with_swaps, **kwargs)
+
+    blocks = [
+        list(range(start, min(start + block_size, nqubits)))
+        for start in range(0, nqubits, block_size)
+    ]
+    # Lone blocks are not windowed: their QFT cancels with the inverse QFT of the same block.
+    # These are the last block of the first layer if there is no partner, and the first and
+    # last blocks of the last layer. Thus, the inverse QFT is not applied on the first and last
+    # blocks either.
+    first = [
+        [qubit for block in blocks[j : j + 2] for qubit in block]
+        for j in range(0, len(blocks) - 1, 2)
+    ]
+    last = [
+        [qubit for block in blocks[j : j + 2] for qubit in block]
+        for j in range(1, len(blocks) - 1, 2)
+    ]
+
+    circuit = Circuit(nqubits, **kwargs)
+    for window in first:
+        circuit.add(QFT(len(window), with_swaps=False).on_qubits(*window))
+    for block in blocks[1:-1]:
+        inverse = QFT(len(block), with_swaps=False).invert()
+        circuit.add(inverse.on_qubits(*block))
+    for window in last:
+        circuit.add(QFT(len(window), with_swaps=False).on_qubits(*window))
+
+    if with_swaps:
+        for qubit in range(nqubits // 2):
+            circuit.add(gates.SWAP(qubit, nqubits - qubit - 1))
+
+    return circuit
+
+
 def QFT(
     nqubits: int,
     with_swaps: bool = True,

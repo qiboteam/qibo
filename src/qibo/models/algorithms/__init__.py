@@ -29,7 +29,7 @@ from qibo.models.algorithms.qaa import (
 )
 from qibo.models.algorithms.qae import QAE
 from qibo.models.algorithms.qdrift import qdrift
-from qibo.models.algorithms.qft import QFT
+from qibo.models.algorithms.qft import QFT, OptimisticQFT
 from qibo.models.algorithms.qmc import QMC
 from qibo.models.algorithms.qpe import (
     IQPE,
@@ -73,6 +73,7 @@ __all__ = [
     "Gidney",
     "Grover",
     "IterativeAmplitudeEstimationResult",
+    "OptimisticQFT",
     "QSearch",
     "RandomizedTrotter",
     "Shor",
