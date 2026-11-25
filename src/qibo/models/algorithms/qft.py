@@ -24,14 +24,15 @@ def OptimisticQFT(
 
     Every window is a layer of disjoint operations, so each step has depth
     :math:`O(m)` if the operations are scheduled in parallel, which gives a total depth
-    :math:`O(m)` with :math:`O(n \\, m)` gates, and no auxiliary qubits. Note that this differs
-    from depth is counted in :meth:`qibo.models.circuit.Circuit.depth`. The QFT of a lone block
+    :math:`O(m)` with :math:`O(n \\, m)` gates, and no auxiliary qubits. This is the same depth
+    reported by :meth:`qibo.models.circuit.Circuit.depth`. The QFT of a lone block
     is adjacent to the inverse QFT of the same block, and the pair cancels exactly, so neither
     is added. Each block QFT is implemented with :func:`qibo.models.QFT`.
 
     This is an *optimistic* approximation: it is accurate on most inputs, but it can have a
-    large error on a small subspace, namely the states in which some block starts with a long
-    string of :math:`0` or :math:`1`. Its quality is measured by the normalized squared Frobenius
+    large error on a small subspace, namely the states in which some even-indexed block
+    (the indices of the blocks start at zero) starts with a long string of :math:`0` or
+    :math:`1`. Its quality is measured by the normalized squared Frobenius
     error :math:`\\| \\tilde{U} - U \\|_{F}^{2} / 2^{n}`. Theorem 3 of Ref. [1] establishes that
     this error is at most :math:`\\epsilon` for a block size :math:`m = O(\\log(n / \\epsilon))`;
     the constant is not specified, and should be chosen by the user for the desired average error.
