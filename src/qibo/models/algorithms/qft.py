@@ -109,21 +109,7 @@ def QFT(
         transform and decoherence*, `Phys. Rev. A 54, 139 (1996)
         <https://doi.org/10.1103/PhysRevA.54.139>`_.
     """
-    if approximation_degree is None:
-        approximation_degree = nqubits
-    elif isinstance(approximation_degree, bool) or not isinstance(
-        approximation_degree, int
-    ):
-        raise_error(
-            TypeError,
-            "``approximation_degree`` must be an integer or ``None``, "
-            + f"but it is {type(approximation_degree)}.",
-        )
-    elif approximation_degree < 1:
-        raise_error(
-            ValueError,
-            f"``approximation_degree`` must be at least 1, but it is {approximation_degree}.",
-        )
+    approximation_degree = _validate_approximation_degree(nqubits, approximation_degree)
 
     if accelerators is not None:
         if not with_swaps:
@@ -131,7 +117,7 @@ def QFT(
                 NotImplementedError,
                 "Distributed QFT is only implemented with SWAPs.",
             )
-        return _DistributedQFT(nqubits, accelerators, approximation_degree, **kwargs)
+        return _DistributedQFT(nqubits, approximation_degree, accelerators, **kwargs)
 
     circuit = Circuit(nqubits, **kwargs)
     for i1 in range(nqubits):
@@ -149,14 +135,15 @@ def QFT(
 
 def _DistributedQFT(
     nqubits,
-    accelerators: dict | None = None,
     approximation_degree: int | None = None,
+    accelerators: dict | None = None,
     **kwargs,
 ):
     """QFT with the order of gates optimized for reduced multi-device communication."""
-    if approximation_degree is None:
-        approximation_degree = nqubits
+    approximation_degree = _validate_approximation_degree(nqubits, approximation_degree)
+
     circuit = Circuit(nqubits, accelerators, **kwargs)
+
     icrit = nqubits // 2 + nqubits % 2
     if accelerators is not None:
         circuit.global_qubits = range(circuit.nlocal, nqubits)
@@ -180,3 +167,28 @@ def _DistributedQFT(
             circuit.add(gates.CU1(i2, i1eff, theta))
 
     return circuit
+
+
+def _validate_approximation_degree(
+    nqubits: int, approximation_degree: int | None
+) -> int:
+    if approximation_degree is None:
+        return nqubits
+
+    if isinstance(approximation_degree, bool) or not isinstance(
+        approximation_degree, int
+    ):
+        raise_error(
+            TypeError,
+            "``approximation_degree`` must be an integer or ``None``, "
+            + f"but it is {type(approximation_degree)}.",
+        )
+
+    if approximation_degree < 1:
+        raise_error(
+            ValueError,
+            "``approximation_degree`` must be at least 1, "
+            + f"but it is {approximation_degree}.",
+        )
+
+    return approximation_degree
