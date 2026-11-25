@@ -2,7 +2,7 @@
 
 import re
 
-import numpy as np  # noqa: F401  # used in eval() string templates
+import numpy as np  # used in eval() string templates
 import openqasm3
 
 import qibo
@@ -123,7 +123,7 @@ class CustomQASMGate:
                 )
                 # names left over belong to an enclosing gate definition
                 try:
-                    arg = eval(arg, {"np": np, "pi": np.pi})  # noqa: S307
+                    arg = eval(arg, {"np": np, "pi": np.pi})
                 except NameError:
                     pass
             new_args.append(arg)
