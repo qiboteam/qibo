@@ -112,8 +112,9 @@ class CustomQASMGate:
         for arg in gate.init_kwargs.values():
             # expressions of the gate parameters, e.g. ``a/2``, are kept as strings
             if isinstance(arg, str):
+                name = r"(?<![\w.])[A-Za-z_]\w*"
                 arg = re.sub(
-                    r"(?<![\w.])[A-Za-z_]\w*",
+                    name,
                     lambda m: (
                         f"({args_map[m.group()]})"
                         if m.group() in args_map
@@ -121,11 +122,9 @@ class CustomQASMGate:
                     ),
                     arg,
                 )
-                # names left over belong to an enclosing gate definition
-                try:
+                # names left over (other than ``pi``) belong to an enclosing gate definition
+                if all(token == "pi" for token in re.findall(name, arg)):
                     arg = eval(arg, {"pi": math.pi})
-                except NameError:
-                    pass
             new_args.append(arg)
         return new_qubits, new_args
 
@@ -294,7 +293,7 @@ class QASMParser:
                     qubits, init_args
                 )
             # the gate exists in self.defined_gates but invalid construction
-            except ValueError:
+            except (ArithmeticError, ValueError):
                 raise_error(
                     ValueError, f"Invalid gate declaration at span: {gate.span}"
                 )

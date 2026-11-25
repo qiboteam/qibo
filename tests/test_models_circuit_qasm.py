@@ -745,6 +745,16 @@ def test_from_qasm_gate_command_nested_parameter_expressions(backend):
     )
 
 
+def test_from_qasm_gate_command_invalid_parameter_expression():
+    """Errors evaluating the parameters of a defined gate are reported as ``ValueError``."""
+    qasm = (
+        'OPENQASM 2.0;\ninclude "qelib1.inc";\n'
+        + "gate g(a) x { rz(1/a) x; }\nqreg q[1];\ng(0) q[0];\n"
+    )
+    with pytest.raises(ValueError, match="Invalid gate declaration"):
+        Circuit.from_qasm(qasm)
+
+
 def test_from_qasm_controlled_gates():
     target = """OPENQASM 2.0;
 qreg q[3];
