@@ -521,7 +521,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         for terms in self.diagonal_terms:
             tmp_qubits, tmp_coeffs, tmp_obs = [], [], []
             for term in terms:
-                tmp_qubits.append(term.target_qubits)
+                tmp_qubits.append(tuple(factor.target_qubit for factor in term.factors))
                 tmp_coeffs.append(term.coefficient.real)
                 tmp_obs.append("".join(factor.name[0] for factor in term.factors))
             terms_qubits.append(tmp_qubits)
