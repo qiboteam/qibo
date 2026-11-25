@@ -272,7 +272,7 @@ class QASMParser:
         for arg in gate.arguments:
             arg = self._unroll_expression(arg)
             try:
-                arg = eval(arg.replace("pi", "np.pi"))
+                arg = eval(arg, {"pi": math.pi})
             except Exception:  # noqa: S110
                 pass
             init_args.append(arg)
