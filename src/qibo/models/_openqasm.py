@@ -159,7 +159,7 @@ class QASMParser:
         Returns:
             :class:`qibo.models.Circuit`: circuit constructed from QASM string.
         """
-        parsed = self.parser.parse(qasm_string)
+        parsed = self.parser.parse(qasm_string, ignore_version=True)
         gates = []
         self.defined_gates, self.q_registers, self.c_registers = {}, {}, {}
 
