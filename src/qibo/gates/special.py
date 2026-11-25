@@ -149,8 +149,9 @@ class FusedGate(SpecialGate):
     def from_gate(cls, gate):
         fgate = cls(*gate.qubits)
         fgate.append(gate)
-        if isinstance(gate, (M, SpecialGate)):
-            # special gates do not participate in fusion
+        if isinstance(gate, (M, SpecialGate)) and not isinstance(gate, cls):
+            # special gates do not participate in fusion, but a ``FusedGate``
+            # is only a group of ordinary gates, so it can be fused further
             fgate.marked = True
         return fgate
 

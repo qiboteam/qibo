@@ -91,7 +91,9 @@ class _Queue(list):
         queue = self.__class__(self.nqubits)
         for gate in self:
             fgate = gates.FusedGate.from_gate(gate)
-            if isinstance(gate, gates.SpecialGate):
+            if isinstance(gate, gates.SpecialGate) and not isinstance(
+                gate, gates.FusedGate
+            ):
                 fgate.qubit_set = set(range(self.nqubits))
                 fgate.init_args = sorted(fgate.qubit_set)
                 fgate.target_qubits = tuple(fgate.init_args)
