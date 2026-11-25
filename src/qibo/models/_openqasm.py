@@ -1,5 +1,7 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
+import re
+
 import numpy as np  # noqa: F401  # used in eval() string templates
 import openqasm3
 
@@ -106,7 +108,25 @@ class CustomQASMGate:
             Tuple(List[int], List[int]): The compiled qubits and arguments.
         """
         new_qubits = [qubit_map[q] for q in gate.qubits]
-        new_args = [args_map.get(arg, arg) for arg in gate.init_kwargs.values()]
+        new_args = []
+        for arg in gate.init_kwargs.values():
+            # expressions of the gate parameters, e.g. ``a/2``, are kept as strings
+            if isinstance(arg, str):
+                arg = re.sub(
+                    r"(?<![\w.])[A-Za-z_]\w*",
+                    lambda m: (
+                        f"({args_map[m.group()]})"
+                        if m.group() in args_map
+                        else m.group()
+                    ),
+                    arg,
+                )
+                # names left over belong to an enclosing gate definition
+                try:
+                    arg = eval(arg, {"np": np, "pi": np.pi})  # noqa: S307
+                except NameError:
+                    pass
+            new_args.append(arg)
         return new_qubits, new_args
 
 
