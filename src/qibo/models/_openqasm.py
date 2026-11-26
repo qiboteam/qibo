@@ -1,6 +1,8 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
-import numpy as np  # noqa: F401  # used in eval() string templates
+import math
+import re
+
 import openqasm3
 
 import qibo
@@ -106,7 +108,24 @@ class CustomQASMGate:
             Tuple(List[int], List[int]): The compiled qubits and arguments.
         """
         new_qubits = [qubit_map[q] for q in gate.qubits]
-        new_args = [args_map.get(arg, arg) for arg in gate.init_kwargs.values()]
+        new_args = []
+        for arg in gate.init_kwargs.values():
+            # expressions of the gate parameters, e.g. ``a/2``, are kept as strings
+            if isinstance(arg, str):
+                name = r"(?<![\w.])[A-Za-z_]\w*"
+                arg = re.sub(
+                    name,
+                    lambda m: (
+                        f"({args_map[m.group()]})"
+                        if m.group() in args_map
+                        else m.group()
+                    ),
+                    arg,
+                )
+                # names left over (other than ``pi``) belong to an enclosing gate definition
+                if all(token == "pi" for token in re.findall(name, arg)):
+                    arg = eval(arg, {"pi": math.pi})
+            new_args.append(arg)
         return new_qubits, new_args
 
 
@@ -159,7 +178,7 @@ class QASMParser:
         Returns:
             :class:`qibo.models.Circuit`: circuit constructed from QASM string.
         """
-        parsed = self.parser.parse(qasm_string)
+        parsed = self.parser.parse(qasm_string, ignore_version=True)
         gates = []
         self.defined_gates, self.q_registers, self.c_registers = {}, {}, {}
 
@@ -252,7 +271,7 @@ class QASMParser:
         for arg in gate.arguments:
             arg = self._unroll_expression(arg)
             try:
-                arg = eval(arg.replace("pi", "np.pi"))
+                arg = eval(arg, {"pi": math.pi})
             except Exception:  # noqa: S110
                 pass
             init_args.append(arg)
@@ -274,7 +293,7 @@ class QASMParser:
                     qubits, init_args
                 )
             # the gate exists in self.defined_gates but invalid construction
-            except ValueError:
+            except (ArithmeticError, ValueError):
                 raise_error(
                     ValueError, f"Invalid gate declaration at span: {gate.span}"
                 )

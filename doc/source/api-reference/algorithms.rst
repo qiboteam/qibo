@@ -18,6 +18,12 @@ Quantum Fourier Transform (QFT)
     :member-order: bysource
 
 
+Optimistic Quantum Fourier Transform
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: qibo.models.OptimisticQFT
+
+
 Quantum Phase Estimation (QPE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

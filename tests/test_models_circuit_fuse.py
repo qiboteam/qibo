@@ -261,3 +261,18 @@ def test_fused_gate_draw():
     circuit = circuit.fuse()
     assert str(circuit) == ref
     assert circuit.diagram(parallel=True) == ref_parallel
+
+
+@pytest.mark.parametrize("max_qubits", [1, 2])
+def test_fusion_with_qasm_defined_gate(backend, max_qubits):
+    """Gates defined in QASM are stored as ``FusedGate`` and must survive fusion."""
+    qasm = (
+        'OPENQASM 2.0;\ninclude "qelib1.inc";\ngate g a,b { h b; cx a,b; }\n'
+        + "qreg q[2];\nx q[0];\ng q[0],q[1];\n"
+    )
+    circuit = Circuit.from_qasm(qasm)
+    target = backend.execute_circuit(circuit).state()
+
+    fused_circuit = circuit.fuse(max_qubits=max_qubits)
+    state = backend.execute_circuit(fused_circuit).state()
+    backend.assert_allclose(state, target, atol=1e-8)

@@ -709,6 +709,52 @@ def test_qasm_file(backend):
     os.remove("tests/circ.qasm")
 
 
+@pytest.mark.parametrize(
+    "body,target",
+    [
+        ("u3(a,0,a/2) x;", (0.4, 0, 0.2)),
+        ("rz(a*2) x;", (0.8,)),
+        ("rz(-a) x;", (-0.4,)),
+        ("rz(a+0.1) x;", (0.5,)),
+        ("rz(2*a) x;", (0.8,)),
+        ("rz(a*pi) x;", (0.4 * np.pi,)),
+    ],
+)
+def test_from_qasm_gate_command_parameter_expressions(backend, body, target):
+    """Expressions of the parameters of a defined gate are evaluated at the call."""
+    target = backend.cast(target, dtype=backend.float64)
+    qasm = (
+        'OPENQASM 2.0;\ninclude "qelib1.inc";\n'
+        + f"gate g(a) x {{ {body} }}\nqreg q[1];\ng(0.4) q[0];\n"
+    )
+    circuit = Circuit.from_qasm(qasm)
+    param = backend.cast(circuit.queue[0].gates[0].parameters, dtype=backend.float64)
+    backend.assert_allclose(param, target)
+
+
+def test_from_qasm_gate_command_nested_parameter_expressions(backend):
+    """Expressions are also evaluated when a defined gate calls another defined gate."""
+    qasm = (
+        'OPENQASM 2.0;\ninclude "qelib1.inc";\ngate bob(t) x { rz(t*2) x; }\n'
+        + "gate alice(a) x { bob(a/2) x; rz(-a) x; }\nqreg q[1];\nalice(0.4) q[0];\n"
+    )
+    circuit = Circuit.from_qasm(qasm)
+    parameters = [gate.parameters[0] for gate in circuit.queue[0].gates]
+    backend.assert_allclose(
+        backend.cast(parameters, dtype=backend.float64), [0.4, -0.4]
+    )
+
+
+def test_from_qasm_gate_command_invalid_parameter_expression():
+    """Errors evaluating the parameters of a defined gate are reported as ``ValueError``."""
+    qasm = (
+        'OPENQASM 2.0;\ninclude "qelib1.inc";\n'
+        + "gate g(a) x { rz(1/a) x; }\nqreg q[1];\ng(0) q[0];\n"
+    )
+    with pytest.raises(ValueError, match="Invalid gate declaration"):
+        Circuit.from_qasm(qasm)
+
+
 def test_from_qasm_controlled_gates():
     target = """OPENQASM 2.0;
 qreg q[3];

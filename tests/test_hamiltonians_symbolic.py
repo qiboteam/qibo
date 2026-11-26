@@ -317,6 +317,21 @@ def test_hamiltonian_expectation_from_samples(backend):
         backend.assert_allclose(from_samples, from_state, atol=20 / np.sqrt(nshots))
 
 
+def test_hamiltonian_expectation_from_samples_factor_order(backend):
+    """Sampled expectation must not depend on the order of the factors in a term."""
+    circuit = Circuit(3)
+    circuit.add(gates.X(0))
+    circuit.add(gates.H(2))
+    nshots = 10**3
+    for form in (
+        X(2, backend=backend) * Z(0, backend=backend),
+        Z(0, backend=backend) * X(2, backend=backend),
+    ):
+        hamiltonian = SymbolicHamiltonian(form, nqubits=3, backend=backend)
+        from_samples = hamiltonian.expectation(circuit, nshots=nshots)
+        backend.assert_allclose(from_samples, -1.0, atol=1e-8)
+
+
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix):
     from qibo.symbols import Symbol, X
