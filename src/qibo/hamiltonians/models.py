@@ -290,6 +290,87 @@ def DisorderedHeisenberg(
     return heisenberg + (fields.dense if dense else fields)
 
 
+def DisorderedXY(
+    nqubits: int | nx.Graph,
+    disorder_strength: float,
+    gamma: float = 0.0,
+    distribution: str = "uniform",
+    seed: int | np.random.Generator | None = None,
+    dense: bool = True,
+    closed_boundary: bool = True,
+    backend: Backend | None = None,
+) -> Hamiltonian | SymbolicHamiltonian:
+    """XY model with random on-site fields along the :math:`Z`-axis.
+
+    .. math::
+        H = -\\sum_{\\langle j, \\, k \\rangle} \\left(
+            \\frac{1 + \\gamma}{2} \\, X_{j} \\, X_{k}
+            + \\frac{1 - \\gamma}{2} \\, Y_{j} \\, Y_{k} \\right)
+            - \\sum_{j} h_{j} \\, Z_{j} \\, ,
+
+    where :math:`\\langle j, \\, k \\rangle` runs over all pairs of coupled qubits,
+    :math:`\\gamma` is the anisotropy of the exchange interaction in the :math:`XY` plane, and
+    :math:`h_{j} = W \\, \\xi_{j}` are independent random fields with zero mean, with :math:`W`
+    the ``disorder strength``. For :math:`\\gamma = 0`, it is the random-field :math:`XX` chain,
+    which maps onto free fermions in a random potential, and therefore displays Anderson
+    localization for any nonzero disorder.
+
+    Example:
+        .. testcode::
+
+            from qibo.hamiltonians import DisorderedXY
+
+            # random-field XX chain with 4 qubits
+            hamiltonian = DisorderedXY(4, disorder_strength=2.0, seed=42)
+
+    Args:
+        nqubits (int or :class:`networkx.Graph`): if an ``int``, number of qubits in a
+            one-dimensional chain. Must be larger than one. If a :class:`networkx.Graph`,
+            connectivity graph of the qubits, with one node per qubit and, optionally,
+            a ``"weight"`` attribute per edge that scales the exchange interaction.
+        disorder_strength (float): disorder strength :math:`W`.
+        gamma (float, optional): anisotropy :math:`\\gamma`. Defaults to :math:`0.0`.
+        distribution (str, optional): distribution of the random variables :math:`\\xi_{j}`.
+            If ``"uniform"``, they are uniformly distributed in the interval :math:`[-1, 1)`, so
+            that :math:`h_{j} \\in [-W, W)`. If ``"gaussian"``, they follow a standard normal
+            distribution. Defaults to ``"uniform"``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Defaults to ``None``.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        closed_boundary (bool, optional): If ``True``, returns the Hamiltonian with periodic
+            boundary conditions. If ``False``, returns the Hamiltonian with open boundaries.
+            Ignored if ``nqubits`` is a :class:`networkx.Graph`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        Disordered XY Hamiltonian.
+
+    References:
+        1. P. W. Anderson, *Absence of diffusion in certain random lattices*,
+        `Phys. Rev. 109, 1492 (1958) <https://doi.org/10.1103/PhysRev.109.1492>`_.
+        2. E. Lieb, T. Schultz, and D. Mattis, *Two soluble models of an antiferromagnetic
+        chain*, Ann. Phys. 16, 407 (1961).
+    """
+    return DisorderedHeisenberg(
+        nqubits,
+        [(1 + gamma) / 2, (1 - gamma) / 2, 0],
+        disorder_strength,
+        distribution=distribution,
+        seed=seed,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+
+
 def DMHeisenberg(
     nqubits: int | nx.Graph,
     coupling_constants: float | list | tuple,
