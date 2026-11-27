@@ -8,7 +8,8 @@ of the chip, which is read from the calibration data that `qibocal` exports. It 
 
 1. build the circuit with `qibo.models.encodings.hamming_weight_encoder`,
 2. get the calibration data from `qibocal` and build a `HardwareModel`,
-3. transpile with the noise-aware pipeline of `qibo.transpiler`,
+3. transpile with the noise-aware pipeline of `qibo.transpiler`, with and without the hardware
+   model and with and without `sampling_only`, and compare the results,
 4. return the final, transpiled circuit.
 
 The folder has two files: `main.py`, which runs all the steps, and `calibration.json`, which is
@@ -17,30 +18,36 @@ the input of the second step. Run the script from this folder, *i.e.* `python ma
 #### Step 1: the Hamming-weight encoder
 
 The encoder of weight `k = 1` on `n = 3` qubits loads `3 choose 1 = 3` amplitudes in the
-bitstrings `100`, `010` and `001`. Without `data`, the circuit is returned with all the phases
-set to `0.0`, so we pass three amplitudes.
+bitstrings `100`, `010` and `001`. The real and the imaginary parts of the three amplitudes are
+random numbers in `[-1, 1)`, generated with `backend.random_sample` and a fixed seed, so the
+example is reproducible. The encoder infers the type of the data from its data type. The data is
+complex, so the circuit has `RZ` gates, and a controlled-`RZ` gate, that load the phases. With
+real data, such as the real parts alone, there are no `RZ` gates. The circuit ends with a
+measurement of the three qubits.
 
 ```python
+from qibo import gates
 from qibo.backends import get_backend
 from qibo.models.encodings import hamming_weight_encoder
 
 backend = get_backend()
 
 nqubits, weight = 3, 1
-# one amplitude per bitstring of Hamming weight 1, which are 3 choose 1 = 3
-data = backend.cast([0.6, 0.3, 0.74])
+samples = 2 * backend.random_sample((2, 3), seed=10, dtype=backend.float64) - 1
+data = backend.cast(samples[0] + 1j * samples[1], dtype=backend.complex128)
 circuit = hamming_weight_encoder(nqubits, weight, data=data, backend=backend)
+circuit.add(gates.M(*range(nqubits)))
 circuit.draw()
 ```
 
 ```
-0: ───RBS─RZ─RBS─RZ─RZ─
-1: ───|──────RBS─RZ─o──
-2: ─X─RBS─RZ───────────
+0: ───RBS─RZ─RBS─RZ─RZ─M─
+1: ───|──────RBS─RZ─o──M─
+2: ─X─RBS─RZ───────────M─
 ```
 
-The circuit has gates, such as `RBS`, that are not native, and it acts on qubits that are not
-connected in a star, so it has to be transpiled.
+The circuit has gates, such as `RBS`, that are not native, and it is not written for the
+connectivity of the chip, so it has to be transpiled.
 
 #### Step 2: calibration data from `qibocal`
 
@@ -49,62 +56,9 @@ benchmarking fidelities, the readout fidelities and the fidelities of the `CZ` g
 coupling. The chip of this tutorial has qubits `0` to `4`, with qubit `2` at the center of the
 star, so the couplings are `0-2`, `1-2`, `2-3` and `2-4`.
 
-On a chip, the file is produced by a runcard like the following one. The platform name is a
-placeholder, and the depths and the delays have to be adapted to the chip.
-
-```yaml
-platform: my_star_chip
-targets: [0, 1, 2, 3, 4]
-
-actions:
-  - id: readout characterization
-    operation: readout_characterization
-    parameters: {nshots: 1000}
-
-  - id: t1
-    operation: t1
-    parameters:
-      delay_before_readout_start: 50
-      delay_before_readout_end: 20000
-      delay_before_readout_step: 500
-
-  - id: t2
-    operation: t2
-    parameters:
-      delay_between_pulses_start: 50
-      delay_between_pulses_end: 20000
-      delay_between_pulses_step: 500
-
-  - id: standard rb
-    operation: standard_rb
-    parameters: {depths: [1, 5, 10, 20, 50], niter: 5, nshots: 100}
-
-  # one pair of actions for each of the couplings: 0-2, 1-2, 2-3 and 2-4
-  - id: standard_rb_2q 0-2
-    operation: standard_rb_2q
-    targets: [[0, 2]]
-    parameters: {depths: [1, 2, 3, 5, 8], niter: 5, nshots: 100}
-
-  - id: standard_rb_2q_inter 0-2
-    operation: standard_rb_2q_inter
-    targets: [[0, 2]]
-    parameters: {depths: [1, 2, 3, 5, 8], niter: 5, nshots: 100}
-```
-
-```
-qq run runcard.yml -o calibration_run
-```
-
-A few points about the use of `qibocal`:
-
-- The targets of an action cannot share a qubit, so each coupling needs its own action. All the
-  couplings of a star share the center qubit.
-- `standard_rb_2q` has to run before `standard_rb_2q_inter` on each coupling, because the
-  interleaved benchmark is the one that writes the fidelity of the `CZ` gate, `cz_fidelity`.
-- The platform folder must already have a `calibration.json` with the initial parameters of the
-  qubits, such as their frequencies.
-- If the output folder already has the original platform, the updated calibration is written
-  to `calibration_run/new_platform/calibration.json`.
+The file is produced by running the calibration protocols of `qibocal` on the chip. For
+how to write the runcards and run the protocols, see the
+[`qibocal` documentation](https://qibo.science/qibocal/stable/).
 
 > **Note:** the `calibration.json` of this folder follows the format of `qibocal`, and it was
 > validated with its `Calibration` model, but its values are **illustrative**, they were not
@@ -112,9 +66,10 @@ A few points about the use of `qibocal`:
 > instrument returns random data, so it cannot be used to get meaningful values.
 
 The file is loaded with `json` and converted to a `qibo.transpiler.hardware.HardwareModel`. The
-native gates are `CZ` and `U3`, and the durations, in ns, are used to split the error of each
-gate into the thermal relaxation of its qubits, from `t1` and `t2`, and a depolarizing error.
-The connectivity is the set of couplings of the file, so it is the star around qubit `2`.
+native gates are `CZ`, `U3` and the measurement `M`, and the durations, in ns, are used to split
+the error of each gate into the thermal relaxation of its qubits, from `t1` and `t2`, and a
+depolarizing error. The connectivity is the set of couplings of the file, so it is the star
+around qubit `2`.
 
 ```python
 import json
@@ -123,7 +78,7 @@ from pathlib import Path
 from qibo.transpiler import HardwareModel, NativeGates
 
 calibration = json.loads(Path("calibration.json").read_text())
-native_gates = NativeGates.CZ | NativeGates.U3
+native_gates = NativeGates.CZ | NativeGates.U3 | NativeGates.M
 hardware = HardwareModel.from_calibration(
     calibration, durations={"1q": 40.0, "2q": 60.0}, native_gates=native_gates
 )
@@ -152,109 +107,188 @@ qubits and of the couplings of the chip.
 | 2-3      | 0.009      |
 | 2-4      | 0.028      |
 
-#### Step 3: noise-aware transpilation
+#### Step 3: transpilation, with and without noise awareness
 
 `qibo.transpiler.transpile` builds the pipeline of the chosen `optimization_level` and applies
-it to the circuit. At level `2`, if `hardware` is given, the pipeline uses its errors to:
+it to the circuit. We use level `2` and compare four transpilations:
 
-- search the initial layout, where a layout without SWAP gates is not kept just for being
-  free of SWAP gates, so that the one with the least noise is chosen,
-- route with the `"noise"` heuristic of the `"sabre"` router, which adds the SWAP gates on the
-  least noisy couplings,
-- choose other physical qubits for the routed circuit with
-  `qibo.transpiler.placer.NoiseAwarePostLayout`,
-- optimize the single-qubit gates, and, if `approximation_degree=None`, remove the gates whose
-  infidelity is lower than their error.
+- without the hardware model (noise-unaware) and with it (noise-aware), through the argument
+  `hardware`. At levels `1` and `2`, `hardware` makes the pipeline use its errors to search
+  the initial layout, where a layout without SWAP gates is not kept just for being free of
+  SWAP gates, so that the one with the least noise is chosen, to route with the `"noise"`
+  heuristic of the `"sabre"` router, which adds the SWAP gates on the least noisy couplings,
+  to choose other physical qubits for the routed circuit with
+  `qibo.transpiler.placer.NoiseAwarePostLayout`, and to optimize the single-qubit gates. At
+  level `0` it has no effect.
+- without and with `sampling_only=True`, which also enables the rewrites that keep the
+  distribution of the measured qubits but can change the state before the measurements. One of
+  them removes the diagonal gates, such as `RZ`, that are placed right before the measurements.
+  It only has an effect on circuits with measurements.
+
+Each result is checked with `assert_transpiling`, which raises an error if the transpiled
+circuit does not respect the connectivity and the native gates, or if it is not equivalent to
+the original circuit. With `sampling_only` it is not equivalent, so that check is skipped, and
+the probabilities of the measured qubits of the transpiled circuit are compared with the ones
+of the original circuit instead. The estimated fidelity is the product of the fidelities of
+the `U3` and `CZ` gates, which are `1 - error` for the qubit or the coupling of each gate. It
+does not include the readout error nor the decoherence of the idle qubits, and each `U3` gate
+is charged one single-qubit error. It only depends on the number of gates and on the qubits
+where they act. Each wire of a transpiled circuit is the hardware qubit of
+`transpiled_circuit.wire_names`.
 
 ```python
 from qibo.transpiler import transpile
 from qibo.transpiler.asserts import assert_transpiling
 
-transpiled_circuit, layout = transpile(
-    circuit,
-    connectivity=hardware.connectivity,
-    native_gates=native_gates,
-    optimization_level=2,
-    seed=42,
-    hardware=hardware,
-    backend=backend,
+configurations = (
+    ("noise-unaware", None, False),
+    ("noise-unaware, sampling_only", None, True),
+    ("noise-aware", hardware, False),
+    ("noise-aware, sampling_only", hardware, True),
 )
+probabilities = backend.execute_circuit(circuit, nshots=1).probabilities(
+    qubits=tuple(range(nqubits))
+)
+transpiled_circuits, summary = {}, []
+for label, model, sampling_only in configurations:
+    transpiled_circuit, layout = transpile(
+        circuit,
+        connectivity=hardware.connectivity,
+        native_gates=native_gates,
+        optimization_level=2,
+        seed=42,
+        sampling_only=sampling_only,
+        hardware=model,
+        backend=backend,
+    )
 
-# Raises an error if the circuits are not equivalent, or if the transpiled circuit does not
-# respect the connectivity and the native gates
-assert_transpiling(
-    original_circuit=circuit,
-    transpiled_circuit=transpiled_circuit,
-    connectivity=hardware.connectivity,
-    final_layout=layout,
-    native_gates=native_gates,
-)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=hardware.connectivity,
+        final_layout=layout,
+        native_gates=native_gates,
+        check_circuit_equivalence=not sampling_only,
+    )
+    transpiled_probabilities = backend.execute_circuit(
+        transpiled_circuit, nshots=1
+    ).probabilities(qubits=tuple(transpiled_circuit.measurements[0].qubits))
+    backend.assert_allclose(transpiled_probabilities, probabilities, atol=1e-8)
+
+    fidelity = 1.0
+    for gate in transpiled_circuit.queue:
+        if isinstance(gate, (gates.CZ, gates.U3)):
+            qubits = tuple(
+                transpiled_circuit.wire_names[qubit] for qubit in gate.qubits
+            )
+            fidelity *= 1 - (hardware.error(qubits) or 0.0)
+
+    print(f"\n{label}")
+    # hardware qubits on which the three qubits of the circuit are placed
+    print(layout.initial_layout[:nqubits])
+    transpiled_circuit.draw()
+    print(f"estimated fidelity {fidelity:.4f}")
+
+    transpiled_circuits[label] = transpiled_circuit
+    summary.append(
+        (
+            label,
+            transpiled_circuit.gate_types[gates.CZ],
+            transpiled_circuit.gate_types[gates.U3],
+            fidelity,
+        )
+    )
 ```
 
-#### Step 4: the transpiled circuit
+The four results are presented in the order of the loop. In each of them, the first line is the
+list of the hardware qubits on which the three qubits of the circuit are placed.
 
-The transpiled circuit has one wire for each qubit of the chip. The qubits of the encoder are
-placed on the physical qubits given by `layout.initial_layout`, and the other two qubits of the
-chip are added as auxiliary qubits that are not used. The wire `i` of the circuit is the
-physical qubit `transpiled_circuit.wire_names[i]`.
+**Noise-unaware.** The placement does not know the errors of the chip, and it uses the
+couplings `0-2`, four times, and `1-2`, twice. The latter has the highest `CZ` error.
 
-```python
-# hardware qubits on which the three qubits of the circuit are placed
-print(layout.initial_layout[:nqubits])
-transpiled_circuit.draw()
 ```
+[2, 0, 1]
+Global phase = exp(i * 3π/2)
+2: ─U3─Z─U3─Z─U3─o─U3─o─U3─Z─U3─Z─U3─M─
+0: ────|────|─U3─Z─U3─Z─U3─o────o────M─
+1: ─U3─o─U3─o─U3─────────────────────M─
+3: ────────────────────────────────────
+4: ────────────────────────────────────
+estimated fidelity 0.8543
+```
+
+**Noise-unaware, with `sampling_only`.** The `RZ` gates before the measurements are removed,
+and the circuit has two `CZ` gates and two `U3` gates less. The placement is the same.
+
+```
+[2, 0, 1]
+Global phase = exp(i * π/2)
+2: ─U3─Z─U3─Z─U3─o─U3─o─U3─M─
+0: ────|────|─U3─Z─U3─Z─U3─M─
+1: ─U3─o─U3─o─U3───────────M─
+3: ──────────────────────────
+4: ──────────────────────────
+estimated fidelity 0.8824
+```
+
+**Noise-aware.** The placement is chosen with the errors of the chip. The circuit uses the
+couplings `2-3`, four times, and `0-2`, twice, and does not use the coupling `1-2`.
+
+```
+[2, 3, 0]
+Global phase = exp(i * 3π/2)
+2: ─U3─Z─U3─Z─U3─o─U3─o─U3─Z─U3─Z─U3─M─
+3: ────|────|─U3─Z─U3─Z─U3─o────o────M─
+0: ─U3─o─U3─o─U3─────────────────────M─
+1: ────────────────────────────────────
+4: ────────────────────────────────────
+estimated fidelity 0.9208
+```
+
+**Noise-aware, with `sampling_only`.** Both effects add up. The circuit uses the couplings
+`2-3` and `0-2`, twice each, which are the two with the lowest error.
 
 ```
 [2, 0, 3]
 Global phase = exp(i * π/2)
-2: ─U3─Z─U3─Z────o─U3─o─U3─
-0: ────|────|─U3─Z─U3─Z─U3─
-3: ─U3─o─U3─o─U3───────────
-1: ────────────────────────
-4: ────────────────────────
+2: ─U3─Z─U3─Z─U3─o─U3─o─U3─M─
+0: ────|────|─U3─Z─U3─Z─U3─M─
+3: ─U3─o─U3─o─U3───────────M─
+1: ──────────────────────────
+4: ──────────────────────────
+estimated fidelity 0.9396
 ```
 
-The circuit only has the native gates `U3` and `CZ`, up to a global phase, and the `CZ` gates act
-on the couplings `2-3` and `0-2` only, which are the two with the lowest error. The couplings
-`1-2` and `2-4` are the noisiest ones, and the qubits `1` and `4` are the noisiest qubits, so none
-of them is used. No SWAP gate was needed in this run.
+#### Step 4: the final circuit and the summary
 
-#### Comparison with a noise-unaware transpilation
-
-The same transpilation without `hardware` does not know the errors of the chip. The two
-results are compared with a rough estimate of the fidelity, which is the product of
-`1 - error` over the `U3` and `CZ` gates, and does not include the readout error nor the
-decoherence of the idle qubits. Each `U3` gate is charged one single-qubit error.
+The final circuit is the noise-aware one with `sampling_only`, which is the last one of the
+loop.
 
 ```python
-from qibo import gates
+final_circuit = transpiled_circuits["noise-aware, sampling_only"]
 
-baseline_circuit, _ = transpile(
-    circuit,
-    connectivity=hardware.connectivity,
-    native_gates=native_gates,
-    optimization_level=2,
-    seed=42,
-    backend=backend,
-)
-for label, result in (
-    ("noise-aware", transpiled_circuit),
-    ("noise-unaware", baseline_circuit),
-):
-    fidelity = 1.0
-    for gate in result.queue:
-        if isinstance(gate, (gates.CZ, gates.U3)):
-            qubits = tuple(result.wire_names[qubit] for qubit in gate.qubits)
-            fidelity *= 1 - (hardware.error(qubits) or 0.0)
-    print(f"{label}: estimated fidelity {fidelity:.4f}")
+print(f"\n{'transpilation':<30} {'CZ':>3} {'U3':>3} {'estimated fidelity':>19}")
+for label, ncz, nu3, fidelity in summary:
+    print(f"{label:<30} {ncz:>3} {nu3:>3} {fidelity:>19.4f}")
 ```
 
-```
-noise-aware: estimated fidelity 0.9406
-noise-unaware: estimated fidelity 0.8834
-```
+| Transpilation                | `CZ` | `U3` | Estimated fidelity |
+|------------------------------|------|------|--------------------|
+| noise-unaware                |    6 |   13 |             0.8543 |
+| noise-unaware, sampling_only |    4 |   11 |             0.8824 |
+| noise-aware                  |    6 |   13 |             0.9208 |
+| noise-aware, sampling_only   |    4 |   11 |             0.9396 |
 
-Both circuits have four `CZ` gates, but the noise-unaware one places a qubit of the encoder on
-the qubit `1`, which has the noisiest coupling to the center of the star. In this example, the
-choice of the qubits and of the couplings changes the estimated fidelity by about 6 percentage
-points.
+Three points follow from the table:
+
+- The hardware model raises the estimated fidelity from `0.8543` to `0.9208` without
+  `sampling_only`, and from `0.8824` to `0.9396` with it. The circuits have the same number of
+  gates, and the difference comes from the qubits and the couplings that they use.
+- `sampling_only` raises it from `0.8543` to `0.8824` without the hardware model, and from
+  `0.9208` to `0.9396` with it, because it removes two `CZ` gates and two `U3` gates. The
+  distribution of the measured qubits is the same, but the state before the measurements is not,
+  so it can only be used if the circuit is only run to sample from it.
+- It only has an effect if there are diagonal gates before the measurements. If the data of
+  Step 1 is real, such as the real parts alone, the encoder has no `RZ` gates, and the four
+  transpilations have four `CZ` gates and ten `U3` gates, with the estimated fidelities `0.8834`,
+  without the hardware model, and `0.9406`, with it.
