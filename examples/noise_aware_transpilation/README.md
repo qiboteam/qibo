@@ -92,20 +92,35 @@ print(sorted(hardware.connectivity.edges))
 The errors that the model takes from the file are the following ones, in the order of the
 qubits and of the couplings of the chip.
 
-| Qubit | `t1` (µs) | `t2` (µs) | Readout error |
-|-------|-----------|-----------|---------------|
-| 0     | 32        | 24        | 0.035         |
-| 1     | 21        | 15        | 0.060         |
-| 2     | 45        | 31        | 0.025         |
-| 3     | 38        | 29        | 0.030         |
-| 4     | 27        | 18        | 0.050         |
+<table class="docutils">
+<thead>
+<tr>
+<th>Qubit</th>
+<th><code>t1</code> (µs)</th>
+<th><code>t2</code> (µs)</th>
+<th>Readout error</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>0</td><td>32</td><td>24</td><td>0.035</td></tr>
+<tr><td>1</td><td>21</td><td>15</td><td>0.060</td></tr>
+<tr><td>2</td><td>45</td><td>31</td><td>0.025</td></tr>
+<tr><td>3</td><td>38</td><td>29</td><td>0.030</td></tr>
+<tr><td>4</td><td>27</td><td>18</td><td>0.050</td></tr>
+</tbody>
+</table>
 
-| Coupling | `CZ` error |
-|----------|------------|
-| 0-2      | 0.015      |
-| 1-2      | 0.038      |
-| 2-3      | 0.009      |
-| 2-4      | 0.028      |
+<table class="docutils">
+<thead>
+<tr><th>Coupling</th><th><code>CZ</code> error</th></tr>
+</thead>
+<tbody>
+<tr><td>0-2</td><td>0.015</td></tr>
+<tr><td>1-2</td><td>0.038</td></tr>
+<tr><td>2-3</td><td>0.009</td></tr>
+<tr><td>2-4</td><td>0.028</td></tr>
+</tbody>
+</table>
 
 #### Step 3: transpilation, with and without noise awareness
 
@@ -272,12 +287,22 @@ for label, ncz, nu3, fidelity in summary:
     print(f"{label:<30} {ncz:>3} {nu3:>3} {fidelity:>19.4f}")
 ```
 
-| Transpilation                | `CZ` | `U3` | Estimated fidelity |
-|------------------------------|------|------|--------------------|
-| noise-unaware                |    6 |   13 |             0.8543 |
-| noise-unaware, sampling_only |    4 |   11 |             0.8824 |
-| noise-aware                  |    6 |   13 |             0.9208 |
-| noise-aware, sampling_only   |    4 |   11 |             0.9396 |
+<table class="docutils">
+<thead>
+<tr>
+<th>Transpilation</th>
+<th><code>CZ</code></th>
+<th><code>U3</code></th>
+<th>Estimated fidelity</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>noise-unaware</td><td>6</td><td>13</td><td>0.8543</td></tr>
+<tr><td>noise-unaware, sampling_only</td><td>4</td><td>11</td><td>0.8824</td></tr>
+<tr><td>noise-aware</td><td>6</td><td>13</td><td>0.9208</td></tr>
+<tr><td>noise-aware, sampling_only</td><td>4</td><td>11</td><td>0.9396</td></tr>
+</tbody>
+</table>
 
 Three points follow from the table:
 
