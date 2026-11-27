@@ -1,0 +1,151 @@
+{
+    "single_qubits": {
+        "0": {
+            "resonator": {},
+            "qubit": {
+                "frequency_01": 4500000000.0
+            },
+            "readout": {
+                "fidelity": 0.93,
+                "ground_state": [],
+                "excited_state": [],
+                "qudits_frequency": {}
+            },
+            "t1": [
+                32000.0,
+                640.0
+            ],
+            "t2": [
+                24000.0,
+                480.0
+            ],
+            "rb_fidelity": [
+                0.997,
+                0.0002
+            ]
+        },
+        "1": {
+            "resonator": {},
+            "qubit": {
+                "frequency_01": 4600000000.0
+            },
+            "readout": {
+                "fidelity": 0.88,
+                "ground_state": [],
+                "excited_state": [],
+                "qudits_frequency": {}
+            },
+            "t1": [
+                21000.0,
+                420.0
+            ],
+            "t2": [
+                15000.0,
+                300.0
+            ],
+            "rb_fidelity": [
+                0.9955,
+                0.0002
+            ]
+        },
+        "2": {
+            "resonator": {},
+            "qubit": {
+                "frequency_01": 4700000000.0
+            },
+            "readout": {
+                "fidelity": 0.95,
+                "ground_state": [],
+                "excited_state": [],
+                "qudits_frequency": {}
+            },
+            "t1": [
+                45000.0,
+                900.0
+            ],
+            "t2": [
+                31000.0,
+                620.0
+            ],
+            "rb_fidelity": [
+                0.998,
+                0.0002
+            ]
+        },
+        "3": {
+            "resonator": {},
+            "qubit": {
+                "frequency_01": 4800000000.0
+            },
+            "readout": {
+                "fidelity": 0.94,
+                "ground_state": [],
+                "excited_state": [],
+                "qudits_frequency": {}
+            },
+            "t1": [
+                38000.0,
+                760.0
+            ],
+            "t2": [
+                29000.0,
+                580.0
+            ],
+            "rb_fidelity": [
+                0.9976,
+                0.0002
+            ]
+        },
+        "4": {
+            "resonator": {},
+            "qubit": {
+                "frequency_01": 4900000000.0
+            },
+            "readout": {
+                "fidelity": 0.9,
+                "ground_state": [],
+                "excited_state": [],
+                "qudits_frequency": {}
+            },
+            "t1": [
+                27000.0,
+                540.0
+            ],
+            "t2": [
+                18000.0,
+                360.0
+            ],
+            "rb_fidelity": [
+                0.9962,
+                0.0002
+            ]
+        }
+    },
+    "couplers": {},
+    "two_qubits": {
+        "0-2": {
+            "cz_fidelity": [
+                0.985,
+                0.002
+            ]
+        },
+        "1-2": {
+            "cz_fidelity": [
+                0.962,
+                0.002
+            ]
+        },
+        "2-3": {
+            "cz_fidelity": [
+                0.991,
+                0.002
+            ]
+        },
+        "2-4": {
+            "cz_fidelity": [
+                0.972,
+                0.002
+            ]
+        }
+    }
+}
