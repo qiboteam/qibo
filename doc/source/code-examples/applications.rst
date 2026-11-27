@@ -97,6 +97,14 @@ to simulate the electronic structure of molecular systems.
 .. _`Qibochem`: https://github.com/qiboteam/qibochem
 
 
+Circuit transpilation
+^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/noise_aware_transpilation/README.md
+
 Applications by algorithm
 -------------------------
 

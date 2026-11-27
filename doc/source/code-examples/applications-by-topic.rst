@@ -78,3 +78,11 @@ Quantum Machine Learning
     tutorials/qcnn_classifier/qcnn_demo.ipynb
     tutorials/qclustering/README.md
     tutorials/adiabatic_qml/adiabatic-qml.ipynb
+
+Circuit transpilation
+^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/noise_aware_transpilation/README.md
