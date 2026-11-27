@@ -249,6 +249,14 @@ Disordered Heisenberg model
     :member-order: bysource
 
 
+Disordered XY model
+-------------------
+
+.. autoclass:: qibo.hamiltonians.DisorderedXY
+    :members:
+    :member-order: bysource
+
+
 Heisenberg model with Dzyaloshinskii-Moriya interaction
 -------------------------------------------------------
 

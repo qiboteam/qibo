@@ -24,6 +24,7 @@ from qibo.hamiltonians.models import (
     XY,
     ClusterIsing,
     DisorderedHeisenberg,
+    DisorderedXY,
     DMHeisenberg,
     FermiHubbard,
     FoldedXXZ,
@@ -1853,6 +1854,114 @@ def test_disordered_heisenberg_value_error(backend):
 
     with pytest.raises(ValueError):
         DisorderedHeisenberg(nx.Graph(), 1.0, 1.0, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("distribution", ["gaussian", "uniform"])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_disordered_xy(backend, closed_boundary, distribution, dense):
+    X = lambda x: symbols.X(x, backend=backend)
+    Y = lambda x: symbols.Y(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    nqubits, seed, strength, gamma = 4, 5, 1.7, 0.3
+
+    if distribution == "gaussian":
+        randoms = backend.random_normal(0, 1, nqubits, seed=seed)
+    else:
+        randoms = backend.random_uniform(-1.0, 1.0, size=nqubits, seed=seed)
+    randoms = backend.to_numpy(randoms)
+
+    nbonds = nqubits if closed_boundary else nqubits - 1
+    bonds = [(qubit, (qubit + 1) % nqubits) for qubit in range(nbonds)]
+
+    target = -sum(
+        (1 + gamma) / 2 * X(a) * X(b) + (1 - gamma) / 2 * Y(a) * Y(b) for a, b in bonds
+    )
+    target -= sum(strength * random * Z(qubit) for qubit, random in enumerate(randoms))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = DisorderedXY(
+        nqubits,
+        strength,
+        gamma,
+        distribution=distribution,
+        seed=seed,
+        dense=dense,
+        closed_boundary=closed_boundary,
+        backend=backend,
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("closed_boundary", [False, True])
+def test_disordered_xy_xy(backend, closed_boundary, dense):
+    """Without disorder, the model is the XY model without external field."""
+    kwargs = {"dense": dense, "closed_boundary": closed_boundary, "backend": backend}
+
+    hamiltonian = DisorderedXY(4, 0.0, -0.4, seed=1, **kwargs)
+    target = XY(4, -0.4, 0.0, **kwargs)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_disordered_xy_graph(backend, dense):
+    """Random fields act on all qubits of the graph, including the isolated ones."""
+    X = lambda x: symbols.X(x, backend=backend)
+    Y = lambda x: symbols.Y(x, backend=backend)
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    nqubits, seed, strength, gamma = 5, 3, 0.8, -0.4
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from([(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)])
+    graph.add_node(4)
+    bonds = [(0, 1, 2.0), (0, 2, -0.5), (1, 3, 1.5)]
+
+    randoms = backend.to_numpy(
+        backend.random_uniform(-1.0, 1.0, size=nqubits, seed=seed)
+    )
+
+    target = -sum(
+        weight * ((1 + gamma) / 2 * X(a) * X(b) + (1 - gamma) / 2 * Y(a) * Y(b))
+        for a, b, weight in bonds
+    )
+    target -= sum(strength * random * Z(qubit) for qubit, random in enumerate(randoms))
+    target = SymbolicHamiltonian(target, nqubits=nqubits, backend=backend)
+    target = backend.real(target.matrix)
+
+    hamiltonian = DisorderedXY(
+        graph, strength, gamma, seed=seed, dense=dense, backend=backend
+    )
+    hamiltonian = backend.real(hamiltonian.matrix)
+
+    backend.assert_allclose(hamiltonian, target, atol=1e-10)
+
+
+@pytest.mark.parametrize("dense", [False, True])
+def test_disordered_xy_seed(backend, dense):
+    kwargs = {"dense": dense, "backend": backend}
+
+    hamiltonian = DisorderedXY(4, 2.0, seed=1, **kwargs)
+    same = DisorderedXY(4, 2.0, seed=1, **kwargs)
+    backend.assert_allclose(hamiltonian.matrix, same.matrix)
+
+    other = DisorderedXY(4, 2.0, seed=2, **kwargs)
+    assert not backend.allclose(hamiltonian.matrix, other.matrix)
+
+
+def test_disordered_xy_value_error(backend):
+    with pytest.raises(ValueError):
+        DisorderedXY(4, 1.0, distribution="bimodal", backend=backend)
+
+    for nqubits in (0, 1):
+        with pytest.raises(ValueError):
+            DisorderedXY(nqubits, 1.0, backend=backend)
 
 
 @pytest.mark.parametrize("dense", [False, True])
