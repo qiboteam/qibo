@@ -257,7 +257,7 @@ and it is a superposition of two spin configurations.
 
     10110: 0.50 11001: 0.50
 
-The circuit can be implemented with two methods, selected with ``method``. The default
+The circuit can be implemented with three methods, selected with ``method``. The default
 ``"sopena"`` follows the original construction. With ``"merged"``, the free fermions are prepared
 with Givens rotations, and the output is written in a single pass over the squeezed chain.
 For domain walls, ``"merged"`` needs fewer qubits and gates, and for no domain walls, it needs more.
@@ -275,6 +275,24 @@ Both prepare the same state in the first qubits of the circuit.
     :hide:
 
     10110: 0.50 11001: 0.50
+
+With ``"grid"``, all the gates act on neighboring qubits of a grid of ``nrows`` rows, and the
+circuit also holds the two boundary sites: the first ``nsites + 2`` qubits are the sites
+``0, ..., nsites + 1`` of the chain, which form a snake of neighboring qubits in the grid. The
+remaining qubits are labelled in row-major order, and they end in the zero state.
+
+.. testcode::
+
+    circuit = folded_xxz_eigenstate(5, 1, [[3, 4]], [2], method="grid", nrows=4)
+    probabilities = circuit().probabilities(qubits=range(7))
+    print(circuit.nqubits, *(f"{state}: {prob:.2f}" for state, prob in zip(
+        ("0101100", "0110010"), probabilities[[0b0101100, 0b0110010]]
+    )))
+
+.. testoutput::
+    :hide:
+
+    12 0101100: 0.50 0110010: 0.50
 
 .. autofunction:: qibo.models.encodings.folded_xxz_eigenstate
 
