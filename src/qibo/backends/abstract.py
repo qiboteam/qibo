@@ -2627,13 +2627,9 @@ class Backend:
         matrix = gate.matrix(self)
 
         if density_matrix:
-            matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            matrix_conj = self.conj(matrix)
-            left, right = einsum_utils.apply_gate_density_matrix_string(
-                gate.qubits, nqubits
+            return self._apply_matrix_density_matrix(
+                matrix, state, (), gate.qubits, nqubits
             )
-            state = self.einsum(right, state, matrix_conj)
-            state = self.einsum(left, state, matrix)
         else:
             fwd_perm, inv_perm = einsum_utils.permutations(gate.qubits, nqubits)
             state = self.transpose(state, fwd_perm)
@@ -2664,9 +2660,14 @@ class Backend:
         state = self.reshape(state, 2 * nqubits * (2,))
         matrix = gate.matrix(self)
 
-        matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
-        left, _ = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
-        state = self.einsum(left, state, matrix)
+        fwd_perm, inv_perm = einsum_utils.permutations_density_matrix(
+            (), tuple(gate.qubits), nqubits
+        )
+        state = self.transpose(state, fwd_perm)
+        state = self.reshape(state, (2 ** len(gate.qubits), -1))
+        state = matrix @ state
+        state = self.reshape(state, 2 * nqubits * (2,))
+        state = self.transpose(state, inv_perm)
 
         return self.reshape(state, 2 * (2**nqubits,))
 
@@ -3455,16 +3456,22 @@ class Backend:
         self, gate: Gate, state: ArrayLike, nqubits: int
     ) -> ArrayLike:
         matrix = gate.matrix(self)
-        matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
         ncontrol = len(gate.control_qubits)
         nactive = nqubits - ncontrol
         order, targets = einsum_utils.control_order(gate, nqubits)
         state = self.transpose(state, order)
-        # Apply `einsum` only to the part of the state where all controls
+        # Apply the matrix only to the part of the state where all controls
         # are active. This should be `state[-1]`
         state = self.reshape(state, (2**ncontrol,) + nactive * (2,))
-        opstring = einsum_utils.apply_gate_string(targets, nactive)
-        updates = self.einsum(opstring, state[-1], matrix)
+        # Contract the target axes through unfolding and matrix product.
+        # The controls are moved separately because they are often already
+        # the leading axes, which makes the first transposition free.
+        fwd_perm, inv_perm = einsum_utils.permutations(tuple(targets), nactive)
+        updates = self.transpose(state[-1], fwd_perm)
+        updates = self.reshape(updates, (2 ** len(targets), -1))
+        updates = matrix @ updates
+        updates = self.reshape(updates, nactive * (2,))
+        updates = self.transpose(updates, inv_perm)
         # Concatenate the updated part of the state `updates` with the
         # part of of the state that remained unaffected `state[:-1]`.
         state = self.concatenate([state[:-1], updates[None]], axis=0)
@@ -3478,36 +3485,68 @@ class Backend:
         self, gate: Gate, state: ArrayLike, nqubits: int
     ) -> ArrayLike:
         matrix = gate.matrix(self)
-        matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
-        matrixc = self.conj(matrix)
-        ncontrol = len(gate.control_qubits)
-        nactive = nqubits - ncontrol
-        dims_ctrl = 2**ncontrol
-
-        order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
-        state = self.transpose(state, order)
-        state = self.reshape(state, 2 * (dims_ctrl,) + 2 * nactive * (2,))
-
-        leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
-            targets, nactive
+        controls = tuple(gate.control_qubits)
+        targets = tuple(gate.target_qubits)
+        if len(controls) + len(targets) <= 4:
+            # For small gates it is cheaper to multiply by the full controlled
+            # matrix than to slice and concatenate the active blocks
+            dims_ctrl = 2 ** len(controls)
+            active = self.diag(
+                self.cast((dims_ctrl - 1) * [0] + [1], dtype=matrix.dtype)
+            )
+            idle = self.identity(dims_ctrl, dtype=matrix.dtype) - active
+            matrix = self.kron(
+                idle, self.identity(2 ** len(targets), dtype=matrix.dtype)
+            ) + self.kron(active, matrix)
+            return self._apply_matrix_density_matrix(
+                matrix, state, (), controls + targets, nqubits
+            )
+        return self._apply_matrix_density_matrix(
+            matrix, state, controls, targets, nqubits
         )
-        state01 = state[: dims_ctrl - 1, dims_ctrl - 1]
-        state01 = self.einsum(rightc, state01, matrixc)
-        state10 = state[dims_ctrl - 1, : dims_ctrl - 1]
-        state10 = self.einsum(leftc, state10, matrix)
 
-        left, right = einsum_utils.apply_gate_density_matrix_string(targets, nactive)
-        state11 = state[dims_ctrl - 1, dims_ctrl - 1]
-        state11 = self.einsum(right, state11, matrixc)
-        state11 = self.einsum(left, state11, matrix)
+    def _apply_matrix_density_matrix(
+        self,
+        matrix: ArrayLike,
+        state: ArrayLike,
+        controls: tuple[int, ...],
+        targets: tuple[int, ...],
+        nqubits: int,
+    ) -> ArrayLike:
+        r"""Apply :math:`\rho \mapsto U \, \rho \, U^{\dagger}`, where :math:`U`
+        acts as ``matrix`` on ``targets`` when all ``controls`` are in state
+        :math:`1` and as the identity otherwise.
 
-        state00 = state[range(dims_ctrl - 1)]
-        state00 = state00[:, range(dims_ctrl - 1)]
-        state01 = self.concatenate([state00, state01[:, None]], axis=1)
-        state10 = self.concatenate([state10, state11[None]], axis=0)
-        state = self.concatenate([state01, state10[None]], axis=0)
+        The contraction is done with transpositions, reshapes and two-dimensional
+        matrix products instead of ``einsum``. ``state`` must have shape
+        ``2 * nqubits * (2,)``.
+        """
+        dims_ctrl = 2 ** len(controls)
+        dims_target = 2 ** len(targets)
+        matrix_dagger = self.transpose(self.conj(matrix), (1, 0))
+        fwd_perm, inv_perm = einsum_utils.permutations_density_matrix(
+            tuple(controls), tuple(targets), nqubits
+        )
+        # Rows ordered as (controls, targets, rest),
+        # columns ordered as (controls, rest, targets)
+        state = self.transpose(state, fwd_perm)
+        if dims_ctrl == 1:
+            state = self.reshape(state, (dims_target, -1))
+            state = matrix @ state
+            state = self.reshape(state, (-1, dims_target))
+            state = state @ matrix_dagger
+        else:
+            # Left multiplication on the rows where all controls are active
+            state = self.reshape(state, (dims_ctrl, dims_target, -1))
+            updates = matrix @ state[-1]
+            state = self.concatenate([state[:-1], updates[None]], axis=0)
+            # Right multiplication on the columns where all controls are active
+            state = self.reshape(state, (2**nqubits, dims_ctrl, -1))
+            updates = self.reshape(state[:, -1], (-1, dims_target)) @ matrix_dagger
+            updates = self.reshape(updates, (2**nqubits, 1, -1))
+            state = self.concatenate([state[:, :-1], updates], axis=1)
         state = self.reshape(state, 2 * nqubits * (2,))
-        state = self.transpose(state, einsum_utils.reverse_order(order))
+        state = self.transpose(state, inv_perm)
 
         return self.reshape(state, 2 * (2**nqubits,))
 

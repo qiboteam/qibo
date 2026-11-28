@@ -107,3 +107,29 @@ def permutations(qubits: tuple[int, ...], nqubits: int) -> tuple[list[int], list
     inv_perm = zip(list(range(nqubits)), fwd_perm)
     inv_perm, _ = list(zip(*sorted(inv_perm, key=lambda x: x[1])))
     return fwd_perm, inv_perm
+
+
+@cache
+def permutations_density_matrix(
+    controls: tuple[int, ...], targets: tuple[int, ...], nqubits: int
+) -> tuple[list[int], list[int]]:
+    """Compute the permutations of the indices needed for (controlled) gate
+    application on density matrices through unfolding and matrix product.
+
+    The row axes are ordered as ``(controls, targets, rest)`` and the column axes
+    as ``(controls, rest, targets)``, so that after reshaping the target rows can
+    be multiplied from the left and the target columns from the right with plain
+    two-dimensional matrix products.
+
+    Args:
+        controls (Tuple[int, ...]): the control qubits (may be empty).
+        targets (Tuple[int, ...]): the target qubits.
+        nqubits (int): the total number of qubits of the system.
+
+    Returns:
+        (Tuple[List[int], List[int]]) the forward permutation and its inverse.
+    """
+    rest = [q for q in range(nqubits) if q not in controls and q not in targets]
+    fwd_perm = list(controls) + list(targets) + rest
+    fwd_perm += [nqubits + q for q in list(controls) + rest + list(targets)]
+    return fwd_perm, reverse_order(fwd_perm)

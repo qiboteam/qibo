@@ -5,7 +5,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import random_density_matrix, random_statevector
+from qibo.quantum_info import random_density_matrix, random_statevector, random_unitary
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -233,3 +233,63 @@ def test_controlled_by_random(backend, nqubits):
     target_psi = backend.execute_circuit(circuit, backend.copy(initial_psi)).state()
     target_rho = backend.outer(target_psi, backend.conj(target_psi))
     backend.assert_allclose(final_rho, target_rho)
+
+
+def _controlled_unitary(matrix, controls, targets, nqubits):
+    """Dense matrix of ``matrix`` acting on ``targets`` controlled by ``controls``,
+    built element by element (qubit ``0`` is the most significant bit)."""
+    dim = 2**nqubits
+    full = np.zeros((dim, dim), dtype=complex)
+    for col in range(dim):
+        bits = [(col >> (nqubits - 1 - q)) & 1 for q in range(nqubits)]
+        if not all(bits[c] for c in controls):
+            full[col, col] = 1
+            continue
+        t_in = sum(bits[t] << (len(targets) - 1 - i) for i, t in enumerate(targets))
+        for t_out in range(2 ** len(targets)):
+            out_bits = list(bits)
+            for i, t in enumerate(targets):
+                out_bits[t] = (t_out >> (len(targets) - 1 - i)) & 1
+            row = sum(b << (nqubits - 1 - q) for q, b in enumerate(out_bits))
+            full[row, col] = matrix[t_out, t_in]
+    return full
+
+
+@pytest.mark.parametrize(
+    "controls,targets",
+    [
+        ((), (2,)),
+        ((), (3, 0)),
+        ((), (4, 1, 2)),
+        ((0,), (2,)),
+        ((4,), (0,)),
+        ((3, 1), (0, 4)),
+        ((2, 0, 4), (1,)),
+        ((0, 2, 5), (1, 4, 3)),
+    ],
+)
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_apply_gate_random_unitary(backend, controls, targets, density_matrix):
+    """Compare (controlled) gate application with the explicit dense matrix."""
+    nqubits = 6
+    matrix = random_unitary(2 ** len(targets), seed=10, backend=backend)
+    gate = gates.Unitary(matrix, *targets)
+    if controls:
+        gate = gate.controlled_by(*controls)
+    full = backend.cast(
+        _controlled_unitary(backend.to_numpy(matrix), controls, targets, nqubits)
+    )
+    if density_matrix:
+        state = random_density_matrix(2**nqubits, seed=11, backend=backend)
+        target = backend.matmul(backend.matmul(full, state), backend.conj(full).T)
+    else:
+        state = random_statevector(2**nqubits, seed=11, backend=backend)
+        target = backend.matmul(full, state)
+    final = apply_gates(backend, [gate], nqubits, state)
+    backend.assert_allclose(final, target, atol=1e-10)
+
+    if density_matrix and not controls:
+        half = backend.apply_gate_half_density_matrix(
+            gate, backend.copy(state), nqubits
+        )
+        backend.assert_allclose(half, backend.matmul(full, state), atol=1e-10)
